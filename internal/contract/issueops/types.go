@@ -2,14 +2,14 @@ package issueops
 
 import reviewcontract "issueops/internal/contract/issueopsreview"
 
-type IssueOpsStartRequest struct {
+type StartRequest struct {
 	Repo   string `json:"repo"`
 	Branch string `json:"branch,omitempty"`
 	// New requests a fresh branchless lifecycle instead of deterministic resume.
 	New bool `json:"new,omitempty"`
 }
 
-type IssueOpsFeedbackItem struct {
+type FeedbackItem struct {
 	Source         string `json:"source"`
 	Body           string `json:"body"`
 	Classification string `json:"classification,omitempty"`
@@ -20,7 +20,7 @@ type IssueOpsFeedbackItem struct {
 	Resolution string `json:"resolution,omitempty"`
 }
 
-type IssueOpsIssueLink struct {
+type IssueLink struct {
 	Type            string `json:"type"`
 	URL             string `json:"url"`
 	Title           string `json:"title,omitempty"`
@@ -31,7 +31,7 @@ type IssueOpsIssueLink struct {
 	CloseReason     string `json:"close_reason,omitempty"`
 }
 
-type IssueOpsBranchPrepareStep struct {
+type BranchPrepareStep struct {
 	Order         int            `json:"order"`
 	Strategy      string         `json:"strategy"`
 	Tool          string         `json:"tool,omitempty"`
@@ -40,7 +40,7 @@ type IssueOpsBranchPrepareStep struct {
 	Description   string         `json:"description"`
 }
 
-type IssueOpsBranchPrepare struct {
+type BranchPrepare struct {
 	Provider        string `json:"provider"`
 	IssueURL        string `json:"issue_url"`
 	Branch          string `json:"branch"`
@@ -57,16 +57,16 @@ type IssueOpsBranchPrepare struct {
 	// Steps are the provider instructions for creating the linked branch. The
 	// `branch prepare` acknowledgement carries them once; the `status` view
 	// leaves them out because they never change after prepare.
-	Steps     []IssueOpsBranchPrepareStep `json:"steps,omitempty"`
-	CreatedAt string                      `json:"created_at"`
+	Steps     []BranchPrepareStep `json:"steps,omitempty"`
+	CreatedAt string              `json:"created_at"`
 	// Retargets records every provider-observed base change after prepare, oldest
 	// first. BaseBranch always equals the last entry's ToBase.
-	Retargets []IssueOpsBranchRetarget `json:"retargets,omitempty"`
+	Retargets []BranchRetarget `json:"retargets,omitempty"`
 }
 
-// IssueOpsBranchRetarget is one accepted base change. ToBase was read back from
+// BranchRetarget is one accepted base change. ToBase was read back from
 // the remote artifact and observed on origin at ObservedAt; it is never asserted.
-type IssueOpsBranchRetarget struct {
+type BranchRetarget struct {
 	FromBase    string `json:"from_base"`
 	ToBase      string `json:"to_base"`
 	Reason      string `json:"reason"`
@@ -74,12 +74,12 @@ type IssueOpsBranchRetarget struct {
 	ObservedAt  string `json:"observed_at"`
 }
 
-type IssueOpsBranchRetargetRequest struct {
+type BranchRetargetRequest struct {
 	BaseBranch string
 	Reason     string
 }
 
-type IssueOpsBranchPrepareRequest struct {
+type BranchPrepareRequest struct {
 	Provider        string `json:"provider"`
 	IssueURL        string `json:"issue_url"`
 	Branch          string `json:"branch"`
@@ -96,11 +96,11 @@ type IssueOpsBranchPrepareRequest struct {
 // cycle with many children from growing the record without limit.
 const MaxIssueOpsBodySyncs = 16
 
-// IssueOpsRemoteBodySync is the last body the harness wrote to one remote
+// RemoteBodySync is the last body the harness wrote to one remote
 // artifact. It is the baseline the next staleness check compares against, so a
 // body edited outside the harness shows up as an outside edit instead of being
 // silently overwritten.
-type IssueOpsRemoteBodySync struct {
+type RemoteBodySync struct {
 	Kind string `json:"kind"`
 	URL  string `json:"url"`
 	// FromSHA256 is the body that was replaced; ToSHA256 is what the provider
@@ -112,7 +112,7 @@ type IssueOpsRemoteBodySync struct {
 	SyncedAt   string `json:"synced_at"`
 }
 
-type IssueOpsRemoteArtifactVerification struct {
+type RemoteArtifactVerification struct {
 	Provider   string   `json:"provider"`
 	Kind       string   `json:"kind"`
 	URL        string   `json:"url"`
@@ -124,7 +124,7 @@ type IssueOpsRemoteArtifactVerification struct {
 	TargetBranch string `json:"target_branch,omitempty"`
 }
 
-type IssueOpsRemoteArtifactVerificationRequest struct {
+type RemoteArtifactVerificationRequest struct {
 	Provider     string
 	Kind         string
 	URL          string
@@ -133,7 +133,7 @@ type IssueOpsRemoteArtifactVerificationRequest struct {
 	TargetBranch string
 }
 
-type IssueOpsIntentContract struct {
+type IntentContract struct {
 	RawRequest        string   `json:"raw_request"`
 	InterpretedIntent string   `json:"interpreted_intent"`
 	SuccessCriteria   []string `json:"success_criteria"`
@@ -144,7 +144,7 @@ type IssueOpsIntentContract struct {
 	RecordedAt        string   `json:"recorded_at"`
 }
 
-type IssueOpsIntentRecordRequest struct {
+type IntentRecordRequest struct {
 	RawRequest        string
 	InterpretedIntent string
 	SuccessCriteria   []string
@@ -154,7 +154,7 @@ type IssueOpsIntentRecordRequest struct {
 	IntentClass       string
 }
 
-type IssueOpsDecision struct {
+type Decision struct {
 	Title              string   `json:"title"`
 	Body               string   `json:"body"`
 	Kind               string   `json:"kind"`
@@ -165,7 +165,7 @@ type IssueOpsDecision struct {
 	CreatedAt          string   `json:"created_at"`
 }
 
-type IssueOpsDecisionRecordRequest struct {
+type DecisionRecordRequest struct {
 	Title              string
 	Body               string
 	Kind               string
@@ -175,41 +175,41 @@ type IssueOpsDecisionRecordRequest struct {
 	AffectedArtifacts  []string
 }
 
-type IssueOpsPlanPrepItem struct {
+type PlanPrepItem struct {
 	Status      string   `json:"status"`
 	Evidence    []string `json:"evidence,omitempty"`
 	WaiveReason string   `json:"waive_reason,omitempty"`
 }
 
-type IssueOpsPlanPrep struct {
-	PriorDecisions IssueOpsPlanPrepItem `json:"prior_decisions"`
-	RelatedIssues  IssueOpsPlanPrepItem `json:"related_issues"`
-	WebResearch    IssueOpsPlanPrepItem `json:"web_research"`
-	CodebaseSurvey IssueOpsPlanPrepItem `json:"codebase_survey"`
-	RecordedAt     string               `json:"recorded_at"`
+type PlanPrep struct {
+	PriorDecisions PlanPrepItem `json:"prior_decisions"`
+	RelatedIssues  PlanPrepItem `json:"related_issues"`
+	WebResearch    PlanPrepItem `json:"web_research"`
+	CodebaseSurvey PlanPrepItem `json:"codebase_survey"`
+	RecordedAt     string       `json:"recorded_at"`
 }
 
-type IssueOpsPlanPrepItemRequest struct {
+type PlanPrepItemRequest struct {
 	Evidence    []string
 	WaiveReason string
 }
 
-type IssueOpsPlanPrepRequest struct {
-	PriorDecisions IssueOpsPlanPrepItemRequest
-	RelatedIssues  IssueOpsPlanPrepItemRequest
-	WebResearch    IssueOpsPlanPrepItemRequest
-	CodebaseSurvey IssueOpsPlanPrepItemRequest
+type PlanPrepRequest struct {
+	PriorDecisions PlanPrepItemRequest
+	RelatedIssues  PlanPrepItemRequest
+	WebResearch    PlanPrepItemRequest
+	CodebaseSurvey PlanPrepItemRequest
 }
 
 // domain/issueops may import only this contract package, and its plan-review
 // rendering names these types, so they stay visible here.
-type IssueOpsDevilsAdvocateReview = reviewcontract.DevilsAdvocateReview
-type IssueOpsDevilsAdvocateRound = reviewcontract.DevilsAdvocateRound
+type DevilsAdvocateReview = reviewcontract.DevilsAdvocateReview
+type DevilsAdvocateRound = reviewcontract.DevilsAdvocateRound
 
-// IssueOpsDomainReview captures the grill-phase domain grilling outcome:
+// DomainReview captures the grill-phase domain grilling outcome:
 // terminology, current model fit, risks, and unresolved uncertainties. It is a
 // net-new source-of-truth field; grilling produced no record state before.
-type IssueOpsDomainReview struct {
+type DomainReview struct {
 	Terminology       []string `json:"terminology,omitempty"`
 	ModelFit          string   `json:"model_fit,omitempty"`
 	Risks             []string `json:"risks,omitempty"`
@@ -217,41 +217,41 @@ type IssueOpsDomainReview struct {
 	ReviewedAt        string   `json:"reviewed_at"`
 }
 
-// IssueOpsPhaseLedgerEntry records that a phase was entered and (optionally)
+// PhaseLedgerEntry records that a phase was entered and (optionally)
 // completed, plus which artifacts satisfied it. It is an index over existing
 // source-of-truth fields, not their replacement. The owning map's key is the
 // authoritative phase identity; Phase is a self-describing copy that must equal
 // its key.
-type IssueOpsDomainReviewRequest struct {
+type DomainReviewRequest struct {
 	Terminology       []string
 	ModelFit          string
 	Risks             []string
 	OpenUncertainties []string
 }
 
-type IssueOpsPhaseLedgerEntry struct {
-	Phase       IssueOpsPhase `json:"phase"`
-	EnteredAt   string        `json:"entered_at,omitempty"`
-	CompletedAt string        `json:"completed_at,omitempty"`
-	Artifacts   []string      `json:"artifacts,omitempty"`
-	Missing     []string      `json:"missing,omitempty"`
-	Notes       []string      `json:"notes,omitempty"`
+type PhaseLedgerEntry struct {
+	Phase       Phase    `json:"phase"`
+	EnteredAt   string   `json:"entered_at,omitempty"`
+	CompletedAt string   `json:"completed_at,omitempty"`
+	Artifacts   []string `json:"artifacts,omitempty"`
+	Missing     []string `json:"missing,omitempty"`
+	Notes       []string `json:"notes,omitempty"`
 }
 
-// IssueOpsPhaseLedger indexes phase completion. Iterate in IssueOpsPhases order
+// PhaseLedger indexes phase completion. Iterate in Phases order
 // (never Go map order) when rendering or comparing for determinism.
-type IssueOpsPhaseLedger map[IssueOpsPhase]IssueOpsPhaseLedgerEntry
+type PhaseLedger map[Phase]PhaseLedgerEntry
 
-// IssueOpsRegressEvent is the audit trail of one Brooks regression (stop →
+// RegressEvent is the audit trail of one Brooks regression (stop →
 // reflect → regress). Its count backs the regress cap: repeated stop/regress
 // rounds on one cycle stop consuming tokens and escalate to a human decision.
-type IssueOpsRegressEvent struct {
-	Reason    string        `json:"reason"`
-	FromPhase IssueOpsPhase `json:"from_phase"`
-	At        string        `json:"at"`
+type RegressEvent struct {
+	Reason    string `json:"reason"`
+	FromPhase Phase  `json:"from_phase"`
+	At        string `json:"at"`
 }
 
-type IssueOpsDelegationContract struct {
+type DelegationContract struct {
 	ParentCycleID      string   `json:"parent_cycle_id"`
 	TaskScope          string   `json:"task_scope"`
 	AcceptanceCriteria []string `json:"acceptance_criteria"`
@@ -260,7 +260,7 @@ type IssueOpsDelegationContract struct {
 	DelegatedAt        string   `json:"delegated_at"`
 }
 
-type IssueOpsChildCycleRef struct {
+type ChildCycleRef struct {
 	CycleID            string   `json:"cycle_id"`
 	Branch             string   `json:"branch"`
 	Title              string   `json:"title,omitempty"`
@@ -272,7 +272,7 @@ type IssueOpsChildCycleRef struct {
 	ValidatedAt        string   `json:"validated_at,omitempty"`
 }
 
-type IssueOpsChildStartRequest struct {
+type ChildStartRequest struct {
 	ParentID           string
 	Branch             string
 	Title              string
@@ -282,50 +282,50 @@ type IssueOpsChildStartRequest struct {
 	ChildIssueURL      string
 }
 
-type IssueOpsChildStartResult struct {
-	OK               bool                  `json:"ok"`
-	ParentID         string                `json:"parent_id"`
-	Child            IssueOpsRecord        `json:"child"`
-	ParentRef        IssueOpsChildCycleRef `json:"parent_ref"`
-	Guidance         string                `json:"guidance,omitempty"`
-	ChildLinkWarning string                `json:"child_link_warning,omitempty"`
+type ChildStartResult struct {
+	OK               bool          `json:"ok"`
+	ParentID         string        `json:"parent_id"`
+	Child            Record        `json:"child"`
+	ParentRef        ChildCycleRef `json:"parent_ref"`
+	Guidance         string        `json:"guidance,omitempty"`
+	ChildLinkWarning string        `json:"child_link_warning,omitempty"`
 }
 
-type IssueOpsChildStatusEntry struct {
-	CycleID            string        `json:"cycle_id"`
-	Branch             string        `json:"branch,omitempty"`
-	Title              string        `json:"title,omitempty"`
-	ChildIssueURL      string        `json:"child_issue_url,omitempty"`
-	Phase              IssueOpsPhase `json:"phase,omitempty"`
-	LastActiveAt       string        `json:"last_active_at,omitempty"`
-	WorktreePath       string        `json:"worktree_path,omitempty"`
-	ValidationVerdict  string        `json:"validation_verdict,omitempty"`
-	ValidationReason   string        `json:"validation_reason,omitempty"`
-	ValidationEvidence []string      `json:"validation_evidence,omitempty"`
-	ValidatedAt        string        `json:"validated_at,omitempty"`
-	ParentClosedState  string        `json:"parent_closed_state,omitempty"`
-	Indexed            bool          `json:"indexed"`
-	Scanned            bool          `json:"scanned"`
-	Orphaned           bool          `json:"orphaned,omitempty"`
+type ChildStatusEntry struct {
+	CycleID            string   `json:"cycle_id"`
+	Branch             string   `json:"branch,omitempty"`
+	Title              string   `json:"title,omitempty"`
+	ChildIssueURL      string   `json:"child_issue_url,omitempty"`
+	Phase              Phase    `json:"phase,omitempty"`
+	LastActiveAt       string   `json:"last_active_at,omitempty"`
+	WorktreePath       string   `json:"worktree_path,omitempty"`
+	ValidationVerdict  string   `json:"validation_verdict,omitempty"`
+	ValidationReason   string   `json:"validation_reason,omitempty"`
+	ValidationEvidence []string `json:"validation_evidence,omitempty"`
+	ValidatedAt        string   `json:"validated_at,omitempty"`
+	ParentClosedState  string   `json:"parent_closed_state,omitempty"`
+	Indexed            bool     `json:"indexed"`
+	Scanned            bool     `json:"scanned"`
+	Orphaned           bool     `json:"orphaned,omitempty"`
 }
 
-type IssueOpsChildStatusResult struct {
-	OK             bool                       `json:"ok"`
-	ParentID       string                     `json:"parent_id"`
-	Children       []IssueOpsChildStatusEntry `json:"children"`
-	Repaired       bool                       `json:"repaired,omitempty"`
-	RepairAppended []string                   `json:"repair_appended,omitempty"`
-	Orphaned       []string                   `json:"orphaned,omitempty"`
+type ChildStatusResult struct {
+	OK             bool               `json:"ok"`
+	ParentID       string             `json:"parent_id"`
+	Children       []ChildStatusEntry `json:"children"`
+	Repaired       bool               `json:"repaired,omitempty"`
+	RepairAppended []string           `json:"repair_appended,omitempty"`
+	Orphaned       []string           `json:"orphaned,omitempty"`
 }
 
-type IssueOpsChildValidationResult struct {
-	OK        bool                  `json:"ok"`
-	ParentID  string                `json:"parent_id"`
-	ChildID   string                `json:"child_id"`
-	ParentRef IssueOpsChildCycleRef `json:"parent_ref"`
+type ChildValidationResult struct {
+	OK        bool          `json:"ok"`
+	ParentID  string        `json:"parent_id"`
+	ChildID   string        `json:"child_id"`
+	ParentRef ChildCycleRef `json:"parent_ref"`
 }
 
-type IssueOpsRecord struct {
+type Record struct {
 	OK                      bool                                `json:"ok"`
 	Invalid                 bool                                `json:"-"`
 	InvalidReason           string                              `json:"-"`
@@ -333,37 +333,37 @@ type IssueOpsRecord struct {
 	ID                      string                              `json:"id"`
 	Repo                    string                              `json:"repo"`
 	Branch                  string                              `json:"branch,omitempty"`
-	Phase                   IssueOpsPhase                       `json:"phase"`
-	Intent                  *IssueOpsIntentContract             `json:"intent,omitempty"`
+	Phase                   Phase                               `json:"phase"`
+	Intent                  *IntentContract                     `json:"intent,omitempty"`
 	ArchitectureReview      *reviewcontract.ArchitectureReview  `json:"architecture_review,omitempty"`
-	DomainReview            *IssueOpsDomainReview               `json:"domain_review,omitempty"`
+	DomainReview            *DomainReview                       `json:"domain_review,omitempty"`
 	IssueURL                string                              `json:"issue_url,omitempty"`
 	ChildCreateOperations   []ChildCreateOperation              `json:"child_create_operations,omitempty"`
-	IssueCreateIntent       *IssueOpsIssueCreateIntent          `json:"issue_create_intent,omitempty"`
+	IssueCreateIntent       *IssueCreateIntent                  `json:"issue_create_intent,omitempty"`
 	PlanPath                string                              `json:"plan_path,omitempty"`
 	WorktreePath            string                              `json:"worktree_path,omitempty"`
-	IssueLinks              []IssueOpsIssueLink                 `json:"issue_links,omitempty"`
-	BranchPrepare           *IssueOpsBranchPrepare              `json:"branch_prepare,omitempty"`
-	RemoteArtifact          *IssueOpsRemoteArtifactVerification `json:"remote_artifact,omitempty"`
-	BodySyncs               []IssueOpsRemoteBodySync            `json:"body_syncs,omitempty"`
-	Decisions               []IssueOpsDecision                  `json:"decisions,omitempty"`
-	PlanPrep                *IssueOpsPlanPrep                   `json:"plan_prep,omitempty"`
+	IssueLinks              []IssueLink                         `json:"issue_links,omitempty"`
+	BranchPrepare           *BranchPrepare                      `json:"branch_prepare,omitempty"`
+	RemoteArtifact          *RemoteArtifactVerification         `json:"remote_artifact,omitempty"`
+	BodySyncs               []RemoteBodySync                    `json:"body_syncs,omitempty"`
+	Decisions               []Decision                          `json:"decisions,omitempty"`
+	PlanPrep                *PlanPrep                           `json:"plan_prep,omitempty"`
 	CompatibilityReview     *reviewcontract.CompatibilityReview `json:"compatibility_review,omitempty"`
-	DevilsAdvocateReview    *IssueOpsDevilsAdvocateReview       `json:"devils_advocate_review,omitempty"`
-	Feedback                []IssueOpsFeedbackItem              `json:"feedback,omitempty"`
-	RegressEvents           []IssueOpsRegressEvent              `json:"regress_events,omitempty"`
-	Delegation              *IssueOpsDelegationContract         `json:"delegation,omitempty"`
-	ChildCycles             []IssueOpsChildCycleRef             `json:"child_cycles,omitempty"`
+	DevilsAdvocateReview    *DevilsAdvocateReview               `json:"devils_advocate_review,omitempty"`
+	Feedback                []FeedbackItem                      `json:"feedback,omitempty"`
+	RegressEvents           []RegressEvent                      `json:"regress_events,omitempty"`
+	Delegation              *DelegationContract                 `json:"delegation,omitempty"`
+	ChildCycles             []ChildCycleRef                     `json:"child_cycles,omitempty"`
 	Execution               *Execution                          `json:"execution,omitempty"`
-	RemoteCompletion        *IssueOpsRemoteCompletion           `json:"remote_completion,omitempty"`
+	RemoteCompletion        *RemoteCompletion                   `json:"remote_completion,omitempty"`
 	SourceMisdirectWarnings int                                 `json:"source_misdirect_warnings,omitempty"`
-	CleanupAttempt          *IssueOpsCleanupAttempt             `json:"cleanup_attempt,omitempty"`
-	CleanupFinishFailure    *IssueOpsCleanupFinishFailure       `json:"cleanup_finish_failure,omitempty"`
-	LinkedBranchCleanup     *IssueOpsLinkedBranchCleanup        `json:"linked_branch_cleanup,omitempty"`
-	CleanupAbandonFailure   *IssueOpsCleanupAbandonFailure      `json:"cleanup_abandon_failure,omitempty"`
-	ImplementationReview    *IssueOpsImplementationReview       `json:"implementation_review,omitempty"`
-	ProjectDocsReview       *IssueOpsProjectDocsReview          `json:"project_docs_review,omitempty"`
-	SchemaEvidence          *IssueOpsSchemaEvidence             `json:"schema_evidence,omitempty"`
+	CleanupAttempt          *CleanupAttempt                     `json:"cleanup_attempt,omitempty"`
+	CleanupFinishFailure    *CleanupFinishFailure               `json:"cleanup_finish_failure,omitempty"`
+	LinkedBranchCleanup     *LinkedBranchCleanup                `json:"linked_branch_cleanup,omitempty"`
+	CleanupAbandonFailure   *CleanupAbandonFailure              `json:"cleanup_abandon_failure,omitempty"`
+	ImplementationReview    *ImplementationReview               `json:"implementation_review,omitempty"`
+	ProjectDocsReview       *ProjectDocsReview                  `json:"project_docs_review,omitempty"`
+	SchemaEvidence          *SchemaEvidence                     `json:"schema_evidence,omitempty"`
 	RoutingTrace            []SkillRoutingEntry                 `json:"routing_trace,omitempty"`
 	AISlopCleanAt           string                              `json:"ai_slop_clean_at,omitempty"`
 	AISlopCleanHead         string                              `json:"ai_slop_clean_head,omitempty"`
@@ -374,17 +374,17 @@ type IssueOpsRecord struct {
 	// re-entered pr through the same strict gate after a post-pr fix. The gate requires a
 	// clean, upstream-synced worktree with fresh review seals, so this is the verified head;
 	// completion refuses a final head that changed anything but the verification report since.
-	PRHead      string              `json:"pr_head,omitempty"`
-	PhaseLedger IssueOpsPhaseLedger `json:"phase_ledger,omitempty"`
-	CreatedAt   string              `json:"created_at"`
-	UpdatedAt   string              `json:"updated_at"`
+	PRHead      string      `json:"pr_head,omitempty"`
+	PhaseLedger PhaseLedger `json:"phase_ledger,omitempty"`
+	CreatedAt   string      `json:"created_at"`
+	UpdatedAt   string      `json:"updated_at"`
 }
 
-// IssueOpsImplementationReview captures the architecture-review adversarial verdict on the
+// ImplementationReview captures the architecture-review adversarial verdict on the
 // implementation diff, recorded by the execution owner before publication.
 // reviewer_* 필드는 감사 기록이며 게이트 조건이 아니다 — 하네스는 모델
 // 자기신고를 검증할 수 없으므로 verdict와 실질 내용만 게이트한다(설계 v5 WS5).
-type IssueOpsImplementationReview struct {
+type ImplementationReview struct {
 	Verdict  string   `json:"verdict"` // pass | revise | stop
 	Findings []string `json:"findings"`
 	Evidence []string `json:"evidence"`
@@ -399,11 +399,11 @@ type IssueOpsImplementationReview struct {
 	RecordedAt          string `json:"recorded_at"`
 }
 
-// IssueOpsProjectDocsReview captures the pre-publication project-doc pass:
+// ProjectDocsReview captures the pre-publication project-doc pass:
 // 이번 변경이 CAUTIONS/ADR 같은 운영 문서에 남길 결정을 만들었는지 판정한 기록이다.
 // verdict가 updated면 Docs에 적은 문서가 실제 변경 집합 안에 있어야 하므로,
 // "갱신했다"는 자기신고만으로는 게이트를 통과할 수 없다.
-type IssueOpsProjectDocsReview struct {
+type ProjectDocsReview struct {
 	Verdict string   `json:"verdict"` // updated | no-change
 	Docs    []string `json:"docs,omitempty"`
 	// ReviewedDocs는 판정이 실제로 읽은 project doc의 repo-상대 경로다.
@@ -420,7 +420,7 @@ type IssueOpsProjectDocsReview struct {
 // 들어 있을 때만 요구되는 실측 근거다. 인덱스 현황, row count처럼 실제
 // 데이터베이스에서 관찰한 값과 그 출처를 남긴다. 관찰이 불가능한 상황은
 // 근거를 적어 waive한다.
-type IssueOpsSchemaEvidence struct {
+type SchemaEvidence struct {
 	Measurements        []string `json:"measurements,omitempty"`
 	Sources             []string `json:"sources,omitempty"`
 	Waived              bool     `json:"waived,omitempty"`
@@ -429,7 +429,7 @@ type IssueOpsSchemaEvidence struct {
 	RecordedAt          string   `json:"recorded_at"`
 }
 
-// IssueOpsCleanupFinishFailure marks the step where a destructive cleanup
+// CleanupFinishFailure marks the step where a destructive cleanup
 // apply stopped. finish 재실행이 이어받을 수 있도록 레코드에 남긴다(resumable).
 const (
 	CleanupFailureStepApplying       = "applying"
@@ -446,7 +446,7 @@ const (
 	CleanupFailureStepRemoteBranchDelete = "remote_branch_delete"
 )
 
-type IssueOpsCleanupFinishFailure struct {
+type CleanupFinishFailure struct {
 	Step    string `json:"step"`
 	Message string `json:"message"`
 	At      string `json:"at"`
@@ -454,7 +454,7 @@ type IssueOpsCleanupFinishFailure struct {
 
 // IssueOpsCleanupAbandonFailure는 부분 실패 뒤 같은 로컬 대상을 재시도할 수 있도록
 // 마지막으로 승인된 inventory를 봉인한다.
-type IssueOpsCleanupAbandonFailure struct {
+type CleanupAbandonFailure struct {
 	Step            string `json:"step"`
 	Message         string `json:"message"`
 	Fingerprint     string `json:"fingerprint"`
@@ -467,9 +467,9 @@ type IssueOpsCleanupAbandonFailure struct {
 	At              string `json:"at"`
 }
 
-// IssueOpsRemoteCompletion caches confirmed remote completion mutations.
+// RemoteCompletion caches confirmed remote completion mutations.
 // 원격 readback이 항상 우선 판정이고 이 필드는 보조 캐시다(설계 v5 WS3).
-type IssueOpsRemoteCompletion struct {
+type RemoteCompletion struct {
 	ReflectedAt   string `json:"reflected_at,omitempty"`
 	IssueClosedAt string `json:"issue_closed_at,omitempty"`
 	// MergedAt is when remote merge-pr read the PR/MR back merged, so next
@@ -486,7 +486,7 @@ type SkillRoutingEntry struct {
 	At    string `json:"at,omitempty"`
 }
 
-type IssueOpsReadiness struct {
+type Readiness struct {
 	OK                     bool     `json:"ok"`
 	Ready                  bool     `json:"ready"`
 	Strict                 bool     `json:"strict,omitempty"`
@@ -502,11 +502,11 @@ type IssueOpsReadiness struct {
 	Warnings               []string `json:"warnings,omitempty"`
 }
 
-type IssueOpsCleanupStatusRequest struct {
+type CleanupStatusRequest struct {
 	Merged bool `json:"merged"`
 }
 
-type IssueOpsCleanupStatus struct {
+type CleanupStatus struct {
 	OK                bool     `json:"ok"`
 	Ready             bool     `json:"ready"`
 	ID                string   `json:"id"`
@@ -522,7 +522,7 @@ type IssueOpsCleanupStatus struct {
 	NextCommand string `json:"next_command,omitempty"`
 }
 
-type IssueOpsCloseChildrenRequest struct {
+type CloseChildrenRequest struct {
 	// Merged는 부모 PR/MR의 머지가 원격 readback으로 검증됐음을 뜻한다.
 	Merged bool `json:"merged"`
 	// MergeEvidenceRequested는 운영자가 --merged로 정리 의도를 명시했다는
@@ -533,7 +533,7 @@ type IssueOpsCloseChildrenRequest struct {
 	Confirm                bool `json:"confirm"`
 }
 
-type IssueOpsCloseChildResult struct {
+type CloseChildResult struct {
 	URL               string `json:"url"`
 	Provider          string `json:"provider,omitempty"`
 	Closed            bool   `json:"closed"`
@@ -544,7 +544,7 @@ type IssueOpsCloseChildResult struct {
 	Error             string `json:"error,omitempty"`
 }
 
-type IssueOpsCloseChildrenResult struct {
+type CloseChildrenResult struct {
 	OK        bool   `json:"ok"`
 	ID        string `json:"id"`
 	Merged    bool   `json:"merged"`
@@ -554,10 +554,10 @@ type IssueOpsCloseChildrenResult struct {
 	// parent_merge_verified는 부모 PR/MR의 머지 readback이고,
 	// children_already_closed는 모든 자식이 원격에서 이미 닫혀 있다는 관측이다.
 	// 운영자가 어느 근거로 정리됐는지 알아야 하므로 결과에 남긴다.
-	EvidenceBasis string                     `json:"evidence_basis,omitempty"`
-	ClosedCount   int                        `json:"closed_count"`
-	Children      []IssueOpsCloseChildResult `json:"children"`
-	Missing       []string                   `json:"missing,omitempty"`
+	EvidenceBasis string             `json:"evidence_basis,omitempty"`
+	ClosedCount   int                `json:"closed_count"`
+	Children      []CloseChildResult `json:"children"`
+	Missing       []string           `json:"missing,omitempty"`
 }
 
 type LeaseHolderIndex struct {
@@ -585,7 +585,7 @@ type CleanupRemoteBranchArtifactHead struct {
 // IssueOpsLinkedBranchCleanup은 ref-null 고아 linked-branch 처분의 durable
 // audit이다(#306 AC-06). 성공만이 아니라 거절도 남긴다 — 다음 사람이 "왜 아직
 // 안 지워졌나"를 처음부터 다시 조사하지 않게 하는 것이 이 기록의 목적이다.
-type IssueOpsLinkedBranchCleanup struct {
+type LinkedBranchCleanup struct {
 	State          string `json:"state"`
 	StateReason    string `json:"state_reason,omitempty"`
 	LinkedBranchID string `json:"linked_branch_id,omitempty"`
@@ -598,9 +598,9 @@ type IssueOpsLinkedBranchCleanup struct {
 	ObservedAt     string `json:"observed_at"`
 }
 
-// IssueOpsTrackedMaterials reports copied implementation materials. This response
+// TrackedMaterials reports copied implementation materials. This response
 // is not persisted in the strict versioned IssueOps record.
-type IssueOpsTrackedMaterials struct {
+type TrackedMaterials struct {
 	Written  []string `json:"written,omitempty"`
 	Warnings []string `json:"warnings,omitempty"`
 }

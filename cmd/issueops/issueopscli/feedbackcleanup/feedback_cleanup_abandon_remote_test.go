@@ -21,7 +21,7 @@ func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest
 
 	command.Operations = wired
 	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
-		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+		service.Read = func(id string) (issueopscontract.Record, error) {
 			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 		}
 		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {

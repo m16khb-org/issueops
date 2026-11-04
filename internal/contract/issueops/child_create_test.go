@@ -7,7 +7,7 @@ import (
 
 func validChildCreateOperation(operationID string) ChildCreateOperation {
 	return ChildCreateOperation{
-		IssueOpsIssueCreateIntent: IssueOpsIssueCreateIntent{
+		IssueCreateIntent: IssueCreateIntent{
 			OperationID:      operationID,
 			Marker:           "<!-- issueops:child-create:" + operationID + " -->",
 			Provider:         "github",

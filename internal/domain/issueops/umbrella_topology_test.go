@@ -8,7 +8,7 @@ import (
 )
 
 func TestUmbrellaBranchGateReasonRequiresPreparedBranch(t *testing.T) {
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID:       "io-parent",
 		Repo:     "/repo",
 		Branch:   "78-umbrella",
@@ -24,12 +24,12 @@ func TestUmbrellaBranchGateReasonRequiresPreparedBranch(t *testing.T) {
 }
 
 func TestUmbrellaBranchGateReasonRequiresBranchIdentity(t *testing.T) {
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID:       "io-parent",
 		Repo:     "/repo",
 		Branch:   "78-umbrella",
 		IssueURL: "https://github.com/acme/repo/issues/78",
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{
+		BranchPrepare: &issueops.BranchPrepare{
 			Provider:   "github",
 			IssueURL:   "https://github.com/acme/repo/issues/78",
 			Branch:     "79-something-else",
@@ -42,12 +42,12 @@ func TestUmbrellaBranchGateReasonRequiresBranchIdentity(t *testing.T) {
 }
 
 func TestUmbrellaBranchGateReasonAcceptsPreparedUmbrella(t *testing.T) {
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID:       "io-parent",
 		Repo:     "/repo",
 		Branch:   "78-umbrella",
 		IssueURL: "https://github.com/acme/repo/issues/78",
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{
+		BranchPrepare: &issueops.BranchPrepare{
 			Provider:   "github",
 			IssueURL:   "https://github.com/acme/repo/issues/78",
 			Branch:     "78-umbrella",

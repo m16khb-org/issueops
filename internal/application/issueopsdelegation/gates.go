@@ -9,10 +9,10 @@ import (
 )
 
 type ChildGates struct {
-	Scan func(string) ([]issueops.IssueOpsRecord, error)
+	Scan func(string) ([]issueops.Record, error)
 }
 
-func (g ChildGates) PRMissing(stateRoot string, parent issueops.IssueOpsRecord) ([]string, []string) {
+func (g ChildGates) PRMissing(stateRoot string, parent issueops.Record) ([]string, []string) {
 	stateRoot = strings.TrimSpace(stateRoot)
 	if stateRoot == "" {
 		return nil, nil
@@ -24,7 +24,7 @@ func (g ChildGates) PRMissing(stateRoot string, parent issueops.IssueOpsRecord) 
 	return issueopsdomain.ChildPRGateMissing(status.Children), nil
 }
 
-func (g ChildGates) ActiveIDs(stateRoot string, parent issueops.IssueOpsRecord) ([]string, error) {
+func (g ChildGates) ActiveIDs(stateRoot string, parent issueops.Record) ([]string, error) {
 	stateRoot = strings.TrimSpace(stateRoot)
 	if stateRoot == "" {
 		return nil, nil
@@ -36,10 +36,10 @@ func (g ChildGates) ActiveIDs(stateRoot string, parent issueops.IssueOpsRecord) 
 	return issueopsdomain.ActiveChildIDs(status.Children), nil
 }
 
-func (g ChildGates) status(stateRoot string, parent issueops.IssueOpsRecord) (issueops.IssueOpsChildStatusResult, error) {
+func (g ChildGates) status(stateRoot string, parent issueops.Record) (issueops.ChildStatusResult, error) {
 	records, err := g.Scan(stateRoot)
 	if err != nil {
-		return issueops.IssueOpsChildStatusResult{OK: false, ParentID: parent.ID}, err
+		return issueops.ChildStatusResult{OK: false, ParentID: parent.ID}, err
 	}
 	return issueopsdomain.BuildChildStatus(parent, issueopsdomain.SelectChildren(parent, records)), nil
 }

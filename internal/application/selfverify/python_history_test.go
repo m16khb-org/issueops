@@ -21,7 +21,7 @@ func TestPythonContractDistinguishesHistoricalEvidenceWithoutChangingSnapshotSch
 			steps = append(steps, contract.StepResult{Label: label, OK: true})
 		}
 	}
-	oldInput := augment.SelfAugmentResult{OK: true, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}
+	oldInput := augment.Result{OK: true, Iterations: 1, Runs: []augment.Iteration{{Iteration: 1, Steps: steps}}}
 	incomplete := SummarizeSelfVerification(oldInput, 95)
 	if incomplete.TerminationEligible || len(incomplete.CoverageGaps) != 1 || !strings.Contains(incomplete.CoverageGaps[0], "Python script tests") {
 		t.Fatal(incomplete)
@@ -39,15 +39,15 @@ func TestPythonContractDistinguishesHistoricalEvidenceWithoutChangingSnapshotSch
 	if current.Version != 9 || current.Hash == olderContract.Hash || !reflect.DeepEqual(current.RequiredFields, olderContract.RequiredFields) {
 		t.Fatal(current, olderContract)
 	}
-	old := augment.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, Summary: incomplete}
+	old := augment.StateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, Summary: incomplete}
 	old.Summary.Contract = olderContract
 	old.Summary.TerminationEligible = true
 	if err := history.ValidateSummarySnapshot("old", old); err != nil {
 		t.Fatalf("older-contract snapshots must stay comparable: %v", err)
 	}
 	steps = append(steps, contract.StepResult{Label: "Python script tests", OK: true})
-	newInput := augment.SelfAugmentResult{OK: true, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}
-	fresh := augment.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, Summary: SummarizeSelfVerification(newInput, 95)}
+	newInput := augment.Result{OK: true, Iterations: 1, Runs: []augment.Iteration{{Iteration: 1, Steps: steps}}}
+	fresh := augment.StateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, Summary: SummarizeSelfVerification(newInput, 95)}
 	comparison := history.CompareSnapshots("v4", "v5", 100, old, fresh, "fixture")
 	if comparison.Regressed || !reflect.DeepEqual(comparison.AddedStepLabels, []string{"Python script tests"}) || comparison.TotalStepsDelta != 1 {
 		t.Fatal(comparison)
@@ -79,7 +79,7 @@ const legacySummarySnapshot = `{
 }`
 
 func TestSavedSummariesWithoutNotRunFieldsStillDecodeAndCompare(t *testing.T) {
-	var old augment.SelfAugmentStateSnapshot
+	var old augment.StateSnapshot
 	if err := json.Unmarshal([]byte(legacySummarySnapshot), &old); err != nil {
 		t.Fatalf("legacy summary must decode: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestSavedSummariesWithoutNotRunFieldsStillDecodeAndCompare(t *testing.T) {
 
 	// A fresh fail-fast summary compares against it without error or spurious step-label regression.
 	order := domain.StepOrder()
-	fresh := augment.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", Summary: SummarizeSelfVerification(augment.SelfAugmentResult{Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: []contract.StepResult{
+	fresh := augment.StateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", Summary: SummarizeSelfVerification(augment.Result{Iterations: 1, Runs: []augment.Iteration{{Iteration: 1, Steps: []contract.StepResult{
 		{Label: order[0], OK: true}, {Label: order[1], OK: true}, {Label: order[2], OK: false},
 	}}}}, 95)}
 	comparison := history.CompareSnapshots("legacy", "fresh", 100, old, fresh, "fixture")

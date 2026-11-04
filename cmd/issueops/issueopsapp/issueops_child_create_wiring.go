@@ -25,7 +25,7 @@ func newChildCreator(root string) app.ChildCreator {
 			return adapter.LockedChildCreator{Inner: resolved, StateRoot: root}, nil
 		},
 		Bodies: app.NewTemplateBodyResolver(os.ReadFile),
-		Authorize: func(ctx context.Context, id string, actor model.IssueOpsActor) error {
+		Authorize: func(ctx context.Context, id string, actor model.Actor) error {
 			return adapter.ValidateIssueOpsMutationActor(ctx, root, id, actor, issueOpsActorVerifier())
 		},
 		Intents:        &app.ChildCreateIntents{Store: adapter.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorization.CanonicalPaths{}.Same, issueOpsActorVerifier()), Now: time.Now},

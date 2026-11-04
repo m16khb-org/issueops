@@ -197,7 +197,7 @@ func TestListLeaseHolderIndexesAcceptsEverySupportedHostAndRejectsOthers(t *test
 		}
 		actor := issueops.NativeActor{Host: host, SessionID: "session-" + host}
 		data, err := json.Marshal(issueops.LeaseHolderIndex{
-			SchemaVersion: issueops.IssueOpsSchemaVersion, LifecycleID: "io-0123456789ab", Generation: 1,
+			SchemaVersion: issueops.SchemaVersion, LifecycleID: "io-0123456789ab", Generation: 1,
 			Host: host, SessionID: actor.SessionID,
 		})
 		if err != nil {
@@ -257,7 +257,7 @@ func TestPersistExecutionTransitionRefusesHolderOfAnotherActiveLease(t *testing.
 	}
 	holder := *record.Execution.Lease.Holder
 	data, err := json.Marshal(issueops.LeaseHolderIndex{
-		SchemaVersion: issueops.IssueOpsSchemaVersion, LifecycleID: "io-other0000000", Generation: 7,
+		SchemaVersion: issueops.SchemaVersion, LifecycleID: "io-other0000000", Generation: 7,
 		Host: holder.Host, SessionID: holder.SessionID, AgentID: holder.AgentID,
 	})
 	if err != nil {
@@ -275,7 +275,7 @@ func TestPersistExecutionTransitionRefusesHolderOfAnotherActiveLease(t *testing.
 	}
 }
 
-func writeClaimTokenOfSize(t *testing.T, record issueops.IssueOpsRecord, size int) {
+func writeClaimTokenOfSize(t *testing.T, record issueops.Record, size int) {
 	t.Helper()
 	path := claimTokenPath(record)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {

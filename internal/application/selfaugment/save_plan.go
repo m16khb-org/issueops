@@ -10,12 +10,12 @@ import (
 
 type SavePlanDeps struct {
 	Now      func() time.Time
-	Encode   func(contract.SelfAugmentPlanStateSnapshot) ([]byte, error)
-	Write    func(string, string) (state.StateResult, error)
+	Encode   func(contract.PlanStateSnapshot) ([]byte, error)
+	Write    func(string, string) (state.Result, error)
 	StateDir func() string
 }
 
-func SavePlan(result *contract.SelfAugmentPlanResult, key string, deps SavePlanDeps) error {
+func SavePlan(result *contract.PlanResult, key string, deps SavePlanDeps) error {
 	if key == "" {
 		key = "self-augment-latest"
 	}
@@ -28,16 +28,16 @@ func SavePlan(result *contract.SelfAugmentPlanResult, key string, deps SavePlanD
 // SaveStateSnapshot encodes snapshot, writes it under key, and returns the
 // checkpoint the self-augment and self-verify results report. An encode
 // failure has no state directory yet; a write failure names the directory.
-func SaveStateSnapshot[S any](key string, snapshot S, encode func(S) ([]byte, error), write func(string, string) (state.StateResult, error), stateDir func() string) (*contract.SelfAugmentStateCheckpoint, error) {
+func SaveStateSnapshot[S any](key string, snapshot S, encode func(S) ([]byte, error), write func(string, string) (state.Result, error), stateDir func() string) (*contract.StateCheckpoint, error) {
 	b, err := encode(snapshot)
 	if err != nil {
-		return &contract.SelfAugmentStateCheckpoint{OK: false, Key: key, Error: err.Error()}, err
+		return &contract.StateCheckpoint{OK: false, Key: key, Error: err.Error()}, err
 	}
 	written, err := write(key, string(b))
 	if err != nil {
-		return &contract.SelfAugmentStateCheckpoint{OK: false, Key: key, StateDir: stateDir(), Error: err.Error()}, err
+		return &contract.StateCheckpoint{OK: false, Key: key, StateDir: stateDir(), Error: err.Error()}, err
 	}
-	return &contract.SelfAugmentStateCheckpoint{
+	return &contract.StateCheckpoint{
 		OK:       true,
 		Key:      written.Record.Key,
 		StateDir: written.StateDir,

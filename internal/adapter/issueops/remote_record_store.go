@@ -13,12 +13,12 @@ func (s RemoteRecordStore) WithinTransaction(ctx context.Context, id string, fn 
 	return withIssueOpsLock(ctx, s.StateRoot, id, fn)
 }
 
-func (s RemoteRecordStore) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
+func (s RemoteRecordStore) Read(_ context.Context, id string) (model.Record, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 
-func (s RemoteRecordStore) Update(ctx context.Context, id string, transition application.RecordTransition) (model.IssueOpsRecord, error) {
-	var persisted model.IssueOpsRecord
+func (s RemoteRecordStore) Update(ctx context.Context, id string, transition application.RecordTransition) (model.Record, error) {
+	var persisted model.Record
 	err := withIssueOpsLock(ctx, s.StateRoot, id, func(spanCtx context.Context) error {
 		current, err := ReadIssueOps(s.StateRoot, id)
 		if err != nil {

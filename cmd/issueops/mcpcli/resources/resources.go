@@ -10,11 +10,11 @@ import (
 type Config struct {
 	CommandPolicySummary func() map[string]any
 	// RouteProjectDocs는 composition root가 주입한다.
-	RouteProjectDocs func(repoRoot, task string) (projectdocscontract.ProjectDocsRouteResult, error)
+	RouteProjectDocs func(repoRoot, task string) (projectdocscontract.RouteResult, error)
 	// DocsIndex는 composition root가 주입한다.
-	DocsIndex func(root, version string, includeHistory bool) docscontract.DocsIndexResult
+	DocsIndex func(root, version string, includeHistory bool) docscontract.IndexResult
 	// StateList는 composition root가 주입한다.
-	StateList       func() (statecontract.StateListResult, error)
+	StateList       func() (statecontract.ListResult, error)
 	IssueOpsRoot    string
 	Version         string
 	SkillName       string

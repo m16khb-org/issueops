@@ -6,7 +6,7 @@ import (
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-func SchemaEvidenceMissingForPaths(record model.IssueOpsRecord, changed []string, currentFingerprint string) string {
+func SchemaEvidenceMissingForPaths(record model.Record, changed []string, currentFingerprint string) string {
 	evidence := reviewcontract.SchemaGateEvidence{}
 	if recorded := record.SchemaEvidence; recorded != nil {
 		evidence = reviewcontract.SchemaGateEvidence{
@@ -18,7 +18,7 @@ func SchemaEvidenceMissingForPaths(record model.IssueOpsRecord, changed []string
 	return reviewdomain.SchemaEvidenceMissing(reviewdomain.ChangeSetTouchesSchema(changed), evidence, currentFingerprint)
 }
 
-func ObservedSchemaEvidenceMissing(record model.IssueOpsRecord, strict bool, observedPaths []string, currentFingerprint string, observePaths func(model.IssueOpsRecord) []string) string {
+func ObservedSchemaEvidenceMissing(record model.Record, strict bool, observedPaths []string, currentFingerprint string, observePaths func(model.Record) []string) string {
 	if record.Execution == nil {
 		return ""
 	}

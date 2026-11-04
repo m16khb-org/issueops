@@ -8,9 +8,9 @@ import (
 import statecontract "issueops/internal/contract/state"
 
 type Validator struct {
-	StateRead     func(string, string) (statecontract.StateResult, error)
+	StateRead     func(string, string) (statecontract.Result, error)
 	WriteRecord   func(string, string, statecontract.RecordEnvelope) (string, error)
-	WriteSnapshot func(string, string, selfaugment.SelfAugmentStateSnapshot) error
+	WriteSnapshot func(string, string, selfaugment.StateSnapshot) error
 	OpenDatabase  func(string) (StateDatabase, error)
 }
 

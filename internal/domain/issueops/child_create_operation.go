@@ -22,7 +22,7 @@ func ChildRequestDigest(provider, parent, title, body string, labels, assignees 
 	return fmt.Sprintf("%x", sha256.Sum256(payload))
 }
 
-func FindChildOperation(record model.IssueOpsRecord, id, digest string) (model.ChildCreateOperation, bool) {
+func FindChildOperation(record model.Record, id, digest string) (model.ChildCreateOperation, bool) {
 	for _, op := range record.ChildCreateOperations {
 		if id != "" && op.OperationID == id || id == "" && op.Origin == "implicit" && op.RequestSHA256 == digest {
 			return op, true
@@ -31,14 +31,14 @@ func FindChildOperation(record model.IssueOpsRecord, id, digest string) (model.C
 	return model.ChildCreateOperation{}, false
 }
 
-func SealChildOperation(record model.IssueOpsRecord, id, origin, provider, title, body, digest, now string, labels, assignees []string) (model.ChildCreateOperation, string, error) {
+func SealChildOperation(record model.Record, id, origin, provider, title, body, digest, now string, labels, assignees []string) (model.ChildCreateOperation, string, error) {
 	marker := "<!-- issueops:child-create:" + id + " -->"
 	body = strings.TrimSpace(body) + "\n\n" + marker
 	project, err := childProjectAuthority(record.IssueURL, provider)
 	if err != nil {
 		return model.ChildCreateOperation{}, "", err
 	}
-	op := model.ChildCreateOperation{IssueOpsIssueCreateIntent: model.IssueOpsIssueCreateIntent{OperationID: id, Marker: marker, Provider: provider, ProjectAuthority: project, Title: strings.TrimSpace(title), BodySHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(body))), Labels: labels, Assignees: assignees, Status: model.IssueCreateIntentPending, Attempt: 1, StartedAt: now, UpdatedAt: now}, Origin: origin, RequestSHA256: digest, ParentURL: record.IssueURL}
+	op := model.ChildCreateOperation{IssueCreateIntent: model.IssueCreateIntent{OperationID: id, Marker: marker, Provider: provider, ProjectAuthority: project, Title: strings.TrimSpace(title), BodySHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(body))), Labels: labels, Assignees: assignees, Status: model.IssueCreateIntentPending, Attempt: 1, StartedAt: now, UpdatedAt: now}, Origin: origin, RequestSHA256: digest, ParentURL: record.IssueURL}
 	if record.Execution != nil {
 		op.Generation = record.Execution.Lease.Generation
 		op.Holder = record.Execution.Lease.Holder
@@ -53,7 +53,7 @@ func SealChildOperation(record model.IssueOpsRecord, id, origin, provider, title
 	return op, body, nil
 }
 
-func ValidateChildOperationAuthority(record model.IssueOpsRecord, op model.ChildCreateOperation) error {
+func ValidateChildOperationAuthority(record model.Record, op model.ChildCreateOperation) error {
 	project, err := childProjectAuthority(record.IssueURL, op.Provider)
 	if err != nil || record.IssueURL != op.ParentURL || project != op.ProjectAuthority {
 		return fmt.Errorf("child operation parent/project changed")
@@ -70,7 +70,7 @@ func ValidateChildOperationAuthority(record model.IssueOpsRecord, op model.Child
 	return nil
 }
 
-func BeginChildOperation(record model.IssueOpsRecord, request model.ChildCreateOperation, explicitID string) (model.IssueOpsRecord, model.ChildCreateOperation, bool, error) {
+func BeginChildOperation(record model.Record, request model.ChildCreateOperation, explicitID string) (model.Record, model.ChildCreateOperation, bool, error) {
 	if err := ValidateChildOperationAuthority(record, request); err != nil {
 		return record, request, false, err
 	}
@@ -107,7 +107,7 @@ func BeginChildOperation(record model.IssueOpsRecord, request model.ChildCreateO
 	return record, request, true, nil
 }
 
-func RecordChildOutcome(record model.IssueOpsRecord, id, status, url, failure, now string) (model.IssueOpsRecord, error) {
+func RecordChildOutcome(record model.Record, id, status, url, failure, now string) (model.Record, error) {
 	op, ok := FindChildOperation(record, id, "")
 	if !ok {
 		return record, fmt.Errorf("child operation not found")
@@ -132,7 +132,7 @@ func RecordChildOutcome(record model.IssueOpsRecord, id, status, url, failure, n
 	return putChildOperation(record, op), nil
 }
 
-func CompleteChildOperation(record model.IssueOpsRecord, id, url, now string) (model.IssueOpsRecord, error) {
+func CompleteChildOperation(record model.Record, id, url, now string) (model.Record, error) {
 	updated, err := RecordChildOutcome(record, id, model.IssueCreateIntentCompleted, url, "", now)
 	if err != nil {
 		return record, err
@@ -143,10 +143,10 @@ func CompleteChildOperation(record model.IssueOpsRecord, id, url, now string) (m
 			return updated, nil
 		}
 	}
-	return AppendIssueRelation(updated, model.IssueOpsIssueLink{Type: "child", URL: url, Title: op.Title}, now)
+	return AppendIssueRelation(updated, model.IssueLink{Type: "child", URL: url, Title: op.Title}, now)
 }
 
-func RebindChildOperation(record model.IssueOpsRecord, id string) (model.IssueOpsRecord, error) {
+func RebindChildOperation(record model.Record, id string) (model.Record, error) {
 	op, ok := FindChildOperation(record, id, "")
 	if !ok {
 		return record, fmt.Errorf("child operation not found")
@@ -163,7 +163,7 @@ func RebindChildOperation(record model.IssueOpsRecord, id string) (model.IssueOp
 	return putChildOperation(record, op), nil
 }
 
-func putChildOperation(record model.IssueOpsRecord, op model.ChildCreateOperation) model.IssueOpsRecord {
+func putChildOperation(record model.Record, op model.ChildCreateOperation) model.Record {
 	record.ChildCreateOperations = append([]model.ChildCreateOperation(nil), record.ChildCreateOperations...)
 	for i, old := range record.ChildCreateOperations {
 		if old.OperationID == op.OperationID {

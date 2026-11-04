@@ -16,7 +16,7 @@ func TestCatalogClassifiesBuiltinsAndWorkspaceOverrides(t *testing.T) {
 		t.Fatalf("git push classification=%+v", got)
 	}
 	overridden := BuiltinCatalog()
-	overridden.Apply(policycontract.PolicyOverrides{AdditionalReadOnlyCommands: []string{"echo"}})
+	overridden.Apply(policycontract.Overrides{AdditionalReadOnlyCommands: []string{"echo"}})
 	if !overridden.Classify([]string{"echo", "ok"}).ReadOnlyAllowed {
 		t.Fatal("workspace override did not apply")
 	}

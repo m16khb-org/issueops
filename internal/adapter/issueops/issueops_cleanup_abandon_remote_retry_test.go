@@ -68,9 +68,9 @@ func TestCleanupAbandonRemoteFailureRetriesLocalShapes(t *testing.T) {
 		for _, shape := range []string{"paired", "branch", "worktree"} {
 			t.Run(step+"/"+shape, func(t *testing.T) {
 				stateRoot, record, worktree := abandonResidueFixture(t)
-				mutateFinishRecord(t, stateRoot, record.ID, func(r *issueops.IssueOpsRecord) {
+				mutateFinishRecord(t, stateRoot, record.ID, func(r *issueops.Record) {
 					r.IssueURL = "https://github.com/acme/repo/issues/106"
-					r.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/107"}
+					r.RemoteArtifact = &issueops.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/107"}
 				})
 				if shape == "branch" {
 					if code, _, out := preflight.GitCmd(record.Repo, "worktree", "remove", worktree); code != 0 {

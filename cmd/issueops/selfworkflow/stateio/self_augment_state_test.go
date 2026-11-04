@@ -24,7 +24,7 @@ func TestSaveSelfAugmentPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := filepath.Clean(filepath.Join(cwd, "..", "..", "..", ".."))
-	result := planForStateTest(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}, root, "test")
+	result := planForStateTest(augmentcontract.PlanRequest{Cycles: 1, TargetScore: 95}, root, "test")
 	if err := SaveSelfAugmentPlan(&result, "self-augment-plan-test"); err != nil {
 		t.Fatalf("SaveSelfAugmentPlan: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestSaveSelfAugmentPlan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
-	var snapshot augmentcontract.SelfAugmentPlanStateSnapshot
+	var snapshot augmentcontract.PlanStateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("unmarshal saved plan snapshot: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestSaveSelfAugmentPlan(t *testing.T) {
 
 func TestSaveSelfAugmentPlanRejectsInvalidStateKey(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	result := planForStateTest(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 99}, ".", "test")
+	result := planForStateTest(augmentcontract.PlanRequest{Cycles: 1, TargetScore: 99}, ".", "test")
 	if err := SaveSelfAugmentPlan(&result, "!bad-key"); err == nil {
 		t.Fatal("expected self-augment plan save to reject invalid state key")
 	}
@@ -61,6 +61,6 @@ func TestSaveSelfAugmentPlanRejectsInvalidStateKey(t *testing.T) {
 	}
 }
 
-func planForStateTest(req augmentcontract.SelfAugmentPlanRequest, root, version string) augmentcontract.SelfAugmentPlanResult {
+func planForStateTest(req augmentcontract.PlanRequest, root, version string) augmentcontract.PlanResult {
 	return (app.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.NewService().List, StateRead: statestore.NewService().Read, Now: time.Now}).Plan(req, root, version)
 }

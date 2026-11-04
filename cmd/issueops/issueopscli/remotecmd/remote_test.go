@@ -21,7 +21,7 @@ import (
 	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	issuedomain "issueops/internal/domain/issueops"
-	remotedomain "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	port "issueops/internal/port"
 )
 
@@ -66,21 +66,21 @@ func TestRunVerifyArtifactAndRemoteCreateDryRuns(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecord(t)
 	addOriginForTest(t, record.Repo)
-	var records []issueopscontract.IssueOpsRecord
+	var records []issueopscontract.Record
 	var printed []any
 	deps := Deps{
 		PrintJSON: func(value any) error {
 			printed = append(printed, value)
 			return nil
 		},
-		PrintResult: func(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
+		PrintResult: func(record issueopscontract.Record, jsonOut bool, err error) error {
 			if err != nil {
 				return err
 			}
 			records = append(records, record)
 			return nil
 		},
-		VerifyLive: func(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+		VerifyLive: func(req issueopscontract.RemoteArtifactVerificationRequest) error {
 			if req.Provider == "" || req.URL == "" {
 				return errors.New("bad request")
 			}
@@ -205,7 +205,7 @@ func TestRunRenderTemplateAndCreateIssueBodyFileTemplateValidation(t *testing.T)
 
 func TestRunRemoteCreateIssueValidatesTitleBeforeProviderInference(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{
 		Repo:   t.TempDir(),
 		Branch: "1234-title-validation",
 	})
@@ -520,10 +520,10 @@ func TestRemoteHelpersAndBoundaries(t *testing.T) {
 	if err := deps.printError(errors.New("x")); err == nil {
 		t.Fatal("default printError should return input error")
 	}
-	if err := deps.printResult(issueopscontract.IssueOpsRecord{}, false, errors.New("x")); err == nil {
+	if err := deps.printResult(issueopscontract.Record{}, false, errors.New("x")); err == nil {
 		t.Fatal("default printResult should return input error")
 	}
-	if err := deps.verifyLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerificationRequest{}); err == nil {
+	if err := deps.verifyLive(context.Background(), issueopscontract.RemoteArtifactVerificationRequest{}); err == nil {
 		t.Fatal("default verifyLive must fail closed")
 	}
 	var flags repeatedFlag
@@ -545,8 +545,8 @@ func TestRemoteHelpersAndBoundaries(t *testing.T) {
 	if !slices.Equal(assignees, repeatedFlag{"@me", "octocat"}) {
 		t.Fatalf("assignees were not canonicalized: %v", assignees)
 	}
-	item := remotedomain.IssueOpsRemoteScoredItem{ID: "1", URL: "url", Title: "Title", Score: 0.9}
-	if formatIssueOpsRemoteIssueRef(item) != "1 (Title)" || formatIssueOpsRemoteIssueRef(remotedomain.IssueOpsRemoteScoredItem{Title: "Title"}) != "Title" {
+	item := issueopsremote.ScoredItem{ID: "1", URL: "url", Title: "Title", Score: 0.9}
+	if formatIssueOpsRemoteIssueRef(item) != "1 (Title)" || formatIssueOpsRemoteIssueRef(issueopsremote.ScoredItem{Title: "Title"}) != "Title" {
 		t.Fatal("unexpected issue ref formatting")
 	}
 	if firstNonEmptyMain("", " a ") != "a" {
@@ -562,13 +562,13 @@ func TestRemoteHelpersAndBoundaries(t *testing.T) {
 	if _, err := readIssueOpsRemoteScoringRequestFile(bad); err == nil {
 		t.Fatal("bad scoring JSON should fail")
 	}
-	if issuedomain.ResolveRecordProvider(issueopscontract.IssueOpsRecord{BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{Provider: "gitlab"}}) != "gitlab" {
+	if issuedomain.ResolveRecordProvider(issueopscontract.Record{BranchPrepare: &issueopscontract.BranchPrepare{Provider: "gitlab"}}) != "gitlab" {
 		t.Fatal("branch prepare provider should win")
 	}
-	if issuedomain.ResolveRecordProvider(issueopscontract.IssueOpsRecord{RemoteArtifact: &issueopscontract.IssueOpsRemoteArtifactVerification{Provider: "github"}}) != "github" {
+	if issuedomain.ResolveRecordProvider(issueopscontract.Record{RemoteArtifact: &issueopscontract.RemoteArtifactVerification{Provider: "github"}}) != "github" {
 		t.Fatal("remote artifact provider should be used")
 	}
-	if issuedomain.ResolveRecordProvider(issueopscontract.IssueOpsRecord{IssueURL: "https://gitlab.com/acme/repo/-/issues/1"}) != "gitlab" {
+	if issuedomain.ResolveRecordProvider(issueopscontract.Record{IssueURL: "https://gitlab.com/acme/repo/-/issues/1"}) != "gitlab" {
 		t.Fatal("gitlab issue URL should infer provider")
 	}
 	if err := testRemoteCommand().Run(nil, deps); err != nil {
@@ -599,7 +599,7 @@ func TestReflectDevilsAdvocateAcceptsHolderActorFlags(t *testing.T) {
 	}
 }
 
-func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
+func remoteIssueOpsRecord(t *testing.T) issueopscontract.Record {
 	t.Helper()
 	record := remoteIssueOpsRecordWithoutChild(t)
 	var err error
@@ -607,7 +607,7 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	if err != nil {
 		t.Fatalf("LinkIssueOpsChild: %v", err)
 	}
-	record.Phase = issueopscontract.IssueOpsPhasePR
+	record.Phase = issueopscontract.PhasePR
 	record, err = (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
@@ -615,10 +615,10 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	return record
 }
 
-func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRecord {
+func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.Record {
 	t.Helper()
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-cmd"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: repo, Branch: "1234-remote-cmd"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
@@ -626,7 +626,7 @@ func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRec
 	if err != nil {
 		t.Fatalf("LinkIssueOpsIssue: %v", err)
 	}
-	record, err = prepareBranchForTest(issueOpsStateRootForTest(), record.ID, issueopscontract.IssueOpsBranchPrepareRequest{
+	record, err = prepareBranchForTest(issueOpsStateRootForTest(), record.ID, issueopscontract.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/acme/repo/issues/1234",
 		Branch:       record.Branch,
@@ -672,7 +672,7 @@ func gitOnlyPATH(t *testing.T) {
 	t.Setenv("PATH", dir)
 }
 
-func remoteIssueOpsRecordForCreate(t *testing.T) issueopscontract.IssueOpsRecord {
+func remoteIssueOpsRecordForCreate(t *testing.T) issueopscontract.Record {
 	t.Helper()
 	testsupport.IsolateGitConfig(t)
 	repo := t.TempDir()
@@ -685,14 +685,14 @@ func remoteIssueOpsRecordForCreate(t *testing.T) issueopscontract.IssueOpsRecord
 			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 		}
 	}
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-create"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: repo, Branch: "1234-remote-create"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
 	return record
 }
 
-func activateRemoteIssueOpsRecordForCurrentProcess(t *testing.T, record *issueopscontract.IssueOpsRecord) (string, []issueopscontract.NativeProcessReceipt) {
+func activateRemoteIssueOpsRecordForCurrentProcess(t *testing.T, record *issueopscontract.Record) (string, []issueopscontract.NativeProcessReceipt) {
 	t.Helper()
 	ancestry, err := issueopscore.ObserveNativeProcessAncestry(os.Getpid())
 	if err != nil {
@@ -759,11 +759,11 @@ func TestRunRemoteCreateIssueConfirmVerifiesLiveIssue(t *testing.T) {
 	writeFakeGhForCreateIssue(t, binDir)
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	var verified []issueopscontract.IssueOpsRemoteArtifactVerificationRequest
+	var verified []issueopscontract.RemoteArtifactVerificationRequest
 	deps := Deps{
 		PrintJSON:  func(any) error { return nil },
 		PrintError: func(error) error { return nil },
-		VerifyLive: func(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+		VerifyLive: func(req issueopscontract.RemoteArtifactVerificationRequest) error {
 			verified = append(verified, req)
 			return nil
 		},
@@ -799,7 +799,7 @@ func TestRunRemoteCreateIssueConfirmFailsWhenLiveVerificationFails(t *testing.T)
 
 	deps := Deps{
 		PrintError: func(error) error { return nil },
-		VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+		VerifyLive: func(issueopscontract.RemoteArtifactVerificationRequest) error {
 			return errors.New("remote artifact missing verified label(s): bug")
 		},
 	}
@@ -865,7 +865,7 @@ func TestRunRemoteReconcileIssueAdoptsDelayedUniqueVerifiedCandidate(t *testing.
 			printed = append(printed, value)
 			return nil
 		},
-		VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+		VerifyLive: func(issueopscontract.RemoteArtifactVerificationRequest) error {
 			verified++
 			return nil
 		},
@@ -879,12 +879,12 @@ func TestRunRemoteReconcileIssueAdoptsDelayedUniqueVerifiedCandidate(t *testing.
 	if len(printed) != 2 {
 		t.Fatalf("printed %d reconcile results, want 2", len(printed))
 	}
-	preview, ok := printed[0].(issueopscontract.IssueOpsIssueCreateReconcileResult)
+	preview, ok := printed[0].(issueopscontract.IssueCreateReconcileResult)
 	if !ok || !preview.OK || preview.CandidateCount != 1 || preview.CandidateURL == "" || !preview.WouldAdopt ||
 		preview.IssueURL != "" || preview.IssueCreateIntent == nil {
 		t.Fatalf("preview reconcile result = %#v", printed[0])
 	}
-	confirmed, ok := printed[1].(issueopscontract.IssueOpsIssueCreateReconcileResult)
+	confirmed, ok := printed[1].(issueopscontract.IssueCreateReconcileResult)
 	if !ok || !confirmed.OK || confirmed.CandidateCount != 1 || confirmed.CandidateURL == "" || confirmed.WouldAdopt ||
 		confirmed.IssueURL == "" || confirmed.IssueCreateIntent == nil ||
 		confirmed.IssueCreateIntent.Status != issueopscontract.IssueCreateIntentCompleted {
@@ -936,7 +936,7 @@ func TestRunRemoteReconcileIssueRejectsTruncatedAndForeignProjectCandidates(t *t
 	}
 	t.Setenv("RECONCILE_JSON", string(raw))
 	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID, "--confirm"}, Deps{
-		VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+		VerifyLive: func(issueopscontract.RemoteArtifactVerificationRequest) error {
 			t.Fatal("foreign project candidate reached live verification")
 			return nil
 		},
@@ -965,7 +965,7 @@ func TestRunRemoteReconcileIssueRejectsChangedContentBeforeVerification(t *testi
 				if confirm {
 					args = append(args, "--confirm")
 				}
-				err := testRemoteCommand().Run(args, Deps{PrintError: func(error) error { return nil }, VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+				err := testRemoteCommand().Run(args, Deps{PrintError: func(error) error { return nil }, VerifyLive: func(issueopscontract.RemoteArtifactVerificationRequest) error {
 					t.Fatal("modified candidate verified")
 					return nil
 				}})
@@ -988,14 +988,14 @@ func TestRunRemoteReconcileIssueRejectsChangedContentBeforeVerification(t *testi
 	}
 }
 
-func remoteIssueOpsRecordWithCreateIntent(t *testing.T) (issueopscontract.IssueOpsRecord, string) {
+func remoteIssueOpsRecordWithCreateIntent(t *testing.T) (issueopscontract.Record, string) {
 	t.Helper()
 	record := remoteIssueOpsRecordForCreate(t)
 	operationID := "0123456789abcdef0123456789abcdef"
 	marker := "<!-- issueops:issue-create:" + operationID + " -->"
 	body := "Body\n\n" + marker
 	digest := sha256.Sum256([]byte(body))
-	updated, err := newIssueIntentsForTest(issueOpsStateRootForTest()).Begin(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateIntentRequest{
+	updated, err := newIssueIntentsForTest(issueOpsStateRootForTest()).Begin(context.Background(), record.ID, issueopscontract.IssueCreateIntentRequest{
 		OperationID:      operationID,
 		Provider:         "github",
 		ProjectAuthority: "github.com/acme/repo",
@@ -1051,7 +1051,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 	t.Run("merge verification not configured", func(t *testing.T) {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		record := remoteIssueOpsRecord(t)
-		record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+		record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
@@ -1067,7 +1067,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 	t.Run("merge readback failure refuses to continue", func(t *testing.T) {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		record := remoteIssueOpsRecord(t)
-		record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+		record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
@@ -1075,7 +1075,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
-		deps := Deps{VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
+		deps := Deps{VerifyMerged: func(issueopscontract.RemoteArtifactVerification) error {
 			return errors.New("connection reset")
 		}}
 		_, _, _, err = testRemoteCommand().Operations.ReflectRemoteCompletion(context.Background(), testRemoteCommand().Operations.IssueOpsStateRoot(), record.ID, "", "", false, deps.VerifyMerged)
@@ -1086,7 +1086,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 	t.Run("verified record resolves provider", func(t *testing.T) {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		record := remoteIssueOpsRecord(t)
-		record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+		record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
@@ -1094,7 +1094,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
-		deps := Deps{VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
+		deps := Deps{VerifyMerged: func(issueopscontract.RemoteArtifactVerification) error {
 			return nil
 		}}
 		got, result, _, err := testRemoteCommand().Operations.ReflectRemoteCompletion(context.Background(), testRemoteCommand().Operations.IssueOpsStateRoot(), record.ID, "", "", false, deps.VerifyMerged)
@@ -1119,12 +1119,12 @@ func TestRemoteReflectReviewPreviewAndConfirmUseApplication(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", root)
 	root = issueOpsStateRootForTest()
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "64-review-cli"})
+	record, err := startIssueOpsFixture(root, issueopscontract.StartRequest{Repo: repo, Branch: "64-review-cli"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/64"
-	record.DevilsAdvocateReview = &issueopscontract.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"finding from review"}, RecordedAt: "then"}
+	record.DevilsAdvocateReview = &issueopscontract.DevilsAdvocateReview{Verdict: "stop", Findings: []string{"finding from review"}, RecordedAt: "then"}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}

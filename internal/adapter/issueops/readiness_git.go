@@ -54,10 +54,10 @@ func NewReadinessGitObservations(run func(string, ...string) (int, string, strin
 	return ReadinessGit{Run: observe, Output: output}, reset
 }
 
-func (ReadinessGit) Root(record model.IssueOpsRecord) string {
+func (ReadinessGit) Root(record model.Record) string {
 	return readinesspaths.StrictGitRoot(record)
 }
-func (g ReadinessGit) Head(record model.IssueOpsRecord) string {
+func (g ReadinessGit) Head(record model.Record) string {
 	root := g.Root(record)
 	if root == "" {
 		return ""

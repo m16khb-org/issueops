@@ -165,7 +165,7 @@ func Inspect(root string, deps InspectDeps) contract.InspectResult {
 	branchCandidateCount, highBranchCount := countBranchFunctions(branchFunctions)
 	signals := evidence.signals(lowCoverage, branchCandidateCount, highBranchCount)
 	findings := policy.CollectQualityFindings(warnings, lowCoverage, branchFunctions, auditItems, evidence.pioneer.value)
-	collectionStatus, healthStatus, gateStatus := policy.QualityStatuses(warnings, findings)
+	collectionStatus, healthStatus, gateStatus := policy.Statuses(warnings, findings)
 	return contract.InspectResult{
 		OK:               collectionStatus == contract.CollectionStatusOK,
 		CollectionStatus: collectionStatus,

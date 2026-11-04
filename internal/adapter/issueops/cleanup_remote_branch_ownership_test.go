@@ -26,7 +26,7 @@ func TestCleanupRemoteBranchExcludesOtherExecutorsAndWriters(t *testing.T) {
 			}
 			observed := false
 			second := remoteBranchDeps(git)
-			second.VerifyMergedArtifact = func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+			second.VerifyMergedArtifact = func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 				observed = true
 				return model.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: remoteBranchTestHeadOID}, nil
 			}
@@ -34,7 +34,7 @@ func TestCleanupRemoteBranchExcludesOtherExecutorsAndWriters(t *testing.T) {
 				t.Errorf("second remote executor observed active cycle: observed=%v err=%v", observed, err)
 			}
 			finish := finishExecutorForTests(root, finishDeps(&fakeFinishGit{branchOID: "abc123"}))
-			finish.Observe = func(_ context.Context, _ model.IssueOpsRecord, req model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
+			finish.Observe = func(_ context.Context, _ model.Record, req model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
 				observed = true
 				return req, nil
 			}
@@ -101,7 +101,7 @@ func TestCleanupRemoteBranchRecoversOnlyItsOwnCrashedAttempt(t *testing.T) {
 		for _, operation := range []model.CleanupOperation{model.CleanupOperationRemoteBranch, model.CleanupOperationFinish} {
 			t.Run(fmt.Sprintf("%s/absent=%v", operation, absent), func(t *testing.T) {
 				root, record := remoteBranchTestRecord(t)
-				record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z"}
+				record.CleanupAttempt = &model.CleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z"}
 				_, raw, err := encodeIssueOpsRecord(record)
 				if err != nil {
 					t.Fatal(err)
@@ -120,7 +120,7 @@ func TestCleanupRemoteBranchRecoversOnlyItsOwnCrashedAttempt(t *testing.T) {
 				deps := remoteBranchDeps(git)
 				observed := false
 				verify := deps.VerifyMergedArtifact
-				deps.VerifyMergedArtifact = func(a model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+				deps.VerifyMergedArtifact = func(a model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 					observed = true
 					return verify(a)
 				}
@@ -196,14 +196,14 @@ func TestCleanupFinishRejectsRemoteAttemptBeforeObservation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attempt := model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationRemoteBranch, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	attempt := model.CleanupAttempt{Operation: model.CleanupOperationRemoteBranch, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	armed, err := store.Arm(context.Background(), snapshot, attempt)
 	if err != nil {
 		t.Fatal(err)
 	}
 	executor := finishExecutorForTests(root, finishDeps(&fakeFinishGit{branchOID: "abc123"}))
 	observed := false
-	executor.Observe = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
+	executor.Observe = func(_ context.Context, _ model.Record, r model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
 		observed = true
 		return r, nil
 	}

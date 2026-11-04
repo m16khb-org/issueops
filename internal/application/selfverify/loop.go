@@ -29,19 +29,19 @@ type LoopRequest struct {
 
 type LoopDeps struct {
 	IssueOpsRoot   func() string
-	StepDeps       SelfVerifyStepDeps
+	StepDeps       StepDeps
 	FailedStep     func(string, error) selfverifycontract.StepResult
 	PrintStep      func(selfverifycontract.StepResult)
 	Printf         func(string, ...any) (int, error)
-	Summarize      func(selfaugmentcontract.SelfAugmentResult, float64) selfaugmentcontract.SelfAugmentSummary
+	Summarize      func(selfaugmentcontract.Result, float64) selfaugmentcontract.Summary
 	MkdirTemp      func() (string, error)
 	RemoveAll      func(string) error
 	TempBinaryPath func(string) string
 	Now            func() time.Time
 }
 
-func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root string) selfaugmentcontract.SelfAugmentResult {
-	return selfaugmentcontract.SelfAugmentResult{
+func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root string) selfaugmentcontract.Result {
+	return selfaugmentcontract.Result{
 		LoopKind:     "self_verification",
 		KoreanName:   selfaugmentcontract.SelfVerificationKoreanName,
 		Iterations:   iterations,
@@ -61,7 +61,7 @@ func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root str
 	}
 }
 
-func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAugmentResult, error) {
+func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.Result, error) {
 	const iterations = 1
 	started := deps.Now()
 	result := NewLoopResult(iterations, request.BaseSeed, request.TargetScore, deps.IssueOpsRoot())
@@ -75,7 +75,7 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 	if request.Verbose {
 		_, _ = deps.Printf("\n=== Self-verification evidence pass seed=%d ===\n", seed)
 	}
-	run := selfaugmentcontract.SelfAugmentIteration{Iteration: iteration, Seed: seed}
+	run := selfaugmentcontract.Iteration{Iteration: iteration, Seed: seed}
 	tempDir, err := deps.MkdirTemp()
 	if err != nil {
 		run.Steps = append(run.Steps, deps.FailedStep("create temp workspace", err))
@@ -120,7 +120,7 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 }
 
 // runPlannedSteps executes the planned steps in order, appending each result to run.Steps, and reports whether any step failed and the first failure.
-func runPlannedSteps(request LoopRequest, deps LoopDeps, loopKind string, plannedSteps []SelfVerifyPlannedStep, seed int64, iterations, iteration int, run *selfaugmentcontract.SelfAugmentIteration) (bool, selfverifycontract.StepResult) {
+func runPlannedSteps(request LoopRequest, deps LoopDeps, loopKind string, plannedSteps []PlannedStep, seed int64, iterations, iteration int, run *selfaugmentcontract.Iteration) (bool, selfverifycontract.StepResult) {
 	failed := false
 	var firstFailure selfverifycontract.StepResult
 	for index, plannedStep := range plannedSteps {

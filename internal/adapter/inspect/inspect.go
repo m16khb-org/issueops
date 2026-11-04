@@ -24,7 +24,7 @@ type Observer struct {
 	OpencodeConfigRoot func(home string) string
 }
 
-func (observer Observer) Inspect(root, target, home, version, skillName string, options inspectcontract.Options) inspectcontract.InspectInfo {
+func (observer Observer) Inspect(root, target, home, version, skillName string, options inspectcontract.Options) inspectcontract.Info {
 	codexSkill := filepath.Join(home, ".codex", "skills", skillName)
 	claudeSkill := filepath.Join(home, ".claude", "skills", skillName)
 	projectClaudeSkill := filepath.Join(root, ".claude", "skills", skillName)
@@ -38,7 +38,7 @@ func (observer Observer) Inspect(root, target, home, version, skillName string, 
 	skills := ListSkills(root, skillName)
 	hosts := observer.observeHosts(root, home, skillName, options)
 	wg.Wait()
-	return inspectcontract.InspectInfo{
+	return inspectcontract.Info{
 		OK:           true,
 		Version:      version,
 		IssueOpsRoot: root,

@@ -22,7 +22,7 @@ const (
 func ValidateForSelfVerifyWithScope(root, baseRef string) (verifycontract.StepResult, bool) {
 	deps := defaultDeps()
 	plan := PlanWithScope(root, baseRef)
-	deps.Plan = func(string) riskqacontract.RiskQATierPlan { return plan }
+	deps.Plan = func(string) riskqacontract.TierPlan { return plan }
 	return ValidateWithDeps(root, deps), riskqadomain.CoversFullGoTest(plan)
 }
 

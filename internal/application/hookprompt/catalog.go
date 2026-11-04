@@ -13,10 +13,10 @@ import (
 // renderers append that to each view only when something was omitted, so a
 // catalog without omissions renders unchanged.
 type CatalogService struct {
-	DiscoverReport        func(string) ([]projectdoc.ProjectDocCatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats)
-	FormatCompact         func([]projectdoc.ProjectDocCatalogEntry) string
+	DiscoverReport        func(string) ([]projectdoc.CatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats)
+	FormatCompact         func([]projectdoc.CatalogEntry) string
 	RepoName              func(string) string
-	FormatUserView        func(repoName string, docs []projectdoc.ProjectDocCatalogEntry) string
+	FormatUserView        func(repoName string, docs []projectdoc.CatalogEntry) string
 	FormatCompactOmission func(projectdoc.CatalogOmissions) string
 	FormatUserOmission    func(projectdoc.CatalogOmissions) string
 }

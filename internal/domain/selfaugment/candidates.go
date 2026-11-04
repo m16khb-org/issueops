@@ -2,8 +2,8 @@ package selfaugment
 
 import contract "issueops/internal/contract/selfaugment"
 
-func Candidates(signals contract.SelfAugmentRepoSignals, qualityCandidates []contract.SelfAugmentCandidate) []contract.SelfAugmentCandidate {
-	base := []contract.SelfAugmentCandidate{
+func Candidates(signals contract.RepoSignals, qualityCandidates []contract.Candidate) []contract.Candidate {
+	base := []contract.Candidate{
 		{
 			ID: "loop-taxonomy-score-gates", Title: "Separate self-verification and self-augmentation loops and enforce >95 exit gates", Category: "quality",
 			Impact: 99, Feasibility: 98, Novelty: 93, Risk: 8,

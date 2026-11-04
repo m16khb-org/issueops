@@ -34,7 +34,7 @@ func runGuard(args []string) error {
 }
 
 func runQuality(args []string) error {
-	return qualitycli.Run(args, newQualityDependencies(issueOpsRoot(), statestore.StateDir()))
+	return qualitycli.Run(args, newQualityDependencies(issueOpsRoot(), statestore.Dir()))
 }
 
 func runInspect(args []string) error {

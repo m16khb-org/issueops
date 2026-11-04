@@ -17,12 +17,12 @@ const (
 	hostOpencodeStep = `{"type":"step_finish","sessionID":"cli-sess","part":{"id":"prt_cli","messageID":"cli-msg","type":"step-finish","cost":0,"tokens":{"input":7,"output":2,"reasoning":1,"cache":{"read":0,"write":0}}}}` + "\n"
 )
 
-func runTraceAnalyzeJSON(t *testing.T, args ...string) (trace.TraceAnalyzeResult, string, error) {
+func runTraceAnalyzeJSON(t *testing.T, args ...string) (trace.AnalyzeResult, string, error) {
 	t.Helper()
 	out, err := captureTraceGuardPolicyStdout(t, func() error {
 		return RunTrace(append([]string{"analyze"}, args...))
 	})
-	var result trace.TraceAnalyzeResult
+	var result trace.AnalyzeResult
 	if strings.TrimSpace(out) != "" {
 		if decodeErr := json.Unmarshal([]byte(out), &result); decodeErr != nil {
 			t.Fatalf("decode trace analyze JSON: %v\n%s", decodeErr, out)

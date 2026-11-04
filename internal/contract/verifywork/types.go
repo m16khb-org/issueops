@@ -7,16 +7,16 @@ import (
 )
 
 type Result struct {
-	OK                bool                              `json:"ok"`
-	Kind              string                            `json:"kind"`
-	Repo              string                            `json:"repo"`
-	GitStatus         string                            `json:"git_status,omitempty"`
-	Preflight         preflightcontract.PreflightResult `json:"preflight"`
-	Guard             guardcontract.GuardCheckResult    `json:"guard"`
-	Command           *policydomain.CommandRunResult    `json:"command,omitempty"`
-	EvidenceMatrix    []EvidenceItem                    `json:"evidence_matrix"`
-	SuggestedCommands []SuggestedCommand                `json:"suggested_commands"`
-	Warnings          []string                          `json:"warnings"`
+	OK                bool                           `json:"ok"`
+	Kind              string                         `json:"kind"`
+	Repo              string                         `json:"repo"`
+	GitStatus         string                         `json:"git_status,omitempty"`
+	Preflight         preflightcontract.Result       `json:"preflight"`
+	Guard             guardcontract.CheckResult      `json:"guard"`
+	Command           *policydomain.CommandRunResult `json:"command,omitempty"`
+	EvidenceMatrix    []EvidenceItem                 `json:"evidence_matrix"`
+	SuggestedCommands []SuggestedCommand             `json:"suggested_commands"`
+	Warnings          []string                       `json:"warnings"`
 }
 
 type EvidenceItem struct {

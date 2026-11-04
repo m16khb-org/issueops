@@ -20,16 +20,16 @@ func TestServicePreservesCheckOrderAndFailureEvidence(t *testing.T) {
 					calls = append(calls, "git")
 					return "?? draft\n", errors.New("exit status 128")
 				},
-				Preflight: func(root string) preflight.PreflightResult {
+				Preflight: func(root string) preflight.Result {
 					calls = append(calls, "preflight")
-					return preflight.PreflightResult{OK: false, Path: root}
+					return preflight.Result{OK: false, Path: root}
 				},
-				Guard: func(req guard.GuardCheckRequest) guard.GuardCheckResult {
+				Guard: func(req guard.CheckRequest) guard.CheckResult {
 					calls = append(calls, "guard")
 					if req.RepoRoot != "." || !req.All || req.Staged {
 						t.Fatalf("guard request: %+v", req)
 					}
-					return guard.GuardCheckResult{OK: false, Mode: "all"}
+					return guard.CheckResult{OK: false, Mode: "all"}
 				},
 				RunCommand: func(req policy.CommandPolicyRequest) policy.CommandRunResult {
 					calls = append(calls, "command")

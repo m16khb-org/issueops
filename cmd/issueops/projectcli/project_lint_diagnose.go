@@ -24,7 +24,7 @@ func runProjectLintDiagnose(service app.Service, args []string) error {
 		return fmt.Errorf("missing command to run. Usage: issueops project lint-diagnose [flags] -- <command_to_run...>")
 	}
 
-	result, err := service.Diagnose(lintdiagnosecontract.LintDiagnoseRequest{
+	result, err := service.Diagnose(lintdiagnosecontract.Request{
 		RepoRoot:    *repo,
 		CommandArgv: commandArgv,
 	})

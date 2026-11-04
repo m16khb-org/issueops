@@ -20,20 +20,6 @@ type CommandPolicyRequest struct {
 	AuditLogID     string   `json:"audit_log_id,omitempty"`
 }
 
-// PolicyTier is a host-neutral synthesis of the scattered capability flags
-// (write/network/shell) into one named privilege envelope, derived from
-// Qwen Code's tiered-approval model. It classifies what a request is permitted
-// to attempt; it does not decide whether a specific command is allowed (that
-// stays in DenyReasons). The YOLO/auto-escalation tiers are deliberately
-// excluded so a single approval never raises the whole session's safety level.
-
-const (
-	PolicyTierReadOnly       = TierReadOnly
-	PolicyTierWorkspaceWrite = TierWorkspaceWrite
-	PolicyTierNetworkAccess  = TierNetworkAccess
-	PolicyTierShellException = TierShellException
-)
-
 type CommandPolicyEvaluation struct {
 	OK             bool     `json:"ok"`
 	Allowed        bool     `json:"allowed"`
@@ -79,11 +65,11 @@ type CommandRunResult struct {
 	Policy     CommandPolicyEvaluation `json:"policy"`
 }
 
-type PolicyDeniedError struct {
+type DeniedError struct {
 	Reasons []string
 }
 
-func (e PolicyDeniedError) Error() string {
+func (e DeniedError) Error() string {
 	if len(e.Reasons) == 0 {
 		return "command denied by policy"
 	}
@@ -91,6 +77,6 @@ func (e PolicyDeniedError) Error() string {
 }
 
 func IsPolicyDenied(err error) bool {
-	_, ok := err.(PolicyDeniedError) //nolint:errorlint // exit code 3 maps only a direct policy denial; TestIsPolicyDeniedMatchesDirectErrorOnly pins it
+	_, ok := err.(DeniedError) //nolint:errorlint // exit code 3 maps only a direct policy denial; TestIsPolicyDeniedMatchesDirectErrorOnly pins it
 	return ok
 }

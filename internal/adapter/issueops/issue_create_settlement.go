@@ -35,8 +35,8 @@ func HoldIssueCreate(ctx context.Context, stateRoot, repo, title string) (contex
 // with its title is running, and the provider's newest issues (a listing, not
 // the eventually consistent search) carry no issue with its marker. Any
 // observation failure or an indeterminate listing answers false.
-func IssueCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.IssueOpsRecord) (bool, error) {
-	return func(ctx context.Context, record model.IssueOpsRecord) (bool, error) {
+func IssueCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.Record) (bool, error) {
+	return func(ctx context.Context, record model.Record) (bool, error) {
 		if record.IssueCreateIntent == nil {
 			return false, nil
 		}
@@ -46,13 +46,13 @@ func IssueCreateCrashSettlement(stateRoot string, resolve func(string) (port.Iss
 
 // ChildCreateCrashSettlement is the same proof for a pending child create
 // (the child carries the same marker and sealed title).
-func ChildCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.IssueOpsRecord, model.ChildCreateOperation) (bool, error) {
-	return func(ctx context.Context, record model.IssueOpsRecord, op model.ChildCreateOperation) (bool, error) {
-		return settleIssueCreate(ctx, stateRoot, resolve, now, record, op.IssueOpsIssueCreateIntent, "task")
+func ChildCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.Record, model.ChildCreateOperation) (bool, error) {
+	return func(ctx context.Context, record model.Record, op model.ChildCreateOperation) (bool, error) {
+		return settleIssueCreate(ctx, stateRoot, resolve, now, record, op.IssueCreateIntent, "task")
 	}
 }
 
-func settleIssueCreate(ctx context.Context, stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time, record model.IssueOpsRecord, intent model.IssueOpsIssueCreateIntent, issueType string) (bool, error) {
+func settleIssueCreate(ctx context.Context, stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time, record model.Record, intent model.IssueCreateIntent, issueType string) (bool, error) {
 	if intent.Status != model.IssueCreateIntentPending {
 		return false, nil
 	}

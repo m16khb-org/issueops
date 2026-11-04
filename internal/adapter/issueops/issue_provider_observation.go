@@ -3,7 +3,7 @@ package issueops
 import (
 	"context"
 	"fmt"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"strings"
 )
 
@@ -24,7 +24,7 @@ func InferProviderFromRepoRemotes(repo string) (string, error) {
 			urls = append(urls, fields[1])
 		}
 	}
-	return remote.ProviderFromRemoteURLs(urls)
+	return issueopsremote.ProviderFromRemoteURLs(urls)
 }
 
 func ResolveProviderProjectAuthority(repo, provider string) (string, error) {
@@ -32,7 +32,7 @@ func ResolveProviderProjectAuthority(repo, provider string) (string, error) {
 	if code != 0 {
 		return "", fmt.Errorf("cannot determine project authority from origin remote")
 	}
-	projectKey, err := remote.ProjectKeyFromGitRemoteURL(strings.TrimSpace(out), provider)
+	projectKey, err := issueopsremote.ProjectKeyFromGitRemoteURL(strings.TrimSpace(out), provider)
 	if err != nil {
 		return "", fmt.Errorf("cannot determine project authority: %w", err)
 	}

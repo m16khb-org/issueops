@@ -224,14 +224,14 @@ func TestRemoteSyncRefusesCriticalAndReportsLiveReadability(t *testing.T) {
 func TestReflectCompletionRequiresReadableResult(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecord(t)
-	record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/7"}
+	record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/7"}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", t.TempDir())
 	verified := 0
 	deps := Deps{
-		VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error { verified++; return nil },
+		VerifyMerged: func(issueopscontract.RemoteArtifactVerification) error { verified++; return nil },
 		PrintJSON:    func(any) error { return nil },
 		PrintError:   func(error) error { return nil },
 	}

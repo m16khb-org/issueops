@@ -87,9 +87,9 @@ func (f fakeHierarchyProvider) VerifyChildHierarchy(context.Context, port.IssueP
 
 // bodySyncCreateIntent is a complete, record-valid create intent whose digest
 // stands in for "the body the harness last wrote".
-func bodySyncCreateIntent(url, sha string) *issueops.IssueOpsIssueCreateIntent {
+func bodySyncCreateIntent(url, sha string) *issueops.IssueCreateIntent {
 	const operationID = "0123456789abcdef0123456789abcdef"
-	return &issueops.IssueOpsIssueCreateIntent{
+	return &issueops.IssueCreateIntent{
 		OperationID:      operationID,
 		Marker:           "<!-- issueops:issue-create:" + operationID + " -->",
 		Provider:         "github",
@@ -104,7 +104,7 @@ func bodySyncCreateIntent(url, sha string) *issueops.IssueOpsIssueCreateIntent {
 	}
 }
 
-func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRecord, actor issueops.IssueOpsActor) {
+func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.Record, actor issueops.Actor) {
 	t.Helper()
 	stateRoot = filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
@@ -112,7 +112,7 @@ func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRe
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "412-body-sync"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "412-body-sync"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRe
 	return stateRoot, record, issueOpsActorForTest(worktree)
 }
 
-func saveBodySyncRecord(t *testing.T, stateRoot string, record issueops.IssueOpsRecord) {
+func saveBodySyncRecord(t *testing.T, stateRoot string, record issueops.Record) {
 	t.Helper()
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
 		_, err := writeIssueOps(context.Background(), stateRoot, record)
@@ -318,7 +318,7 @@ func TestSyncPullRequestBodyFencesGenerationAndLifecycle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stateRoot, record, actor := bodySyncFixture(t)
-			record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+			record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 				Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 				VerifiedAt: "2026-07-01T00:00:00Z",
 			}
@@ -342,7 +342,7 @@ func TestSyncPullRequestBodyRejectsForeignURL(t *testing.T) {
 	t.Parallel()
 
 	stateRoot, record, actor := bodySyncFixture(t)
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9", VerifiedAt: "2026-07-01T00:00:00Z",
 	}
 	saveBodySyncRecord(t, stateRoot, record)
@@ -472,10 +472,10 @@ func TestRemoteSyncRefusesCriticalAndReportsLiveReadability(t *testing.T) {
 	}
 }
 
-func syncBodyForTest(ctx context.Context, stateRoot, id string, command bodysynccontract.Command, provider port.IssueProvider, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, bodysynccontract.Result, error) {
+func syncBodyForTest(ctx context.Context, stateRoot, id string, command bodysynccontract.Command, provider port.IssueProvider, actor issueops.Actor) (issueops.Record, bodysynccontract.Result, error) {
 	gateway, err := NewBodySyncProvider(provider)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
+		return issueops.Record{OK: false}, bodysynccontract.Result{}, err
 	}
 	return application.NewService(BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, liveTestVerifier()), time.Now).Sync(ctx, id, command, actor)
 }

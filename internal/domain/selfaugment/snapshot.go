@@ -6,7 +6,7 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func ValidateSummarySnapshot(key string, snapshot contract.SelfAugmentStateSnapshot) error {
+func ValidateSummarySnapshot(key string, snapshot contract.StateSnapshot) error {
 	if snapshot.Kind != SelfVerificationSummaryKind {
 		return fmt.Errorf("state key %q contains kind %q, want %s", key, snapshot.Kind, SelfVerificationSummaryKind)
 	}

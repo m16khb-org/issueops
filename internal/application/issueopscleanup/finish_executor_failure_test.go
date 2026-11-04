@@ -21,7 +21,7 @@ func (r loadFailingFinishRecords) Load(context.Context, string) (model.CleanupSn
 }
 
 func withInventory(executor *FinishExecutor, inventory model.CleanupFinishInventory, occupants ...model.CleanupWorkspaceProcess) {
-	executor.Plan = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
+	executor.Plan = func(_ context.Context, _ model.Record, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 		return inventory, model.CleanupFinishResult{OK: true, ID: r.ID, WorkspaceProcesses: occupants}
 	}
 }
@@ -42,17 +42,17 @@ func TestFinishExecutorRefusesBeforeArmingWhenEvidenceIsMissing(t *testing.T) {
 			e.Records = loadFailingFinishRecords{r, loadFailure}
 		}, wantIs: loadFailure},
 		{name: "another cleanup owns the cycle", req: finishApplyRequest(), configure: func(_ *FinishExecutor, r *finishTestRecords) {
-			r.snapshot.Record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationAbandon}
+			r.snapshot.Record.CleanupAttempt = &model.CleanupAttempt{Operation: model.CleanupOperationAbandon}
 		}, wantErr: "cleanup abandon owns this cycle"},
 		{name: "plan reports missing gates", req: finishApplyRequest(), configure: func(e *FinishExecutor, _ *finishTestRecords) {
-			e.Plan = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
+			e.Plan = func(_ context.Context, _ model.Record, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 				return model.CleanupFinishInventory{}, model.CleanupFinishResult{OK: true, ID: r.ID, Missing: []string{"completion_reflected", "branch_oid"}}
 			}
 		}, wantErr: "cleanup finish is not ready; unmet gates: completion_reflected, branch_oid"},
 		// An implementation session that lives in the worktree got only the
 		// gate names; the refusal says where finish has to run.
 		{name: "requester inside the worktree", req: finishApplyRequest(), configure: func(e *FinishExecutor, _ *finishTestRecords) {
-			e.Plan = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
+			e.Plan = func(_ context.Context, _ model.Record, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 				return model.CleanupFinishInventory{}, model.CleanupFinishResult{OK: true, ID: r.ID, Missing: []string{"cwd_outside_worktree", "requester_occupies_worktree"}}
 			}
 		}, wantErr: "run it from a session started in the source checkout"},
@@ -62,8 +62,8 @@ func TestFinishExecutorRefusesBeforeArmingWhenEvidenceIsMissing(t *testing.T) {
 		{name: "apply without confirm", req: model.CleanupFinishRequest{ID: "io-finish", Apply: true, Fingerprint: "fingerprint"}, wantErr: "requires --confirm"},
 		{name: "stale fingerprint", req: model.CleanupFinishRequest{ID: "io-finish", Apply: true, Confirm: true, Fingerprint: "old"}, wantErr: "stale cleanup fingerprint"},
 		{name: "attempt token unavailable", req: finishApplyRequest(), configure: func(e *FinishExecutor, _ *finishTestRecords) {
-			e.NewAttempt = func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
-				return model.IssueOpsCleanupAttempt{}, attemptFailure
+			e.NewAttempt = func(model.CleanupOperation) (model.CleanupAttempt, error) {
+				return model.CleanupAttempt{}, attemptFailure
 			}
 		}, wantIs: attemptFailure},
 	}
@@ -95,7 +95,7 @@ func TestFinishExecutorRefusesBeforeArmingWhenEvidenceIsMissing(t *testing.T) {
 func TestFinishExecutorWrapsObservationFailuresAndSuggestsRemedy(t *testing.T) {
 	observed := errors.New("provider down")
 	executor, _, _, _ := finishExecutorFixture(t)
-	executor.Observe = func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
+	executor.Observe = func(context.Context, model.Record, model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
 		return model.CleanupFinishRequest{}, observed
 	}
 	_, err := executor.Run(t.Context(), finishApplyRequest())
@@ -104,7 +104,7 @@ func TestFinishExecutorWrapsObservationFailuresAndSuggestsRemedy(t *testing.T) {
 	}
 
 	executor, _, _, _ = finishExecutorFixture(t)
-	executor.Plan = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
+	executor.Plan = func(_ context.Context, _ model.Record, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 		return model.CleanupFinishInventory{}, model.CleanupFinishResult{ID: r.ID, Missing: []string{"completion_reflected"}}
 	}
 	result, err := executor.Run(t.Context(), model.CleanupFinishRequest{ID: "io-finish"})
@@ -115,7 +115,7 @@ func TestFinishExecutorWrapsObservationFailuresAndSuggestsRemedy(t *testing.T) {
 
 func TestFinishExecutorSurfacesMaterialWarningInPreview(t *testing.T) {
 	executor, _, _, _ := finishExecutorFixture(t)
-	executor.MaterialWarning = func(model.IssueOpsRecord) string { return "uncommitted notes in worktree" }
+	executor.MaterialWarning = func(model.Record) string { return "uncommitted notes in worktree" }
 	result, err := executor.Run(t.Context(), model.CleanupFinishRequest{ID: "io-finish"})
 	if err != nil || !slices.Equal(result.Warnings, []string{"uncommitted notes in worktree"}) {
 		t.Fatalf("result=%+v err=%v", result, err)

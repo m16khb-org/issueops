@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type ProjectDocCatalogEntry struct {
+type CatalogEntry struct {
 	RelPath     string `json:"rel_path"`
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`

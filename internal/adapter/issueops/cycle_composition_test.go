@@ -24,46 +24,46 @@ func testCycleReadinessWithChanges(changes implementation.Reader) cycle.Readines
 		ObserveChanges: observer.Observe, ChangedPaths: changes.ChangedPaths,
 		ChildMissing: (delegation.ChildGates{Scan: ScanReadableIssueOps}).PRMissing}
 }
-func testCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {
+func testCyclePhaseService(actor *model.Actor) cycle.PhaseService {
 	store := NewReviewMutationStore(actor)
 	return cycle.PhaseService{WriteMaterials: (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write, Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: testCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: testReadinessGit().Head, Fingerprint: testChangeReader().ChangeFingerprint}}
 }
 
-func IssueOpsAISlopCleanReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func IssueOpsAISlopCleanReadiness(record model.Record) model.Readiness {
 	return testCycleReadiness().AISlopClean(record)
 }
-func IssueOpsPRReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func IssueOpsPRReadiness(record model.Record) model.Readiness {
 	return testCycleReadiness().PR(record)
 }
-func IssueOpsLocalPRReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func IssueOpsLocalPRReadiness(record model.Record) model.Readiness {
 	ready, _ := testCycleReadiness().ObserveLocalPR(record)
 	return ready
 }
-func IssueOpsStrictPRReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func IssueOpsStrictPRReadiness(record model.Record) model.Readiness {
 	readiness := testCycleReadiness()
-	readiness.ChildMissing = func(string, model.IssueOpsRecord) ([]string, []string) { return nil, nil }
+	readiness.ChildMissing = func(string, model.Record) ([]string, []string) { return nil, nil }
 	return readiness.StrictPRWithState("", record)
 }
-func IssueOpsStrictPRReadinessWithState(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
+func IssueOpsStrictPRReadinessWithState(root string, record model.Record) model.Readiness {
 	return testCycleReadiness().StrictPRWithState(root, record)
 }
-func IssueOpsPhaseCompletion(record model.IssueOpsRecord, phase model.IssueOpsPhase) model.IssueOpsReadiness {
+func IssueOpsPhaseCompletion(record model.Record, phase model.Phase) model.Readiness {
 	return testCycleReadiness().Completion(record, phase)
 }
 
-func AdvanceIssueOpsPhase(root, id, to string) (model.IssueOpsRecord, error) {
+func AdvanceIssueOpsPhase(root, id, to string) (model.Record, error) {
 	record, _, err := testCyclePhaseService(nil).AdvanceReport(root, id, to)
 	return record, err
 }
-func AdvanceIssueOpsPhaseWithActor(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func AdvanceIssueOpsPhaseWithActor(root, id, to string, actor model.Actor) (model.Record, error) {
 	record, _, err := testCyclePhaseService(&actor).AdvanceReport(root, id, to)
 	return record, err
 }
 
-func ObserveIssueOpsLocalPRReadiness(record model.IssueOpsRecord) (model.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {
+func ObserveIssueOpsLocalPRReadiness(record model.Record) (model.Readiness, reviewcontract.LocalChangeObservation) {
 	return testCycleReadiness().ObserveLocalPR(record)
 }
 
-func IssueOpsImplementationReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func IssueOpsImplementationReadiness(record model.Record) model.Readiness {
 	return testCycleReadiness().Implementation(record)
 }

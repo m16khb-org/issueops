@@ -51,7 +51,7 @@ func TestMCPRecordRootsUnknownLoopDoesNotCreateLoopStore(t *testing.T) {
 	if err == nil || !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("unknown loop err = %v, want not-exist", err)
 	}
-	if _, statErr := os.Stat(filepath.Join(statestore.StateDir(), "loop")); !errors.Is(statErr, fs.ErrNotExist) {
+	if _, statErr := os.Stat(filepath.Join(statestore.Dir(), "loop")); !errors.Is(statErr, fs.ErrNotExist) {
 		t.Fatalf("record lookup created the loop store: %v", statErr)
 	}
 }

@@ -14,13 +14,13 @@ import (
 func handleAssistantWorkerMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "commit_suggest":
-		result, err := deps.Commit.Suggest(commitsuggestcontract.CommitSuggestRequest{
+		result, err := deps.Commit.Suggest(commitsuggestcontract.Request{
 			RepoRoot: deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			Staged:   argmap.Bool(call.Arguments, "staged"),
 		})
 		return mcpPayloadOrFailure(result, err, -32000, "commit_suggest failed")
 	case "lint_diagnose":
-		result, err := deps.Lint.Diagnose(lintdiagnosecontract.LintDiagnoseRequest{
+		result, err := deps.Lint.Diagnose(lintdiagnosecontract.Request{
 			RepoRoot:    deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			CommandArgv: argmap.StringSlice(call.Arguments, "command_argv"),
 		})

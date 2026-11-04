@@ -12,11 +12,11 @@ import (
 )
 
 func TestFinishEvidenceUsesSupersedingArtifactBaseBranch(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-finish", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/2", Provider: "github"}}
+	record := model.Record{ID: "io-finish", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/2", Provider: "github"}}
 	replacement := "https://github.com/acme/repo/pull/3"
 	observed := []string{}
 	reader := FinishEvidenceReader{
-		VerifyMergedHead: func(artifact model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+		VerifyMergedHead: func(artifact model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 			observed = append(observed, artifact.URL)
 			if artifact.URL == record.RemoteArtifact.URL {
 				return model.CleanupRemoteBranchArtifactHead{}, errors.New("original unmerged")
@@ -26,11 +26,11 @@ func TestFinishEvidenceUsesSupersedingArtifactBaseBranch(t *testing.T) {
 			}
 			return model.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 		},
-		ReadIssueSnapshot: func(ctx context.Context, _ port.IssueProvider, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+		ReadIssueSnapshot: func(ctx context.Context, _ port.IssueProvider, req executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 			if ctx.Value(finishTestContextKey{}) != true || req.Repo != record.Repo || req.URL != record.IssueURL {
 				t.Fatal("readback lost snapshot identity or context")
 			}
-			return executionissue.ExecutionIssueSnapshot{URL: req.URL, Body: model.IssueBodyCompletionStartMarker, State: "closed"}, nil
+			return executionissue.Snapshot{URL: req.URL, Body: model.IssueBodyCompletionStartMarker, State: "closed"}, nil
 		},
 	}
 	req, err := reader.Observe(context.WithValue(context.Background(), finishTestContextKey{}, true), record, model.CleanupFinishRequest{ID: record.ID, SupersededBy: replacement})
@@ -44,15 +44,15 @@ func TestFinishEvidenceUsesSupersedingArtifactBaseBranch(t *testing.T) {
 
 func TestFinishEvidenceRefusesUnknownMergeBeforeIssueReadback(t *testing.T) {
 	reader := FinishEvidenceReader{
-		VerifyMergedHead: func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+		VerifyMergedHead: func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 			return model.CleanupRemoteBranchArtifactHead{}, errors.New("provider unavailable")
 		},
-		ReadIssueSnapshot: func(context.Context, port.IssueProvider, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+		ReadIssueSnapshot: func(context.Context, port.IssueProvider, executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 			t.Fatal("read issue after failed merge evidence")
-			return executionissue.ExecutionIssueSnapshot{}, nil
+			return executionissue.Snapshot{}, nil
 		},
 	}
-	_, err := reader.Observe(context.Background(), model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "original"}}, model.CleanupFinishRequest{})
+	_, err := reader.Observe(context.Background(), model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "original"}}, model.CleanupFinishRequest{})
 	if err == nil {
 		t.Fatal("unknown merge allowed cleanup")
 	}

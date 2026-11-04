@@ -10,9 +10,9 @@ import (
 
 // SelectPrune separates records selected by prefix, age, and retained-count
 // policy from records that must remain. Both outputs are sorted by key.
-func SelectPrune(records []statecontract.StateListEntry, prefix string, cutoff time.Time, maxRecords int) ([]statecontract.StateListEntry, []statecontract.StateListEntry) {
-	matching := make([]statecontract.StateListEntry, 0, len(records))
-	kept := make([]statecontract.StateListEntry, 0, len(records))
+func SelectPrune(records []statecontract.ListEntry, prefix string, cutoff time.Time, maxRecords int) ([]statecontract.ListEntry, []statecontract.ListEntry) {
+	matching := make([]statecontract.ListEntry, 0, len(records))
+	kept := make([]statecontract.ListEntry, 0, len(records))
 	for _, record := range records {
 		if prefix == "" || strings.HasPrefix(record.Key, prefix) {
 			matching = append(matching, record)
@@ -29,7 +29,7 @@ func SelectPrune(records []statecontract.StateListEntry, prefix string, cutoff t
 		return matching[i].Key < matching[j].Key
 	})
 	selected := selectPruneKeys(matching, cutoff, maxRecords)
-	pruned := make([]statecontract.StateListEntry, 0, len(selected))
+	pruned := make([]statecontract.ListEntry, 0, len(selected))
 	for _, record := range matching {
 		if selected[record.Key] {
 			pruned = append(pruned, record)
@@ -44,7 +44,7 @@ func SelectPrune(records []statecontract.StateListEntry, prefix string, cutoff t
 
 // selectPruneKeys는 cutoff보다 오래된 키와, 보존 개수를 넘는 가장 오래된 키를 고른다.
 // matching은 오래된 순으로 정렬되어 있어야 한다.
-func selectPruneKeys(matching []statecontract.StateListEntry, cutoff time.Time, maxRecords int) map[string]bool {
+func selectPruneKeys(matching []statecontract.ListEntry, cutoff time.Time, maxRecords int) map[string]bool {
 	selected := make(map[string]bool, len(matching))
 	for _, record := range matching {
 		updatedAt, err := statecontract.ParseTime(record.UpdatedAt)
@@ -53,7 +53,7 @@ func selectPruneKeys(matching []statecontract.StateListEntry, cutoff time.Time, 
 		}
 	}
 	if maxRecords > 0 {
-		retained := make([]statecontract.StateListEntry, 0, len(matching))
+		retained := make([]statecontract.ListEntry, 0, len(matching))
 		for _, record := range matching {
 			if !selected[record.Key] {
 				retained = append(retained, record)

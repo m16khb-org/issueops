@@ -9,16 +9,16 @@ import (
 
 func TestRecordDomainReviewUsesOneLockedWrite(t *testing.T) {
 	const at = "2026-09-25T00:00:00Z"
-	record := model.IssueOpsRecord{ID: "io-domain", Phase: model.IssueOpsPhaseGrill}
+	record := model.Record{ID: "io-domain", Phase: model.PhaseGrill}
 	reads, writes := 0, 0
 	store := reviewport.ReviewMutationStore{
 		WithLock:         func(_, _ string, fn func() error) error { return fn() },
-		Read:             func(_, _ string) (model.IssueOpsRecord, error) { reads++; return record, nil },
-		ValidateMutation: func(model.IssueOpsRecord) error { return nil },
-		Write:            func(_ string, next model.IssueOpsRecord) (model.IssueOpsRecord, error) { writes++; return next, nil },
+		Read:             func(_, _ string) (model.Record, error) { reads++; return record, nil },
+		ValidateMutation: func(model.Record) error { return nil },
+		Write:            func(_ string, next model.Record) (model.Record, error) { writes++; return next, nil },
 		Now:              func() string { return at },
 	}
-	out, err := RecordDomainReview(store, "state", record.ID, model.IssueOpsDomainReviewRequest{
+	out, err := RecordDomainReview(store, "state", record.ID, model.DomainReviewRequest{
 		ModelFit: " fits ", Terminology: []string{" aggregate ", " "},
 	})
 	if err != nil {

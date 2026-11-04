@@ -16,7 +16,7 @@ type LinkedBranchAuditRecorder struct {
 // Record is best-effort: an audit failure cannot undo the provider's disposition.
 // Reload under the cycle lock so the observation never recreates a deleted cycle
 // or overwrites a concurrent mutation with its earlier snapshot.
-func (s LinkedBranchAuditRecorder) Record(ctx context.Context, observed model.IssueOpsRecord, result model.CleanupLinkedBranchResult) (bool, string) {
+func (s LinkedBranchAuditRecorder) Record(ctx context.Context, observed model.Record, result model.CleanupLinkedBranchResult) (bool, string) {
 	err := s.Records.WithinLock(ctx, observed.ID, func(spanCtx context.Context) error {
 		current, err := s.Records.Load(observed.ID)
 		if err != nil {

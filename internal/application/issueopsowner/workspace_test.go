@@ -21,21 +21,21 @@ var (
 type workspaceFiles struct {
 	matches      bool
 	comparisons  int
-	materialized []model.IssueOpsRecord
+	materialized []model.Record
 	err          error
 }
 
 func (f *workspaceFiles) SamePath(a, b string) bool { f.comparisons++; return f.matches }
-func (f *workspaceFiles) Materialize(record model.IssueOpsRecord) (map[string]string, error) {
+func (f *workspaceFiles) Materialize(record model.Record) (map[string]string, error) {
 	f.materialized = append(f.materialized, record)
 	return nil, f.err
 }
 
-func ownerRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "io-owner", Repo: ownerSource, IssueURL: "https://github.com/acme/repo/issues/480", Branch: "feature/one"}
+func ownerRecord() model.Record {
+	return model.Record{ID: "io-owner", Repo: ownerSource, IssueURL: "https://github.com/acme/repo/issues/480", Branch: "feature/one"}
 }
 
-func rawSnapshot(t *testing.T, record model.IssueOpsRecord) prep.Snapshot {
+func rawSnapshot(t *testing.T, record model.Record) prep.Snapshot {
 	t.Helper()
 	raw, err := json.Marshal(record)
 	if err != nil {
@@ -62,9 +62,9 @@ func TestWorkspaceResolutionPreservesValidationBeforePathObservation(t *testing.
 			s := Service{Files: f}
 			r := ownerRecord()
 			r.Branch = tc.branch
-			r.BranchPrepare = &model.IssueOpsBranchPrepare{BaseSHA: "abc", BaseBranch: tc.base, ParentWorktree: tc.parent}
+			r.BranchPrepare = &model.BranchPrepare{BaseSHA: "abc", BaseBranch: tc.base, ParentWorktree: tc.parent}
 			if tc.delegated {
-				r.Delegation = &model.IssueOpsDelegationContract{ParentCycleID: "parent"}
+				r.Delegation = &model.DelegationContract{ParentCycleID: "parent"}
 			}
 			got, err := s.ResolveWorkspace(rawSnapshot(t, r), true)
 			if tc.want != "" {
@@ -116,13 +116,13 @@ func TestMaterializeDirectPropagatesMaterializeFailure(t *testing.T) {
 
 func TestOwnerArtifactDirFallsBackToBranchPrepareIssue(t *testing.T) {
 	for name, tc := range map[string]struct {
-		record model.IssueOpsRecord
+		record model.Record
 		want   string
 	}{
-		"record issue wins": {model.IssueOpsRecord{IssueURL: "https://github.com/a/b/issues/7", BranchPrepare: &model.IssueOpsBranchPrepare{IssueURL: "https://github.com/a/b/issues/8"}}, ".issueops/issues/7/artifact"},
-		"branch issue":      {model.IssueOpsRecord{IssueURL: "not-an-issue", BranchPrepare: &model.IssueOpsBranchPrepare{IssueURL: "https://github.com/a/b/issues/8"}}, ".issueops/issues/8/artifact"},
-		"neither":           {model.IssueOpsRecord{IssueURL: "not-an-issue"}, ""},
-		"branch unnumbered": {model.IssueOpsRecord{BranchPrepare: &model.IssueOpsBranchPrepare{IssueURL: "nope"}}, ""},
+		"record issue wins": {model.Record{IssueURL: "https://github.com/a/b/issues/7", BranchPrepare: &model.BranchPrepare{IssueURL: "https://github.com/a/b/issues/8"}}, ".issueops/issues/7/artifact"},
+		"branch issue":      {model.Record{IssueURL: "not-an-issue", BranchPrepare: &model.BranchPrepare{IssueURL: "https://github.com/a/b/issues/8"}}, ".issueops/issues/8/artifact"},
+		"neither":           {model.Record{IssueURL: "not-an-issue"}, ""},
+		"branch unnumbered": {model.Record{BranchPrepare: &model.BranchPrepare{IssueURL: "nope"}}, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := OwnerArtifactDir(tc.record); got != tc.want {

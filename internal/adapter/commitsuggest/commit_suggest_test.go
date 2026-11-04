@@ -12,7 +12,7 @@ import (
 
 func TestSuggestCommitReturnsNoopWhenDiffIsEmpty(t *testing.T) {
 	repo := initCommitSuggestRepo(t)
-	result, err := SuggestCommit(commitsuggestcontract.CommitSuggestRequest{
+	result, err := SuggestCommit(commitsuggestcontract.Request{
 		RepoRoot: repo,
 		Staged:   false,
 	})
@@ -30,7 +30,7 @@ func TestSuggestCommitRendersPromptForWorkingTreeDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := SuggestCommit(commitsuggestcontract.CommitSuggestRequest{
+	result, err := SuggestCommit(commitsuggestcontract.Request{
 		RepoRoot: repo,
 	})
 	if err != nil {

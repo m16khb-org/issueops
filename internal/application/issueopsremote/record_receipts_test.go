@@ -13,13 +13,13 @@ import (
 // memoryRecordStore applies transitions to an in-memory record the way the
 // durable store does: a failing transition leaves the record untouched.
 type memoryRecordStore struct {
-	record model.IssueOpsRecord
+	record model.Record
 	err    error
 }
 
-func (s *memoryRecordStore) Update(_ context.Context, _ string, transition RecordTransition) (model.IssueOpsRecord, error) {
+func (s *memoryRecordStore) Update(_ context.Context, _ string, transition RecordTransition) (model.Record, error) {
 	if s.err != nil {
-		return model.IssueOpsRecord{}, s.err
+		return model.Record{}, s.err
 	}
 	next, err := transition(s.record)
 	if err != nil {
@@ -59,8 +59,8 @@ func TestCompletionReceiptsReportStoreFailureAsNotOK(t *testing.T) {
 	}
 }
 
-func issueCreateRequest() model.IssueOpsIssueCreateIntentRequest {
-	return model.IssueOpsIssueCreateIntentRequest{
+func issueCreateRequest() model.IssueCreateIntentRequest {
+	return model.IssueCreateIntentRequest{
 		OperationID: strings.Repeat("b", 32), Provider: "github", ProjectAuthority: "github.com/acme/app",
 		Title: "title", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z",
 	}
@@ -82,12 +82,12 @@ func TestIssueCreateIntentsLifecycleBindsProjectAuthority(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "does not match sealed authority") {
 		t.Fatalf("foreign project accepted: %v", err)
 	}
-	_, err = intents.Outcome(t.Context(), "c", model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/other/repo/issues/9", ObservedAt: "now"})
+	_, err = intents.Outcome(t.Context(), "c", model.IssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/other/repo/issues/9", ObservedAt: "now"})
 	if err == nil {
 		t.Fatal("outcome for a foreign project accepted")
 	}
 
-	rec, err = intents.Outcome(t.Context(), "c", model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/acme/app/issues/9", Failure: "receipt pending", ObservedAt: "t1"})
+	rec, err = intents.Outcome(t.Context(), "c", model.IssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/acme/app/issues/9", Failure: "receipt pending", ObservedAt: "t1"})
 	if err != nil || rec.IssueCreateIntent.CanonicalURL != "https://github.com/acme/app/issues/9" {
 		t.Fatalf("outcome=%+v err=%v", rec.IssueCreateIntent, err)
 	}

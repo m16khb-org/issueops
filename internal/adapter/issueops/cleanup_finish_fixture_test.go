@@ -31,10 +31,10 @@ func finishExecutorForTests(stateRoot string, deps CleanupFinishDeps) cleanupapp
 	executor := cleanupapp.FinishExecutor{
 		MaterialWarning: (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Warning,
 		Records:         CleanupRecordStore{StateRoot: stateRoot}, Acquire: (CleanupLifetimeLock{StateRoot: stateRoot, Wait: -1}).Acquire,
-		Observe: func(_ context.Context, _ issueops.IssueOpsRecord, r issueops.CleanupFinishRequest) (issueops.CleanupFinishRequest, error) {
+		Observe: func(_ context.Context, _ issueops.Record, r issueops.CleanupFinishRequest) (issueops.CleanupFinishRequest, error) {
 			return r, nil
 		},
-		Plan: func(ctx context.Context, record issueops.IssueOpsRecord, req issueops.CleanupFinishRequest) (issueops.CleanupFinishInventory, issueops.CleanupFinishResult) {
+		Plan: func(ctx context.Context, record issueops.Record, req issueops.CleanupFinishRequest) (issueops.CleanupFinishInventory, issueops.CleanupFinishResult) {
 			return (cleanupapp.FinishPreviewer{Environment: CleanupFinishEnvironment{RunGit: func(dir string, args ...string) (int, string) { return runtime.Git(ctx, dir, args...) }}, ObserveArtifact: deps.ObserveArtifact, Workspace: runtime.Workspace}).Plan(ctx, record, req)
 		},
 		Fingerprint: CleanupFinishFingerprint, NewAttempt: NewCleanupAttempt,

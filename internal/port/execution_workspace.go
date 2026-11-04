@@ -40,5 +40,5 @@ type ExecutionWorkspaceAccessProber interface {
 }
 
 type ExecutionIssueSnapshotReader interface {
-	ReadIssueSnapshot(context.Context, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error)
+	ReadIssueSnapshot(context.Context, executionissue.SnapshotRequest) (executionissue.Snapshot, error)
 }

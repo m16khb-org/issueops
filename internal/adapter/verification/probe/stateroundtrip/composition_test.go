@@ -42,7 +42,7 @@ func validateStateRoundtripWithTestDeps(binary, root string, seed int64, deps st
 	return validateStateRoundtripWithDeps(binary, root, seed, testStateDependencies(deps))
 }
 
-func readProbeState(dir, key string) (statecontract.StateResult, error) {
+func readProbeState(dir, key string) (statecontract.Result, error) {
 	service := stateapp.NewService(stateapp.Dependencies{StateDir: func() string { return dir }, StatePath: statepath.Path, OpenStore: func(dir string) (stateport.Store, error) { return sqlstore.Open(dir) }, ExistingRecords: statestore.ExistingRecords{}})
 	return service.Read(key)
 }

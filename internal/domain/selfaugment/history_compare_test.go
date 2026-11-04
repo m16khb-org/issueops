@@ -22,15 +22,15 @@ func TestCompareSnapshotsSeparatesDurationContracts(t *testing.T) {
 		{"different hash", 7, 7, "different", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			baseline := contract.SelfAugmentStateSnapshot{
+			baseline := contract.StateSnapshot{
 				OK: true, ElapsedMS: 1000,
-				Summary: contract.SelfAugmentSummary{
+				Summary: contract.Summary{
 					Contract: verifycontract.SelfVerificationContract{
 						Name: "self_verification_summary", Version: tc.baselineVersion, Hash: "same",
 					},
 					TotalSteps: 1, PassedSteps: 1, StepLabels: []string{"go test"},
-					SlowestSteps: []contract.SelfAugmentSlowStep{{Label: "go test", DurationMS: 100}},
-					StepDurationStats: []contract.SelfAugmentStepDurationStat{
+					SlowestSteps: []contract.SlowStep{{Label: "go test", DurationMS: 100}},
+					StepDurationStats: []contract.StepDurationStat{
 						{Label: "go test", Count: 1, P95DurationMS: 100},
 					},
 				},
@@ -40,8 +40,8 @@ func TestCompareSnapshotsSeparatesDurationContracts(t *testing.T) {
 			candidate.Summary.Contract.Hash = tc.candidateHash
 			candidate.Summary.PassedSteps = 0
 			candidate.Summary.FailedSteps = 1
-			candidate.Summary.SlowestSteps = []contract.SelfAugmentSlowStep{{Label: "go test", DurationMS: 500}}
-			candidate.Summary.StepDurationStats = []contract.SelfAugmentStepDurationStat{
+			candidate.Summary.SlowestSteps = []contract.SlowStep{{Label: "go test", DurationMS: 500}}
+			candidate.Summary.StepDurationStats = []contract.StepDurationStat{
 				{Label: "go test", Count: 1, P95DurationMS: 500},
 			}
 

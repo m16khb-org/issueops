@@ -8,16 +8,16 @@ import (
 )
 
 func TestCycleFromRecordProjectsDurableFailures(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID:    "io-failed",
-		Phase: issueopscontract.IssueOpsPhaseImplement,
+		Phase: issueopscontract.PhaseImplement,
 		Execution: &issueopscontract.Execution{
 			Failure: &issueopscontract.ExecutionFailure{Code: "external_operation_ambiguous"},
 		},
-		CleanupFinishFailure: &issueopscontract.IssueOpsCleanupFinishFailure{
+		CleanupFinishFailure: &issueopscontract.CleanupFinishFailure{
 			Step: issueopscontract.CleanupFailureStepWorktreeRemove,
 		},
-		IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{
+		IssueCreateIntent: &issueopscontract.IssueCreateIntent{
 			Status: issueopscontract.IssueCreateIntentInvokedUnknown,
 		},
 	}
@@ -31,10 +31,10 @@ func TestCycleFromRecordProjectsDurableFailures(t *testing.T) {
 
 func TestCycleFromRecordDoesNotFlagNormalPendingIssueCreate(t *testing.T) {
 	now := time.Date(2026, 8, 14, 12, 0, 0, 0, time.UTC)
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID:    "io-pending",
-		Phase: issueopscontract.IssueOpsPhaseProblem,
-		IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{
+		Phase: issueopscontract.PhaseProblem,
+		IssueCreateIntent: &issueopscontract.IssueCreateIntent{
 			Status:    issueopscontract.IssueCreateIntentPending,
 			StartedAt: now.Add(-time.Minute).Format(time.RFC3339Nano),
 			UpdatedAt: now.Add(-time.Minute).Format(time.RFC3339Nano),
@@ -50,10 +50,10 @@ func TestCycleFromRecordDoesNotFlagNormalPendingIssueCreate(t *testing.T) {
 
 func TestCycleFromRecordFlagsStalePendingIssueCreate(t *testing.T) {
 	now := time.Date(2026, 8, 14, 12, 0, 0, 0, time.UTC)
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID:    "io-stale-pending",
-		Phase: issueopscontract.IssueOpsPhaseProblem,
-		IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{
+		Phase: issueopscontract.PhaseProblem,
+		IssueCreateIntent: &issueopscontract.IssueCreateIntent{
 			Status:    issueopscontract.IssueCreateIntentPending,
 			StartedAt: now.Add(-10 * time.Minute).Format(time.RFC3339Nano),
 			UpdatedAt: now.Add(-10 * time.Minute).Format(time.RFC3339Nano),

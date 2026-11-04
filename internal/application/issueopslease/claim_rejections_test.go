@@ -151,7 +151,7 @@ func TestClaimWithinTransactionRefusesBeforeAnyMutation(t *testing.T) {
 			name: "pending cleanup attempt blocks a fresh claim",
 			build: func() *failingClaimTransaction {
 				stub := claimableTransactionStub()
-				stub.record.Stable.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+				stub.record.Stable.CleanupAttempt = &model.CleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 				return &failingClaimTransaction{claimTransactionStub: stub}
 			},
 			check: func(err error) bool {

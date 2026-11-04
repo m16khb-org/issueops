@@ -209,8 +209,8 @@ func TestSelfWorkflowAndLLMHelpers(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "docs", "note.md"), []byte("coverage signal"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	history := augmentcontract.SelfAugmentHistoryResult{Entries: []augmentcontract.SelfAugmentHistoryEntry{}}
-	if err := applySelfAugmentHistoryRetention(&history, augmentcontract.SelfAugmentHistoryRetentionOptions{}); err != nil {
+	history := augmentcontract.HistoryResult{Entries: []augmentcontract.HistoryEntry{}}
+	if err := applySelfAugmentHistoryRetention(&history, augmentcontract.HistoryRetentionOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := domain.ParseHistoryTimestamp(time.Now().UTC().Format(time.RFC3339Nano)); !ok {
@@ -230,7 +230,7 @@ func TestSelfWorkflowAndLLMHelpers(t *testing.T) {
 	if domain.ScoreBool(true) <= domain.ScoreBool(false) {
 		t.Fatal("scoreBool failed")
 	}
-	if !domain.AllGoalsPassed([]augmentcontract.SelfAugmentGoal{{Passed: true}}) {
+	if !domain.AllGoalsPassed([]augmentcontract.Goal{{Passed: true}}) {
 		t.Fatal("allSelfAugmentGoalsPassed failed")
 	}
 	if domain.SelectedCandidateID(nil) != "" {
@@ -251,13 +251,13 @@ func TestSelfWorkflowAndLLMHelpers(t *testing.T) {
 	_ = domain.StepDurationStatByLabel(nil)
 	_ = domain.MaxSlowStepDurationByLabel(nil)
 	_ = domain.BuildStepDurationStats(map[string][]int64{"a": {1, 2}})
-	result := augmentcontract.SelfAugmentResult{OK: true, Iterations: 0, Runs: []augmentcontract.SelfAugmentIteration{}}
+	result := augmentcontract.Result{OK: true, Iterations: 0, Runs: []augmentcontract.Iteration{}}
 	summary := summarizeSelfAugment(result)
 	_ = domain.StepDurationStatsForCompare(summary)
 	verifySummary := verifyapp.SummarizeSelfVerification(result, 95)
 	_, _, _ = verifyapp.ClassifySelfVerificationFailure(result, verifySummary)
-	_ = verifydomain.SelfVerifyRerunCommands("go test", 100, 95)
-	_, _ = verifydomain.SelfVerifyStepRerunCommand("go test ./...")
+	_ = verifydomain.RerunCommands("go test", 100, 95)
+	_, _ = verifydomain.StepRerunCommand("go test ./...")
 	if verifydomain.FormatScore(95.5) == "" {
 		t.Fatal("formatScore empty")
 	}
@@ -298,8 +298,8 @@ func TestRiskMCPAndIssueOpsPolicyHelpers(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("ISSUEOPS_ROOT", root)
 	riskStep := validateRiskQATierWithDeps(root, riskQATierDeps{
-		plan: func(string) riskqaxx.RiskQATierPlan {
-			return riskqaxx.RiskQATierPlan{Tier: "static", Commands: []string{"go test ./..."}, Reasons: []string{"test"}}
+		plan: func(string) riskqaxx.TierPlan {
+			return riskqaxx.TierPlan{Tier: "static", Commands: []string{"go test ./..."}, Reasons: []string{"test"}}
 		},
 		run: func(root string, command string) selfverify.StepResult {
 			return selfverify.StepResult{OK: true, Label: "risk", Command: command}
@@ -314,7 +314,7 @@ func TestRiskMCPAndIssueOpsPolicyHelpers(t *testing.T) {
 	}
 	_ = riskqa.Plan(root)
 
-	if err := verifyIssueOpsRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
+	if err := verifyIssueOpsRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail")
 	}
 	if _, _, err := parseCommandPolicyFlags("policy", []string{"--workspace-root", root, "--cwd", root, "--", "git", "status"}); err != nil {
@@ -435,8 +435,8 @@ func TestSelfVerifyHelpers(t *testing.T) {
 	if err := saveSelfVerificationCandidateExport(&export, "candidate-export-test"); err != nil {
 		t.Fatalf("saveSelfVerificationCandidateExport: %v", err)
 	}
-	baseline := augmentcontract.SelfAugmentStateSnapshot{Kind: domain.SelfVerificationSummaryKind}
-	candidate := augmentcontract.SelfAugmentStateSnapshot{Kind: domain.SelfVerificationSummaryKind}
+	baseline := augmentcontract.StateSnapshot{Kind: domain.SelfVerificationSummaryKind}
+	candidate := augmentcontract.StateSnapshot{Kind: domain.SelfVerificationSummaryKind}
 	_ = compareSelfAugmentSummariesFromSnapshots("base", "candidate", 10, baseline, candidate)
 	_ = newSelfAugmentCompareResult("base", "candidate", 10)
 	if _, err := compareSelfAugmentSummaries("missing-base", "missing-candidate", 10); err == nil {
@@ -446,8 +446,8 @@ func TestSelfVerifyHelpers(t *testing.T) {
 		t.Fatalf("selfAugmentHistory: %v", err)
 	}
 	if err := runSelfVerifyPromoteWithDeps([]string{"--from-key", "a", "--baseline-key", "b", "--confirm"}, selfVerifyPromoteDeps{
-		promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.SelfAugmentPromoteResult, error) {
-			return augmentcontract.SelfAugmentPromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey}, nil
+		promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.PromoteResult, error) {
+			return augmentcontract.PromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey}, nil
 		},
 	}); err != nil {
 		t.Fatalf("runSelfVerifyPromoteWithDeps: %v", err)

@@ -11,7 +11,7 @@ import (
 // top of the existing intent/issue_url/plan_prep readiness.
 func issueOpsGrillGateBaseRecord(t *testing.T, stateRoot, repo, branch string) string {
 	t.Helper()
-	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -20,7 +20,7 @@ func issueOpsGrillGateBaseRecord(t *testing.T, stateRoot, repo, branch string) s
 		t.Fatal(err)
 	}
 	setIssueOpsPlanPrepForTest(t, stateRoot, rec.ID)
-	if _, err := AdvanceIssueOpsPhase(stateRoot, rec.ID, string(issueops.IssueOpsPhaseGrill)); err != nil {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, rec.ID, string(issueops.PhaseGrill)); err != nil {
 		t.Fatalf("grill entry should pass once intent is present: %v", err)
 	}
 	return rec.ID
@@ -33,17 +33,17 @@ func TestEnterPlanRequiresDomainReview(t *testing.T) {
 	repo := initIssueOpsRepo(t)
 	id := issueOpsGrillGateBaseRecord(t, stateRoot, repo, "1-gate")
 	// split_decision satisfied via a scope decision, but no domain review yet.
-	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.IssueOpsDecisionRecordRequest{Title: "no split", Body: "single work item", Kind: "scope"}); err != nil {
+	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.DecisionRecordRequest{Title: "no split", Body: "single work item", Kind: "scope"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "domain_review") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.PhasePlan)); err == nil || !strings.Contains(err.Error(), "domain_review") {
 		t.Fatalf("plan entry must require domain_review, got %v", err)
 	}
-	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{ModelFit: "fits the model"}); err != nil {
+	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.DomainReviewRequest{ModelFit: "fits the model"}); err != nil {
 		t.Fatal(err)
 	}
-	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan))
-	if err != nil || rec.Phase != issueops.IssueOpsPhasePlan {
+	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.PhasePlan))
+	if err != nil || rec.Phase != issueops.PhasePlan {
 		t.Fatalf("plan entry should pass once grill is complete: %+v err=%v", rec, err)
 	}
 }
@@ -55,17 +55,17 @@ func TestEnterPlanRequiresSplitDecision(t *testing.T) {
 	repo := initIssueOpsRepo(t)
 	id := issueOpsGrillGateBaseRecord(t, stateRoot, repo, "2-gate")
 	// domain review present, but no split decision (no child link, no scope decision).
-	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{ModelFit: "fits the model"}); err != nil {
+	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.DomainReviewRequest{ModelFit: "fits the model"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "split_decision") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.PhasePlan)); err == nil || !strings.Contains(err.Error(), "split_decision") {
 		t.Fatalf("plan entry must require split_decision, got %v", err)
 	}
-	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.IssueOpsDecisionRecordRequest{Title: "no split", Body: "single work item", Kind: "scope"}); err != nil {
+	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.DecisionRecordRequest{Title: "no split", Body: "single work item", Kind: "scope"}); err != nil {
 		t.Fatal(err)
 	}
-	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan))
-	if err != nil || rec.Phase != issueops.IssueOpsPhasePlan {
+	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.PhasePlan))
+	if err != nil || rec.Phase != issueops.PhasePlan {
 		t.Fatalf("plan entry should pass once split_decision is recorded: %+v err=%v", rec, err)
 	}
 }

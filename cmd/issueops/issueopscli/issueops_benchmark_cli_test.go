@@ -73,10 +73,10 @@ func TestRunIssueOpsBenchmarkUsageAndErrorBranches(t *testing.T) {
 	}
 }
 
-func benchmarkRunForCLITest(id string, score float64, evidence string) benchmarkcontract.IssueOpsBenchmarkRunResult {
-	return benchmarkdomain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{
+func benchmarkRunForCLITest(id string, score float64, evidence string) benchmarkcontract.RunResult {
+	return benchmarkdomain.FinalizeRun(benchmarkcontract.RunResult{
 		ID: id,
-		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.Score{{
 			OK:           true,
 			FixtureID:    "fixture",
 			AverageScore: score,

@@ -10,10 +10,10 @@ import (
 )
 
 type auditRecords struct {
-	current          model.IssueOpsRecord
+	current          model.Record
 	loadErr, saveErr error
 	lockErr          error
-	saved            []model.IssueOpsRecord
+	saved            []model.Record
 	inLock           bool
 	loadedInsideLock bool
 	savedInsideLock  bool
@@ -27,19 +27,19 @@ func (r *auditRecords) WithinLock(ctx context.Context, _ string, fn func(context
 	defer func() { r.inLock = false }()
 	return fn(ctx)
 }
-func (r *auditRecords) Load(string) (model.IssueOpsRecord, error) {
+func (r *auditRecords) Load(string) (model.Record, error) {
 	r.loadedInsideLock = r.inLock
 	return r.current, r.loadErr
 }
-func (r *auditRecords) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (r *auditRecords) Save(_ context.Context, record model.Record) (model.Record, error) {
 	r.savedInsideLock = r.inLock
 	r.saved = append(r.saved, record)
 	return record, r.saveErr
 }
 
-func auditRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "cycle", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-work",
-		BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "github", Branch: "1-work", BaseBranch: "main", BaseSHA: "abc"}}
+func auditRecord() model.Record {
+	return model.Record{ID: "cycle", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-work",
+		BranchPrepare: &model.BranchPrepare{Provider: "github", Branch: "1-work", BaseBranch: "main", BaseSHA: "abc"}}
 }
 
 var auditResult = model.CleanupLinkedBranchResult{State: "deleted", StateReason: "merged", LinkedBranchID: "lb-1", LinkedCount: 1, RemoteRefOID: "oid", Fingerprint: "fp", Deleted: true}
@@ -69,7 +69,7 @@ func TestLinkedBranchAuditRecordsDispositionUnderLockOnLatestRecord(t *testing.T
 func TestLinkedBranchAuditFailuresAreReportedWithoutWriting(t *testing.T) {
 	loadFailure, saveFailure, lockFailure := errors.New("record vanished"), errors.New("disk full"), errors.New("lock timeout")
 	moved := auditRecord()
-	moved.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", Branch: "1-work", BaseBranch: "main", BaseSHA: "different"}
+	moved.BranchPrepare = &model.BranchPrepare{Provider: "github", Branch: "1-work", BaseBranch: "main", BaseSHA: "different"}
 	cases := []struct {
 		name      string
 		records   *auditRecords

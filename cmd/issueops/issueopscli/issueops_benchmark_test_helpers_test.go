@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	remotedomain "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
-func writeIssueOpsRemoteScoreRequestForCLITest(t *testing.T, req remotedomain.IssueOpsRemoteScoringRequest) string {
+func writeIssueOpsRemoteScoreRequestForCLITest(t *testing.T, req issueopsremote.ScoringRequest) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "remote-score.json")
 	b, err := json.Marshal(req)

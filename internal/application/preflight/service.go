@@ -29,10 +29,10 @@ type Observer interface {
 
 type Service struct{ Observer Observer }
 
-func (service Service) Check(target, issueOpsRoot string) preflightcontract.PreflightResult {
+func (service Service) Check(target, issueOpsRoot string) preflightcontract.Result {
 	facts := service.Observer.Observe(target, issueOpsRoot)
 	if !facts.GitOK {
-		return preflightcontract.PreflightResult{
+		return preflightcontract.Result{
 			OK: false, Error: "not_git_repo", Path: target, Detail: facts.ErrorDetail,
 			StatusLines: []string{}, Remotes: []preflightcontract.RemoteInfo{}, RecentCommits: []preflightcontract.CommitInfo{},
 			StagedFiles: []string{}, UnstagedFiles: []string{}, UntrackedFiles: []string{}, SecretLikePaths: []string{}, Warnings: []string{},
@@ -40,7 +40,7 @@ func (service Service) Check(target, issueOpsRoot string) preflightcontract.Pref
 	}
 	status := preflightdomain.AnalyzeStatus(facts.StatusLines)
 	// Lists are [] when empty so `jq '.staged_files[]'` never meets null.
-	return preflightcontract.PreflightResult{
+	return preflightcontract.Result{
 		OK:               true,
 		RepoRoot:         facts.RepoRoot,
 		Branch:           facts.Branch,

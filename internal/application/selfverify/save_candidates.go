@@ -12,7 +12,7 @@ import (
 type SaveCandidateExportDeps struct {
 	Now      func() time.Time
 	Encode   func(contract.SelfVerificationCandidateExportStateSnapshot) ([]byte, error)
-	Write    func(string, string) (state.StateResult, error)
+	Write    func(string, string) (state.Result, error)
 	StateDir func() string
 }
 

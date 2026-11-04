@@ -8,11 +8,11 @@ import (
 )
 
 func TestObservedPRReadinessMissingKeepsStaleAndPathGates(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		PlanPath: "plan.md", WorktreePath: "tree", AISlopCleanAt: "now", AISlopCleanFingerprint: "old",
 		Execution:            &model.Execution{},
-		ImplementationReview: &model.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: "old"},
-		ProjectDocsReview:    &model.IssueOpsProjectDocsReview{ReviewedFingerprint: "old"},
+		ImplementationReview: &model.ImplementationReview{Verdict: "pass", ReviewedFingerprint: "old"},
+		ProjectDocsReview:    &model.ProjectDocsReview{ReviewedFingerprint: "old"},
 	}
 	facts := ObservedPRFacts{CurrentFingerprint: "new", SchemaMissing: "schema_evidence_stale"}
 	want := []string{"implementation_review_stale", "project_docs_review_stale", "schema_evidence_stale", "ai_slop_clean_stale", "plan_exists", "plan_in_worktree", "worktree_exists"}

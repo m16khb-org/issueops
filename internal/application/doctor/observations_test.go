@@ -19,9 +19,9 @@ func TestDoctorObservesInOrderAndSkipsLiveProbesForStaticRequests(t *testing.T) 
 		service := Service{Effects: Effects{
 			NormalizeRoot: func(root string) (string, error) { record("normalize"); return root, nil },
 			StateDir:      func() string { return "/state" },
-			StateDoctor: func() (statecontract.StateDoctorResult, error) {
+			StateDoctor: func() (statecontract.DoctorResult, error) {
 				record("state")
-				return statecontract.StateDoctorResult{Healthy: true, StateDir: "/state"}, nil
+				return statecontract.DoctorResult{Healthy: true, StateDir: "/state"}, nil
 			},
 			ValidateLifecycle: func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 				record("lifecycle")

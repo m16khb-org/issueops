@@ -13,8 +13,8 @@ func TestExecuteStopsAtFirstFailedRiskCommand(t *testing.T) {
 	now := time.Date(2026, 9, 26, 0, 0, 0, 0, time.UTC)
 	var called []string
 	result := Execute("/repo", ExecuteDeps{
-		Plan: func(string) contract.RiskQATierPlan {
-			return contract.RiskQATierPlan{Tier: "elevated", Commands: []string{"go test -race ./... -count=1", "go vet ./..."}}
+		Plan: func(string) contract.TierPlan {
+			return contract.TierPlan{Tier: "elevated", Commands: []string{"go test -race ./... -count=1", "go vet ./..."}}
 		},
 		Run: func(_ string, command string) selfverify.StepResult {
 			called = append(called, command)
@@ -23,7 +23,7 @@ func TestExecuteStopsAtFirstFailedRiskCommand(t *testing.T) {
 			}
 			return selfverify.StepResult{Label: "risk QA race test", Command: command, OK: false, Error: "race failed"}
 		},
-		RenderPlan: func(contract.RiskQATierPlan) string { return `{"tier":"elevated"}` },
+		RenderPlan: func(contract.TierPlan) string { return `{"tier":"elevated"}` },
 		Now: func() time.Time {
 			now = now.Add(time.Millisecond)
 			return now
@@ -39,10 +39,10 @@ func TestExecutePreservesScopeWithOversizedSuccessAndFailureLogs(t *testing.T) {
 		t.Run(map[bool]string{true: "success", false: "failure"}[ok], func(t *testing.T) {
 			scope := &contract.Scope{BaseSHA: strings.Repeat("a", 40), HeadSHA: strings.Repeat("b", 40)}
 			step := Execute("/repo", ExecuteDeps{
-				Plan: func(string) contract.RiskQATierPlan {
-					return contract.RiskQATierPlan{Scope: scope, Commands: []string{"go vet ./..."}}
+				Plan: func(string) contract.TierPlan {
+					return contract.TierPlan{Scope: scope, Commands: []string{"go vet ./..."}}
 				},
-				RenderPlan: func(contract.RiskQATierPlan) string { return "plan" }, Now: time.Now,
+				RenderPlan: func(contract.TierPlan) string { return "plan" }, Now: time.Now,
 				Run: func(string, string) selfverify.StepResult {
 					return selfverify.StepResult{OK: ok, Command: "go vet ./...", Label: "vet", Error: "diagnostic", Stdout: strings.Repeat("x", 20000) + "output-end", Stderr: "stderr evidence"}
 				},
@@ -64,10 +64,10 @@ func TestExecutePreservesScopeWithOversizedSuccessAndFailureLogs(t *testing.T) {
 
 func TestExecuteScopeFailureSurvivesOversizedPlanAndCannotClaimSuccess(t *testing.T) {
 	step := Execute("/repo", ExecuteDeps{
-		Plan: func(string) contract.RiskQATierPlan {
-			return contract.RiskQATierPlan{Scope: &contract.Scope{Error: "range unavailable"}, Commands: []string{"go vet ./..."}}
+		Plan: func(string) contract.TierPlan {
+			return contract.TierPlan{Scope: &contract.Scope{Error: "range unavailable"}, Commands: []string{"go vet ./..."}}
 		},
-		RenderPlan: func(contract.RiskQATierPlan) string { return strings.Repeat("p", 20000) }, Now: time.Now,
+		RenderPlan: func(contract.TierPlan) string { return strings.Repeat("p", 20000) }, Now: time.Now,
 		Run: func(string, string) selfverify.StepResult {
 			t.Fatal("scope failure ran a command")
 			return selfverify.StepResult{}

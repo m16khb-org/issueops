@@ -77,7 +77,7 @@ func TestPathMatchesPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record := model.IssueOpsRecord{PlanPath: planPath}
+	record := model.Record{PlanPath: planPath}
 
 	tests := []struct {
 		name     string
@@ -94,7 +94,7 @@ func TestPathMatchesPlan(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.name == "relative plan match" {
-				rec := model.IssueOpsRecord{PlanPath: "plan.md"}
+				rec := model.Record{PlanPath: "plan.md"}
 				got := PathMatchesPlan(rec, tt.worktree, planPath)
 				if !got {
 					t.Error("expected match for relative plan path")
@@ -111,15 +111,15 @@ func TestPathMatchesPlan(t *testing.T) {
 
 func TestDiffBaseRef(t *testing.T) {
 	t.Run("nil branch prepare", func(t *testing.T) {
-		rec := model.IssueOpsRecord{}
+		rec := model.Record{}
 		got := testReader().DiffBaseRef(rec, "/tmp")
 		if got != "" {
 			t.Errorf("expected empty, got %q", got)
 		}
 	})
 	t.Run("empty base branch", func(t *testing.T) {
-		rec := model.IssueOpsRecord{
-			BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: ""},
+		rec := model.Record{
+			BranchPrepare: &model.BranchPrepare{BaseBranch: ""},
 		}
 		got := testReader().DiffBaseRef(rec, "/tmp")
 		if got != "" {
@@ -130,13 +130,13 @@ func TestDiffBaseRef(t *testing.T) {
 
 func TestHasEvidenceForGitAndFileTreeChanges(t *testing.T) {
 	t.Run("invalid worktree", func(t *testing.T) {
-		if testReader().HasEvidence(model.IssueOpsRecord{}) {
+		if testReader().HasEvidence(model.Record{}) {
 			t.Fatal("empty worktree should not have implementation evidence")
 		}
 	})
 	t.Run("non git worktree falls back to file tree", func(t *testing.T) {
 		worktree := t.TempDir()
-		record := model.IssueOpsRecord{WorktreePath: worktree, PlanPath: "plan.md"}
+		record := model.Record{WorktreePath: worktree, PlanPath: "plan.md"}
 		if testReader().HasEvidence(record) {
 			t.Fatal("empty non-git worktree should not have implementation evidence")
 		}
@@ -155,10 +155,10 @@ func TestHasEvidenceForGitAndFileTreeChanges(t *testing.T) {
 	})
 	t.Run("git status and fingerprint", func(t *testing.T) {
 		repo := newImplementationGitRepo(t)
-		record := model.IssueOpsRecord{
+		record := model.Record{
 			WorktreePath: repo,
 			PlanPath:     filepath.Join(repo, "plan.md"),
-			BranchPrepare: &model.IssueOpsBranchPrepare{
+			BranchPrepare: &model.BranchPrepare{
 				BaseBranch: "main",
 			},
 		}
@@ -196,10 +196,10 @@ func TestImplementationEvidenceUsesImmutableBranchPrepareBaseSHA(t *testing.T) {
 	featureSHA := strings.TrimSpace(runGitOutput(t, repo, "rev-parse", "HEAD"))
 	runGit(t, repo, "update-ref", "refs/remotes/origin/main", featureSHA)
 
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		WorktreePath: repo,
 		PlanPath:     filepath.Join(repo, "plan.md"),
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		BranchPrepare: &model.BranchPrepare{
 			BaseBranch: "main",
 			BaseSHA:    baseSHA,
 		},
@@ -238,9 +238,9 @@ func TestChangeFingerprintPreservesLeadingPorcelainStatusSpaceAcrossCommit(t *te
 	if err := os.WriteFile(filepath.Join(repo, "impl.go"), []byte("package impl\nconst Value = 2\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		WorktreePath: repo,
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		BranchPrepare: &model.BranchPrepare{
 			BaseBranch: "main",
 			BaseSHA:    baseSHA,
 		},
@@ -259,10 +259,10 @@ func TestChangeFingerprintPreservesLeadingPorcelainStatusSpaceAcrossCommit(t *te
 
 func TestHasEvidenceIgnoresTrackedPlanAsFirstPorcelainEntry(t *testing.T) {
 	repo := newImplementationGitRepo(t)
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		WorktreePath: repo,
 		PlanPath:     filepath.Join(repo, "plan.md"),
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		BranchPrepare: &model.BranchPrepare{
 			BaseBranch: "main",
 		},
 	}
@@ -319,9 +319,9 @@ func TestHasEvidenceTreatsTrackedMaterialFromBranchPrepareIssueURLAsPlanning(t *
 	if err := os.WriteFile(material, []byte("spec"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		WorktreePath: worktree,
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		BranchPrepare: &model.BranchPrepare{
 			IssueURL: "https://github.com/acme/repo/issues/513",
 		},
 	}

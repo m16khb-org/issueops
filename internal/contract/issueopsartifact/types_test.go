@@ -24,7 +24,7 @@ func TestSealedErrorContract(t *testing.T) {
 }
 
 func TestAliasesShareUnderlyingIssueOpsContract(t *testing.T) {
-	var record issueopscontract.IssueOpsRecord = Record{OK: true, ID: "io-1"}
+	var record issueopscontract.Record = Record{OK: true, ID: "io-1"}
 	if !record.OK || record.ID != "io-1" {
 		t.Fatalf("Record alias mismatch: %+v", record)
 	}
@@ -34,7 +34,7 @@ func TestAliasesShareUnderlyingIssueOpsContract(t *testing.T) {
 		t.Fatalf("Staged alias mismatch: %+v", staged)
 	}
 
-	if PhaseDone != issueopscontract.IssueOpsPhaseDone {
+	if PhaseDone != issueopscontract.PhaseDone {
 		t.Fatal("PhaseDone alias drifted from source contract")
 	}
 	if MaxBytes <= 0 {

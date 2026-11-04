@@ -6,7 +6,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ArmCleanupAbandon(record model.IssueOpsRecord, attempt model.IssueOpsCleanupAttempt, failure model.IssueOpsCleanupAbandonFailure) (model.IssueOpsRecord, error) {
+func ArmCleanupAbandon(record model.Record, attempt model.CleanupAttempt, failure model.CleanupAbandonFailure) (model.Record, error) {
 	if attempt.Operation != model.CleanupOperationAbandon {
 		return record, fmt.Errorf("abandon requires its own cleanup operation")
 	}
@@ -25,7 +25,7 @@ func ArmCleanupAbandon(record model.IssueOpsRecord, attempt model.IssueOpsCleanu
 	return next, nil
 }
 
-func ApplyCleanupAbandonFailure(record model.IssueOpsRecord, failure model.IssueOpsCleanupAbandonFailure, drained bool) model.IssueOpsRecord {
+func ApplyCleanupAbandonFailure(record model.Record, failure model.CleanupAbandonFailure, drained bool) model.Record {
 	record.CleanupAbandonFailure = &failure
 	record.UpdatedAt = failure.At
 	if drained {

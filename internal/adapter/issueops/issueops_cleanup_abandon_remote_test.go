@@ -88,14 +88,14 @@ func (g *remoteAbandonGit) run(_ string, args ...string) (int, string) {
 	return 0, ""
 }
 
-func remoteAbandonRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func remoteAbandonRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot, record := abandonTestRecord(t)
 	record.IssueURL = "https://github.com/acme/repo/issues/106"
-	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueops.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main",
 	}
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/107",
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {

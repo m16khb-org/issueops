@@ -14,8 +14,8 @@ import (
 
 type CycleRecords interface {
 	WithinLock(context.Context, string, func(context.Context) error) error
-	Load(string) (model.IssueOpsRecord, error)
-	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Load(string) (model.Record, error)
+	Save(context.Context, model.Record) (model.Record, error)
 }
 
 // RetiredCycles names the cycles a plain start must not resume: the IDs
@@ -42,20 +42,20 @@ type Starter struct {
 	Now       func() time.Time
 }
 
-func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (model.IssueOpsRecord, error) {
+func (s Starter) Start(ctx context.Context, req model.StartRequest) (model.Record, error) {
 	if err := domain.ValidateNewCycleRequest(req); err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	if repo := strings.TrimSpace(req.Repo); repo != "" && s.IsGitRepo != nil && !s.IsGitRepo(repo) {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("repo %s is not a git repository; an issueops cycle needs one: pass the repository root (git rev-parse --show-toplevel), or git init first", repo)
+		return model.Record{OK: false}, fmt.Errorf("repo %s is not a git repository; an issueops cycle needs one: pass the repository root (git rev-parse --show-toplevel), or git init first", repo)
 	}
 	repo := s.Identity.CanonicalRepo(req.Repo)
 	branch := strings.TrimSpace(req.Branch)
 	id, err := s.cycleID(repo, branch, req.New)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
-	var record model.IssueOpsRecord
+	var record model.Record
 	err = s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		repo := strings.TrimSpace(req.Repo)
 		if repo == "" {

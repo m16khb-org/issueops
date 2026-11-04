@@ -19,11 +19,11 @@ type Effects interface {
 
 type Service struct{ Effects Effects }
 
-func (service Service) Analyze(req tracecontract.TraceAnalyzeRequest) (tracecontract.TraceAnalyzeResult, error) {
+func (service Service) Analyze(req tracecontract.AnalyzeRequest) (tracecontract.AnalyzeResult, error) {
 	input := strings.TrimSpace(req.Input)
-	result := tracecontract.TraceAnalyzeResult{
+	result := tracecontract.AnalyzeResult{
 		OK: false, Kind: AnalysisKind, Input: input,
-		TraceTypes: []string{}, Findings: []tracecontract.TraceAnalysisFinding{}, Warnings: []string{},
+		TraceTypes: []string{}, Findings: []tracecontract.AnalysisFinding{}, Warnings: []string{},
 	}
 	if input == "" {
 		return result, fmt.Errorf("trace analyze input is required")
@@ -92,10 +92,10 @@ func classifyDocument(document *tracedomain.Document) {
 	}
 }
 
-func toContractFindings(findings []tracedomain.Finding) []tracecontract.TraceAnalysisFinding {
-	out := make([]tracecontract.TraceAnalysisFinding, 0, len(findings))
+func toContractFindings(findings []tracedomain.Finding) []tracecontract.AnalysisFinding {
+	out := make([]tracecontract.AnalysisFinding, 0, len(findings))
 	for _, f := range findings {
-		finding := tracecontract.TraceAnalysisFinding{FailureClass: f.FailureClass, FailureCause: failurecontract.Cause(f.FailureCause), FailureCauseEvidence: make([]failurecontract.Evidence, 0, len(f.FailureCauseEvidence)), RecurringPattern: f.RecurringPattern, ProposedKnob: f.ProposedKnob, OverfitRisk: f.OverfitRisk, VerificationCommand: f.VerificationCommand}
+		finding := tracecontract.AnalysisFinding{FailureClass: f.FailureClass, FailureCause: failurecontract.Cause(f.FailureCause), FailureCauseEvidence: make([]failurecontract.Evidence, 0, len(f.FailureCauseEvidence)), RecurringPattern: f.RecurringPattern, ProposedKnob: f.ProposedKnob, OverfitRisk: f.OverfitRisk, VerificationCommand: f.VerificationCommand}
 		for _, e := range f.FailureCauseEvidence {
 			finding.FailureCauseEvidence = append(finding.FailureCauseEvidence, failurecontract.Evidence{Cause: failurecontract.Cause(e.Cause), Code: e.Code, Source: e.Source})
 		}

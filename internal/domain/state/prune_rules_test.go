@@ -8,7 +8,7 @@ import (
 )
 
 func TestSelectPrunePreservesPrefixAgeAndCountRules(t *testing.T) {
-	records := []statecontract.StateListEntry{
+	records := []statecontract.ListEntry{
 		{Key: "other-old", UpdatedAt: "2026-01-01T00:00:00Z"},
 		{Key: "trace-old", UpdatedAt: "2026-01-01T00:00:00Z"},
 		{Key: "trace-newer", UpdatedAt: "2026-01-03T00:00:00Z"},
@@ -23,7 +23,7 @@ func TestSelectPrunePreservesPrefixAgeAndCountRules(t *testing.T) {
 	}
 }
 
-func entryKeys(entries []statecontract.StateListEntry) []string {
+func entryKeys(entries []statecontract.ListEntry) []string {
 	keys := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		keys = append(keys, entry.Key)
@@ -46,7 +46,7 @@ func sameStrings(left, right []string) bool {
 func TestSelectPruneCountRuleDropsOldestByTimestamp(t *testing.T) {
 	// Keys sort opposite to timestamps, so the retained-count rule must order
 	// by parsed time.
-	records := []statecontract.StateListEntry{
+	records := []statecontract.ListEntry{
 		{Key: "a", UpdatedAt: "2026-01-05T00:00:00Z"},
 		{Key: "b", UpdatedAt: "2026-01-04T00:00:00Z"},
 		{Key: "c", UpdatedAt: "2026-01-03T00:00:00Z"},
@@ -58,7 +58,7 @@ func TestSelectPruneCountRuleDropsOldestByTimestamp(t *testing.T) {
 }
 
 func TestSelectPruneAgeRuleAppliesWithoutRetainedCountLimit(t *testing.T) {
-	records := []statecontract.StateListEntry{
+	records := []statecontract.ListEntry{
 		{Key: "old", UpdatedAt: "2026-01-01T00:00:00Z"},
 		{Key: "boundary", UpdatedAt: "2026-01-02T00:00:00Z"},
 		{Key: "new", UpdatedAt: "2026-01-03T00:00:00Z"},

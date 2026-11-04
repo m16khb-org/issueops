@@ -17,7 +17,7 @@ import (
 	"issueops/internal/port"
 )
 
-var leaseHolderBucket = fmt.Sprintf("lease_holder_v%d", issueops.IssueOpsSchemaVersion)
+var leaseHolderBucket = fmt.Sprintf("lease_holder_v%d", issueops.SchemaVersion)
 
 // ListLeaseHolderIndexes는 state를 생성하거나 복구하지 않고 reverse index를
 // 읽는다. 모든 row는 content에서 파생한 key와 대조해 검증한다.
@@ -60,7 +60,7 @@ func decodeLeaseHolderIndexRow(row port.RecordRow) (issueopscontract.LeaseHolder
 }
 
 func leaseHolderIndexFieldsValid(index issueopscontract.LeaseHolderIndex) bool {
-	return index.SchemaVersion == issueops.IssueOpsSchemaVersion && index.Generation != 0 && strings.TrimSpace(index.LifecycleID) != "" &&
+	return index.SchemaVersion == issueops.SchemaVersion && index.Generation != 0 && strings.TrimSpace(index.LifecycleID) != "" &&
 		leaseHolderHostKnown(index.Host) && strings.TrimSpace(index.SessionID) != ""
 }
 
@@ -72,13 +72,13 @@ func leaseHolderHostKnown(host string) bool {
 	return false
 }
 
-func persistExecutionTransition(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, previousHolder *issueops.NativeActor) (issueops.IssueOpsRecord, error) {
+func persistExecutionTransition(ctx context.Context, stateRoot string, record issueops.Record, previousHolder *issueops.NativeActor) (issueops.Record, error) {
 	return persistExecutionTransitionWithMutations(ctx, stateRoot, record, previousHolder, nil)
 }
 
-func persistExecutionTransitionWithMutations(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, previousHolder *issueops.NativeActor, extra []port.RecordMutation) (issueops.IssueOpsRecord, error) {
+func persistExecutionTransitionWithMutations(ctx context.Context, stateRoot string, record issueops.Record, previousHolder *issueops.NativeActor, extra []port.RecordMutation) (issueops.Record, error) {
 	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
+		return issueops.Record{OK: false, ID: record.ID}, err
 	}
 	encoded, data, err := encodeIssueOpsRecord(record)
 	if err != nil {
@@ -86,11 +86,11 @@ func persistExecutionTransitionWithMutations(ctx context.Context, stateRoot stri
 	}
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
+		return issueops.Record{OK: false, ID: record.ID}, err
 	}
 	raw, found, err := mutableIssueOpsRaw(db, encoded.ID)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
+		return issueops.Record{OK: false, ID: encoded.ID}, err
 	}
 	expected := []port.ExpectedRecord{}
 	if found {
@@ -100,7 +100,7 @@ func persistExecutionTransitionWithMutations(ctx context.Context, stateRoot stri
 	if previousHolder != nil {
 		mutation, err := leaseIndexDeleteMutation(db, encoded.ID, *previousHolder)
 		if err != nil {
-			return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
+			return issueops.Record{OK: false, ID: encoded.ID}, err
 		}
 		if mutation != nil {
 			mutations = append(mutations, *mutation)
@@ -108,21 +108,21 @@ func persistExecutionTransitionWithMutations(ctx context.Context, stateRoot stri
 	}
 	indexMutation, err := activeLeaseIndexMutation(db, encoded)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
+		return issueops.Record{OK: false, ID: encoded.ID}, err
 	}
 	if indexMutation != nil {
 		mutations = append(mutations, *indexMutation)
 	}
 	mutations = append(mutations, extra...)
 	if err := db.CompareAndApply(ctx, expected, mutations); err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
+		return issueops.Record{OK: false, ID: encoded.ID}, err
 	}
 	return encoded, nil
 }
 
 // activeLeaseIndexMutation은 활성 lease 홀더 인덱스를 새로 써야 할 때 그 변경을 돌려준다.
 // 활성 lease가 아니거나 같은 lifecycle/generation 인덱스가 이미 있으면 nil이다.
-func activeLeaseIndexMutation(db *sqlstore.DB, encoded issueops.IssueOpsRecord) (*port.RecordMutation, error) {
+func activeLeaseIndexMutation(db *sqlstore.DB, encoded issueops.Record) (*port.RecordMutation, error) {
 	if encoded.Execution == nil || encoded.Execution.Lease.Status != issueops.LeaseStatusActive {
 		return nil, nil
 	}
@@ -135,7 +135,7 @@ func activeLeaseIndexMutation(db *sqlstore.DB, encoded issueops.IssueOpsRecord) 
 		return nil, err
 	}
 	index := issueopscontract.LeaseHolderIndex{
-		SchemaVersion: issueops.IssueOpsSchemaVersion,
+		SchemaVersion: issueops.SchemaVersion,
 		LifecycleID:   encoded.ID,
 		Generation:    encoded.Execution.Lease.Generation,
 		Host:          holder.Host,
@@ -166,7 +166,7 @@ func requireLeaseIndexAvailable(db *sqlstore.DB, lifecycleID string, generation 
 	if err := json.Unmarshal(data, &existing); err != nil {
 		return false, fmt.Errorf("decode active lease-holder index: %w", err)
 	}
-	if existing.SchemaVersion != issueops.IssueOpsSchemaVersion {
+	if existing.SchemaVersion != issueops.SchemaVersion {
 		return false, fmt.Errorf("unsupported lease-holder index schema %d", existing.SchemaVersion)
 	}
 	if existing.LifecycleID == lifecycleID && existing.Generation == generation {

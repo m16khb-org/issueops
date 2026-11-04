@@ -29,7 +29,7 @@ func TestIssueReconcileRequiresUniqueCompleteSearch(t *testing.T) {
 func TestIssueReconcileRequiresSealedProjectAndContent(t *testing.T) {
 	body := "sealed body"
 	digest := sha256.Sum256([]byte(body))
-	intent := model.IssueOpsIssueCreateIntent{Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "Title", BodySHA256: fmt.Sprintf("%x", digest)}
+	intent := model.IssueCreateIntent{Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "Title", BodySHA256: fmt.Sprintf("%x", digest)}
 	for _, tc := range []struct{ url, title, body, message string }{
 		{"github.com/other/repo", "Title", body, "authority"},
 		{"github.com/acme/repo", "Changed", body, "title and body digest"},
@@ -48,10 +48,10 @@ func TestIssueReconcileRejectsMissingOrCompletedIntent(t *testing.T) {
 	if err := ValidateIssueReconcileIntent(nil); err == nil {
 		t.Fatal("missing intent accepted")
 	}
-	if err := ValidateIssueReconcileIntent(&model.IssueOpsIssueCreateIntent{Status: model.IssueCreateIntentCompleted}); err == nil {
+	if err := ValidateIssueReconcileIntent(&model.IssueCreateIntent{Status: model.IssueCreateIntentCompleted}); err == nil {
 		t.Fatal("completed intent accepted")
 	}
-	if err := ValidateIssueReconcileIntent(&model.IssueOpsIssueCreateIntent{Status: model.IssueCreateIntentInvokedUnknown}); err != nil {
+	if err := ValidateIssueReconcileIntent(&model.IssueCreateIntent{Status: model.IssueCreateIntentInvokedUnknown}); err != nil {
 		t.Fatal(err)
 	}
 }

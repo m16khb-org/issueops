@@ -63,7 +63,7 @@ func TestCleanupFinishExcludesConcurrentApplyAndOrdinaryWriters(t *testing.T) {
 
 func TestCleanupFinishRecoversCrashedAttemptOnlyAfterExclusiveAcquisition(t *testing.T) {
 	root, record, _ := finishTestRecord(t, false)
-	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z"}
+	record.CleanupAttempt = &model.CleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z"}
 	_, raw, err := encodeIssueOpsRecord(record)
 	if err != nil {
 		t.Fatal(err)

@@ -180,17 +180,17 @@ func markInvalidSelection(result issueopsnextcontract.Result, id string) issueop
 // 좁게 읽을 수 있었다. 관측에 실패하면 추정하지 않고 기본 티어와 경고를 남긴다.
 func (service *Service) applyReviewTier(
 	result issueopsnextcontract.Result,
-	record issueopscontract.IssueOpsRecord,
+	record issueopscontract.Record,
 	actorHost string,
 ) issueopsnextcontract.Result {
 	ports := service.ports
-	implementRank := issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseImplement)
+	implementRank := issueopsdomain.PhaseRank(issueopscontract.PhaseImplement)
 	role := agentmodelcontract.RolePlanReview
-	if issueopsdomain.IssueOpsPhaseRank(record.Phase) >= implementRank {
+	if issueopsdomain.PhaseRank(record.Phase) >= implementRank {
 		role = agentmodelcontract.RoleDiffReview
 	}
-	if issueopsdomain.IssueOpsPhaseRank(record.Phase) < implementRank ||
-		record.Phase == issueopscontract.IssueOpsPhaseImplement && slices.Contains(result.Missing, "implementation_changes") {
+	if issueopsdomain.PhaseRank(record.Phase) < implementRank ||
+		record.Phase == issueopscontract.PhaseImplement && slices.Contains(result.Missing, "implementation_changes") {
 		return service.applyReviewModel(result, actorHost, role, "", result.CWD)
 	}
 	tier := issueopsdomain.ChangeTierDefault
@@ -231,7 +231,7 @@ func (service *Service) applyReviewModel(result issueopsnextcontract.Result, act
 func (service *Service) buildInput(
 	ctx context.Context,
 	stateRoot, sourceRoot string,
-	record issueopscontract.IssueOpsRecord,
+	record issueopscontract.Record,
 	entries []issueopsinventorycontract.ListEntry,
 	actorHost, actorSession string,
 ) issueopsnextdomain.Input {
@@ -242,7 +242,7 @@ func (service *Service) buildInput(
 		ActorHost:       actorHost,
 		ActorSessionID:  actorSession,
 		ClaimActorFlags: ports.ClaimActorFlags,
-		Completion: func(phase issueopscontract.IssueOpsPhase) issueopsnextdomain.Readiness {
+		Completion: func(phase issueopscontract.Phase) issueopsnextdomain.Readiness {
 			readiness := ports.Completion(record, phase)
 			return issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing}
 		},
@@ -251,7 +251,7 @@ func (service *Service) buildInput(
 	if ports.WriterlessCommand != nil {
 		input.WriterlessRecovery = ports.WriterlessCommand(record)
 	}
-	if record.Phase == issueopscontract.IssueOpsPhaseImplement && len(record.ChildCycles) > 0 {
+	if record.Phase == issueopscontract.PhaseImplement && len(record.ChildCycles) > 0 {
 		input.ChildGateMissing = childGateMissing(ctx, ports, stateRoot, record)
 	}
 	if record.Execution == nil {
@@ -271,7 +271,7 @@ func (service *Service) buildInput(
 
 // applyStagedArtifacts fills the staged plan/architecture facts and their
 // stale flags. An unreadable staging area leaves the input untouched.
-func applyStagedArtifacts(input *issueopsnextdomain.Input, ports Ports, stateRoot string, record issueopscontract.IssueOpsRecord) {
+func applyStagedArtifacts(input *issueopsnextdomain.Input, ports Ports, stateRoot string, record issueopscontract.Record) {
 	if ports.StagedArtifacts == nil {
 		return
 	}
@@ -294,7 +294,7 @@ func applyStagedArtifacts(input *issueopsnextdomain.Input, ports Ports, stateRoo
 
 // applyExecutionState observes the worktree, git operation and lease holder
 // of a record that already has an execution.
-func applyExecutionState(input *issueopsnextdomain.Input, ports Ports, record issueopscontract.IssueOpsRecord) {
+func applyExecutionState(input *issueopsnextdomain.Input, ports Ports, record issueopscontract.Record) {
 	if ports.WorktreeState != nil {
 		present, branch, head := ports.WorktreeState(record.Execution.Workspace.Root)
 		input.WorktreePresent, input.WorktreeBranch, input.WorktreeHead = present, branch, head
@@ -310,12 +310,12 @@ func applyExecutionState(input *issueopsnextdomain.Input, ports Ports, record is
 // childGateMissing is the parent PR gate's child keys (the same
 // issueopsdomain rules the PR readiness applies), read from one record scan.
 // A failed scan reports nothing: next only routes, the PR gate still refuses.
-func childGateMissing(ctx context.Context, ports Ports, stateRoot string, parent issueopscontract.IssueOpsRecord) []string {
+func childGateMissing(ctx context.Context, ports Ports, stateRoot string, parent issueopscontract.Record) []string {
 	if ports.ScanRecords == nil {
 		return nil
 	}
-	var records []issueopscontract.IssueOpsRecord
-	if err := ports.ScanRecords(ctx, stateRoot, func(record issueopscontract.IssueOpsRecord) error {
+	var records []issueopscontract.Record
+	if err := ports.ScanRecords(ctx, stateRoot, func(record issueopscontract.Record) error {
 		records = append(records, record)
 		return nil
 	}); err != nil {
@@ -325,11 +325,11 @@ func childGateMissing(ctx context.Context, ports Ports, stateRoot string, parent
 	return issueopsdomain.ChildPRGateMissing(status.Children)
 }
 
-func needsLocalReadiness(record issueopscontract.IssueOpsRecord) bool {
+func needsLocalReadiness(record issueopscontract.Record) bool {
 	switch record.Phase {
-	case issueopscontract.IssueOpsPhaseAISlopClean, issueopscontract.IssueOpsPhaseFeedback:
+	case issueopscontract.PhaseAISlopClean, issueopscontract.PhaseFeedback:
 		return true
-	case issueopscontract.IssueOpsPhasePR:
+	case issueopscontract.PhasePR:
 		return record.RemoteArtifact == nil
 	}
 	return false
@@ -358,7 +358,7 @@ func selectCycle(
 	}
 	var active []issueopsinventorycontract.ListEntry
 	for _, entry := range entries {
-		if entry.Phase != issueopscontract.IssueOpsPhaseDone {
+		if entry.Phase != issueopscontract.PhaseDone {
 			active = append(active, entry)
 		}
 	}
@@ -390,7 +390,7 @@ const maxCandidates = 20
 func activeCount(entries []issueopsinventorycontract.ListEntry) int {
 	count := 0
 	for _, entry := range entries {
-		if entry.Phase != issueopscontract.IssueOpsPhaseDone {
+		if entry.Phase != issueopscontract.PhaseDone {
 			count++
 		}
 	}
@@ -419,7 +419,7 @@ func matchOne(
 // prepare 전에 알려 준다.
 func rootConflict(
 	ports Ports,
-	record issueopscontract.IssueOpsRecord,
+	record issueopscontract.Record,
 	sourceRoot string,
 	entries []issueopsinventorycontract.ListEntry,
 ) string {
@@ -460,7 +460,7 @@ func entryOf(entry issueopsinventorycontract.ListEntry) *issueopsnextcontract.En
 	}
 }
 
-func recordEntry(record issueopscontract.IssueOpsRecord) *issueopsnextcontract.Entry {
+func recordEntry(record issueopscontract.Record) *issueopsnextcontract.Entry {
 	entry := &issueopsnextcontract.Entry{
 		ID:       record.ID,
 		Phase:    string(record.Phase),
@@ -534,7 +534,7 @@ func commandKind(command string) string {
 func doneCycleIDs(entries []issueopsinventorycontract.ListEntry) []string {
 	var ids []string
 	for _, entry := range entries {
-		if !entry.Invalid && entry.Phase == issueopscontract.IssueOpsPhaseDone {
+		if !entry.Invalid && entry.Phase == issueopscontract.PhaseDone {
 			ids = append(ids, entry.ID)
 		}
 	}

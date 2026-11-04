@@ -70,12 +70,12 @@ type ExecutionPrepareResult struct {
 	NextCommand    string     `json:"next_command,omitempty"`
 }
 type ExecutionReconcileRequest struct {
-	ID       string          `json:"id"`
-	Preview  bool            `json:"preview,omitempty"`
-	Confirm  bool            `json:"confirm,omitempty"`
-	Actor    NativeActor     `json:"actor"`
-	CWD      string          `json:"cwd"`
-	Snapshot *IssueOpsRecord `json:"-"`
+	ID       string      `json:"id"`
+	Preview  bool        `json:"preview,omitempty"`
+	Confirm  bool        `json:"confirm,omitempty"`
+	Actor    NativeActor `json:"actor"`
+	CWD      string      `json:"cwd"`
+	Snapshot *Record     `json:"-"`
 }
 type ExecutionReconcileResult struct {
 	OK         bool            `json:"ok"`

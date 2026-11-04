@@ -68,11 +68,11 @@ func TestAbandonAllowsDoneCycleWithoutArtifact(t *testing.T) {
 
 // abandonRetirementRecord는 phase=done이고 미머지 artifact를 가진 사이클을 만든다.
 // 로컬 잔여물은 없으므로 이 이슈가 다루는 두 게이트만 판정에 남는다.
-func abandonRetirementRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func abandonRetirementRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot, record := abandonTestRecord(t)
-	record.Phase = issueops.IssueOpsPhaseDone
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.Phase = issueops.PhaseDone
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr",
 		URL:        "https://github.com/example/issueops/pull/241",
 		VerifiedAt: "2026-08-02T15:54:07Z",

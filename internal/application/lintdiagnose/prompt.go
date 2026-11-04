@@ -32,7 +32,7 @@ func BuildPrompt(exitCode int, logTail string) string {
 			"The fix is directly actionable.",
 			"The response avoids log repetition.",
 		},
-		Data: []prompt.PromptDataSection{
+		Data: []prompt.DataSection{
 			judgement.BuildJSONSchemaSection(lintDiagnoseResponseSchemaExample(), []string{
 				"diagnosis: string, required, concise root cause and fix guidance.",
 			}),

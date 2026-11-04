@@ -15,8 +15,8 @@ type Effects interface {
 	Dir() (string, error)
 	EnsureDir(string) error
 	WithLock(context.Context, string, string, func(context.Context) error) error
-	Read(string) (workercontract.WorkerJob, error)
-	Write(context.Context, workercontract.WorkerJob) error
+	Read(string) (workercontract.Job, error)
+	Write(context.Context, workercontract.Job) error
 	Now() time.Time
 	PID() int
 	Run(policycontract.CommandPolicyRequest) policycontract.CommandRunResult
@@ -26,17 +26,17 @@ type Effects interface {
 
 type Service struct{ Effects Effects }
 
-func (service Service) Enqueue(ctx context.Context, kind, payload string) (workercontract.WorkerJob, error) {
+func (service Service) Enqueue(ctx context.Context, kind, payload string) (workercontract.Job, error) {
 	kind, err := workerdomain.NormalizeKind(kind)
 	if err != nil {
-		return workercontract.WorkerJob{OK: false}, err
+		return workercontract.Job{OK: false}, err
 	}
 	dir, err := service.Effects.Dir()
 	if err != nil {
-		return workercontract.WorkerJob{OK: false}, err
+		return workercontract.Job{OK: false}, err
 	}
 	if err := service.Effects.EnsureDir(dir); err != nil {
-		return workercontract.WorkerJob{OK: false}, err
+		return workercontract.Job{OK: false}, err
 	}
 	now := service.Effects.Now().UTC()
 	id := workerdomain.MakeID(kind, payload, now)
@@ -47,19 +47,19 @@ func (service Service) Enqueue(ctx context.Context, kind, payload string) (worke
 	return job, service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error { return service.Effects.Write(spanCtx, job) })
 }
 
-func (service Service) Cancel(ctx context.Context, id string) (workercontract.WorkerJob, error) {
+func (service Service) Cancel(ctx context.Context, id string) (workercontract.Job, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id}, err
+		return workercontract.Job{OK: false, ID: id}, err
 	}
-	var job workercontract.WorkerJob
+	var job workercontract.Job
 	err = service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error {
 		current, readErr := service.Effects.Read(id)
 		job = current
 		if readErr != nil {
 			return readErr
 		}
-		if current.Status == workercontract.WorkerStatusCancelled {
+		if current.Status == workercontract.StatusCancelled {
 			return nil
 		}
 		next, transitionErr := workerdomain.Cancel(current, service.Effects.Now().UTC().Format(time.RFC3339Nano))
@@ -72,7 +72,7 @@ func (service Service) Cancel(ctx context.Context, id string) (workercontract.Wo
 	return job, err
 }
 
-func (service Service) RunReadOnly(ctx context.Context, kind, payload string, request policycontract.CommandPolicyRequest) (workercontract.WorkerJob, error) {
+func (service Service) RunReadOnly(ctx context.Context, kind, payload string, request policycontract.CommandPolicyRequest) (workercontract.Job, error) {
 	job, err := service.Enqueue(ctx, kind, payload)
 	if err != nil {
 		return job, err
@@ -118,19 +118,19 @@ func (service Service) RunReadOnly(ctx context.Context, kind, payload string, re
 	return job, nil
 }
 
-func (service Service) DetectStuck(ctx context.Context) (workercontract.WorkerListResult, error) {
+func (service Service) DetectStuck(ctx context.Context) (workercontract.ListResult, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {
-		return workercontract.WorkerListResult{OK: false}, err
+		return workercontract.ListResult{OK: false}, err
 	}
-	result := workercontract.WorkerListResult{OK: true, WorkerDir: dir, Jobs: []workercontract.WorkerJob{}}
+	result := workercontract.ListResult{OK: true, WorkerDir: dir, Jobs: []workercontract.Job{}}
 	ids, err := service.Effects.ListIDs(dir)
 	if err != nil {
 		return result, err
 	}
 	for _, id := range ids {
 		job, readErr := service.Effects.Read(id)
-		if readErr != nil || job.Status != workercontract.WorkerStatusRunning || service.Effects.PIDAlive(job.PID) {
+		if readErr != nil || job.Status != workercontract.StatusRunning || service.Effects.PIDAlive(job.PID) {
 			continue
 		}
 		if next, fixed := service.markStuckLocked(ctx, dir, id); fixed {
@@ -143,15 +143,15 @@ func (service Service) DetectStuck(ctx context.Context) (workercontract.WorkerLi
 
 // markStuckLocked re-reads one running job under its lock and records it as
 // stuck when its PID is still dead. fixed reports whether the job was rewritten.
-func (service Service) markStuckLocked(ctx context.Context, dir, id string) (workercontract.WorkerJob, bool) {
-	var job workercontract.WorkerJob
+func (service Service) markStuckLocked(ctx context.Context, dir, id string) (workercontract.Job, bool) {
+	var job workercontract.Job
 	fixed := false
 	lockErr := service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error {
 		current, reReadErr := service.Effects.Read(id)
 		if reReadErr != nil {
 			return reReadErr
 		}
-		if current.Status != workercontract.WorkerStatusRunning || service.Effects.PIDAlive(current.PID) {
+		if current.Status != workercontract.StatusRunning || service.Effects.PIDAlive(current.PID) {
 			return nil
 		}
 		next, changed := workerdomain.MarkStuck(current, false, service.Effects.Now().UTC().Format(time.RFC3339Nano))
@@ -168,16 +168,16 @@ func (service Service) markStuckLocked(ctx context.Context, dir, id string) (wor
 	return job, lockErr == nil && fixed
 }
 
-func (service Service) Read(id string) (workercontract.WorkerJob, error) {
+func (service Service) Read(id string) (workercontract.Job, error) {
 	return service.Effects.Read(id)
 }
 
-func (service Service) List() (workercontract.WorkerListResult, error) {
+func (service Service) List() (workercontract.ListResult, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {
-		return workercontract.WorkerListResult{OK: false}, err
+		return workercontract.ListResult{OK: false}, err
 	}
-	result := workercontract.WorkerListResult{OK: true, WorkerDir: dir, Jobs: []workercontract.WorkerJob{}}
+	result := workercontract.ListResult{OK: true, WorkerDir: dir, Jobs: []workercontract.Job{}}
 	ids, err := service.Effects.ListIDs(dir)
 	if err != nil {
 		return result, err

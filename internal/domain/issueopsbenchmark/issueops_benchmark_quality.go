@@ -12,47 +12,47 @@ import (
 // 하나라도 일치하면 해당 문구를 한 번만 보고한다.
 type issueOpsCriticalFailureRule struct {
 	marker    string
-	triggered func(ruleText string, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool
+	triggered func(ruleText string, artifact issueopscontract.Artifact) bool
 }
 
 var issueOpsCriticalFailureRules = []issueOpsCriticalFailureRule{
-	{"works in source repo", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool { return !implementationInWorktree(a) }},
-	{"skips branch prompt", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"works in source repo", func(_ string, a issueopscontract.Artifact) bool { return !implementationInWorktree(a) }},
+	{"skips branch prompt", func(_ string, a issueopscontract.Artifact) bool {
 		return strings.TrimSpace(a.BranchName) == ""
 	}},
-	{"worker starts without context check", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"worker starts without context check", func(_ string, a issueopscontract.Artifact) bool {
 		return !workerPromptHasContextGate(a)
 	}},
-	{"unbounded code-reviewer", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool { return !reviewPromptIsBounded(a) }},
-	{"removes dirty worktree", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"unbounded code-reviewer", func(_ string, a issueopscontract.Artifact) bool { return !reviewPromptIsBounded(a) }},
+	{"removes dirty worktree", func(_ string, a issueopscontract.Artifact) bool {
 		return containsAllFold(a.WorktreeCleanup, "dirty", "remove")
 	}},
-	{"not written in korean", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"not written in korean", func(_ string, a issueopscontract.Artifact) bool {
 		return !containsHangul(a.IssueDraft) || !containsHangul(a.PRDraft)
 	}},
-	{"missing issue/pr guideline reference", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool { return !hasIssueOpsGuidelineRef(a) }},
-	{"excessive emoji", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"missing issue/pr guideline reference", func(_ string, a issueopscontract.Artifact) bool { return !hasIssueOpsGuidelineRef(a) }},
+	{"excessive emoji", func(_ string, a issueopscontract.Artifact) bool {
 		return hasExcessiveEmoji(a.IssueDraft + "\n" + a.PRDraft)
 	}},
-	{"domain contract", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"domain contract", func(_ string, a issueopscontract.Artifact) bool {
 		return !issueOpsDomainContractEvidenceComplete(a)
 	}},
-	{"api doc", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"api doc", func(_ string, a issueopscontract.Artifact) bool {
 		return !issueOpsAPIDocGateEvidenceComplete(a)
 	}},
-	{"live evidence", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"live evidence", func(_ string, a issueopscontract.Artifact) bool {
 		return !issueOpsLiveEvidenceMatrixComplete(a)
 	}},
-	{"review feedback", func(ruleText string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"review feedback", func(ruleText string, a issueopscontract.Artifact) bool {
 		return !strings.Contains(ruleText, "review-agent threads") && !issueOpsReviewFeedbackEvidenceComplete(a)
 	}},
-	{"completion hygiene", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	{"completion hygiene", func(_ string, a issueopscontract.Artifact) bool {
 		return !issueOpsCompletionHygieneComplete(a)
 	}},
 }
 
 // issueOpsCriticalFailureTriggered는 소문자 rule 문구가 등록된 rule 중 하나라도 만족하는지 반환한다.
-func issueOpsCriticalFailureTriggered(ruleText string, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsCriticalFailureTriggered(ruleText string, artifact issueopscontract.Artifact) bool {
 	for _, r := range issueOpsCriticalFailureRules {
 		if strings.Contains(ruleText, r.marker) && r.triggered(ruleText, artifact) {
 			return true
@@ -61,7 +61,7 @@ func issueOpsCriticalFailureTriggered(ruleText string, artifact issueopscontract
 	return false
 }
 
-func detectIssueOpsCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) []string {
+func detectIssueOpsCriticalFailures(fixture issueopscontract.Fixture, artifact issueopscontract.Artifact, routingComplete bool) []string {
 	var failures []string
 	for _, rule := range fixture.CriticalFailures {
 		if issueOpsCriticalFailureTriggered(strings.ToLower(rule), artifact) {
@@ -71,47 +71,47 @@ func detectIssueOpsCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFi
 	return append(failures, detectIssueOpsQualityCriticalFailures(fixture, artifact, routingComplete)...)
 }
 
-func implementationInWorktree(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func implementationInWorktree(artifact issueopscontract.Artifact) bool {
 	worktreePath := strings.TrimSpace(artifact.WorktreePath)
 	location := strings.TrimSpace(artifact.ImplementationLocation)
 	return worktreePath != "" && location != "" && (location == worktreePath || strings.HasPrefix(location, worktreePath+string(filepath.Separator)))
 }
 
-func issueOpsDomainContractEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsDomainContractEvidenceComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.DomainContractEvidence, "invariant", "exact mechanism", "equivalent behavior", "source") &&
 		containsAnyFold(artifact.DomainContractEvidence, "file:", "line", ":")
 }
 
-func issueOpsAPIDocGateEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsAPIDocGateEvidenceComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.APIDocGateEvidence, "changed endpoint", "public error", "static check", "review") &&
 		containsAnyFold(artifact.APIDocGateEvidence, "openapi", "swagger", "api-doc", "api doc")
 }
 
-func issueOpsLiveEvidenceMatrixComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsLiveEvidenceMatrixComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.LiveEvidenceMatrix, "environment", "repo config", "runtime", "remediation order") &&
 		containsAnyFold(artifact.LiveEvidenceMatrix, "dev", "stg", "prod", "local", "production")
 }
 
-func issueOpsReviewFeedbackEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsReviewFeedbackEvidenceComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.ReviewFeedbackEvidence, "classification", "verification", "thread reply", "resolution") &&
 		containsAnyFold(artifact.ReviewFeedbackEvidence, "valid", "stale", "noise", "contract_change", "defect") &&
 		issueOpsReviewAgentThreadEvidenceComplete(artifact)
 }
 
-func issueOpsCompletionHygieneComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsCompletionHygieneComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.CompletionHygiene, "final diff", "target branch", "remote artifact", "single commit", "cleanup") &&
 		containsAnyFold(artifact.CompletionHygiene, "pr", "mr", "issue") &&
 		issueOpsDraftIssueCompletionEvidenceComplete(artifact)
 }
 
-func workerPromptHasContextGate(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func workerPromptHasContextGate(artifact issueopscontract.Artifact) bool {
 	prompt := artifact.SubagentPrompts
 	return containsAllFold(prompt, "pwd", "branch", "head") &&
 		(ContainsFold(prompt, "worktree") || strings.TrimSpace(artifact.WorktreePath) != "") &&
 		containsAnyFold(prompt, "stop", "halt", "중단")
 }
 
-func reviewPromptIsBounded(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func reviewPromptIsBounded(artifact issueopscontract.Artifact) bool {
 	prompt := artifact.SubagentPrompts
 	if !containsAnyFold(prompt, "review", "code-reviewer", "verifier") {
 		return true
@@ -141,7 +141,7 @@ var issueOpsPRSectionConcepts = [][]string{
 	{"reviewer focus", "리뷰 포인트"},
 }
 
-func hasIssueOpsGuidelineRef(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func hasIssueOpsGuidelineRef(artifact issueopscontract.Artifact) bool {
 	const guideline = "skills/issueops-create-issue/SKILL.md; skills/issueops-create-pr/SKILL.md"
 	return ContainsFold(artifact.GuidelineRef, guideline) ||
 		ContainsFold(artifact.IssueDraft, guideline) ||

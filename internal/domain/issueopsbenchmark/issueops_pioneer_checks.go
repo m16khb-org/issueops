@@ -138,7 +138,7 @@ var pioneerSkillSignatures = map[string][]pioneerClause{
 //
 // Fixtures without a pioneer_skill_target are handled as N/A by the scorer
 // and never reach this check.
-func PioneerSkillEvidenceComplete(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func PioneerSkillEvidenceComplete(fixture issueopscontract.Fixture, artifact issueopscontract.Artifact) bool {
 	clauses, ok := pioneerSkillSignatures[strings.ToLower(strings.TrimSpace(fixture.PioneerSkillTarget))]
 	if !ok {
 		return false

@@ -31,7 +31,7 @@ func writeFileForTest(t *testing.T, path, content string) {
 func TestObserveProjectDocsListsOnlyMissingRequiredDocs(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, projectdoc.ProjectDocsDir)
-	names := projectdoc.ProjectDocNames()
+	names := projectdoc.Names()
 	for _, name := range names[1:] {
 		writeFileForTest(t, filepath.Join(dir, name), "x")
 	}

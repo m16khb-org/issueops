@@ -49,20 +49,20 @@ func runGatesGateGit(t *testing.T, dir string, name string, args ...string) {
 	}
 }
 
-func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
+func readyGatesGateRecord(t *testing.T) issueopscontract.Record {
 	t.Helper()
 	repo := initGatesGateRepo(t)
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            (issueops.CycleStartIdentity{}).StableID(repo, "main"),
 		Repo:          repo,
 		Branch:        "main",
-		Phase:         issueopscontract.IssueOpsPhasePR,
+		Phase:         issueopscontract.PhasePR,
 		IssueURL:      "https://github.com/acme/repo/issues/21",
 		PlanPath:      "plans/demo.md",
 		WorktreePath:  repo,
-		Intent: &issueopscontract.IssueOpsIntentContract{
+		Intent: &issueopscontract.IntentContract{
 			RawRequest:        "ship gates gate",
 			InterpretedIntent: "ship gates gate",
 			SuccessCriteria:   []string{"gates gate works"},
@@ -78,7 +78,7 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 			Approved:             true,
 			ReviewedAt:           "2026-07-07T00:00:00Z",
 		},
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
+		BranchPrepare: &issueopscontract.BranchPrepare{
 			Provider:     "github",
 			IssueURL:     "https://github.com/acme/repo/issues/21",
 			Branch:       "main",
@@ -88,7 +88,7 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 		},
 		AISlopCleanAt: "2026-07-07T00:00:00Z",
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
-		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
+		ProjectDocsReview: &issueopscontract.ProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 	record.AISlopCleanFingerprint = testChangeReader().ChangeFingerprint(record)
 	if _, err := (issueops.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
@@ -156,9 +156,9 @@ func TestStrictPRReadinessBlocksOnEvidencePendingOnly(t *testing.T) {
 func TestAdvancePhaseGuardsPRWithGates(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyGatesGateRecord(t)
-	if _, err := (issueops.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), func() issueopscontract.IssueOpsRecord {
+	if _, err := (issueops.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), func() issueopscontract.Record {
 		regressed := record
-		regressed.Phase = issueopscontract.IssueOpsPhaseImplement
+		regressed.Phase = issueopscontract.PhaseImplement
 		return regressed
 	}()); err != nil {
 		t.Fatal(err)
@@ -167,27 +167,27 @@ func TestAdvancePhaseGuardsPRWithGates(t *testing.T) {
 
 	// 게이트 없으면 loopgate와 동일하게 pr 진입 가능(다른 readiness는 이미 충족).
 	writeGatesLedger(t, record.Repo, "- [x] G1: done\n  EVIDENCE: measured\n")
-	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueopscontract.IssueOpsActor{Host: "codex"}); err != nil {
+	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueopscontract.Actor{Host: "codex"}); err != nil {
 		t.Fatalf("pr entry with met gates must pass: %v", err)
 	}
 
 	// 미충족 게이트면 pr 진입이 거부된다.
-	blockRecord := func() issueopscontract.IssueOpsRecord {
+	blockRecord := func() issueopscontract.Record {
 		regressed := record
-		regressed.Phase = issueopscontract.IssueOpsPhaseImplement
+		regressed.Phase = issueopscontract.PhaseImplement
 		return regressed
 	}()
 	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), blockRecord); err != nil {
 		t.Fatal(err)
 	}
 	writeGatesLedger(t, record.Repo, "- [ ] G1: blocked\n  EVIDENCE: pending\n")
-	_, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueopscontract.IssueOpsActor{Host: "codex"})
+	_, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueopscontract.Actor{Host: "codex"})
 	if err == nil || !strings.Contains(err.Error(), "gates_incomplete") {
 		t.Fatalf("pr entry with unmet gates must fail with gates_incomplete: %v", err)
 	}
 
 	// pr 외 전환은 게이트와 무관하게 통과.
-	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "feedback", issueopscontract.IssueOpsActor{Host: "codex"}); err != nil {
+	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "feedback", issueopscontract.Actor{Host: "codex"}); err != nil {
 		t.Fatalf("non-pr transition must pass: %v", err)
 	}
 }

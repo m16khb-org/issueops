@@ -13,6 +13,6 @@ func validateRiskQATierWithDeps(root string, deps riskQATierDeps) selfverify.Ste
 }
 
 type riskQATierDeps struct {
-	plan func(string) riskqaxx.RiskQATierPlan
+	plan func(string) riskqaxx.TierPlan
 	run  func(root string, command string) selfverify.StepResult
 }

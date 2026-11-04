@@ -11,16 +11,16 @@ import (
 	"issueops/internal/port"
 )
 
-func evidenceRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "io-finish", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/2", Provider: "github"}}
+func evidenceRecord() model.Record {
+	return model.Record{ID: "io-finish", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/2", Provider: "github"}}
 }
 
 func TestFinishEvidenceRefusesWithoutVerifiableArtifact(t *testing.T) {
-	noRead := func(context.Context, port.IssueProvider, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+	noRead := func(context.Context, port.IssueProvider, executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 		t.Fatal("issue read before merge evidence existed")
-		return executionissue.ExecutionIssueSnapshot{}, nil
+		return executionissue.Snapshot{}, nil
 	}
-	merged := func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+	merged := func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 		return model.CleanupRemoteBranchArtifactHead{}, nil
 	}
 	t.Run("record has no artifact", func(t *testing.T) {
@@ -40,7 +40,7 @@ func TestFinishEvidenceRefusesWithoutVerifiableArtifact(t *testing.T) {
 	t.Run("superseding artifact also unverifiable", func(t *testing.T) {
 		failure := errors.New("provider unavailable")
 		calls := 0
-		reader := FinishEvidenceReader{ReadIssueSnapshot: noRead, VerifyMergedHead: func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+		reader := FinishEvidenceReader{ReadIssueSnapshot: noRead, VerifyMergedHead: func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 			calls++
 			return model.CleanupRemoteBranchArtifactHead{}, failure
 		}}
@@ -53,18 +53,18 @@ func TestFinishEvidenceRefusesWithoutVerifiableArtifact(t *testing.T) {
 
 func TestFinishEvidenceReportsIssueReadbackFailureAndMergedEvidence(t *testing.T) {
 	record := evidenceRecord()
-	merged := func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+	merged := func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 		return model.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 	}
 	failure := errors.New("issue gone")
-	_, err := (FinishEvidenceReader{VerifyMergedHead: merged, ReadIssueSnapshot: func(context.Context, port.IssueProvider, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
-		return executionissue.ExecutionIssueSnapshot{}, failure
+	_, err := (FinishEvidenceReader{VerifyMergedHead: merged, ReadIssueSnapshot: func(context.Context, port.IssueProvider, executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
+		return executionissue.Snapshot{}, failure
 	}}).Observe(t.Context(), record, model.CleanupFinishRequest{})
 	if !errors.Is(err, failure) || !strings.Contains(err.Error(), "issue readback failed") {
 		t.Fatalf("err=%v", err)
 	}
-	req, err := (FinishEvidenceReader{VerifyMergedHead: merged, ReadIssueSnapshot: func(context.Context, port.IssueProvider, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
-		return executionissue.ExecutionIssueSnapshot{Body: model.IssueBodyCompletionStartMarker, State: "closed"}, nil
+	req, err := (FinishEvidenceReader{VerifyMergedHead: merged, ReadIssueSnapshot: func(context.Context, port.IssueProvider, executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
+		return executionissue.Snapshot{Body: model.IssueBodyCompletionStartMarker, State: "closed"}, nil
 	}}).Observe(t.Context(), record, model.CleanupFinishRequest{ID: record.ID})
 	if err != nil || !req.Merged || req.MergedBaseBranch != "main" || !req.IssueClosed {
 		t.Fatalf("req=%+v err=%v", req, err)

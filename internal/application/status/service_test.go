@@ -14,9 +14,9 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 	var calls []string
 	service := Service{
 		Home: "home", IssueOpsRoot: "harness", Version: "version",
-		Inspect: func(repo string) inspectcontract.InspectInfo {
+		Inspect: func(repo string) inspectcontract.Info {
 			calls = append(calls, "inspect:"+repo)
-			return inspectcontract.InspectInfo{Version: "observed"}
+			return inspectcontract.Info{Version: "observed"}
 		},
 		Doctor: func(req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 			calls = append(calls, "doctor:"+req.RepoRoot)
@@ -25,13 +25,13 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 			}
 			return doctorcontract.HarnessDoctorResult{OK: true, Healthy: false}, errors.New("")
 		},
-		State: func() (statecontract.StateListResult, error) {
+		State: func() (statecontract.ListResult, error) {
 			calls = append(calls, "state")
-			return statecontract.StateListResult{OK: true}, errors.New("state failed")
+			return statecontract.ListResult{OK: true}, errors.New("state failed")
 		},
-		Workers: func() (workercontract.WorkerListResult, error) {
+		Workers: func() (workercontract.ListResult, error) {
 			calls = append(calls, "workers")
-			return workercontract.WorkerListResult{OK: true}, errors.New("worker failed")
+			return workercontract.ListResult{OK: true}, errors.New("worker failed")
 		},
 		ResolveTarget: func(repo string) string { calls = append(calls, "resolve:"+repo); return "resolved" },
 	}
@@ -47,12 +47,12 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 
 func TestRunOKDoesNotRequireHealth(t *testing.T) {
 	service := Service{
-		Inspect: func(string) inspectcontract.InspectInfo { return inspectcontract.InspectInfo{} },
+		Inspect: func(string) inspectcontract.Info { return inspectcontract.Info{} },
 		Doctor: func(doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 			return doctorcontract.HarnessDoctorResult{OK: true, Healthy: false}, nil
 		},
-		State:         func() (statecontract.StateListResult, error) { return statecontract.StateListResult{OK: true}, nil },
-		Workers:       func() (workercontract.WorkerListResult, error) { return workercontract.WorkerListResult{OK: true}, nil },
+		State:         func() (statecontract.ListResult, error) { return statecontract.ListResult{OK: true}, nil },
+		Workers:       func() (workercontract.ListResult, error) { return workercontract.ListResult{OK: true}, nil },
 		ResolveTarget: func(s string) string { return s },
 	}
 	if got := service.Run("repo"); !got.OK || got.Doctor.Healthy {

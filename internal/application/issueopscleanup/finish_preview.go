@@ -24,11 +24,11 @@ type FinishWorkspaceObservation struct {
 
 type FinishPreviewer struct {
 	Environment     FinishEnvironment
-	Workspace       func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string)
+	Workspace       func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string)
 	ObserveArtifact func(string) (domain.ArtifactObservation, error)
 }
 
-func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, req model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
+func (s FinishPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 	inventory := domain.CleanupFinishTargets(record)
 	var facts domain.CleanupFinishObservation
 	if !req.Merged {
@@ -64,7 +64,7 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 
 // observeWorktree는 연결된 worktree의 정체성, 존재, 점유, 청결을 관찰해
 // inventory와 facts에 기록한다.
-func (s FinishPreviewer) observeWorktree(ctx context.Context, record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory *model.CleanupFinishInventory, facts *domain.CleanupFinishObservation) {
+func (s FinishPreviewer) observeWorktree(ctx context.Context, record model.Record, req model.CleanupFinishRequest, inventory *model.CleanupFinishInventory, facts *domain.CleanupFinishObservation) {
 	if linked := strings.TrimSpace(record.WorktreePath); linked != "" {
 		facts.WorktreeIdentityConflict = !s.Environment.SamePath(inventory.WorktreeRoot, linked)
 	}
@@ -139,7 +139,7 @@ func (s FinishPreviewer) observeRemoteRefs(repo string, withHEAD bool, refs []st
 	return observed
 }
 
-func (s FinishPreviewer) verifySupersedingArtifact(record model.IssueOpsRecord, candidate string) error {
+func (s FinishPreviewer) verifySupersedingArtifact(record model.Record, candidate string) error {
 	candidate = strings.TrimSpace(candidate)
 	if err := domain.ValidateCleanupSupersedeInput(record, candidate, s.ObserveArtifact != nil); err != nil {
 		return err

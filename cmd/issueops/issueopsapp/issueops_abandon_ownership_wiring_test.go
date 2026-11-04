@@ -31,16 +31,16 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 			t.Setenv("ISSUEOPS_STATE_DIR", root)
 			root = issueOpsStateRoot()
 			command := newIssueOpsCleanup(root)
-			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "991-abandon-wiring"})
+			record, err := startIssueOpsFixture(root, model.StartRequest{Repo: makeGitRepoForContract(t), Branch: "991-abandon-wiring"})
 			if err != nil {
 				t.Fatal(err)
 			}
-			record.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}
+			record.RemoteArtifact = &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}
 			db, err := sqlstore.Open(root)
 			if err != nil {
 				t.Fatal(err)
 			}
-			save := func(r model.IssueOpsRecord) {
+			save := func(r model.Record) {
 				raw, err := json.Marshal(r)
 				if err != nil {
 					t.Fatal(err)
@@ -50,7 +50,7 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 				}
 			}
 			if mode == "foreign" {
-				record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationFinish, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+				record.CleanupAttempt = &model.CleanupAttempt{Operation: model.CleanupOperationFinish, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 			}
 			save(record)
 			if mode == "live" {
@@ -86,7 +86,7 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 					return nil
 				}, PrintError: func(error) error { return nil },
 				Provider: func(string) (port.IssueProvider, error) { providers++; return provider, nil },
-				ObserveArtifactMerged: func(model.IssueOpsRemoteArtifactVerification) (bool, error) {
+				ObserveArtifactMerged: func(model.RemoteArtifactVerification) (bool, error) {
 					t.Error("abandon must read the artifact through the provider, not the merged-state transport")
 					return false, nil
 				},

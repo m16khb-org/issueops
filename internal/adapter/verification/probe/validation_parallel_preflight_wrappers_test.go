@@ -35,7 +35,7 @@ func TestValidationParallelPreflightWrappersUseDefaultSurfaces(t *testing.T) {
 
 func writeParallelPreflightFakeBinary(t *testing.T, dir string) string {
 	t.Helper()
-	preflightJSON := mustMarshalParallelPreflight(t, preflightcontract.PreflightResult{
+	preflightJSON := mustMarshalParallelPreflight(t, preflightcontract.Result{
 		OK: true,
 		CommitStyleHints: map[string]any{
 			"conventional_subjects": 1,

@@ -11,16 +11,16 @@ import (
 func TestSelfAugmentHistory(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	summary := augmentcontract.SelfAugmentSummary{
+	summary := augmentcontract.Summary{
 		TotalRuns:   10,
 		TotalSteps:  20,
 		PassedSteps: 20,
 		StepLabels:  []string{"go test", "MCP smoke"},
-		SlowestSteps: []augmentcontract.SelfAugmentSlowStep{
+		SlowestSteps: []augmentcontract.SlowStep{
 			{Iteration: 1, Seed: 800, Label: "go test", DurationMS: 1000},
 		},
 	}
-	if err := writeSnapshotForTest(dir, "self-verify-old", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-old", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -32,7 +32,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write old snapshot: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "self-verify-new", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-new", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -44,7 +44,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write new snapshot: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "other-summary", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "other-summary", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -74,7 +74,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 		t.Fatalf("retention should be omitted when no retention limit is requested: %+v", limited.Retention)
 	}
 
-	retentionPlan, err := SelfAugmentHistory("self-verify", 0, augmentcontract.SelfAugmentHistoryRetentionOptions{Limit: 1})
+	retentionPlan, err := SelfAugmentHistory("self-verify", 0, augmentcontract.HistoryRetentionOptions{Limit: 1})
 	if err != nil {
 		t.Fatalf("history retention plan: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 		t.Fatalf("retention plan should warn about prune candidates: %+v", retentionPlan.Warnings)
 	}
 
-	retentionDryRun, err := SelfAugmentHistory("self-verify", 0, augmentcontract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true})
+	retentionDryRun, err := SelfAugmentHistory("self-verify", 0, augmentcontract.HistoryRetentionOptions{Limit: 1, PruneRequested: true})
 	if err != nil {
 		t.Fatalf("history retention dry-run: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 		t.Fatalf("retention dry-run deleted old summary: %v", err)
 	}
 
-	retentionConfirmed, err := SelfAugmentHistory("self-verify", 0, augmentcontract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true, Confirm: true})
+	retentionConfirmed, err := SelfAugmentHistory("self-verify", 0, augmentcontract.HistoryRetentionOptions{Limit: 1, PruneRequested: true, Confirm: true})
 	if err != nil {
 		t.Fatalf("history retention confirm: %v", err)
 	}
@@ -124,18 +124,18 @@ func TestSelfAugmentHistory(t *testing.T) {
 
 func TestSelfAugmentHistoryRetentionRejectsUnsafeOptions(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := SelfAugmentHistory("self-verify", 0, augmentcontract.SelfAugmentHistoryRetentionOptions{Limit: -1}); err == nil {
+	if _, err := SelfAugmentHistory("self-verify", 0, augmentcontract.HistoryRetentionOptions{Limit: -1}); err == nil {
 		t.Fatalf("negative retention limit was accepted")
 	}
-	if _, err := SelfAugmentHistory("self-verify", 0, augmentcontract.SelfAugmentHistoryRetentionOptions{Confirm: true}); err == nil {
+	if _, err := SelfAugmentHistory("self-verify", 0, augmentcontract.HistoryRetentionOptions{Confirm: true}); err == nil {
 		t.Fatalf("confirm without prune-retention was accepted")
 	}
-	if _, err := SelfAugmentHistory("self-verify", 0, augmentcontract.SelfAugmentHistoryRetentionOptions{PruneRequested: true}); err == nil {
+	if _, err := SelfAugmentHistory("self-verify", 0, augmentcontract.HistoryRetentionOptions{PruneRequested: true}); err == nil {
 		t.Fatalf("prune-retention without positive retention limit was accepted")
 	}
 }
 
-func historySkippedKey(skipped []augmentcontract.SelfAugmentHistorySkipped, key string) bool {
+func historySkippedKey(skipped []augmentcontract.HistorySkipped, key string) bool {
 	for _, item := range skipped {
 		if item.Key == key {
 			return true

@@ -5,7 +5,7 @@ import (
 	selfverifycontract "issueops/internal/contract/selfverify"
 )
 
-type SelfAugmentSummary struct {
+type Summary struct {
 	TotalRuns            int                                                 `json:"total_runs"`
 	TotalSteps           int                                                 `json:"total_steps"`
 	PassedSteps          int                                                 `json:"passed_steps"`
@@ -30,18 +30,18 @@ type SelfAugmentSummary struct {
 	StepLabels           []string                                            `json:"step_labels"`
 	PlannedSteps         int                                                 `json:"planned_steps"`
 	NotRunSteps          []string                                            `json:"not_run_steps"`
-	SlowestSteps         []SelfAugmentSlowStep                               `json:"slowest_steps"`
-	StepDurationStats    []SelfAugmentStepDurationStat                       `json:"step_duration_stats"`
+	SlowestSteps         []SlowStep                                          `json:"slowest_steps"`
+	StepDurationStats    []StepDurationStat                                  `json:"step_duration_stats"`
 }
 
-type SelfAugmentSlowStep struct {
+type SlowStep struct {
 	Iteration  int    `json:"iteration"`
 	Seed       int64  `json:"seed"`
 	Label      string `json:"label"`
 	DurationMS int64  `json:"duration_ms"`
 }
 
-type SelfAugmentStepDurationStat struct {
+type StepDurationStat struct {
 	Label             string  `json:"label"`
 	Count             int     `json:"count"`
 	ReusedCount       int     `json:"reused_count"`

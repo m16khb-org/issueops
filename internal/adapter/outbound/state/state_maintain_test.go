@@ -159,8 +159,8 @@ func TestStateMaintainReportsProjectDiscoveryErrors(t *testing.T) {
 	}
 }
 
-func StateMaintain() (statecontract.StateMaintainResult, error) {
-	stores := NewMaintenanceStores(StateDir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
+func StateMaintain() (statecontract.MaintainResult, error) {
+	stores := NewMaintenanceStores(Dir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
 	return stateapp.NewMaintenanceService(stateapp.MaintenanceDependencies{AllRoots: stores.Roots, StoreExists: stores.Exists, MaintainStore: stores.Maintain}).Maintain()
 }
 

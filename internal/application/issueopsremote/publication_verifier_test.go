@@ -12,22 +12,22 @@ import (
 )
 
 type verifierReader struct {
-	record model.IssueOpsRecord
+	record model.Record
 	err    error
 }
 
-func (r verifierReader) DecodeSnapshot(contract.Intent) (model.IssueOpsRecord, contract.IntentPayload, error) {
+func (r verifierReader) DecodeSnapshot(contract.Intent) (model.Record, contract.IntentPayload, error) {
 	return r.record, contract.IntentPayload{Provider: "github", Kind: "pr", Request: contract.ProviderCreateRequest{
 		Labels: []string{"bug"}, Assignees: []string{"octocat"}, BaseBranch: "main"}}, r.err
 }
-func (r verifierReader) Read(context.Context, string) (model.IssueOpsRecord, error) {
+func (r verifierReader) Read(context.Context, string) (model.Record, error) {
 	return r.record, nil
 }
 
 func TestPublicationVerifierLiveChecksProjectThenProviderVerification(t *testing.T) {
 	record := journalRecord()
-	var seen model.IssueOpsRemoteArtifactVerificationRequest
-	verifier := NewPublicationVerifier(verifierReader{record: record}, func(req model.IssueOpsRemoteArtifactVerificationRequest) error {
+	var seen model.RemoteArtifactVerificationRequest
+	verifier := NewPublicationVerifier(verifierReader{record: record}, func(req model.RemoteArtifactVerificationRequest) error {
 		seen = req
 		return nil
 	})
@@ -39,7 +39,7 @@ func TestPublicationVerifierLiveChecksProjectThenProviderVerification(t *testing
 	}
 
 	called := false
-	verifier = NewPublicationVerifier(verifierReader{record: record}, func(model.IssueOpsRemoteArtifactVerificationRequest) error {
+	verifier = NewPublicationVerifier(verifierReader{record: record}, func(model.RemoteArtifactVerificationRequest) error {
 		called = true
 		return nil
 	})
@@ -48,7 +48,7 @@ func TestPublicationVerifierLiveChecksProjectThenProviderVerification(t *testing
 	}
 
 	boom := errors.New("provider says no")
-	verifier = NewPublicationVerifier(verifierReader{record: record}, func(model.IssueOpsRemoteArtifactVerificationRequest) error { return boom })
+	verifier = NewPublicationVerifier(verifierReader{record: record}, func(model.RemoteArtifactVerificationRequest) error { return boom })
 	if err := verifier.VerifyLive(t.Context(), contract.Intent{}, "https://github.com/acme/app/pull/3"); !errors.Is(err, boom) {
 		t.Fatalf("err=%v", err)
 	}
@@ -69,15 +69,15 @@ func TestPublicationVerifierPropagatesSnapshotDecodeFailure(t *testing.T) {
 }
 
 type knownURLReader struct {
-	record   model.IssueOpsRecord
+	record   model.Record
 	knownURL string
 }
 
-func (r knownURLReader) DecodeSnapshot(contract.Intent) (model.IssueOpsRecord, contract.IntentPayload, error) {
+func (r knownURLReader) DecodeSnapshot(contract.Intent) (model.Record, contract.IntentPayload, error) {
 	return r.record, contract.IntentPayload{Provider: "github", Kind: "pr", KnownURL: r.knownURL, Request: contract.ProviderCreateRequest{
 		Labels: []string{"bug"}, Assignees: []string{"octocat"}, BaseBranch: "main", Title: "제목", HeadBranch: "7-demo", Body: "본문"}}, nil
 }
-func (r knownURLReader) Read(context.Context, string) (model.IssueOpsRecord, error) {
+func (r knownURLReader) Read(context.Context, string) (model.Record, error) {
 	return r.record, nil
 }
 
@@ -89,10 +89,10 @@ func matchingCandidate(url string) contract.Candidate {
 func TestPublicationVerifierCandidateMustMatchIntentAndLinkedProject(t *testing.T) {
 	const inProject = "https://github.com/acme/app/pull/3"
 	codeElsewhere := journalRecord()
-	codeElsewhere.BranchPrepare = &model.IssueOpsBranchPrepare{CodeProjectKey: "github.com/fork/app"}
+	codeElsewhere.BranchPrepare = &model.BranchPrepare{CodeProjectKey: "github.com/fork/app"}
 	for _, tc := range []struct {
 		name      string
-		record    model.IssueOpsRecord
+		record    model.Record
 		known     string
 		candidate func() contract.Candidate
 		wantErr   string

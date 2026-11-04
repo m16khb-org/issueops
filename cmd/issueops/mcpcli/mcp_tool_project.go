@@ -67,7 +67,7 @@ func handleCommitPolicyTool(deps MCPDependencies) MCPToolOutcome {
 }
 
 func handleProjectDocsReviseTool(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
-	result, err := deps.ProjectDocs.Revise(projectdocscontract.ProjectDocsReviseRequest{
+	result, err := deps.ProjectDocs.Revise(projectdocscontract.ReviseRequest{
 		RepoRoot:       argmap.String(call.Arguments, "repo"),
 		RelPath:        argmap.String(call.Arguments, "rel_path"),
 		Content:        argmap.String(call.Arguments, "content"),
@@ -80,7 +80,7 @@ func handleProjectDocsReviseTool(call MCPToolCall, deps MCPDependencies) MCPTool
 }
 
 func handleProjectDocsAppendTool(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
-	result, err := deps.ProjectDocs.Append(projectdocscontract.ProjectDocsAppendRequest{
+	result, err := deps.ProjectDocs.Append(projectdocscontract.AppendRequest{
 		RepoRoot:     argmap.String(call.Arguments, "repo"),
 		Kind:         argmap.String(call.Arguments, "kind"),
 		Title:        argmap.String(call.Arguments, "title"),

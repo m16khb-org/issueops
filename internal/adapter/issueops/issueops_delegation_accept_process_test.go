@@ -36,7 +36,7 @@ func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
 	childIDs := make([]string, workers)
 	evidenceByChild := make(map[string]string, workers)
 	for i := range workers {
-		started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+		started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 			ParentID:           parent.ID,
 			Branch:             fmt.Sprintf("124-child-accept-%d", i),
 			Title:              fmt.Sprintf("accepted child %d", i),
@@ -47,7 +47,7 @@ func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
 			t.Fatalf("start child %d: %v", i, err)
 		}
 		child := started.Child
-		child.Phase = issueops.IssueOpsPhaseDone
+		child.Phase = issueops.PhaseDone
 		writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 		childIDs[i] = child.ID
 		evidenceByChild[child.ID] = fmt.Sprintf("worker-%d accepted verified diff", i)

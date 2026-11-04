@@ -10,69 +10,69 @@ import (
 
 func TestProjectorDerivesDeterministicLedger(t *testing.T) {
 	projector := NewProjector(func(
-		_ issueopscontract.IssueOpsRecord,
-		phase issueopscontract.IssueOpsPhase,
-	) issueopscontract.IssueOpsReadiness {
-		if phase == issueopscontract.IssueOpsPhaseProblem {
-			return issueopscontract.IssueOpsReadiness{Ready: true}
+		_ issueopscontract.Record,
+		phase issueopscontract.Phase,
+	) issueopscontract.Readiness {
+		if phase == issueopscontract.PhaseProblem {
+			return issueopscontract.Readiness{Ready: true}
 		}
-		return issueopscontract.IssueOpsReadiness{Missing: []string{"missing_" + string(phase)}}
+		return issueopscontract.Readiness{Missing: []string{"missing_" + string(phase)}}
 	})
-	record := issueopscontract.IssueOpsRecord{Phase: issueopscontract.IssueOpsPhaseGrill}
+	record := issueopscontract.Record{Phase: issueopscontract.PhaseGrill}
 
 	left := projector.Derive(record)
 	right := projector.Derive(record)
 	if !reflect.DeepEqual(left, right) {
 		t.Fatalf("derived ledger is not deterministic:\nleft=%#v\nright=%#v", left, right)
 	}
-	if problem := left[issueopscontract.IssueOpsPhaseProblem]; len(problem.Artifacts) == 0 || len(problem.Missing) != 0 {
+	if problem := left[issueopscontract.PhaseProblem]; len(problem.Artifacts) == 0 || len(problem.Missing) != 0 {
 		t.Fatalf("ready phase projection is incomplete: %#v", problem)
 	}
-	if grill := left[issueopscontract.IssueOpsPhaseGrill]; len(grill.Missing) == 0 {
+	if grill := left[issueopscontract.PhaseGrill]; len(grill.Missing) == 0 {
 		t.Fatalf("incomplete phase must expose missing keys: %#v", grill)
 	}
 }
 
 func TestProjectorBackfillsWithoutReplacingPersistedEntries(t *testing.T) {
-	var asked []issueopscontract.IssueOpsPhase
+	var asked []issueopscontract.Phase
 	projector := NewProjector(func(
-		_ issueopscontract.IssueOpsRecord,
-		phase issueopscontract.IssueOpsPhase,
-	) issueopscontract.IssueOpsReadiness {
+		_ issueopscontract.Record,
+		phase issueopscontract.Phase,
+	) issueopscontract.Readiness {
 		asked = append(asked, phase)
-		return issueopscontract.IssueOpsReadiness{Ready: true}
+		return issueopscontract.Readiness{Ready: true}
 	})
-	record := issueopscontract.IssueOpsRecord{
-		Phase: issueopscontract.IssueOpsPhasePlan,
-		PhaseLedger: issueopscontract.IssueOpsPhaseLedger{
-			issueopscontract.IssueOpsPhaseProblem: {
-				Phase:       issueopscontract.IssueOpsPhaseProblem,
+	record := issueopscontract.Record{
+		Phase: issueopscontract.PhasePlan,
+		PhaseLedger: issueopscontract.PhaseLedger{
+			issueopscontract.PhaseProblem: {
+				Phase:       issueopscontract.PhaseProblem,
 				CompletedAt: "2026-06-29T00:01:00Z",
 			},
 		},
 	}
 
 	projected := projector.Project(record)
-	if len(projected.PhaseLedger) != len(issueopscontract.IssueOpsPhases) {
+	if len(projected.PhaseLedger) != len(issueopscontract.Phases) {
 		t.Fatalf("partial ledger was not backfilled: %#v", projected.PhaseLedger)
 	}
-	if got := projected.PhaseLedger[issueopscontract.IssueOpsPhaseProblem].CompletedAt; got != "2026-06-29T00:01:00Z" {
+	if got := projected.PhaseLedger[issueopscontract.PhaseProblem].CompletedAt; got != "2026-06-29T00:01:00Z" {
 		t.Fatalf("persisted entry was replaced: %q", got)
 	}
 	// Completion observes git; a recorded phase must not pay for it.
-	if slices.Contains(asked, issueopscontract.IssueOpsPhaseProblem) || len(asked) != len(issueopscontract.IssueOpsPhases)-1 {
+	if slices.Contains(asked, issueopscontract.PhaseProblem) || len(asked) != len(issueopscontract.Phases)-1 {
 		t.Fatalf("completion asked for %v, want every phase except the recorded problem", asked)
 	}
-	if _, mutated := record.PhaseLedger[issueopscontract.IssueOpsPhasePlan]; mutated {
+	if _, mutated := record.PhaseLedger[issueopscontract.PhasePlan]; mutated {
 		t.Fatal("projection mutated the caller's stored ledger")
 	}
 }
 
 func TestArtifactKeysIndexChildrenOnlyAtPR(t *testing.T) {
-	if !slices.Contains(ArtifactKeys(issueopscontract.IssueOpsPhasePR), "children_complete") {
+	if !slices.Contains(ArtifactKeys(issueopscontract.PhasePR), "children_complete") {
 		t.Fatal("PR artifact keys must include children_complete")
 	}
-	if slices.Contains(ArtifactKeys(issueopscontract.IssueOpsPhaseImplement), "children_complete") {
+	if slices.Contains(ArtifactKeys(issueopscontract.PhaseImplement), "children_complete") {
 		t.Fatal("implement artifact keys must not include children_complete")
 	}
 }

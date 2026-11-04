@@ -6,25 +6,25 @@ package trace
 
 import failurecause "issueops/internal/contract/failurecause"
 
-type TraceAnalyzeRequest struct {
+type AnalyzeRequest struct {
 	Input       string `json:"input"`
 	InputFormat string `json:"input_format,omitempty"`
 }
 
-type TraceAnalyzeResult struct {
-	OK           bool                   `json:"ok"`
-	Complete     bool                   `json:"complete"`
-	Kind         string                 `json:"kind"`
-	Input        string                 `json:"input"`
-	InputSource  string                 `json:"input_source"`
-	TraceTypes   []string               `json:"trace_types"`
-	FindingCount int                    `json:"finding_count"`
-	Findings     []TraceAnalysisFinding `json:"findings"`
-	Warnings     []string               `json:"warnings,omitempty"`
-	Usage        *UsageReport           `json:"usage,omitempty"`
+type AnalyzeResult struct {
+	OK           bool              `json:"ok"`
+	Complete     bool              `json:"complete"`
+	Kind         string            `json:"kind"`
+	Input        string            `json:"input"`
+	InputSource  string            `json:"input_source"`
+	TraceTypes   []string          `json:"trace_types"`
+	FindingCount int               `json:"finding_count"`
+	Findings     []AnalysisFinding `json:"findings"`
+	Warnings     []string          `json:"warnings,omitempty"`
+	Usage        *UsageReport      `json:"usage,omitempty"`
 }
 
-type TraceAnalysisFinding struct {
+type AnalysisFinding struct {
 	FailureClass         string                  `json:"failure_class"`
 	FailureCause         failurecause.Cause      `json:"failure_cause"`
 	FailureCauseEvidence []failurecause.Evidence `json:"failure_cause_evidence"`

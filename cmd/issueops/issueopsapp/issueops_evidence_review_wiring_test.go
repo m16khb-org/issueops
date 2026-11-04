@@ -20,16 +20,16 @@ func TestEvidenceReviewRuntimePersistsObservedChangeSet(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := issueOpsStateRoot()
 	runtime := newIssueOpsCLIRuntime(root)
-	record, err := runtime.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "901-review"})
+	record, err := runtime.StartIssueOps(root, model.StartRequest{Repo: repo, Branch: "901-review"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = model.IssueOpsPhaseImplement
+	record.Phase = model.PhaseImplement
 	if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
-	actor := model.IssueOpsActor{}
-	record, err = runtime.RecordIssueOpsImplementationReviewWithActor(root, record.ID, model.IssueOpsImplementationReviewRequest{Verdict: "pass", Findings: []string{"reviewed"}, Evidence: []string{"checked"}}, actor)
+	actor := model.Actor{}
+	record, err = runtime.RecordIssueOpsImplementationReviewWithActor(root, record.ID, model.ImplementationReviewRequest{Verdict: "pass", Findings: []string{"reviewed"}, Evidence: []string{"checked"}}, actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,14 +37,14 @@ func TestEvidenceReviewRuntimePersistsObservedChangeSet(t *testing.T) {
 	if fingerprint == "" {
 		t.Fatal("implementation review lost actual change fingerprint")
 	}
-	record, err = runtime.RecordIssueOpsProjectDocsReviewWithActor(root, record.ID, model.IssueOpsProjectDocsReviewRequest{Verdict: "updated", Docs: []string{filepath.Join(repo, "AGENTS.md")}, ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"updated"}}, actor)
+	record, err = runtime.RecordIssueOpsProjectDocsReviewWithActor(root, record.ID, model.ProjectDocsReviewRequest{Verdict: "updated", Docs: []string{filepath.Join(repo, "AGENTS.md")}, ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"updated"}}, actor)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if record.ProjectDocsReview.ReviewedFingerprint != fingerprint || !reflect.DeepEqual(record.ProjectDocsReview.Docs, []string{"AGENTS.md"}) {
 		t.Fatalf("docs observation=%+v", record.ProjectDocsReview)
 	}
-	record, err = runtime.RecordIssueOpsSchemaEvidenceWithActor(root, record.ID, model.IssueOpsSchemaEvidenceRequest{Measurements: []string{"fixture has one document"}, Sources: []string{"local fixture"}}, actor)
+	record, err = runtime.RecordIssueOpsSchemaEvidenceWithActor(root, record.ID, model.SchemaEvidenceRequest{Measurements: []string{"fixture has one document"}, Sources: []string{"local fixture"}}, actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestEvidenceReviewRuntimePersistsObservedChangeSet(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(saved, record) {
 		t.Fatalf("durable evidence mismatch: %v", err)
 	}
-	for _, req := range []model.IssueOpsProjectDocsReviewRequest{
+	for _, req := range []model.ProjectDocsReviewRequest{
 		{Verdict: "updated", Docs: []string{"unchanged.md"}, Evidence: []string{"claimed"}},
 		{Verdict: "no-change", ReviewedDocs: []string{"README.md"}, Evidence: []string{"read"}},
 		{Verdict: "no-change", ReviewedDocs: []string{"../AGENTS.md"}, Evidence: []string{"read"}},

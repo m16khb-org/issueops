@@ -15,14 +15,14 @@ import (
 
 // abandonResidueFixture는 execution 없이 record가 link한 실제 워크트리·브랜치를
 // 가진 레코드다(#342/#433 residue 선례). 프로세스 표면만 fake로 바꾼다.
-func abandonResidueFixture(t *testing.T) (string, issueops.IssueOpsRecord, string) {
+func abandonResidueFixture(t *testing.T) (string, issueops.Record, string) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	fixture := newClaimableExecutionFixture(t, stateRoot, "477-abandon-processes")
 	if err := os.Remove(fixture.tokenPath); err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(rec *issueops.Record) {
 		rec.Execution = nil
 		rec.WorktreePath = fixture.worktree
 	})
@@ -118,7 +118,7 @@ func TestCleanupAbandonStopFailureInWorktreeOnlyResidueIsRePreviewable(t *testin
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 		rec.WorktreePath = root
 	})

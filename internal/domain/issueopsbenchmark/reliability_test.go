@@ -164,7 +164,7 @@ func TestScoreSpreadAndRound4(t *testing.T) {
 
 func TestConsensusJudgeVerdict(t *testing.T) {
 	s := func(id, prov string, avg float64, pass bool) contract.JudgeSample {
-		return contract.JudgeSample{SampleID: id, Provenance: prov, Score: contract.IssueOpsBenchmarkScore{AverageScore: avg, Passed: pass}}
+		return contract.JudgeSample{SampleID: id, Provenance: prov, Score: contract.Score{AverageScore: avg, Passed: pass}}
 	}
 	t.Run("errors", func(t *testing.T) {
 		cases := []struct {

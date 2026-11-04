@@ -13,10 +13,10 @@ import (
 func TestRepositoryPersistsDecisionMutationWithinSpan(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-decision01"
-	data, err := json.Marshal(issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	data, err := json.Marshal(issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -33,8 +33,8 @@ func TestRepositoryPersistsDecisionMutationWithinSpan(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		id,
-		func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error) {
-			record.Decisions = append(record.Decisions, issueopscontract.IssueOpsDecision{
+		func(record issueopscontract.Record) (issueopscontract.Record, error) {
+			record.Decisions = append(record.Decisions, issueopscontract.Decision{
 				Title: "Boundary",
 			})
 			return record, nil

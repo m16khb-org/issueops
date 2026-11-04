@@ -11,5 +11,5 @@ import (
 )
 
 func newBenchmarkCommand() benchmarkcmd.Command {
-	return benchmarkcmd.Command{Service: &app.Service{Files: benchmark.Files{Stdin: os.Stdin}, Runs: benchmark.Store{Directory: statestore.StateDir()}, Now: time.Now, Artifact: benchmarkartifact.FromFixture}}
+	return benchmarkcmd.Command{Service: &app.Service{Files: benchmark.Files{Stdin: os.Stdin}, Runs: benchmark.Store{Directory: statestore.Dir()}, Now: time.Now, Artifact: benchmarkartifact.FromFixture}}
 }

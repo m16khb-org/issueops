@@ -9,12 +9,12 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
-func ReuseFinding(rel string, line int, symbol string, existing map[string][]string) (guardcontract.GuardFinding, bool) {
+func ReuseFinding(rel string, line int, symbol string, existing map[string][]string) (guardcontract.Finding, bool) {
 	key := NormalizeSymbol(symbol)
 	if key == "" || len(existing[key]) == 0 {
-		return guardcontract.GuardFinding{}, false
+		return guardcontract.Finding{}, false
 	}
-	return guardcontract.GuardFinding{
+	return guardcontract.Finding{
 		Severity: "review",
 		Rule:     "reuse-before-new",
 		File:     rel,

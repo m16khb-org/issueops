@@ -26,7 +26,7 @@ func TestBenchmarkCLIInstancesKeepCapturedState(t *testing.T) {
 		raw := captureStdoutForContract(t, func() error {
 			return issueopscli.RunIssueOpsWithDependencies([]string{"benchmark", "run", "--fixtures", fixtures, "--json"}, deps[i])
 		})
-		var result contract.IssueOpsBenchmarkRunResult
+		var result contract.RunResult
 		if err := json.Unmarshal([]byte(raw), &result); err != nil {
 			t.Fatal(err)
 		}
@@ -34,7 +34,7 @@ func TestBenchmarkCLIInstancesKeepCapturedState(t *testing.T) {
 		if err != nil {
 			t.Fatalf("instance %d did not persist in its captured state directory: %v", i, err)
 		}
-		var stored contract.IssueOpsBenchmarkRunResult
+		var stored contract.RunResult
 		if err := json.Unmarshal(persisted, &stored); err != nil || stored.ID != result.ID || stored.FixtureCount != 1 {
 			t.Fatalf("stored benchmark: %+v err=%v", stored, err)
 		}

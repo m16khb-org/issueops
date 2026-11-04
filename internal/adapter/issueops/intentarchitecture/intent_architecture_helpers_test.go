@@ -14,17 +14,17 @@ import (
 )
 
 type Store struct {
-	Read          func(stateRoot, id string) (model.IssueOpsRecord, error)
-	TouchWrite    func(stateRoot string, record model.IssueOpsRecord) (model.IssueOpsRecord, error)
-	PlanReadiness func(record model.IssueOpsRecord) model.IssueOpsReadiness
-	Document      func(stateRoot string, record model.IssueOpsRecord) (string, error)
+	Read          func(stateRoot, id string) (model.Record, error)
+	TouchWrite    func(stateRoot string, record model.Record) (model.Record, error)
+	PlanReadiness func(record model.Record) model.Readiness
+	Document      func(stateRoot string, record model.Record) (string, error)
 }
 
 const (
 	architectureReviewEvidenceGuidance = `approved architecture review requires architecture_review_evidence: this is not a separate flag or decision record; add --verification "architecture review checked alternatives and risks" or a Korean equivalent such as "아키텍처 검토 완료: 대안과 위험 확인"`
 )
 
-func RecordIntent(store Store, stateRoot, id string, req model.IssueOpsIntentRecordRequest) (model.IssueOpsRecord, error) {
+func RecordIntent(store Store, stateRoot, id string, req model.IntentRecordRequest) (model.Record, error) {
 	return intentapp.RecordIntent(intentport.Store{
 		Read:       store.Read,
 		TouchWrite: store.TouchWrite,
@@ -32,7 +32,7 @@ func RecordIntent(store Store, stateRoot, id string, req model.IssueOpsIntentRec
 	}, stateRoot, id, req)
 }
 
-func RecordArchitectureReview(store Store, stateRoot, id string, req reviewcontract.ArchitectureReviewRequest) (model.IssueOpsRecord, error) {
+func RecordArchitectureReview(store Store, stateRoot, id string, req reviewcontract.ArchitectureReviewRequest) (model.Record, error) {
 	record, err := reviewapp.RecordArchitectureReview(reviewport.ArchitectureReviewStore{
 		Read:          store.Read,
 		PlanReadiness: store.PlanReadiness,
@@ -41,7 +41,7 @@ func RecordArchitectureReview(store Store, stateRoot, id string, req reviewcontr
 		Document:      store.Document,
 	}, stateRoot, id, req)
 	if errors.Is(err, reviewdomain.ErrMissingArchitectureReviewEvidence) {
-		return model.IssueOpsRecord{OK: false}, errors.New(architectureReviewEvidenceGuidance)
+		return model.Record{OK: false}, errors.New(architectureReviewEvidenceGuidance)
 	}
 	return record, err
 }

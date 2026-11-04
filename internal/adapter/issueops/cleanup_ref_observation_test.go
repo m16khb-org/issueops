@@ -105,7 +105,7 @@ func TestCleanupFinishRejectsRecordDriftBeforeLocalEffects(t *testing.T) {
 	deps.Git = func(dir string, args ...string) (int, string) {
 		if drift && args[0] == "ls-remote" {
 			drift = false
-			mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.RemoteArtifact.URL = "https://github.com/acme/repo/pull/999" })
+			mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.RemoteArtifact.URL = "https://github.com/acme/repo/pull/999" })
 		}
 		return git.run(dir, args...)
 	}

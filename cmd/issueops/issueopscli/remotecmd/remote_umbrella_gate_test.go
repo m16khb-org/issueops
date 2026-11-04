@@ -12,7 +12,7 @@ import (
 func TestCreateChildRequiresPreparedUmbrellaBranch(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "78-umbrella"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: repo, Branch: "78-umbrella"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}

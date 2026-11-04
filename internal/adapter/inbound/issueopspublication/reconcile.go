@@ -36,7 +36,7 @@ func (h ReconcileHandler) Handle(ctx context.Context, _ string, request issueops
 	if result.Record.ID != "" {
 		public.ID = result.Record.ID
 	}
-	var record issueopscontract.IssueOpsRecord
+	var record issueopscontract.Record
 	if serviceErr != nil && !result.Reconciled && request.Snapshot != nil {
 		record = *request.Snapshot
 	} else {

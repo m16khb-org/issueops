@@ -1,27 +1,27 @@
 package issueops
 
-type IssueOpsPhase string
+type Phase string
 
 const (
-	IssueOpsPhaseProblem             IssueOpsPhase = "problem"
-	IssueOpsPhaseGrill               IssueOpsPhase = "grill"
-	IssueOpsPhasePlan                IssueOpsPhase = "plan"
-	IssueOpsPhaseCompatibilityReview IssueOpsPhase = "compatibility-review"
-	IssueOpsPhaseImplement           IssueOpsPhase = "implement"
-	IssueOpsPhaseAISlopClean         IssueOpsPhase = "ai-slop-clean"
-	IssueOpsPhaseFeedback            IssueOpsPhase = "feedback"
-	IssueOpsPhasePR                  IssueOpsPhase = "pr"
-	IssueOpsPhaseDone                IssueOpsPhase = "done"
+	PhaseProblem             Phase = "problem"
+	PhaseGrill               Phase = "grill"
+	PhasePlan                Phase = "plan"
+	PhaseCompatibilityReview Phase = "compatibility-review"
+	PhaseImplement           Phase = "implement"
+	PhaseAISlopClean         Phase = "ai-slop-clean"
+	PhaseFeedback            Phase = "feedback"
+	PhasePR                  Phase = "pr"
+	PhaseDone                Phase = "done"
 )
 
-var IssueOpsPhases = []IssueOpsPhase{
-	IssueOpsPhaseProblem,
-	IssueOpsPhaseGrill,
-	IssueOpsPhasePlan,
-	IssueOpsPhaseCompatibilityReview,
-	IssueOpsPhaseImplement,
-	IssueOpsPhaseAISlopClean,
-	IssueOpsPhaseFeedback,
-	IssueOpsPhasePR,
-	IssueOpsPhaseDone,
+var Phases = []Phase{
+	PhaseProblem,
+	PhaseGrill,
+	PhasePlan,
+	PhaseCompatibilityReview,
+	PhaseImplement,
+	PhaseAISlopClean,
+	PhaseFeedback,
+	PhasePR,
+	PhaseDone,
 }

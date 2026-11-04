@@ -23,7 +23,7 @@ func testSnapshotStore() app.SnapshotStore {
 }
 
 func ValidateStepBudgetBaseline(binary, root string, seed int64) selfverify.StepResult {
-	return stepbudget.ValidateStepBudgetBaselineWithDeps(binary, root, seed, stepbudget.StepBudgetValidationDeps{WriteSnapshot: testSnapshotStore().Write})
+	return stepbudget.ValidateStepBudgetBaselineWithDeps(binary, root, seed, stepbudget.ValidationDeps{WriteSnapshot: testSnapshotStore().Write})
 }
 func testDocsValidator() qagate.Validator {
 	return qagate.Validator{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List, ListSkills: install.ListSkillNames}

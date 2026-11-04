@@ -9,5 +9,5 @@ import (
 )
 
 func issueOpsStateRootForTest() string {
-	return filepath.Join(statestore.StateDir(), fmt.Sprintf("issueops_v%d", model.IssueOpsSchemaVersion))
+	return filepath.Join(statestore.Dir(), fmt.Sprintf("issueops_v%d", model.SchemaVersion))
 }

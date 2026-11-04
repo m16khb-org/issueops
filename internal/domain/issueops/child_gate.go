@@ -7,7 +7,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ChildPRGateMissing(children []model.IssueOpsChildStatusEntry) []string {
+func ChildPRGateMissing(children []model.ChildStatusEntry) []string {
 	missing := []string{}
 	for _, child := range children {
 		if key := ChildPRGateKey(child); key != "" {
@@ -17,7 +17,7 @@ func ChildPRGateMissing(children []model.IssueOpsChildStatusEntry) []string {
 	return missing
 }
 
-func ActiveChildIDs(children []model.IssueOpsChildStatusEntry) []string {
+func ActiveChildIDs(children []model.ChildStatusEntry) []string {
 	ids := []string{}
 	for _, child := range children {
 		if !ChildDropped(child) && !ChildTerminal(child) {
@@ -28,7 +28,7 @@ func ActiveChildIDs(children []model.IssueOpsChildStatusEntry) []string {
 	return ids
 }
 
-func ChildPRGateKey(entry model.IssueOpsChildStatusEntry) string {
+func ChildPRGateKey(entry model.ChildStatusEntry) string {
 	if ChildDropped(entry) {
 		return ""
 	}
@@ -45,11 +45,11 @@ func ChildPRGateKey(entry model.IssueOpsChildStatusEntry) string {
 	}
 }
 
-func ChildTerminal(entry model.IssueOpsChildStatusEntry) bool {
-	return !entry.Orphaned && entry.Phase == model.IssueOpsPhaseDone
+func ChildTerminal(entry model.ChildStatusEntry) bool {
+	return !entry.Orphaned && entry.Phase == model.PhaseDone
 }
 
-func ChildDropped(entry model.IssueOpsChildStatusEntry) bool {
+func ChildDropped(entry model.ChildStatusEntry) bool {
 	return strings.TrimSpace(entry.ValidationVerdict) == "dropped" &&
 		len(strings.TrimSpace(entry.ValidationReason)) >= 10 &&
 		strings.TrimSpace(entry.ValidatedAt) != ""

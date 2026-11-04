@@ -37,7 +37,7 @@ func TestBasicCommandsKeepCapturedRootsAndStores(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var result tracecontract.TraceAnalyzeResult
+	var result tracecontract.AnalyzeResult
 	if err := json.Unmarshal([]byte(output), &result); err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestBasicGuardKeepsCapturedWorkingDirectory(t *testing.T) {
 	if !guardcontract.IsGuardBlocked(err) {
 		t.Fatalf("expected blocked error, got %v", err)
 	}
-	var result guardcontract.GuardCheckResult
+	var result guardcontract.CheckResult
 	if err := json.Unmarshal([]byte(output), &result); err != nil {
 		t.Fatal(err)
 	}

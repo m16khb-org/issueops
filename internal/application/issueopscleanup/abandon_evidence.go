@@ -8,7 +8,7 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-func CleanupAbandonFailureSeal(record issueops.IssueOpsRecord, failure *issueops.IssueOpsCleanupAbandonFailure) string {
+func CleanupAbandonFailureSeal(record issueops.Record, failure *issueops.CleanupAbandonFailure) string {
 	sealed := struct {
 		ID           string `json:"id"`
 		Repo         string `json:"repo"`
@@ -28,7 +28,7 @@ func CleanupAbandonFailureSeal(record issueops.IssueOpsRecord, failure *issueops
 	return hex.EncodeToString(sum[:])
 }
 
-func CleanupAbandonRecordSHA(record issueops.IssueOpsRecord) string {
+func CleanupAbandonRecordSHA(record issueops.Record) string {
 	data, err := json.Marshal(record)
 	if err != nil {
 		return ""

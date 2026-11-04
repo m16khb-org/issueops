@@ -12,10 +12,10 @@ import (
 )
 
 func TestCodecRejectsExecutionWorkspacePolicyAsInvalidState(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	record := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            "io-workspace",
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 		Execution: &issueopscontract.Execution{
 			Workspace: issueopscontract.Workspace{
 				SourceRoot: "/repo", Root: "/repo.worktrees/run", Branch: "run",
@@ -44,12 +44,12 @@ func TestCodecRejectsExecutionWorkspacePolicyAsInvalidState(t *testing.T) {
 }
 
 func TestCodecRejectsCompletedIssueURLMismatch(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	record := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            "io-url-mismatch",
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 		IssueURL:      "https://example.test/issues/2",
-		IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{
+		IssueCreateIntent: &issueopscontract.IssueCreateIntent{
 			OperationID:      "0123456789abcdef0123456789abcdef",
 			Marker:           "<!-- issueops:issue-create:0123456789abcdef0123456789abcdef -->",
 			Provider:         "github",
@@ -144,36 +144,36 @@ func TestDecodeRejectsRecordInvariantViolations(t *testing.T) {
 func TestEncodeRejectsRecordInvariantViolationsAsInvalidState(t *testing.T) {
 	tests := []struct {
 		name   string
-		mutate func(*issueopscontract.IssueOpsRecord)
+		mutate func(*issueopscontract.Record)
 	}{
 		{
 			name: "unknown_phase",
-			mutate: func(record *issueopscontract.IssueOpsRecord) {
+			mutate: func(record *issueopscontract.Record) {
 				record.Phase = "unknown"
 			},
 		},
 		{
 			name: "phase_ledger_identity_mismatch",
-			mutate: func(record *issueopscontract.IssueOpsRecord) {
-				record.PhaseLedger = issueopscontract.IssueOpsPhaseLedger{
-					issueopscontract.IssueOpsPhaseProblem: {
-						Phase: issueopscontract.IssueOpsPhasePlan,
+			mutate: func(record *issueopscontract.Record) {
+				record.PhaseLedger = issueopscontract.PhaseLedger{
+					issueopscontract.PhaseProblem: {
+						Phase: issueopscontract.PhasePlan,
 					},
 				}
 			},
 		},
 		{
 			name: "unknown_plan_prep_status",
-			mutate: func(record *issueopscontract.IssueOpsRecord) {
-				record.PlanPrep = &issueopscontract.IssueOpsPlanPrep{
-					PriorDecisions: issueopscontract.IssueOpsPlanPrepItem{Status: "unknown"},
+			mutate: func(record *issueopscontract.Record) {
+				record.PlanPrep = &issueopscontract.PlanPrep{
+					PriorDecisions: issueopscontract.PlanPrepItem{Status: "unknown"},
 				}
 			},
 		},
 		{
 			name: "unknown_cleanup_failure_step",
-			mutate: func(record *issueopscontract.IssueOpsRecord) {
-				record.CleanupFinishFailure = &issueopscontract.IssueOpsCleanupFinishFailure{
+			mutate: func(record *issueopscontract.Record) {
+				record.CleanupFinishFailure = &issueopscontract.CleanupFinishFailure{
 					Step: "unknown",
 				}
 			},
@@ -182,10 +182,10 @@ func TestEncodeRejectsRecordInvariantViolationsAsInvalidState(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			record := issueopscontract.IssueOpsRecord{
-				SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+			record := issueopscontract.Record{
+				SchemaVersion: issueopscontract.SchemaVersion,
 				ID:            "io-invalid",
-				Phase:         issueopscontract.IssueOpsPhaseProblem,
+				Phase:         issueopscontract.PhaseProblem,
 			}
 			test.mutate(&record)
 

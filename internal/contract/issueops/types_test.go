@@ -8,11 +8,11 @@ import (
 )
 
 func TestRecordUsesStablePhaseAndCurrentTypedSidecars(t *testing.T) {
-	record := issueops.IssueOpsRecord{
-		SchemaVersion: issueops.IssueOpsSchemaVersion,
+	record := issueops.Record{
+		SchemaVersion: issueops.SchemaVersion,
 		ID:            "io-1",
 		Repo:          "/repo",
-		Phase:         issueops.IssueOpsPhaseImplement,
+		Phase:         issueops.PhaseImplement,
 		Execution:     &issueops.Execution{},
 		CreatedAt:     "created",
 		UpdatedAt:     "updated",

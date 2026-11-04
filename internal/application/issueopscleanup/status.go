@@ -18,7 +18,7 @@ type StatusEnvironment interface {
 
 type StructuralStatus struct{ Environment StatusEnvironment }
 
-func (s StructuralStatus) ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusRequest) model.IssueOpsCleanupStatus {
+func (s StructuralStatus) ForRecord(record model.Record, req model.CleanupStatusRequest) model.CleanupStatus {
 	var facts domain.CleanupStatusObservation
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if worktree == "" {
@@ -41,7 +41,7 @@ func (s StructuralStatus) ForRecord(record model.IssueOpsRecord, req model.Issue
 }
 
 type StatusRecords interface {
-	Load(string) (model.IssueOpsRecord, error)
+	Load(string) (model.Record, error)
 }
 
 type StatusService struct {
@@ -52,19 +52,19 @@ type StatusService struct {
 	PreviewFinish    func(context.Context, model.CleanupFinishRequest, port.IssueProvider) (model.CleanupFinishResult, error)
 }
 
-func (s StatusService) Status(ctx context.Context, id string, mergedRequested bool) (model.IssueOpsCleanupStatus, error) {
+func (s StatusService) Status(ctx context.Context, id string, mergedRequested bool) (model.CleanupStatus, error) {
 	record, err := s.Records.Load(id)
-	failed := model.IssueOpsCleanupStatus{OK: false, ID: id}
+	failed := model.CleanupStatus{OK: false, ID: id}
 	if err != nil {
 		return failed, err
 	}
 	if !domain.CleanupStatusNeedsMergeReadback(record, mergedRequested) {
-		return s.Structural.ForRecord(record, model.IssueOpsCleanupStatusRequest{}), nil
+		return s.Structural.ForRecord(record, model.CleanupStatusRequest{}), nil
 	}
 	// The finish preview observes the worktree and remote refs itself and its
 	// result replaces the structural status, which then contributes only the
 	// record's artifact URL: skip the git and network ls-remote observation.
-	structural := domain.BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{}, domain.CleanupStatusObservation{})
+	structural := domain.BuildCleanupStatus(record, model.CleanupStatusRequest{}, domain.CleanupStatusObservation{})
 	providerName := domain.ResolveRecordProvider(record)
 	if providerName == "" {
 		return failed, fmt.Errorf("cannot determine provider from IssueOps record")

@@ -9,15 +9,15 @@ import (
 )
 
 func NeedsPRGateRead(to string) bool {
-	return model.IssueOpsPhase(strings.TrimSpace(to)) == model.IssueOpsPhasePR
+	return model.Phase(strings.TrimSpace(to)) == model.PhasePR
 }
-func PRGateError(ready model.IssueOpsReadiness) error {
+func PRGateError(ready model.Readiness) error {
 	if ready.Ready {
 		return nil
 	}
 	return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(ready.Missing, ", "))
 }
-func MergeGateReadiness(ready model.IssueOpsReadiness, missing, warnings []string) model.IssueOpsReadiness {
+func MergeGateReadiness(ready model.Readiness, missing, warnings []string) model.Readiness {
 	if len(missing) == 0 && len(warnings) == 0 {
 		return ready
 	}

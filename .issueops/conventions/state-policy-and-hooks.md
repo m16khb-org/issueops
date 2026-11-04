@@ -11,7 +11,7 @@
 ## 5. Worker 컨벤션
 
 - worker는 로컬 전용이다. 원격 API는 별도 요구가 생기기 전까지 만들지 않는다.
-- 상주 worker 프로세스나 socket은 없다. `issueops worker`(MCP `worker_*`)는 one-shot 명령으로 job record(`internal/contract/worker.WorkerJob`)를 user state의 sqlstore `worker` bucket(`ISSUEOPS_WORKER_DIR` 또는 `<state>/worker`)에 기록한다.
+- 상주 worker 프로세스나 socket은 없다. `issueops worker`(MCP `worker_*`)는 one-shot 명령으로 job record(`internal/contract/worker.Job`)를 user state의 sqlstore `worker` bucket(`ISSUEOPS_WORKER_DIR` 또는 `<state>/worker`)에 기록한다.
 - job 상태는 `queued → running → succeeded|failed`, `queued → cancelled`이다(`internal/domain/worker`). 취소는 `queued`에서만 되고, 상태 전이는 job별 span lock(`WithLock`) 안에서 read-modify-write한다. 셸은 실행하지 않으며(`no_shell`), 명령 실행은 command policy를 거치는 `run --read-only`만 허용한다.
 - `running`인데 기록된 PID가 죽은 job은 `cleanup-stuck`이 `failed`로 표시한다(`MarkStuck`).
 - 장기 작업 상태와 project lifecycle queue/profile은 user state dir에 저장하고, repo에 secret/state 원문을 쓰지 않는다. lifecycle state는 `projects/<repo-id>/` namespace로 격리해 같은 머신의 여러 repo가 섞이지 않게 한다.
@@ -77,7 +77,7 @@
 12-factor #12(stateless reducer)를 IssueOps 상태머신에 명문화한 계약이다. 코드에 이미 성립하는 불변식을 규율로 고정하는 것이지, 새 추상을 도입하는 것이 아니다.
 
 - IssueOps phase 전이의 **판정(validation)은 균일하게 순수하지 않다**. readiness 게이트는 실측상 세 층으로 갈린다 — 이 분류가 계약이고, "전부 순수"라고 적지 않는다(#107, Codex 외부 검토로 확정).
-  - **record-only 순수**: `ProblemReadiness`/`GrillReadiness`(`internal/application/issueopscycle/phase_service.go`)와 `PlanReadinessMissing`/`GrillReadinessMissing`(`internal/domain/issueops/early_phase_readiness.go`)만 `IssueOpsRecord` 필드만 읽어 `Ready/Missing`을 돌려주며 clock·git·FS·network를 건드리지 않는다.
+  - **record-only 순수**: `ProblemReadiness`/`GrillReadiness`(`internal/application/issueopscycle/phase_service.go`)와 `PlanReadinessMissing`/`GrillReadinessMissing`(`internal/domain/issueops/early_phase_readiness.go`)만 `Record` 필드만 읽어 `Ready/Missing`을 돌려주며 clock·git·FS·network를 건드리지 않는다.
   - **FS 존재검사 수행**: compatibility-review/implementation/ai-slop-clean과 비-strict PR readiness(`internal/application/issueopscycle/readiness_service.go`의 `Readiness.Compatibility`/`Implementation`/`AISlopClean`/`PR`, `implementation_readiness.go`, `pr_readiness.go`의 `LocalPRReadinessMissing`)는 `ReadinessPathObservations`(`internal/adapter/issueops/issueops_readiness.go`)가 주입하는 `os.Stat`(`WorktreePathValid`/`PlanPathExists`, `internal/adapter/issueops/readinesspaths/paths.go`)과 `filepath.EvalSymlinks`(`PlanPathInsideWorktree`, 같은 파일)를 실행한다. 같은 record라도 디스크 상태가 바뀌면 결과가 바뀐다.
   - **git·network 수행**: strict PR readiness(`Readiness.StrictPRWithState`/`StrictPRWithFetch`, `readiness_service.go`; `GateService.StrictPRReadinessWithState`, `gate_service.go`)는 `ReadinessGit`(`internal/adapter/issueops/readiness_git.go`)의 `IsWorktree`·`Head`·`Branch`·`Clean`·`Upstream`·`Counts`와 네트워크를 타는 `Fetch`(`git fetch --quiet`)를 통해 git을 직접 실행한다. `PrefetchUpstream`이 fetch를 lock 밖으로 선행한다.
 - **비결정·side-effect의 소유 경계는 게이트마다 다르다**(전부 wrapper 소유가 아니다). 전이 적용은 `internal/application/issueopscycle/phase_transition.go`의 `ApplyPhaseTransition`이 `PhaseTransitionObservations`로 주입받은 wall-clock·git HEAD·change fingerprint를 모아 `internal/domain/issueops/phase_transition.go`의 순수 `ApplyPhaseTransition(record, phase, now, head, fingerprint, completedArtifacts)`에 넘기고, 디스크 write는 `PhaseService.touchWrite`/`Store.Write`가 맡는다. 그러나 **진입 판정(`phase_entry.go`·`readiness_service.go`)은 IO를 실행한다**: PR 진입에서 strict 게이트가 git·network를 돌리고, compatibility-review/implement/ai-slop-clean 진입 판정도 같은 이유로 FS를 읽는다. 규율은 "판정은 순수하다"가 아니라 **이 경계 안으로 새 IO를 더 밀어 넣지 않는다**이다.

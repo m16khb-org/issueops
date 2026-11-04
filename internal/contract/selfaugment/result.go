@@ -2,25 +2,25 @@ package selfaugment
 
 const SelfVerificationKoreanName = "자기 검증 루프"
 
-type SelfAugmentResult struct {
-	OK                  bool                        `json:"ok"`
-	LoopKind            string                      `json:"loop_kind"`
-	KoreanName          string                      `json:"korean_name"`
-	Iterations          int                         `json:"iterations"`
-	BaseSeed            int64                       `json:"base_seed"`
-	TargetScore         float64                     `json:"target_score"`
-	TerminationEligible bool                        `json:"termination_eligible"`
-	ElapsedMS           int64                       `json:"elapsed_ms"`
-	IssueOpsRoot        string                      `json:"issueops_root"`
-	InspiredBy          string                      `json:"inspired_by"`
-	LoopContract        []string                    `json:"loop_contract"`
-	Summary             SelfAugmentSummary          `json:"summary"`
-	StateCheckpoint     *SelfAugmentStateCheckpoint `json:"state_checkpoint,omitempty"`
-	LLMEval             *SelfVerifyLLMEvalResult    `json:"llm_eval,omitempty"`
-	Runs                []SelfAugmentIteration      `json:"runs"`
+type Result struct {
+	OK                  bool                     `json:"ok"`
+	LoopKind            string                   `json:"loop_kind"`
+	KoreanName          string                   `json:"korean_name"`
+	Iterations          int                      `json:"iterations"`
+	BaseSeed            int64                    `json:"base_seed"`
+	TargetScore         float64                  `json:"target_score"`
+	TerminationEligible bool                     `json:"termination_eligible"`
+	ElapsedMS           int64                    `json:"elapsed_ms"`
+	IssueOpsRoot        string                   `json:"issueops_root"`
+	InspiredBy          string                   `json:"inspired_by"`
+	LoopContract        []string                 `json:"loop_contract"`
+	Summary             Summary                  `json:"summary"`
+	StateCheckpoint     *StateCheckpoint         `json:"state_checkpoint,omitempty"`
+	LLMEval             *SelfVerifyLLMEvalResult `json:"llm_eval,omitempty"`
+	Runs                []Iteration              `json:"runs"`
 }
 
-type SelfAugmentStateCheckpoint struct {
+type StateCheckpoint struct {
 	OK       bool   `json:"ok"`
 	Key      string `json:"key"`
 	StateDir string `json:"state_dir,omitempty"`

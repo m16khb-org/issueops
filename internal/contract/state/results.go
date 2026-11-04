@@ -1,40 +1,40 @@
 package state
 
-type StateResult struct {
+type Result struct {
 	OK       bool           `json:"ok"`
 	StateDir string         `json:"state_dir"`
 	Path     string         `json:"path,omitempty"`
 	Record   RecordEnvelope `json:"record"`
 }
 
-type StateListEntry struct {
+type ListEntry struct {
 	Key           string `json:"key"`
 	UpdatedAt     string `json:"updated_at"`
 	Bytes         int    `json:"bytes"`
 	SchemaVersion int    `json:"schema_version"`
 }
 
-type StateListResult struct {
-	OK       bool             `json:"ok"`
-	StateDir string           `json:"state_dir"`
-	Keys     []string         `json:"keys"`
-	Records  []StateListEntry `json:"records"`
+type ListResult struct {
+	OK       bool        `json:"ok"`
+	StateDir string      `json:"state_dir"`
+	Keys     []string    `json:"keys"`
+	Records  []ListEntry `json:"records"`
 }
 
-type StatePruneResult struct {
-	OK          bool             `json:"ok"`
-	StateDir    string           `json:"state_dir"`
-	MaxAge      string           `json:"max_age"`
-	Cutoff      string           `json:"cutoff"`
-	Confirm     bool             `json:"confirm"`
-	DryRun      bool             `json:"dry_run"`
-	DeletedKeys []string         `json:"deleted_keys"`
-	Pruned      []StateListEntry `json:"pruned"`
-	KeptKeys    []string         `json:"kept_keys"`
-	Kept        []StateListEntry `json:"kept"`
+type PruneResult struct {
+	OK          bool        `json:"ok"`
+	StateDir    string      `json:"state_dir"`
+	MaxAge      string      `json:"max_age"`
+	Cutoff      string      `json:"cutoff"`
+	Confirm     bool        `json:"confirm"`
+	DryRun      bool        `json:"dry_run"`
+	DeletedKeys []string    `json:"deleted_keys"`
+	Pruned      []ListEntry `json:"pruned"`
+	KeptKeys    []string    `json:"kept_keys"`
+	Kept        []ListEntry `json:"kept"`
 }
 
-type StateDoctorIssue struct {
+type DoctorIssue struct {
 	Path     string `json:"path"`
 	Key      string `json:"key,omitempty"`
 	Severity string `json:"severity"`
@@ -42,14 +42,14 @@ type StateDoctorIssue struct {
 	Message  string `json:"message"`
 }
 
-type StateDoctorResult struct {
-	OK        bool               `json:"ok"`
-	Healthy   bool               `json:"healthy"`
-	StateDir  string             `json:"state_dir"`
-	Checked   int                `json:"checked"`
-	ValidKeys []string           `json:"valid_keys"`
-	Valid     []StateListEntry   `json:"valid"`
-	Issues    []StateDoctorIssue `json:"issues"`
+type DoctorResult struct {
+	OK        bool          `json:"ok"`
+	Healthy   bool          `json:"healthy"`
+	StateDir  string        `json:"state_dir"`
+	Checked   int           `json:"checked"`
+	ValidKeys []string      `json:"valid_keys"`
+	Valid     []ListEntry   `json:"valid"`
+	Issues    []DoctorIssue `json:"issues"`
 }
 
 type StoreMaintainResult struct {
@@ -60,7 +60,7 @@ type StoreMaintainResult struct {
 	PermissionsFixed []string `json:"permissions_fixed,omitempty"`
 }
 
-type StateMaintainResult struct {
+type MaintainResult struct {
 	OK      bool                  `json:"ok"`
 	Roots   []StoreMaintainResult `json:"roots"`
 	Skipped []string              `json:"skipped,omitempty"`

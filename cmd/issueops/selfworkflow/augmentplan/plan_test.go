@@ -12,7 +12,7 @@ func TestPlanSelfAugmentationUsesGeniusThinkAndScoreGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}, root, "test")
+	result := Plan(augmentcontract.PlanRequest{Cycles: 1, TargetScore: 95}, root, "test")
 	if !result.OK || result.LoopKind != "self_augmentation" || result.KoreanName != augmentcontract.SelfAugmentationKoreanName {
 		t.Fatalf("unexpected loop identity: %+v", result)
 	}
@@ -121,11 +121,11 @@ func TestPlanSelfAugmentationUsesGeniusThinkAndScoreGate(t *testing.T) {
 	}
 }
 
-func candidateByID(candidates []augmentcontract.SelfAugmentCandidate, id string) augmentcontract.SelfAugmentCandidate {
+func candidateByID(candidates []augmentcontract.Candidate, id string) augmentcontract.Candidate {
 	for _, candidate := range candidates {
 		if candidate.ID == id {
 			return candidate
 		}
 	}
-	return augmentcontract.SelfAugmentCandidate{}
+	return augmentcontract.Candidate{}
 }

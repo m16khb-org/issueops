@@ -24,9 +24,9 @@ func (r childMergeRecords) WithinLock(ctx context.Context, id string, fn func(co
 	}
 	return r.lockedChildCleanupRecords.WithinLock(ctx, id, fn)
 }
-func (r childMergeRecords) Load(id string) (model.IssueOpsRecord, error) {
+func (r childMergeRecords) Load(id string) (model.Record, error) {
 	if r.readErr != nil {
-		return model.IssueOpsRecord{}, r.readErr
+		return model.Record{}, r.readErr
 	}
 	return r.lockedChildCleanupRecords.Load(id)
 }
@@ -35,25 +35,25 @@ func TestChildrenCloserBindsUnlockedMergeObservationToCurrentRecord(t *testing.T
 	for _, tc := range []struct {
 		name       string
 		noArtifact bool
-		change     func(*model.IssueOpsRecord)
+		change     func(*model.Record)
 	}{
 		{name: "unchanged"},
-		{name: "artifact mutated in place", change: func(r *model.IssueOpsRecord) { r.RemoteArtifact.URL = "replacement" }},
-		{name: "child link mutated in place", change: func(r *model.IssueOpsRecord) { r.IssueLinks[0].URL = "https://github.com/acme/repo/issues/4" }},
-		{name: "artifact appeared", noArtifact: true, change: func(r *model.IssueOpsRecord) {
-			r.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{URL: "new"}
+		{name: "artifact mutated in place", change: func(r *model.Record) { r.RemoteArtifact.URL = "replacement" }},
+		{name: "child link mutated in place", change: func(r *model.Record) { r.IssueLinks[0].URL = "https://github.com/acme/repo/issues/4" }},
+		{name: "artifact appeared", noArtifact: true, change: func(r *model.Record) {
+			r.RemoteArtifact = &model.RemoteArtifactVerification{URL: "new"}
 		}},
-		{name: "branch changed", change: func(r *model.IssueOpsRecord) { r.Branch = "other" }},
-		{name: "artifact changed", change: func(r *model.IssueOpsRecord) {
-			r.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{URL: "replacement"}
+		{name: "branch changed", change: func(r *model.Record) { r.Branch = "other" }},
+		{name: "artifact changed", change: func(r *model.Record) {
+			r.RemoteArtifact = &model.RemoteArtifactVerification{URL: "replacement"}
 		}},
-		{name: "artifact removed", change: func(r *model.IssueOpsRecord) { r.RemoteArtifact = nil }},
-		{name: "parent changed", change: func(r *model.IssueOpsRecord) { r.IssueURL = "https://github.com/acme/repo/issues/3" }},
-		{name: "repo changed", change: func(r *model.IssueOpsRecord) { r.Repo = "/other" }},
-		{name: "children changed", change: func(r *model.IssueOpsRecord) { r.IssueLinks = nil }},
+		{name: "artifact removed", change: func(r *model.Record) { r.RemoteArtifact = nil }},
+		{name: "parent changed", change: func(r *model.Record) { r.IssueURL = "https://github.com/acme/repo/issues/3" }},
+		{name: "repo changed", change: func(r *model.Record) { r.Repo = "/other" }},
+		{name: "children changed", change: func(r *model.Record) { r.IssueLinks = nil }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "parent", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "observed"}, IssueLinks: []model.IssueOpsIssueLink{{Type: "child", Provider: "github", URL: "https://github.com/acme/repo/issues/2"}}}
+			record := model.Record{ID: "parent", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{URL: "observed"}, IssueLinks: []model.IssueLink{{Type: "child", Provider: "github", URL: "https://github.com/acme/repo/issues/2"}}}
 			if tc.noArtifact {
 				record.RemoteArtifact = nil
 			}
@@ -66,7 +66,7 @@ func TestChildrenCloserBindsUnlockedMergeObservationToCurrentRecord(t *testing.T
 			var calls []string
 			closer := app.ChildrenCloser{
 				Records: current, Now: func() time.Time { return time.Unix(123, 0) },
-				VerifyMerged: func(artifact model.IssueOpsRemoteArtifactVerification) error {
+				VerifyMerged: func(artifact model.RemoteArtifactVerification) error {
 					if records.locked || artifact.URL != "observed" {
 						t.Fatalf("merge observation held the cycle lock or used an unobserved artifact: %+v", artifact)
 					}
@@ -117,10 +117,10 @@ func TestChildrenCloserMergeReadbackRefusals(t *testing.T) {
 		{name: "provider unavailable", requested: true, mergeErr: errors.New("readback unavailable"), wantCalls: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "artifact"}, IssueLinks: []model.IssueOpsIssueLink{{Type: "child", Provider: "github", URL: "child"}}}
+			record := model.Record{ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{URL: "artifact"}, IssueLinks: []model.IssueLink{{Type: "child", Provider: "github", URL: "child"}}}
 			records := &lockedChildCleanupRecords{t: t, record: record}
 			calls := 0
-			closer := app.ChildrenCloser{Records: childMergeRecords{lockedChildCleanupRecords: records, readErr: tc.readErr}, VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { calls++; return tc.mergeErr }, Provider: func(string) (port.IssueProvider, error) {
+			closer := app.ChildrenCloser{Records: childMergeRecords{lockedChildCleanupRecords: records, readErr: tc.readErr}, VerifyMerged: func(model.RemoteArtifactVerification) error { calls++; return tc.mergeErr }, Provider: func(string) (port.IssueProvider, error) {
 				t.Error("child provider must not be resolved on refused merge evidence")
 				return nil, errors.New("unexpected child provider")
 			}}

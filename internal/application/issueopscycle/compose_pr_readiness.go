@@ -13,7 +13,7 @@ type ObservedPRReadinessFacts struct {
 	CurrentFingerprint string
 }
 
-func ComposeObservedPRReadiness(record model.IssueOpsRecord, ready model.IssueOpsReadiness, facts ObservedPRReadinessFacts) model.IssueOpsReadiness {
+func ComposeObservedPRReadiness(record model.Record, ready model.Readiness, facts ObservedPRReadinessFacts) model.Readiness {
 	gitMissing, warnings := cycledomain.PRGitReadiness(record, facts.Git)
 	missing := append(append([]string{}, ready.Missing...), gitMissing...)
 	missing = append(missing, ObservedPRReadinessMissing(record, facts.Artifact)...)
@@ -27,7 +27,7 @@ func ComposeObservedPRReadiness(record model.IssueOpsRecord, ready model.IssueOp
 	return ready
 }
 
-func ApplyChildPRGate(ready model.IssueOpsReadiness, childMissing, childWarnings []string) model.IssueOpsReadiness {
+func ApplyChildPRGate(ready model.Readiness, childMissing, childWarnings []string) model.Readiness {
 	ready.Missing = stringlist.UniqueSorted(append(append([]string{}, ready.Missing...), childMissing...))
 	ready.Warnings = append(ready.Warnings, childWarnings...)
 	ready.Ready = len(ready.Missing) == 0

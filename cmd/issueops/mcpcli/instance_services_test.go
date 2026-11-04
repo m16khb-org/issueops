@@ -48,7 +48,7 @@ func TestMCPDirectAndSDKKeepProjectAndExecutionServicesIsolated(t *testing.T) {
 	for i, owner := range owners {
 		pid := 100 + i
 		deps[i] = MCPDependencies{Catalog: mcpcatalog.Build(), DefaultTarget: owner,
-			Inspect:   func(repo, _ string) any { return inspectmodel.InspectInfo{OK: true, TargetRepo: owner} },
+			Inspect:   func(repo, _ string) any { return inspectmodel.Info{OK: true, TargetRepo: owner} },
 			Preflight: preflightapp.Service{Observer: instancePreflight{owner}},
 			Skills: func(root, name string) []inspectmodel.SkillInfo {
 				if name != owner {
@@ -63,8 +63,8 @@ func TestMCPDirectAndSDKKeepProjectAndExecutionServicesIsolated(t *testing.T) {
 			},
 			Resources: resources.Config{IssueOpsRoot: owner, Version: owner, SkillName: owner,
 				ReadHarnessFile: func(parts ...string) (string, error) { return owner + "/" + strings.Join(parts, "/"), nil },
-				DocsIndex: func(root, version string, _ bool) docsmodel.DocsIndexResult {
-					return docsmodel.DocsIndexResult{OK: root == owner && version == owner, IssueOpsRoot: root, Version: version}
+				DocsIndex: func(root, version string, _ bool) docsmodel.IndexResult {
+					return docsmodel.IndexResult{OK: root == owner && version == owner, IssueOpsRoot: root, Version: version}
 				},
 			},
 			Execution: ExecutionDeps{IssueOpsStateRoot: func() string { return owner },

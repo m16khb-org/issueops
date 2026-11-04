@@ -15,7 +15,7 @@ type ObservedPRFacts struct {
 	WorktreeValid      bool
 }
 
-func ObservedPRReadinessMissing(record model.IssueOpsRecord, facts ObservedPRFacts) []string {
+func ObservedPRReadinessMissing(record model.Record, facts ObservedPRFacts) []string {
 	missing := []string{}
 	// Local readiness includes absent/non-pass reviews. Only fingerprint staleness
 	// can be determined from the observed Git change set.

@@ -19,9 +19,9 @@ func TestExecutionStatusProjectsRecoveryWithoutChangingRecord(t *testing.T) {
 		{"active", model.LeaseStatusActive, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			r := model.IssueOpsRecord{ID: "io-status", Execution: &model.Execution{Lease: model.WriteLease{Generation: 3, Status: tc.status}}}
+			r := model.Record{ID: "io-status", Execution: &model.Execution{Lease: model.WriteLease{Generation: 3, Status: tc.status}}}
 			reads := 0
-			s := ExecutionStatus{ReadRecord: func(id string) (model.IssueOpsRecord, error) {
+			s := ExecutionStatus{ReadRecord: func(id string) (model.Record, error) {
 				reads++
 				if id != r.ID {
 					t.Fatal(id)
@@ -46,7 +46,7 @@ func TestExecutionStatusProjectsRecoveryWithoutChangingRecord(t *testing.T) {
 func TestExecutionStatusReadErrorsAndUnpreparedExecution(t *testing.T) {
 	missing := errors.New("missing record")
 	for _, failure := range []error{missing, nil} {
-		s := ExecutionStatus{ReadRecord: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, failure }}
+		s := ExecutionStatus{ReadRecord: func(string) (model.Record, error) { return model.Record{}, failure }}
 		result, err := s.Read("missing")
 		if err == nil || result.OK || result.ID != "missing" || (failure != nil && !errors.Is(err, failure)) {
 			t.Fatalf("status error contract: %+v %v", result, err)
@@ -55,7 +55,7 @@ func TestExecutionStatusReadErrorsAndUnpreparedExecution(t *testing.T) {
 }
 
 func TestWriterlessCommandIsEmptyWithoutExecution(t *testing.T) {
-	if got := WriterlessCommand(model.IssueOpsRecord{ID: "io-1"}); got != "" {
+	if got := WriterlessCommand(model.Record{ID: "io-1"}); got != "" {
 		t.Fatalf("got %q", got)
 	}
 }

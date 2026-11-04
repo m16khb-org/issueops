@@ -2,7 +2,7 @@ package selfaugment
 
 import qualitycatalog "issueops/internal/contract/qualitycatalog"
 
-type SelfAugmentGoal struct {
+type Goal struct {
 	Name        string   `json:"name"`
 	KoreanName  string   `json:"korean_name"`
 	Score       float64  `json:"score"`
@@ -12,7 +12,7 @@ type SelfAugmentGoal struct {
 	Evidence    []string `json:"evidence"`
 }
 
-type SelfAugmentCandidate struct {
+type Candidate struct {
 	ID                   string   `json:"id"`
 	Title                string   `json:"title"`
 	Category             string   `json:"category"`
@@ -32,7 +32,7 @@ type SelfAugmentCandidate struct {
 	VerificationKind qualitycatalog.VerificationKind `json:"-"`
 }
 
-type SelfAugmentRepoSignals struct {
+type RepoSignals struct {
 	DocsIndexed                         int      `json:"docs_indexed"`
 	Skills                              []string `json:"skills"`
 	HasGeniusThink                      bool     `json:"has_genius_think"`

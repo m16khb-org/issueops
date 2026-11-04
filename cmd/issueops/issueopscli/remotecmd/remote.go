@@ -15,16 +15,16 @@ import (
 	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 	artifacttemplate "issueops/internal/domain/artifacttemplate"
-	issueopsremote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 type Deps struct {
 	PrintJSON              func(any) error
-	PrintResult            func(issueopscontract.IssueOpsRecord, bool, error) error
+	PrintResult            func(issueopscontract.Record, bool, error) error
 	PrintError             func(error) error
-	VerifyLive             func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
-	VerifyLiveContext      func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
-	VerifyMerged           func(issueopscontract.IssueOpsRemoteArtifactVerification) error
+	VerifyLive             func(issueopscontract.RemoteArtifactVerificationRequest) error
+	VerifyLiveContext      func(context.Context, issueopscontract.RemoteArtifactVerificationRequest) error
+	VerifyMerged           func(issueopscontract.RemoteArtifactVerification) error
 	ObserveProcessAncestry func(int) ([]issueopscontract.NativeProcessReceipt, error)
 	Publication            PublicationHandlers
 }
@@ -164,8 +164,8 @@ func (command Command) runRemoteScore(args []string, deps Deps) error {
 	return nil
 }
 
-func printRemoteScorePrompt(deps Deps, req issueopsremote.IssueOpsRemoteScoringRequest, jsonOut bool) error {
-	result, err := issueopsremote.RenderIssueOpsRemoteJudgePrompt(issueopsremote.IssueOpsRemoteLLMJudgeRequest{Request: req})
+func printRemoteScorePrompt(deps Deps, req issueopsremote.ScoringRequest, jsonOut bool) error {
+	result, err := issueopsremote.RenderIssueOpsRemoteJudgePrompt(issueopsremote.LLMJudgeRequest{Request: req})
 	if err != nil {
 		return deps.printErrorResult(jsonOut, err)
 	}
@@ -176,18 +176,18 @@ func printRemoteScorePrompt(deps Deps, req issueopsremote.IssueOpsRemoteScoringR
 	return nil
 }
 
-func scoreRemoteByJudge(req issueopsremote.IssueOpsRemoteScoringRequest, judge, judgeFile string) (issueopsremote.IssueOpsRemoteScoringResult, error) {
+func scoreRemoteByJudge(req issueopsremote.ScoringRequest, judge, judgeFile string) (issueopsremote.ScoringResult, error) {
 	switch judge {
 	case "file":
 		return readIssueOpsRemoteJudgeFile(judgeFile)
 	case "none":
 		return issueopsremote.ScoreIssueOpsRemoteCandidates(req)
 	default:
-		return issueopsremote.IssueOpsRemoteScoringResult{}, fmt.Errorf("unsupported issueops remote score judge %q", judge)
+		return issueopsremote.ScoringResult{}, fmt.Errorf("unsupported issueops remote score judge %q", judge)
 	}
 }
 
-func printRemoteScoreSummary(result issueopsremote.IssueOpsRemoteScoringResult) {
+func printRemoteScoreSummary(result issueopsremote.ScoringResult) {
 	fmt.Printf("provider=%s threshold=%.2f related_issues=%d labels=%d\n", result.Provider, result.Threshold, len(result.SelectedRelatedIssues), len(result.SelectedLabels))
 	for _, issue := range result.SelectedRelatedIssues {
 		fmt.Printf("- related issue: %s score=%.2f\n", formatIssueOpsRemoteIssueRef(issue), issue.Score)
@@ -215,7 +215,7 @@ func (command Command) runRemoteVerifyArtifact(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	req := issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	req := issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:     *provider,
 		Kind:         *kind,
 		URL:          *url,
@@ -266,7 +266,7 @@ func (deps Deps) printError(err error) error {
 	return err
 }
 
-func (deps Deps) printResult(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
+func (deps Deps) printResult(record issueopscontract.Record, jsonOut bool, err error) error {
 	if deps.PrintResult != nil {
 		return deps.PrintResult(record, jsonOut, err)
 	}
@@ -286,7 +286,7 @@ func (deps Deps) printErrorResult(jsonOut bool, err error) error {
 	return err
 }
 
-func (deps Deps) verifyLive(ctx context.Context, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+func (deps Deps) verifyLive(ctx context.Context, req issueopscontract.RemoteArtifactVerificationRequest) error {
 	if deps.VerifyLiveContext != nil {
 		return deps.VerifyLiveContext(ctx, req)
 	}
@@ -317,7 +317,7 @@ func (f *repeatedFlag) Set(value string) error {
 	return nil
 }
 
-func formatIssueOpsRemoteIssueRef(issue issueopsremote.IssueOpsRemoteScoredItem) string {
+func formatIssueOpsRemoteIssueRef(issue issueopsremote.ScoredItem) string {
 	ref := firstNonEmptyMain(issue.ID, issue.URL)
 	title := strings.TrimSpace(issue.Title)
 	if title == "" {
@@ -331,53 +331,53 @@ func formatIssueOpsRemoteIssueRef(issue issueopsremote.IssueOpsRemoteScoredItem)
 
 // remoteScoreExampleRequest is the `remote score --example` output: a minimal
 // valid request built from the real types, so it cannot drift from the parser.
-func remoteScoreExampleRequest() issueopsremote.IssueOpsRemoteScoringRequest {
-	return issueopsremote.IssueOpsRemoteScoringRequest{
+func remoteScoreExampleRequest() issueopsremote.ScoringRequest {
+	return issueopsremote.ScoringRequest{
 		Provider:  "github",
 		Threshold: 0.7,
-		Issue:     issueopsremote.IssueOpsRemoteArtifact{Title: "Login times out after 30 seconds", Body: "Users on slow networks are logged out while the form is open."},
-		IssueCandidates: []issueopsremote.IssueOpsRemoteIssueCandidate{
+		Issue:     issueopsremote.ArtifactDraft{Title: "Login times out after 30 seconds", Body: "Users on slow networks are logged out while the form is open."},
+		IssueCandidates: []issueopsremote.IssueCandidate{
 			{ID: "#12", Title: "Session expires too early", URL: "https://github.com/owner/repo/issues/12", State: "open", Labels: []string{"bug"}},
 		},
-		LabelCandidates: []issueopsremote.IssueOpsRemoteLabelCandidate{
+		LabelCandidates: []issueopsremote.LabelCandidate{
 			{Name: "bug", Description: "Something is not working"},
 			{Name: "auth", Description: "Login and sessions", Aliases: []string{"login"}},
 		},
 	}
 }
 
-func readIssueOpsRemoteScoringRequestFile(path string) (issueopsremote.IssueOpsRemoteScoringRequest, error) {
+func readIssueOpsRemoteScoringRequestFile(path string) (issueopsremote.ScoringRequest, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
-		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("--input is required")
+		return issueopsremote.ScoringRequest{}, fmt.Errorf("--input is required")
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return issueopsremote.IssueOpsRemoteScoringRequest{}, err
+		return issueopsremote.ScoringRequest{}, err
 	}
 	// Unknown fields are an error: a misspelled key otherwise surfaces later as
 	// the unrelated "issue.title or issue.body is required".
 	decoder := json.NewDecoder(bytes.NewReader(b))
 	decoder.DisallowUnknownFields()
-	var req issueopsremote.IssueOpsRemoteScoringRequest
+	var req issueopsremote.ScoringRequest
 	if err := decoder.Decode(&req); err != nil {
-		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("parse input file %s: %w", path, err)
+		return issueopsremote.ScoringRequest{}, fmt.Errorf("parse input file %s: %w", path, err)
 	}
 	return req, nil
 }
 
-func readIssueOpsRemoteJudgeFile(path string) (issueopsremote.IssueOpsRemoteScoringResult, error) {
+func readIssueOpsRemoteJudgeFile(path string) (issueopsremote.ScoringResult, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
-		return issueopsremote.IssueOpsRemoteScoringResult{}, fmt.Errorf("judge-file is required for --judge file")
+		return issueopsremote.ScoringResult{}, fmt.Errorf("judge-file is required for --judge file")
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return issueopsremote.IssueOpsRemoteScoringResult{}, err
+		return issueopsremote.ScoringResult{}, err
 	}
 	result, err := issueopsremote.DecodeIssueOpsRemoteJudgeJSON(b)
 	if err != nil {
-		return issueopsremote.IssueOpsRemoteScoringResult{}, fmt.Errorf("parse judge file %s: %w", path, err)
+		return issueopsremote.ScoringResult{}, fmt.Errorf("parse judge file %s: %w", path, err)
 	}
 	return result, nil
 }

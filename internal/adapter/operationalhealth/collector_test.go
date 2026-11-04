@@ -14,8 +14,8 @@ import (
 
 func TestCycleFromRecordProjectsExecution(t *testing.T) {
 	worktree := testsupport.AbsPath("repo.worktrees", "69-v1")
-	record := issueopscontract.IssueOpsRecord{
-		ID: "io-v1", Repo: testsupport.AbsPath("repo"), Branch: "69-v1", Phase: issueopscontract.IssueOpsPhaseImplement,
+	record := issueopscontract.Record{
+		ID: "io-v1", Repo: testsupport.AbsPath("repo"), Branch: "69-v1", Phase: issueopscontract.PhaseImplement,
 		Execution: &issueopscontract.Execution{
 			Workspace: issueopscontract.Workspace{Root: worktree},
 			Lease: issueopscontract.WriteLease{
@@ -43,7 +43,7 @@ func TestCycleFromRecordProjectsExecution(t *testing.T) {
 }
 
 func TestCycleFromRecordReportsNativeProcessProbeFailure(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{ID: "io-v1", Repo: "/repo", Branch: "69-v1", Phase: issueopscontract.IssueOpsPhaseImplement, Execution: &issueopscontract.Execution{
+	record := issueopscontract.Record{ID: "io-v1", Repo: "/repo", Branch: "69-v1", Phase: issueopscontract.PhaseImplement, Execution: &issueopscontract.Execution{
 		Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/69-v1"},
 		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive, Holder: &issueopscontract.NativeActor{
 			Host: "codex", SessionID: "session", SessionProcess: &issueopscontract.NativeProcessReceipt{PID: 123, StartedAt: "2026-07-22T00:00:00Z", Executable: "/opt/codex"},
@@ -68,21 +68,21 @@ func hasProblemCode(problems []operationalhealthcontract.InventoryProblem, code 
 
 func emptyIssueOpsReader(t *testing.T) IssueOpsReader {
 	t.Helper()
-	return IssueOpsReader{StateRoot: t.TempDir(), Scan: func(string, func(string, issueopscontract.IssueOpsRecord, error)) error { return nil }, ListLeaseHolders: func(string) ([]issueopscontract.LeaseHolderIndex, error) { return nil, nil }}
+	return IssueOpsReader{StateRoot: t.TempDir(), Scan: func(string, func(string, issueopscontract.Record, error)) error { return nil }, ListLeaseHolders: func(string) ([]issueopscontract.LeaseHolderIndex, error) { return nil, nil }}
 }
 
 func TestCollectIssueOpsScansRecordsAndReportsUnreadableRows(t *testing.T) {
 	scans := 0
 	reader := emptyIssueOpsReader(t)
-	reader.Scan = func(string, func(string, issueopscontract.IssueOpsRecord, error)) error { return errors.New("locked") }
+	reader.Scan = func(string, func(string, issueopscontract.Record, error)) error { return errors.New("locked") }
 	snapshot := corehealth.Snapshot{}
 	if (Collector{IssueOps: reader}).collectIssueOps(&snapshot); len(snapshot.Cycles) != 0 || !hasProblemCode(snapshot.InventoryProblems, "issueops_list_failed") {
 		t.Fatalf("scan failure cycles=%v problems=%#v", snapshot.Cycles, snapshot.InventoryProblems)
 	}
-	reader.Scan = func(_ string, visit func(string, issueopscontract.IssueOpsRecord, error)) error {
+	reader.Scan = func(_ string, visit func(string, issueopscontract.Record, error)) error {
 		scans++
-		visit("io-a", issueopscontract.IssueOpsRecord{OK: true, ID: "io-a", Repo: "/repo", Branch: "a"}, nil)
-		visit("io-b", issueopscontract.IssueOpsRecord{}, errors.New("invalid state"))
+		visit("io-a", issueopscontract.Record{OK: true, ID: "io-a", Repo: "/repo", Branch: "a"}, nil)
+		visit("io-b", issueopscontract.Record{}, errors.New("invalid state"))
 		return nil
 	}
 	snapshot = corehealth.Snapshot{}
@@ -102,15 +102,15 @@ func TestCycleFromRecordProjectsCleanupFailureAndCompletionPresence(t *testing.T
 	now := time.Date(2026, 7, 22, 0, 0, 0, 0, time.UTC)
 	cases := []struct {
 		name           string
-		record         issueopscontract.IssueOpsRecord
+		record         issueopscontract.Record
 		wantCleanup    bool
 		wantCompletion bool
 	}{
 		{name: "none"},
-		{name: "finish failure", record: issueopscontract.IssueOpsRecord{CleanupFinishFailure: &issueopscontract.IssueOpsCleanupFinishFailure{}}, wantCleanup: true},
-		{name: "abandon failure", record: issueopscontract.IssueOpsRecord{CleanupAbandonFailure: &issueopscontract.IssueOpsCleanupAbandonFailure{}}, wantCleanup: true},
-		{name: "completion", record: issueopscontract.IssueOpsRecord{Execution: &issueopscontract.Execution{Completion: &issueopscontract.ExecutionCompletion{}}}, wantCompletion: true},
-		{name: "execution without completion", record: issueopscontract.IssueOpsRecord{Execution: &issueopscontract.Execution{}}},
+		{name: "finish failure", record: issueopscontract.Record{CleanupFinishFailure: &issueopscontract.CleanupFinishFailure{}}, wantCleanup: true},
+		{name: "abandon failure", record: issueopscontract.Record{CleanupAbandonFailure: &issueopscontract.CleanupAbandonFailure{}}, wantCleanup: true},
+		{name: "completion", record: issueopscontract.Record{Execution: &issueopscontract.Execution{Completion: &issueopscontract.ExecutionCompletion{}}}, wantCompletion: true},
+		{name: "execution without completion", record: issueopscontract.Record{Execution: &issueopscontract.Execution{}}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -124,8 +124,8 @@ func TestCycleFromRecordProjectsCleanupFailureAndCompletionPresence(t *testing.T
 
 func TestCollectMergesIssueOpsAndGitInventory(t *testing.T) {
 	reader := emptyIssueOpsReader(t)
-	reader.Scan = func(_ string, visit func(string, issueopscontract.IssueOpsRecord, error)) error {
-		visit("io-a", issueopscontract.IssueOpsRecord{OK: true, ID: "io-a", Repo: "/repo", Branch: "a", Phase: issueopscontract.IssueOpsPhasePlan}, nil)
+	reader.Scan = func(_ string, visit func(string, issueopscontract.Record, error)) error {
+		visit("io-a", issueopscontract.Record{OK: true, ID: "io-a", Repo: "/repo", Branch: "a", Phase: issueopscontract.PhasePlan}, nil)
 		return nil
 	}
 	git := &scriptedGit{outputs: map[string]string{

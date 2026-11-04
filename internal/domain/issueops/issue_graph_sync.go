@@ -13,7 +13,7 @@ type IssueGraphSyncPlan struct {
 	LinkCount                    int
 }
 
-func PlanIssueGraphSync(record model.IssueOpsRecord, confirm bool) (IssueGraphSyncPlan, error) {
+func PlanIssueGraphSync(record model.Record, confirm bool) (IssueGraphSyncPlan, error) {
 	if !confirm {
 		return IssueGraphSyncPlan{Preview: true, LinkCount: len(record.IssueLinks), Message: fmt.Sprintf("[dry-run] would sync %d issue graph links to remote issue %s", len(record.IssueLinks), record.IssueURL)}, nil
 	}
@@ -43,7 +43,7 @@ func PlanIssueGraphSync(record model.IssueOpsRecord, confirm bool) (IssueGraphSy
 
 // RenderIssueGraphComment lists the cycle's typed issue links for readers of
 // the parent issue, in Korean and without harness values (#513).
-func RenderIssueGraphComment(record model.IssueOpsRecord) string {
+func RenderIssueGraphComment(record model.Record) string {
 	var body strings.Builder
 	body.WriteString("## 관련 이슈\n\n")
 	for _, link := range record.IssueLinks {

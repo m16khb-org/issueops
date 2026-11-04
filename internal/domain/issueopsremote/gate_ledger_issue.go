@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 func GateLedgerIssueNumber(linkedURL, preparedURL string) string {
 	if number := IssueNumber(linkedURL); number != "" {

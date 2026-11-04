@@ -23,7 +23,7 @@ func TestValidateInspectWithDepsCoversCommandAndContractBranches(t *testing.T) {
 		if dir != root || label != "inspect smoke" || timeout != 30*time.Second || stdin != "" {
 			t.Fatalf("unexpected inspect command envelope: dir=%q label=%q timeout=%s stdin=%q", dir, label, timeout, stdin)
 		}
-		out, err := json.Marshal(inspect.InspectInfo{
+		out, err := json.Marshal(inspect.Info{
 			OK:     true,
 			Skills: []inspectcontract.SkillInfo{{Name: "self-verify", HasSkillMD: true}},
 			Integration: inspect.IntegrationStatus{
@@ -55,7 +55,7 @@ func TestValidateInspectWithDepsCoversCommandAndContractBranches(t *testing.T) {
 	}
 
 	missing := validateInspectWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
-		out, err := json.Marshal(inspect.InspectInfo{OK: false})
+		out, err := json.Marshal(inspect.Info{OK: false})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -138,7 +138,7 @@ func TestValidateSmokeWrappersUseExecutableSurface(t *testing.T) {
 
 func writeValidationSmokeFakeBinary(t *testing.T, dir, root string) string {
 	t.Helper()
-	inspect, err := json.Marshal(inspect.InspectInfo{
+	inspect, err := json.Marshal(inspect.Info{
 		OK:     true,
 		Skills: []inspectcontract.SkillInfo{{Name: "self-verify", HasSkillMD: true}},
 		Integration: inspect.IntegrationStatus{
@@ -148,7 +148,7 @@ func writeValidationSmokeFakeBinary(t *testing.T, dir, root string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	docs, err := json.Marshal(docs.DocsIndexResult{OK: true, IssueOpsRoot: root, Docs: []docs.DocIndexInfo{
+	docs, err := json.Marshal(docs.IndexResult{OK: true, IssueOpsRoot: root, Docs: []docs.DocIndexInfo{
 		{RelPath: "AGENTS.md", Title: "Agents"},
 		{RelPath: "CLAUDE.md", Title: "Claude"},
 		{RelPath: "GENIUS_THINK.md", Title: "Genius"},
@@ -185,7 +185,7 @@ func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T)
 		if dir != root || label != "docs index smoke" || timeout != 30*time.Second || stdin != "" {
 			t.Fatalf("unexpected docs command envelope: dir=%q label=%q timeout=%s stdin=%q", dir, label, timeout, stdin)
 		}
-		out, err := json.Marshal(docs.DocsIndexResult{OK: true, IssueOpsRoot: root, Docs: wantDocs})
+		out, err := json.Marshal(docs.IndexResult{OK: true, IssueOpsRoot: root, Docs: wantDocs})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -207,7 +207,7 @@ func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T)
 	}
 
 	missing := validateDocsIndexWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
-		out, err := json.Marshal(docs.DocsIndexResult{
+		out, err := json.Marshal(docs.IndexResult{
 			OK:           false,
 			IssueOpsRoot: root + "-other",
 			Docs:         []docs.DocIndexInfo{{RelPath: "AGENTS.md", Title: ""}},
@@ -224,7 +224,7 @@ func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T)
 
 func TestValidateInspectMasksRootAndHomePathsBeforeRetiredNameCheck(t *testing.T) {
 	retired := "m" + "16kh"
-	run := func(root string, info inspect.InspectInfo) selfverify.StepResult {
+	run := func(root string, info inspect.Info) selfverify.StepResult {
 		info.OK = true
 		info.Skills = []inspectcontract.SkillInfo{{Name: "self-verify", HasSkillMD: true}}
 		info.Integration.ProjectClaudeMCPConfig = true
@@ -239,10 +239,10 @@ func TestValidateInspectMasksRootAndHomePathsBeforeRetiredNameCheck(t *testing.T
 	t.Run("root", func(t *testing.T) {
 		testsupport.SetHome(t, t.TempDir())
 		root := filepath.Join(t.TempDir(), retired+"-root")
-		if step := run(root, inspect.InspectInfo{IssueOpsRoot: root}); !step.OK {
+		if step := run(root, inspect.Info{IssueOpsRoot: root}); !step.OK {
 			t.Fatalf("root path should be masked, got %+v", step)
 		}
-		if step := run(root, inspect.InspectInfo{Version: "leak " + retired}); step.OK || !strings.Contains(step.Error, "inspect output contains retired") {
+		if step := run(root, inspect.Info{Version: "leak " + retired}); step.OK || !strings.Contains(step.Error, "inspect output contains retired") {
 			t.Fatalf("retired name outside root should fail, got %+v", step)
 		}
 	})
@@ -250,10 +250,10 @@ func TestValidateInspectMasksRootAndHomePathsBeforeRetiredNameCheck(t *testing.T
 		home := filepath.Join(t.TempDir(), retired+"-home")
 		testsupport.SetHome(t, home)
 		root := t.TempDir()
-		if step := run(root, inspect.InspectInfo{TargetRepo: filepath.Join(home, "repo")}); !step.OK {
+		if step := run(root, inspect.Info{TargetRepo: filepath.Join(home, "repo")}); !step.OK {
 			t.Fatalf("home path should be masked, got %+v", step)
 		}
-		if step := run(root, inspect.InspectInfo{Version: "leak " + retired}); step.OK || !strings.Contains(step.Error, "inspect output contains retired") {
+		if step := run(root, inspect.Info{Version: "leak " + retired}); step.OK || !strings.Contains(step.Error, "inspect output contains retired") {
 			t.Fatalf("retired name outside home should fail, got %+v", step)
 		}
 	})

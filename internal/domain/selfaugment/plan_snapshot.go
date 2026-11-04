@@ -6,8 +6,8 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func NewPlanSnapshot(result contract.SelfAugmentPlanResult, generatedAt time.Time) contract.SelfAugmentPlanStateSnapshot {
-	return contract.SelfAugmentPlanStateSnapshot{
+func NewPlanSnapshot(result contract.PlanResult, generatedAt time.Time) contract.PlanStateSnapshot {
+	return contract.PlanStateSnapshot{
 		SchemaVersion:         1,
 		Kind:                  contract.SelfAugmentationPlanKind,
 		LoopKind:              result.LoopKind,
@@ -27,7 +27,7 @@ func NewPlanSnapshot(result contract.SelfAugmentPlanResult, generatedAt time.Tim
 	}
 }
 
-func CandidateIDsByStatus(candidates []contract.SelfAugmentCandidate, status string) []string {
+func CandidateIDsByStatus(candidates []contract.Candidate, status string) []string {
 	ids := []string{}
 	for _, candidate := range candidates {
 		if candidate.Status == status {

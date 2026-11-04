@@ -47,31 +47,31 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 
 // loadReconcileTarget verifies the actor and reads the record, then checks
 // that the record is prepared and req.CWD names its source root or worktree.
-func (s Service) loadReconcileTarget(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest) (issueops.IssueOpsRecord, issueops.NativeActor, error) {
+func (s Service) loadReconcileTarget(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest) (issueops.Record, issueops.NativeActor, error) {
 	if s.Verifier == nil {
-		return issueops.IssueOpsRecord{}, issueops.NativeActor{}, fmt.Errorf("execution reconcile actor verifier is required")
+		return issueops.Record{}, issueops.NativeActor{}, fmt.Errorf("execution reconcile actor verifier is required")
 	}
 	verified, err := s.Verifier.Verify(ctx, req.Actor)
 	if err != nil {
-		return issueops.IssueOpsRecord{}, issueops.NativeActor{}, err
+		return issueops.Record{}, issueops.NativeActor{}, err
 	}
 	actor := verified.Identity
 	record, err := s.ReadRecord(stateRoot, req.ID)
 	if err != nil {
-		return issueops.IssueOpsRecord{}, actor, err
+		return issueops.Record{}, actor, err
 	}
 	if record.Execution == nil {
-		return issueops.IssueOpsRecord{}, actor, fmt.Errorf("IssueOps execution v1 is not prepared")
+		return issueops.Record{}, actor, fmt.Errorf("IssueOps execution v1 is not prepared")
 	}
 	if !s.SamePath(req.CWD, record.Execution.Workspace.SourceRoot) && !s.SamePath(req.CWD, record.Execution.Workspace.Root) {
-		return issueops.IssueOpsRecord{}, actor, fmt.Errorf("execution reconcile cwd must be source_root or the canonical worktree")
+		return issueops.Record{}, actor, fmt.Errorf("execution reconcile cwd must be source_root or the canonical worktree")
 	}
 	return record, actor, nil
 }
 
 // authorizeReconcileConfirm는 확정 reconcile 전에 호출자가 실행 권한을 가졌는지 검증한다.
-func (s Service) authorizeReconcileConfirm(ctx context.Context, record issueops.IssueOpsRecord, req issueops.ExecutionReconcileRequest, actor issueops.NativeActor) error {
-	mutationActor := issueops.IssueOpsActor{
+func (s Service) authorizeReconcileConfirm(ctx context.Context, record issueops.Record, req issueops.ExecutionReconcileRequest, actor issueops.NativeActor) error {
+	mutationActor := issueops.Actor{
 		Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: req.CWD,
 		NativeProcessAncestry: actor.ProcessAncestry,
 	}
@@ -79,7 +79,7 @@ func (s Service) authorizeReconcileConfirm(ctx context.Context, record issueops.
 }
 
 // previewReconcileResult는 미리보기 결과에 판정 코드와 확정 명령을 채운다.
-func previewReconcileResult(result issueops.ExecutionReconcileResult, record issueops.IssueOpsRecord, decision reconciledomain.Decision, actor issueops.NativeActor, cwd string) issueops.ExecutionReconcileResult {
+func previewReconcileResult(result issueops.ExecutionReconcileResult, record issueops.Record, decision reconciledomain.Decision, actor issueops.NativeActor, cwd string) issueops.ExecutionReconcileResult {
 	result.Code = decision.PreviewCode
 	if decision.Route == reconciledomain.RouteRemotePR {
 		result.NextCommand = issueopsdomain.ReconcileConfirmCommand(record.ID, actor, cwd)
@@ -88,7 +88,7 @@ func previewReconcileResult(result issueops.ExecutionReconcileResult, record iss
 }
 
 // dispatchReconcileRoute는 결정된 경로에 맞는 reconcile 핸들러를 호출한다.
-func dispatchReconcileRoute(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest, deps issueopsport.ExecutionReconcileDependencies, record issueops.IssueOpsRecord, decision reconciledomain.Decision, result issueops.ExecutionReconcileResult) (issueops.ExecutionReconcileResult, error) {
+func dispatchReconcileRoute(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest, deps issueopsport.ExecutionReconcileDependencies, record issueops.Record, decision reconciledomain.Decision, result issueops.ExecutionReconcileResult) (issueops.ExecutionReconcileResult, error) {
 	switch decision.Route {
 	case reconciledomain.RouteRemotePR:
 		if deps.RemoteReconcile == nil {
@@ -103,7 +103,7 @@ func dispatchReconcileRoute(ctx context.Context, stateRoot string, req issueops.
 	}
 }
 
-func executionReconcileResult(record issueops.IssueOpsRecord, preview bool, code string) issueops.ExecutionReconcileResult {
+func executionReconcileResult(record issueops.Record, preview bool, code string) issueops.ExecutionReconcileResult {
 	result := issueops.ExecutionReconcileResult{OK: true, ID: record.ID, Preview: preview, Code: code}
 	if record.Execution != nil {
 		result.Execution = *record.Execution
@@ -112,7 +112,7 @@ func executionReconcileResult(record issueops.IssueOpsRecord, preview bool, code
 	return result
 }
 
-func failedExecutionReconcileResult(record issueops.IssueOpsRecord, code string) issueops.ExecutionReconcileResult {
+func failedExecutionReconcileResult(record issueops.Record, code string) issueops.ExecutionReconcileResult {
 	result := executionReconcileResult(record, false, code)
 	result.OK = false
 	return result

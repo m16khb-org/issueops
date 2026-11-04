@@ -14,19 +14,19 @@ import (
 
 type HistoryService struct {
 	StateDir func() string
-	List     func() (state.StateListResult, error)
-	Read     func(string) (state.StateResult, error)
+	List     func() (state.ListResult, error)
+	Read     func(string) (state.Result, error)
 	Delete   func(context.Context, string) error
 }
 
-func (service HistoryService) History(ctx context.Context, prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
-	result := contract.SelfAugmentHistoryResult{
+func (service HistoryService) History(ctx context.Context, prefix string, limit int, retention contract.HistoryRetentionOptions) (contract.HistoryResult, error) {
+	result := contract.HistoryResult{
 		OK:       false,
 		StateDir: service.StateDir(),
 		Prefix:   prefix,
 		Limit:    limit,
-		Entries:  []contract.SelfAugmentHistoryEntry{},
-		Skipped:  []contract.SelfAugmentHistorySkipped{},
+		Entries:  []contract.HistoryEntry{},
+		Skipped:  []contract.HistorySkipped{},
 		Warnings: []string{},
 	}
 	if err := domain.ValidateHistoryRequest(limit, retention); err != nil {
@@ -61,13 +61,13 @@ func (service HistoryService) History(ctx context.Context, prefix string, limit 
 	return result, nil
 }
 
-func (service HistoryService) ApplyRetention(ctx context.Context, result *contract.SelfAugmentHistoryResult, options contract.SelfAugmentHistoryRetentionOptions) error {
+func (service HistoryService) ApplyRetention(ctx context.Context, result *contract.HistoryResult, options contract.HistoryRetentionOptions) error {
 	keys := make([]string, 0, len(result.Entries))
 	for _, entry := range result.Entries {
 		keys = append(keys, entry.Key)
 	}
 	decision := domain.PlanHistoryRetention(keys, options.Limit, options.PruneRequested, options.Confirm)
-	retention := &contract.SelfAugmentHistoryRetention{
+	retention := &contract.HistoryRetention{
 		Enabled:        true,
 		Limit:          options.Limit,
 		TotalMatches:   result.TotalMatches,
@@ -98,7 +98,7 @@ func (service HistoryService) ApplyRetention(ctx context.Context, result *contra
 	return nil
 }
 
-func (service HistoryService) Compare(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (contract.SelfAugmentCompareResult, error) {
+func (service HistoryService) Compare(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (contract.CompareResult, error) {
 	result := domain.NewCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct, service.StateDir())
 	if err := domain.ValidateComparisonRequest(baselineKey, candidateKey, maxElapsedRegressionPct); err != nil {
 		return result, err
@@ -117,20 +117,20 @@ func (service HistoryService) Compare(baselineKey, candidateKey string, maxElaps
 
 // collectRecord reads one state record and appends it to the history result as
 // an entry, or as a skipped record when it cannot be used.
-func (service HistoryService) collectRecord(result *contract.SelfAugmentHistoryResult, record state.StateListEntry) {
+func (service HistoryService) collectRecord(result *contract.HistoryResult, record state.ListEntry) {
 	state, err := service.Read(record.Key)
 	if err != nil {
-		result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: "state_read:" + err.Error()})
+		result.Skipped = append(result.Skipped, contract.HistorySkipped{Key: record.Key, Reason: "state_read:" + err.Error()})
 		return
 	}
-	var snapshot contract.SelfAugmentStateSnapshot
+	var snapshot contract.StateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
-		result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: "not_json_summary"})
+		result.Skipped = append(result.Skipped, contract.HistorySkipped{Key: record.Key, Reason: "not_json_summary"})
 		return
 	}
 	skip, warning := domain.HistorySnapshotDiagnostics(record.Key, snapshot)
 	if skip != "" {
-		result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: skip})
+		result.Skipped = append(result.Skipped, contract.HistorySkipped{Key: record.Key, Reason: skip})
 		return
 	}
 	if warning != "" {

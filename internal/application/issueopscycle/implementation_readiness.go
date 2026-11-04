@@ -8,12 +8,12 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func CompatibilityReadinessMissing(record model.IssueOpsRecord, observations cycleport.ReadinessObservations) []string {
+func CompatibilityReadinessMissing(record model.Record, observations cycleport.ReadinessObservations) []string {
 	missing := BaseImplementationMissing(record)
 	return append(missing, worktreePlanMissing(record, observations)...)
 }
 
-func ImplementationReadinessMissing(record model.IssueOpsRecord, checkPlanBinding bool, observations cycleport.ReadinessObservations) []string {
+func ImplementationReadinessMissing(record model.Record, checkPlanBinding bool, observations cycleport.ReadinessObservations) []string {
 	missing := CompatibilityReadinessMissing(record, observations)
 	missing = append(missing, CompatibilityReviewMissing(record)...)
 	missing = append(missing, ArchitectureReviewStaleMissing(record, checkPlanBinding, observations.SealedArchitectureDigest)...)
@@ -25,7 +25,7 @@ func ImplementationReadinessMissing(record model.IssueOpsRecord, checkPlanBindin
 	return append(missing, cycledomain.ExecutionReadinessMissing(record, workspaceMatches)...)
 }
 
-func worktreePlanMissing(record model.IssueOpsRecord, observations cycleport.ReadinessObservations) []string {
+func worktreePlanMissing(record model.Record, observations cycleport.ReadinessObservations) []string {
 	worktreeValid := false
 	if path := strings.TrimSpace(record.WorktreePath); path != "" {
 		worktreeValid = observations.WorktreePathValid(path)

@@ -21,8 +21,8 @@ func TestBenchmarkGateRejectsUnscoredCandidate(t *testing.T) {
 		Candidate: contract.IssueOpsAutoresearchCandidate{
 			ID: "candidate", Hypothesis: "improve quality", TargetDimensions: []string{"issue_quality"}, EditSurface: []string{"skills/**"},
 		},
-		BaselineRun:  contract.IssueOpsBenchmarkRunResult{OK: true},
-		CandidateRun: contract.IssueOpsBenchmarkRunResult{},
+		BaselineRun:  contract.RunResult{OK: true},
+		CandidateRun: contract.RunResult{},
 	})
 	if result.KeepCandidate || result.OK {
 		t.Fatalf("empty benchmark result was accepted: %+v", result)

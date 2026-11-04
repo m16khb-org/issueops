@@ -6,10 +6,10 @@ import (
 	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
-func CompareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (augmentcontract.SelfAugmentCompareResult, error) {
+func CompareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (augmentcontract.CompareResult, error) {
 	return historyService().Compare(baselineKey, candidateKey, maxElapsedRegressionPct)
 }
 
-func CompareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate augmentcontract.SelfAugmentStateSnapshot) augmentcontract.SelfAugmentCompareResult {
-	return augmentdomain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, statestore.StateDir())
+func CompareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate augmentcontract.StateSnapshot) augmentcontract.CompareResult {
+	return augmentdomain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, statestore.Dir())
 }

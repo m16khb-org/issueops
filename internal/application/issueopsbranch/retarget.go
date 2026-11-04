@@ -14,12 +14,12 @@ import (
 type Retargeter struct {
 	Records       CycleRecords
 	Authority     cycleapp.MutationAuthority
-	TargetBranch  func(model.IssueOpsRemoteArtifactVerification) (string, error)
+	TargetBranch  func(model.RemoteArtifactVerification) (string, error)
 	OriginPresent func(string, string) (bool, error)
 	Now           func() time.Time
 }
 
-func (s Retargeter) authorize(ctx context.Context, record model.IssueOpsRecord, actor *model.IssueOpsActor) error {
+func (s Retargeter) authorize(ctx context.Context, record model.Record, actor *model.Actor) error {
 	required, err := domain.RetargetRequiresHolder(record)
 	if err != nil || !required {
 		return err
@@ -29,17 +29,17 @@ func (s Retargeter) authorize(ctx context.Context, record model.IssueOpsRecord, 
 
 // Retarget observes the remote before entering the transaction. Inside the
 // transaction it rechecks authority and binds those observations to fresh state.
-func (s Retargeter) Retarget(ctx context.Context, id string, req model.IssueOpsBranchRetargetRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func (s Retargeter) Retarget(ctx context.Context, id string, req model.BranchRetargetRequest, actor model.Actor) (model.Record, error) {
 	observed, err := s.Records.Load(id)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	if err := s.authorize(ctx, observed, &actor); err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	base, reason := strings.TrimSpace(req.BaseBranch), strings.TrimSpace(req.Reason)
 	observation := s.observe(observed, base)
-	var result model.IssueOpsRecord
+	var result model.Record
 	err = s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
@@ -58,7 +58,7 @@ func (s Retargeter) Retarget(ctx context.Context, id string, req model.IssueOpsB
 }
 
 // validateRetarget checks the request, the fresh record and the pre-lock remote observations before the retarget is applied.
-func (s Retargeter) validateRetarget(record model.IssueOpsRecord, base, reason string, observation retargetObservation) error {
+func (s Retargeter) validateRetarget(record model.Record, base, reason string, observation retargetObservation) error {
 	if err := domain.ValidateRetargetRequest(base, reason); err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (s Retargeter) validateRetarget(record model.IssueOpsRecord, base, reason s
 }
 
 type retargetObservation struct {
-	artifact      *model.IssueOpsRemoteArtifactVerification
+	artifact      *model.RemoteArtifactVerification
 	target        string
 	targetErr     error
 	repo, branch  string
@@ -90,7 +90,7 @@ type retargetObservation struct {
 	presentStated bool
 }
 
-func (s Retargeter) observe(record model.IssueOpsRecord, base string) retargetObservation {
+func (s Retargeter) observe(record model.Record, base string) retargetObservation {
 	var observation retargetObservation
 	if s.TargetBranch == nil || record.RemoteArtifact == nil || base == "" {
 		return observation

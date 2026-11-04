@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"issueops/internal/adapter/provider/providerutil"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 	"strconv"
 )
@@ -16,7 +16,7 @@ func (p Provider) FindChildCreateCandidates(ctx context.Context, req port.IssueP
 
 func (p Provider) ReadChild(ctx context.Context, repo, parentURL, childURL string) (port.ChildSnapshot, error) {
 	var result port.ChildSnapshot
-	if err := remote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
+	if err := issueopsremote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
 		return result, err
 	}
 	owner, name, parent, err := parseGitHubIssueURL(parentURL)
@@ -58,7 +58,7 @@ func childReadAPI[T any](ctx context.Context, repo, endpoint string) (T, error) 
 	return result, err
 }
 func (p Provider) AttachChild(ctx context.Context, repo, parentURL, childURL string) error {
-	if err := remote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
+	if err := issueopsremote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
 		return err
 	}
 	owner, name, parent, err := parseGitHubIssueURL(parentURL)

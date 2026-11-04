@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"sort"
@@ -94,7 +94,7 @@ func issueOpsRemoteLabelEvidence(issueTokens map[string]bool) issueOpsRemoteType
 
 // issueOpsRemoteLabelEvidenceScore는 규칙 라벨의 점수를 돌려준다. 이름에 규칙이 없으면 ok가 false다.
 // 전체 근거가 최소 개수 미만이면 0이다.
-func issueOpsRemoteLabelEvidenceScore(evidence issueOpsRemoteTypeEvidence, candidate IssueOpsRemoteLabelCandidate) (score float64, matched []string, ok bool) {
+func issueOpsRemoteLabelEvidenceScore(evidence issueOpsRemoteTypeEvidence, candidate LabelCandidate) (score float64, matched []string, ok bool) {
 	matched, ok = evidence.matched[issueOpsRemoteRuleLabel(candidate.Name)]
 	if !ok {
 		return 0, nil, false

@@ -26,7 +26,7 @@ func TestRunTraceRoutesUsageUnknownAndAnalyzeJSON(t *testing.T) {
 	out := captureStatusVerifyStdout(t, func() error {
 		return RunTrace([]string{"analyze", "--input", input, "--json"})
 	})
-	var result trace.TraceAnalyzeResult
+	var result trace.AnalyzeResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode trace analyze JSON: %v\n%s", err, out)
 	}
@@ -50,11 +50,11 @@ func TestRunTraceHandoffDeliveryObserveUsesInjectedAuditProducer(t *testing.T) {
 	input := filepath.Join(t.TempDir(), "delivery.json")
 	writeFileForCLITest(t, input, `{"schema_version":1,"attempt_id":"manual-attempt"}`)
 	command := testBasicCommand()
-	command.Handoff = handoffObserverFunc(func(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
+	command.Handoff = handoffObserverFunc(func(observation issueopscontract.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 		if observation.AttemptID != "manual-attempt" {
 			t.Fatalf("observation=%+v", observation)
 		}
-		observation.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/handoff-delivery.jsonl#audit_log_id=audit-1", Digest: strings.Repeat("a", 64)}
+		observation.Receipt = issueopscontract.HandoffDeliveryReceipt{Location: "audit/handoff-delivery.jsonl#audit_log_id=audit-1", Digest: strings.Repeat("a", 64)}
 		return auditcontract.HandoffDeliveryAuditRecord{OK: true, Kind: "handoff_delivery_observation", AuditLogID: "audit-1", Observation: observation}, nil
 	})
 	out := captureStatusVerifyStdout(t, func() error {
@@ -82,7 +82,7 @@ func TestRunGuardRoutesAndChecksExplicitFiles(t *testing.T) {
 	out := captureStatusVerifyStdout(t, func() error {
 		return RunGuard([]string{"check", "--repo", repo, "--json", "--", "ok_test.go"})
 	})
-	var result guardcontract.GuardCheckResult
+	var result guardcontract.CheckResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode guard JSON: %v\n%s", err, out)
 	}
@@ -98,7 +98,7 @@ func TestRunGuardCheckTextOutputReturnsBlockedError(t *testing.T) {
 	out, err := captureTraceGuardPolicyStdout(t, func() error {
 		return RunGuardCheck([]string{"--repo", repo, "--", "slow_test.go"})
 	})
-	if _, ok := errors.AsType[guardcontract.GuardBlockedError](err); !ok {
+	if _, ok := errors.AsType[guardcontract.BlockedError](err); !ok {
 		t.Fatalf("expected guard blocked error, got %T %v", err, err)
 	}
 	if !strings.Contains(out, "guard files: 1 file(s), block=1") || !strings.Contains(out, "sleep-in-test") {
@@ -106,9 +106,9 @@ func TestRunGuardCheckTextOutputReturnsBlockedError(t *testing.T) {
 	}
 }
 
-type handoffObserverFunc func(issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error)
+type handoffObserverFunc func(issueopscontract.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error)
 
-func (f handoffObserverFunc) ObserveManual(o issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
+func (f handoffObserverFunc) ObserveManual(o issueopscontract.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	return f(o)
 }
 
@@ -125,7 +125,7 @@ func writeHandoffObservationForCLITest(t *testing.T, name string, attemptID stri
 
 func recordingHandoffCommand(attempts *[]string) Command {
 	command := testBasicCommand()
-	command.Handoff = handoffObserverFunc(func(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
+	command.Handoff = handoffObserverFunc(func(observation issueopscontract.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 		*attempts = append(*attempts, observation.AttemptID)
 		return auditcontract.HandoffDeliveryAuditRecord{OK: true, Kind: "handoff_delivery_observation", AuditLogID: "audit-1", Observation: observation}, nil
 	})
@@ -171,11 +171,11 @@ func TestRunTraceHandoffDeliveryRejectsClearlyOversizedInput(t *testing.T) {
 }
 
 type recordingGuardSource struct {
-	requests []guardcontract.GuardCheckRequest
+	requests []guardcontract.CheckRequest
 }
 
 func (*recordingGuardSource) ResolveRoot(root string) string { return root }
-func (source *recordingGuardSource) TargetFiles(_ string, request guardcontract.GuardCheckRequest) []string {
+func (source *recordingGuardSource) TargetFiles(_ string, request guardcontract.CheckRequest) []string {
 	source.requests = append(source.requests, request)
 	return nil
 }
@@ -217,10 +217,10 @@ func TestRunGuardCheckJSONStillReturnsBlockedError(t *testing.T) {
 	out, err := captureTraceGuardPolicyStdout(t, func() error {
 		return RunGuardCheck([]string{"--repo", repo, "--json", "--", "slow_test.go"})
 	})
-	if _, ok := errors.AsType[guardcontract.GuardBlockedError](err); !ok {
+	if _, ok := errors.AsType[guardcontract.BlockedError](err); !ok {
 		t.Fatalf("expected guard blocked error, got %T %v", err, err)
 	}
-	var result guardcontract.GuardCheckResult
+	var result guardcontract.CheckResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode guard JSON: %v\n%s", err, out)
 	}
@@ -234,7 +234,7 @@ type findingGuardSource struct {
 	files []string
 }
 
-func (source *findingGuardSource) TargetFiles(string, guardcontract.GuardCheckRequest) []string {
+func (source *findingGuardSource) TargetFiles(string, guardcontract.CheckRequest) []string {
 	return source.files
 }
 func (*findingGuardSource) ReadFile(_, rel string, _ bool) (string, bool) {

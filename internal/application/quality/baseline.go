@@ -12,8 +12,8 @@ import (
 
 type SNRBaselineStore struct {
 	CanonicalRepository func(string) (string, error)
-	ReadState           func(string) (state.StateResult, error)
-	WriteState          func(string, string) (state.StateResult, error)
+	ReadState           func(string) (state.Result, error)
+	WriteState          func(string, string) (state.Result, error)
 }
 
 func (store SNRBaselineStore) identity(root string) (string, string, error) {

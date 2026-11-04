@@ -10,13 +10,13 @@ import (
 
 func writePromoteGateSnapshotForTest(t *testing.T, dir, key string, ok, terminationEligible bool) {
 	t.Helper()
-	snapshot := augmentcontract.SelfAugmentStateSnapshot{
+	snapshot := augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            ok,
 		Iterations:    1,
 		GeneratedAt:   "2000-01-01T00:00:00Z",
-		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 2, PassedSteps: 2, TerminationEligible: terminationEligible},
+		Summary:       augmentcontract.Summary{TotalRuns: 1, TotalSteps: 2, PassedSteps: 2, TerminationEligible: terminationEligible},
 	}
 	if err := WriteSelfAugmentSnapshotRecord(dir, key, snapshot); err != nil {
 		t.Fatal(err)

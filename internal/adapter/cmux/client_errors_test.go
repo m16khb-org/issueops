@@ -28,7 +28,7 @@ func okPreflightSteps() []runnerStep {
 
 func TestPreflightRejectsIncompleteRequestsBeforeAnyCommandOrObservation(t *testing.T) {
 	observed := 0
-	observer := func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+	observer := func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 		observed++
 		return endpointFixture(), nil
 	}
@@ -73,8 +73,8 @@ func TestPreflightEndpointObservationFailuresAndRestartAbort(t *testing.T) {
 	t.Run("first observation fails before any command", func(t *testing.T) {
 		runner := &queueRunner{t: t}
 		boom := errors.New("socket gone")
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
-			return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{}, boom
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
+			return issueops.HandoffDeliveryEndpointIncarnation{}, boom
 		}}
 		if _, err := client.Preflight(t.Context(), preflightRequestFixture()); !errors.Is(err, boom) || len(runner.seen) != 0 {
 			t.Fatalf("err=%v commands=%d", err, len(runner.seen))
@@ -84,10 +84,10 @@ func TestPreflightEndpointObservationFailuresAndRestartAbort(t *testing.T) {
 		runner := &queueRunner{t: t, steps: okPreflightSteps()}
 		boom := errors.New("socket gone")
 		calls := 0
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			if calls == 2 {
-				return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{}, boom
+				return issueops.HandoffDeliveryEndpointIncarnation{}, boom
 			}
 			return endpointFixture(), nil
 		}}
@@ -98,7 +98,7 @@ func TestPreflightEndpointObservationFailuresAndRestartAbort(t *testing.T) {
 	t.Run("endpoint replaced during preflight", func(t *testing.T) {
 		runner := &queueRunner{t: t, steps: okPreflightSteps()}
 		calls := 0
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			endpoint := endpointFixture()
 			endpoint.Inode += uint64(calls)
@@ -179,7 +179,7 @@ func TestCreateWorkspaceRefusesBeforeCreateWhenEndpointAlreadyChanged(t *testing
 	runner := &queueRunner{t: t}
 	moved := endpointFixture()
 	moved.Inode++
-	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
+	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
 	_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 	var mutation *cmuxport.MutationError
 	if err == nil || errors.As(err, &mutation) || len(runner.seen) != 0 {
@@ -291,7 +291,7 @@ func TestSendRejectsIncompleteTargetsAndEndpointChangesBeforeTyping(t *testing.T
 		runner := &queueRunner{t: t}
 		moved := endpointFixture()
 		moved.Inode++
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
 		_, err := client.Send(t.Context(), cmuxcontract.SendRequest{Created: createdFixture(), Command: "run"})
 		var mutation *cmuxport.MutationError
 		if err == nil || errors.As(err, &mutation) || len(runner.seen) != 0 {
@@ -322,7 +322,7 @@ func TestSendClassifiesFailuresAndRequiresQueuedFieldAndStableEndpoint(t *testin
 	t.Run("endpoint replaced after send", func(t *testing.T) {
 		runner := &queueRunner{t: t, steps: []runnerStep{{args: sendArgs("run\\n"), stdout: sendReceiptFixture(testWindow, testWorkspace, testSurface)}}}
 		calls := 0
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			endpoint := endpointFixture()
 			if calls > 1 {
@@ -489,8 +489,8 @@ func TestCommandEnvironmentDropsAmbientCmuxScopeAndAppliesOnlyNonEmptyOverrides(
 func TestCreateAndSendPropagateEndpointObservationFailureWithoutRunningCommands(t *testing.T) {
 	boom := errors.New("socket unavailable")
 	runner := &queueRunner{t: t}
-	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
-		return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{}, boom
+	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
+		return issueops.HandoffDeliveryEndpointIncarnation{}, boom
 	}}
 	if _, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath}); !errors.Is(err, boom) {
 		t.Fatalf("create err=%v", err)

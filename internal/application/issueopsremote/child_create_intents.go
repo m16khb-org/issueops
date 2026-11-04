@@ -15,32 +15,32 @@ type ChildCreateIntents struct {
 }
 
 func (s *ChildCreateIntents) timestamp() string { return s.Now().UTC().Format(time.RFC3339Nano) }
-func (s *ChildCreateIntents) update(ctx context.Context, id string, actor model.IssueOpsActor, transition RecordTransition) (model.IssueOpsRecord, error) {
-	return s.Store.Update(ctx, id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) update(ctx context.Context, id string, actor model.Actor, transition RecordTransition) (model.Record, error) {
+	return s.Store.Update(ctx, id, func(record model.Record) (model.Record, error) {
 		if err := s.Authority.Authorize(ctx, record, actor); err != nil {
 			return record, err
 		}
 		return transition(record)
 	})
 }
-func (s *ChildCreateIntents) Begin(ctx context.Context, id string, op model.ChildCreateOperation, explicitID string, actor model.IssueOpsActor) (model.ChildCreateOperation, bool, error) {
+func (s *ChildCreateIntents) Begin(ctx context.Context, id string, op model.ChildCreateOperation, explicitID string, actor model.Actor) (model.ChildCreateOperation, bool, error) {
 	var selected model.ChildCreateOperation
 	var invoke bool
-	_, err := s.update(ctx, id, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	_, err := s.update(ctx, id, actor, func(record model.Record) (model.Record, error) {
 		updated, current, shouldInvoke, err := domain.BeginChildOperation(record, op, explicitID)
 		selected, invoke = current, shouldInvoke
 		return updated, err
 	})
 	return selected, invoke, err
 }
-func (s *ChildCreateIntents) Outcome(ctx context.Context, id, operation, status, url, failure string, actor model.IssueOpsActor) error {
-	_, err := s.update(ctx, id, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) Outcome(ctx context.Context, id, operation, status, url, failure string, actor model.Actor) error {
+	_, err := s.update(ctx, id, actor, func(record model.Record) (model.Record, error) {
 		return domain.RecordChildOutcome(record, operation, status, url, failure, s.timestamp())
 	})
 	return err
 }
-func (s *ChildCreateIntents) Complete(ctx context.Context, expected model.IssueOpsRecord, observed model.ChildCreateOperation, url string, actor model.IssueOpsActor, reconcile bool) error {
-	_, err := s.update(ctx, expected.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) Complete(ctx context.Context, expected model.Record, observed model.ChildCreateOperation, url string, actor model.Actor, reconcile bool) error {
+	_, err := s.update(ctx, expected.ID, actor, func(record model.Record) (model.Record, error) {
 		if !sameChildRecoveryAuthority(expected, record) {
 			return record, fmt.Errorf("child recovery authority changed")
 		}
@@ -69,8 +69,8 @@ const childCrashReleased = "the create-child caller died before the provider cre
 
 // ReleaseCrashed records not_invoked for the exact pending attempt that was
 // settled (compare-and-swap on status, attempt, and updated_at).
-func (s *ChildCreateIntents) ReleaseCrashed(ctx context.Context, observed model.IssueOpsRecord, op model.ChildCreateOperation, actor model.IssueOpsActor) error {
-	_, err := s.update(ctx, observed.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) ReleaseCrashed(ctx context.Context, observed model.Record, op model.ChildCreateOperation, actor model.Actor) error {
+	_, err := s.update(ctx, observed.ID, actor, func(record model.Record) (model.Record, error) {
 		if !sameChildRecoveryAuthority(observed, record) {
 			return record, fmt.Errorf("child recovery authority changed")
 		}
@@ -89,8 +89,8 @@ func (s *ChildCreateIntents) ReleaseCrashed(ctx context.Context, observed model.
 	return err
 }
 
-func (s *ChildCreateIntents) RecoveryFailure(ctx context.Context, observed model.IssueOpsRecord, op model.ChildCreateOperation, url, status, failure string, actor model.IssueOpsActor) error {
-	_, err := s.update(ctx, observed.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) RecoveryFailure(ctx context.Context, observed model.Record, op model.ChildCreateOperation, url, status, failure string, actor model.Actor) error {
+	_, err := s.update(ctx, observed.ID, actor, func(record model.Record) (model.Record, error) {
 		if !sameChildRecoveryAuthority(observed, record) {
 			return record, fmt.Errorf("child recovery authority changed")
 		}

@@ -37,7 +37,7 @@ func TestRunSavesAndPrintsJSON(t *testing.T) {
 			},
 			Save: func(result *augmentcontract.SelfVerificationCandidateExportResult, key string) error {
 				savedKey = key
-				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: true, Key: key}
+				result.StateCheckpoint = &augmentcontract.StateCheckpoint{OK: true, Key: key}
 				return nil
 			},
 			PrintJSON: printJSONForTest,

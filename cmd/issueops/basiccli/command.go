@@ -11,15 +11,15 @@ import (
 )
 
 type HandoffObserver interface {
-	ObserveManual(issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error)
+	ObserveManual(issueopscontract.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error)
 }
 
 type Command struct {
 	IssueOpsRoot   string
 	DefaultTarget  string
 	Version        string
-	DocsIndex      func(root, version string, includeHistory bool) docscontract.DocsIndexResult
-	InspectHarness func(string, inspectcontract.Options) inspectcontract.InspectInfo
+	DocsIndex      func(root, version string, includeHistory bool) docscontract.IndexResult
+	InspectHarness func(string, inspectcontract.Options) inspectcontract.Info
 	Preflight      preflightapp.Service
 	Guard          guardapp.Service
 	Trace          traceapp.Service

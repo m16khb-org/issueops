@@ -29,7 +29,7 @@ func TestWorkerRunReadOnlyTimeoutFailsJobWithBoundedStderr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("worker run timeout: %v", err)
 	}
-	if job.Status != workercontract.WorkerStatusFailed || job.Result == nil || !job.Result.TimedOut || job.Result.ExitCode != 124 {
+	if job.Status != workercontract.StatusFailed || job.Result == nil || !job.Result.TimedOut || job.Result.ExitCode != 124 {
 		t.Fatalf("expected timed-out failed job: %+v", job)
 	}
 	if !strings.Contains(job.Result.Stderr, "command timed out") || len(job.Result.Stderr) > 4096 {
@@ -39,7 +39,7 @@ func TestWorkerRunReadOnlyTimeoutFailsJobWithBoundedStderr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read stored job: %v", err)
 	}
-	if stored.Status != workercontract.WorkerStatusFailed || stored.Result == nil || !stored.Result.TimedOut {
+	if stored.Status != workercontract.StatusFailed || stored.Result == nil || !stored.Result.TimedOut {
 		t.Fatalf("stored timeout job missing result: %+v", stored)
 	}
 }

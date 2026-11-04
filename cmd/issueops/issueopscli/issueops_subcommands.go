@@ -27,7 +27,7 @@ func (cli command) runIssueOpsStart(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.StartIssueOps(cli.Runtime.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: *repo, Branch: *branch, New: *newCycle})
+	record, err := cli.Runtime.StartIssueOps(cli.Runtime.IssueOpsStateRoot(), issueopscontract.StartRequest{Repo: *repo, Branch: *branch, New: *newCycle})
 	// start answers with the new record itself: it is small at creation and
 	// carries the repo identity a caller binds the cycle to.
 	return printIssueOpsRecord(record, *jsonOut, err)
@@ -62,7 +62,7 @@ type issueOpsLinkSpec struct {
 	name     string
 	flagName string
 	usage    string
-	link     func(stateRoot, id, value string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	link     func(stateRoot, id, value string, actor issueopscontract.Actor) (issueopscontract.Record, error)
 }
 
 func (cli command) runIssueOpsLinkValue(args []string, spec issueOpsLinkSpec) error {
@@ -116,7 +116,7 @@ func (cli command) runIssueOpsLinkChild(args []string) error {
 		return err
 	}
 	if err := cli.VerifyChild(*childURL); err != nil {
-		return printIssueOpsResult(issueopscontract.IssueOpsRecord{OK: false}, *jsonOut, err)
+		return printIssueOpsResult(issueopscontract.Record{OK: false}, *jsonOut, err)
 	}
 	record, err := cli.Runtime.LinkIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *childURL, *title, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
@@ -174,7 +174,7 @@ func (cli command) runIssueOpsChildStart(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := cli.Runtime.StartIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), issueopscontract.IssueOpsChildStartRequest{
+	result, err := cli.Runtime.StartIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), issueopscontract.ChildStartRequest{
 		ParentID:           *parentID,
 		Branch:             *branch,
 		Title:              *title,
@@ -233,7 +233,7 @@ func (cli command) runIssueOpsChildAccept(args []string) error {
 
 // runIssueOpsChildReason는 child reject와 child drop이 공유한다. 둘 다 parent/child
 // id와 사유 하나를 받아 runtime 호출 한 번으로 처리한다.
-func (cli command) runIssueOpsChildReason(args []string, name, reasonUsage string, apply func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error)) error {
+func (cli command) runIssueOpsChildReason(args []string, name, reasonUsage string, apply func(parentID, childID, reason string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error)) error {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
 	actor := cli.addIssueOpsActorFlags(fs)
@@ -248,13 +248,13 @@ func (cli command) runIssueOpsChildReason(args []string, name, reasonUsage strin
 }
 
 func (cli command) runIssueOpsChildReject(args []string) error {
-	return cli.runIssueOpsChildReason(args, "issueops child reject", "rejection reason", func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+	return cli.runIssueOpsChildReason(args, "issueops child reject", "rejection reason", func(parentID, childID, reason string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error) {
 		return cli.Runtime.RejectIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), parentID, childID, reason, nil, actor)
 	})
 }
 
 func (cli command) runIssueOpsChildDrop(args []string) error {
-	return cli.runIssueOpsChildReason(args, "issueops child drop", "drop reason", func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+	return cli.runIssueOpsChildReason(args, "issueops child drop", "drop reason", func(parentID, childID, reason string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error) {
 		return cli.Runtime.DropIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), parentID, childID, reason, actor)
 	})
 }
@@ -376,13 +376,13 @@ func (cli command) runIssueOpsPhase(args []string) error {
 		}
 		return nil
 	}
-	return printJSON(phaseResponse{IssueOpsMutationAck: issueopscontract.MutationAck(record), TrackedMaterials: &materials})
+	return printJSON(phaseResponse{MutationAck: issueopscontract.NewMutationAck(record), TrackedMaterials: &materials})
 }
 
 // phaseResponse는 phase 전이 ack에 추적 사본 보고를 얹는다. record 필드가 아니다.
 type phaseResponse struct {
-	issueopscontract.IssueOpsMutationAck
-	TrackedMaterials *issueopscontract.IssueOpsTrackedMaterials `json:"tracked_materials,omitempty"`
+	issueopscontract.MutationAck
+	TrackedMaterials *issueopscontract.TrackedMaterials `json:"tracked_materials,omitempty"`
 }
 
 func (cli command) runIssueOpsPRReadiness(args []string) error {
@@ -504,7 +504,7 @@ func (cli command) runIssueOpsImplementationReview(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsImplementationReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsImplementationReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.ImplementationReviewRequest{
 		Verdict: *verdict, Findings: findings, Evidence: evidence,
 		ReviewerHost: *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort, ReviewerContext: *reviewerContext,
 	}, actor.actor())
@@ -534,7 +534,7 @@ func (cli command) runIssueOpsProjectDocsReview(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsProjectDocsReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsProjectDocsReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.ProjectDocsReviewRequest{
 		Verdict: *verdict, Docs: docs, ReviewedDocs: reviewedDocs, Evidence: evidence,
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
@@ -562,7 +562,7 @@ func (cli command) runIssueOpsSchemaEvidence(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsSchemaEvidenceWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsSchemaEvidenceRequest{
+	record, err := cli.Runtime.RecordIssueOpsSchemaEvidenceWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.SchemaEvidenceRequest{
 		Measurements: measurements, Sources: sources, Waive: *waive, WaiverRationale: *rationale,
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)

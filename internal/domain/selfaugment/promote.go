@@ -7,8 +7,8 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func PreparePromotion(fromKey, baselineKey string, confirm bool, stateDir string) (contract.SelfAugmentPromoteResult, error) {
-	result := contract.SelfAugmentPromoteResult{
+func PreparePromotion(fromKey, baselineKey string, confirm bool, stateDir string) (contract.PromoteResult, error) {
+	result := contract.PromoteResult{
 		OK:          false,
 		StateDir:    stateDir,
 		FromKey:     fromKey,
@@ -25,7 +25,7 @@ func PreparePromotion(fromKey, baselineKey string, confirm bool, stateDir string
 	return result, nil
 }
 
-func ObservePromotionSource(result contract.SelfAugmentPromoteResult, snapshot contract.SelfAugmentStateSnapshot, allowFailedSource bool) (contract.SelfAugmentPromoteResult, error) {
+func ObservePromotionSource(result contract.PromoteResult, snapshot contract.StateSnapshot, allowFailedSource bool) (contract.PromoteResult, error) {
 	result.SnapshotGeneratedAt = snapshot.GeneratedAt
 	result.Summary = snapshot.Summary
 	// Gate semantics (measured by the SV-B case): a baseline is the reference

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 type BranchPreparationEnvironment struct {
@@ -54,5 +54,5 @@ func (e BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider strin
 	if code != 0 {
 		return "", fmt.Errorf("git remote get-url origin failed: %s", strings.TrimSpace(stderr))
 	}
-	return remote.ProjectKeyFromGitRemoteURL(strings.TrimSpace(stdout), provider)
+	return issueopsremote.ProjectKeyFromGitRemoteURL(strings.TrimSpace(stdout), provider)
 }

@@ -161,7 +161,7 @@ func TestRedactedHandoffDeliveryObservationScrubsEveryExecutablePathWithoutMutat
 
 func TestHandoffDeliveryAuditErrorAffectsOnlyReadersOfTheSameLineage(t *testing.T) {
 	record := func(lifecycle, lineage string) auditcontract.HandoffDeliveryAuditRecord {
-		return auditcontract.HandoffDeliveryAuditRecord{Observation: issueopscontract.IssueOpsHandoffDeliveryObservation{LifecycleID: lifecycle, LineageID: lineage}}
+		return auditcontract.HandoffDeliveryAuditRecord{Observation: issueopscontract.HandoffDeliveryObservation{LifecycleID: lifecycle, LineageID: lineage}}
 	}
 	for _, tt := range []struct {
 		name                       string
@@ -289,7 +289,7 @@ func TestHandoffDeliveryReadForFiltersByLineageAndPoisonsOnUnidentifiableCorrupt
 	sameLifecycleOtherLineage := auditDeliveryObservationFixture()
 	sameLifecycleOtherLineage.LineageID = "lineage-2"
 	sameLifecycleOtherLineage.AttemptID = "attempt-2"
-	for _, observation := range []issueopscontract.IssueOpsHandoffDeliveryObservation{auditDeliveryObservationFixture(), sameLifecycleOtherLineage} {
+	for _, observation := range []issueopscontract.HandoffDeliveryObservation{auditDeliveryObservationFixture(), sameLifecycleOtherLineage} {
 		if _, err := store.Append(observation); err != nil {
 			t.Fatal(err)
 		}

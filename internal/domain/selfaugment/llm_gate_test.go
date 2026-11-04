@@ -20,14 +20,14 @@ func TestLLMGatePreservesThresholdAndOnlyRevokesTermination(t *testing.T) {
 		{"blocker", "gate", true, 100, []string{"problem"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			input := contract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: contract.SelfAugmentSummary{TerminationEligible: true}, LLMEval: &contract.SelfVerifyLLMEvalResult{Mode: tc.mode, OK: tc.ok, Score: tc.score, Blockers: tc.blockers}}
+			input := contract.Result{OK: true, TerminationEligible: true, Summary: contract.Summary{TerminationEligible: true}, LLMEval: &contract.SelfVerifyLLMEvalResult{Mode: tc.mode, OK: tc.ok, Score: tc.score, Blockers: tc.blockers}}
 			got, err := ApplySelfVerifyLLMGate(input, 95)
 			if got.OK != tc.pass || got.TerminationEligible != tc.pass || got.Summary.TerminationEligible != tc.pass || (err == nil) != tc.pass {
 				t.Fatalf("gate result=%+v err=%v", got, err)
 			}
 		})
 	}
-	priorFailure := contract.SelfAugmentResult{LLMEval: &contract.SelfVerifyLLMEvalResult{Mode: "gate", OK: true, Score: 100}}
+	priorFailure := contract.Result{LLMEval: &contract.SelfVerifyLLMEvalResult{Mode: "gate", OK: true, Score: 100}}
 	got, err := ApplySelfVerifyLLMGate(priorFailure, 95)
 	if err != nil || got.OK || got.TerminationEligible || got.Summary.TerminationEligible {
 		t.Fatal("LLM success promoted deterministic failure")

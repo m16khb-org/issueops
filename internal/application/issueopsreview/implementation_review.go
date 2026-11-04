@@ -14,23 +14,23 @@ import (
 
 // RecordImplementationReview observes the change set before taking the record lock,
 // then rechecks its identity against the locked record before one durable write.
-func RecordImplementationReview(store reviewport.EvidenceReviewStore, stateRoot, id string, req model.IssueOpsImplementationReviewRequest) (model.IssueOpsRecord, error) {
+func RecordImplementationReview(store reviewport.EvidenceReviewStore, stateRoot, id string, req model.ImplementationReviewRequest) (model.Record, error) {
 	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
 	findings := cleanReviewValues(req.Findings)
 	evidence := cleanReviewValues(req.Evidence)
 	if err := reviewdomain.ValidateImplementationReviewRecord(verdict, len(findings), len(evidence)); err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	reviewerContext := strings.ToLower(strings.TrimSpace(req.ReviewerContext))
 	if reviewerContext != "" && reviewerContext != "subagent" && reviewerContext != "inline" {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("reviewer_context must be subagent or inline")
+		return model.Record{OK: false}, fmt.Errorf("reviewer_context must be subagent or inline")
 	}
 	observed, err := store.Read(stateRoot, id)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	fingerprint := store.Fingerprint(observed)
-	var result model.IssueOpsRecord
+	var result model.Record
 	err = store.WithLock(stateRoot, id, func() error {
 		current, err := store.Read(stateRoot, id)
 		if err != nil {
@@ -46,7 +46,7 @@ func RecordImplementationReview(store reviewport.EvidenceReviewStore, stateRoot,
 			return err
 		}
 		now := store.Now()
-		current.ImplementationReview = &model.IssueOpsImplementationReview{
+		current.ImplementationReview = &model.ImplementationReview{
 			Verdict: verdict, Findings: findings, Evidence: evidence,
 			ReviewedFingerprint: fingerprint,
 			ReviewerHost:        strings.ToLower(strings.TrimSpace(req.ReviewerHost)),
@@ -60,7 +60,7 @@ func RecordImplementationReview(store reviewport.EvidenceReviewStore, stateRoot,
 		return err
 	})
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	return result, nil
 }
@@ -76,7 +76,7 @@ func cleanReviewValues(values []string) []string {
 	return out
 }
 
-func changeObservationIdentity(record model.IssueOpsRecord) reviewcontract.ChangeObservationIdentity {
+func changeObservationIdentity(record model.Record) reviewcontract.ChangeObservationIdentity {
 	root := strings.TrimSpace(record.WorktreePath)
 	if root == "" {
 		root = strings.TrimSpace(record.Repo)
@@ -90,7 +90,7 @@ func changeObservationIdentity(record model.IssueOpsRecord) reviewcontract.Chang
 	return identity
 }
 
-func validateCurrentChangeObservation(observed, current model.IssueOpsRecord) error {
+func validateCurrentChangeObservation(observed, current model.Record) error {
 	if !reviewdomain.SameChangeObservationIdentity(changeObservationIdentity(observed), changeObservationIdentity(current)) {
 		return fmt.Errorf("IssueOps record %s changed its worktree or base while the change set was observed; retry the command", current.ID)
 	}

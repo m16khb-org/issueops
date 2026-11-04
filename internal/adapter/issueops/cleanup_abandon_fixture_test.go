@@ -23,7 +23,7 @@ func abandonExecutorForTests(root string, deps CleanupAbandonDeps) cleanupapp.Ab
 	return cleanupapp.AbandonExecutor{
 		Records: CleanupRecordStore{StateRoot: root}, Acquire: (CleanupLifetimeLock{StateRoot: root, Wait: -1}).Acquire,
 		Provider: func(string) (port.IssueProvider, error) { return deps.Remote, nil },
-		Observe: func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupAbandonRequest, _ port.IssueProvider) (model.CleanupAbandonRequest, error) {
+		Observe: func(_ context.Context, _ model.Record, r model.CleanupAbandonRequest, _ port.IssueProvider) (model.CleanupAbandonRequest, error) {
 			return r, nil
 		},
 		Plan: abandonPreviewerForTests(runtime).Plan, NewAttempt: NewCleanupAttempt, Stop: runtime.Stop, Directory: (CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,

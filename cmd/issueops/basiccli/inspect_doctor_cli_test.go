@@ -47,7 +47,7 @@ func TestRunInspect_printsJSON_whenJSONFlagIsSet(t *testing.T) {
 	})
 
 	// 검증
-	var result inspect.InspectInfo
+	var result inspect.Info
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode inspect json: %v\n%s", err, out)
 	}
@@ -370,9 +370,9 @@ func TestRunDoctor_doesNotRequireRealHome(t *testing.T) {
 func TestRunInspect_passesHostReceiptsFlagToInspector_whenProvided(t *testing.T) {
 	var gotRepo string
 	var gotOptions inspect.Options
-	command := Command{InspectHarness: func(repo string, options inspect.Options) inspect.InspectInfo {
+	command := Command{InspectHarness: func(repo string, options inspect.Options) inspect.Info {
 		gotRepo, gotOptions = repo, options
-		return inspect.InspectInfo{OK: true, Integration: inspect.IntegrationStatus{Hosts: []inspect.HostIntegration{{
+		return inspect.Info{OK: true, Integration: inspect.IntegrationStatus{Hosts: []inspect.HostIntegration{{
 			Host: "codex", Transport: "http",
 			Installed:  inspect.Observation{Status: "verified"},
 			Connected:  inspect.Observation{Status: "unknown"},
@@ -394,9 +394,9 @@ func TestRunInspect_passesHostReceiptsFlagToInspector_whenProvided(t *testing.T)
 
 func TestRunInspect_leavesHostReceiptsEmpty_whenFlagIsAbsent(t *testing.T) {
 	var gotOptions inspect.Options
-	command := Command{InspectHarness: func(_ string, options inspect.Options) inspect.InspectInfo {
+	command := Command{InspectHarness: func(_ string, options inspect.Options) inspect.Info {
 		gotOptions = options
-		return inspect.InspectInfo{OK: true}
+		return inspect.Info{OK: true}
 	}}
 
 	_ = captureStatusVerifyStdout(t, func() error { return command.RunInspect([]string{"--json"}) })

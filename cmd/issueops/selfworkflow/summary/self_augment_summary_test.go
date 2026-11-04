@@ -12,8 +12,8 @@ import (
 )
 
 func TestSummarizeSelfAugmentSuccess(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{
-		Runs: []augmentcontract.SelfAugmentIteration{
+	result := augmentcontract.Result{
+		Runs: []augmentcontract.Iteration{
 			{
 				Iteration: 1,
 				Seed:      100,
@@ -45,8 +45,8 @@ func TestSummarizeSelfAugmentSuccess(t *testing.T) {
 }
 
 func TestSummarizeSelfAugmentFailure(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{
-		Runs: []augmentcontract.SelfAugmentIteration{
+	result := augmentcontract.Result{
+		Runs: []augmentcontract.Iteration{
 			{
 				Iteration: 3,
 				Seed:      202,
@@ -73,10 +73,10 @@ func TestSummarizeSelfAugmentFailure(t *testing.T) {
 }
 
 func TestSummarizeSelfVerificationClassifiesIntermittentFailure(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{
+	result := augmentcontract.Result{
 		Iterations: 3,
 		BaseSeed:   10,
-		Runs: []augmentcontract.SelfAugmentIteration{
+		Runs: []augmentcontract.Iteration{
 			{Iteration: 1, Seed: 10, Steps: []verifycontract.StepResult{{Label: "go test", OK: true}}},
 			{Iteration: 2, Seed: 11, Steps: []verifycontract.StepResult{{Label: "go test", OK: false, Error: "boom"}}},
 			{Iteration: 3, Seed: 12, Steps: []verifycontract.StepResult{{Label: "go test", OK: true}}},
@@ -133,39 +133,39 @@ func TestSelfVerificationContractIncludesSummaryExtensions(t *testing.T) {
 }
 
 func TestClassifySelfVerificationFailureCoversDeterministicMixedAndUnknown(t *testing.T) {
-	deterministic := augmentcontract.SelfAugmentResult{
-		Runs: []augmentcontract.SelfAugmentIteration{
+	deterministic := augmentcontract.Result{
+		Runs: []augmentcontract.Iteration{
 			{Iteration: 1, Seed: 10, Steps: []verifycontract.StepResult{{Label: "go test", OK: false}}},
 			{Iteration: 2, Seed: 11, Steps: []verifycontract.StepResult{{Label: "go test", OK: false}}},
 		},
 	}
-	class, reason, clusters := app.ClassifySelfVerificationFailure(deterministic, augmentcontract.SelfAugmentSummary{TotalRuns: 2, FailedSteps: 2})
+	class, reason, clusters := app.ClassifySelfVerificationFailure(deterministic, augmentcontract.Summary{TotalRuns: 2, FailedSteps: 2})
 	if class != "deterministic" || !strings.Contains(reason, "same step") || len(clusters) != 1 || clusters[0].Count != 2 {
 		t.Fatalf("unexpected deterministic classification: class=%q reason=%q clusters=%+v", class, reason, clusters)
 	}
 
-	mixed := augmentcontract.SelfAugmentResult{
-		Runs: []augmentcontract.SelfAugmentIteration{
+	mixed := augmentcontract.Result{
+		Runs: []augmentcontract.Iteration{
 			{Iteration: 1, Seed: 20, Steps: []verifycontract.StepResult{{Label: "go test", OK: false}}},
 			{Iteration: 2, Seed: 21, Steps: []verifycontract.StepResult{{Label: "go build", OK: false}}},
 		},
 	}
-	class, reason, clusters = app.ClassifySelfVerificationFailure(mixed, augmentcontract.SelfAugmentSummary{TotalRuns: 2, FailedSteps: 2})
+	class, reason, clusters = app.ClassifySelfVerificationFailure(mixed, augmentcontract.Summary{TotalRuns: 2, FailedSteps: 2})
 	if class != "mixed" || !strings.Contains(reason, "multiple failure steps") || len(clusters) != 2 {
 		t.Fatalf("unexpected mixed classification: class=%q reason=%q clusters=%+v", class, reason, clusters)
 	}
 
-	class, reason, clusters = app.ClassifySelfVerificationFailure(augmentcontract.SelfAugmentResult{}, augmentcontract.SelfAugmentSummary{FailedSteps: 1})
+	class, reason, clusters = app.ClassifySelfVerificationFailure(augmentcontract.Result{}, augmentcontract.Summary{FailedSteps: 1})
 	if class != "unknown" || !strings.Contains(reason, "no failed step details") || clusters != nil {
 		t.Fatalf("unexpected unknown classification: class=%q reason=%q clusters=%+v", class, reason, clusters)
 	}
 }
 
 func TestSummarizeSelfVerificationMarksGoalFailureWhenLabelsMissing(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{
+	result := augmentcontract.Result{
 		OK:         true,
 		Iterations: 1,
-		Runs: []augmentcontract.SelfAugmentIteration{
+		Runs: []augmentcontract.Iteration{
 			{Iteration: 1, Seed: 100, Steps: []verifycontract.StepResult{{Label: "go test", OK: true}}},
 		},
 	}

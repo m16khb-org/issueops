@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"encoding/json"
@@ -11,18 +11,18 @@ func TestScoreIssueOpsRemoteCandidatesSelectsThresholdMatches(t *testing.T) {
 	unrelatedScore := 0.42
 	labelScore := 0.88
 	docScore := 0.40
-	result, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	result, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Provider:  "github",
 		Threshold: 0.70,
-		Issue: IssueOpsRemoteArtifact{
+		Issue: ArtifactDraft{
 			Title: "IssueOps 이슈 생성 시 관련 이슈와 라벨 점수화",
 			Body:  "관련 이슈 링크와 enhancement 라벨을 threshold 기반으로 적용한다.",
 		},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{
+		IssueCandidates: []IssueCandidate{
 			{ID: "#9", Title: "IssueOps autoresearch quality gate", URL: "https://example.com/issues/9", Score: &relatedScore},
 			{ID: "#7", Title: "Template cleanup", URL: "https://example.com/issues/7", Score: &unrelatedScore},
 		},
-		LabelCandidates: []IssueOpsRemoteLabelCandidate{
+		LabelCandidates: []LabelCandidate{
 			{Name: "enhancement", Score: &labelScore},
 			{Name: "documentation", Score: &docScore},
 		},
@@ -50,11 +50,11 @@ func TestScoreIssueOpsRemoteCandidatesSelectsThresholdMatches(t *testing.T) {
 
 func TestScoreIssueOpsRemoteCandidatesSupportsGitLabInstructions(t *testing.T) {
 	score := 0.95
-	result, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	result, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Provider:  "gitlab",
 		Threshold: 0.70,
-		Issue:     IssueOpsRemoteArtifact{Title: "IssueOps GitLab label support"},
-		LabelCandidates: []IssueOpsRemoteLabelCandidate{
+		Issue:     ArtifactDraft{Title: "IssueOps GitLab label support"},
+		LabelCandidates: []LabelCandidate{
 			{Name: "enhancement", Score: &score},
 		},
 	})
@@ -71,11 +71,11 @@ func TestScoreIssueOpsRemoteCandidatesSupportsGitLabInstructions(t *testing.T) {
 
 func TestScoreIssueOpsRemoteCandidatesGitLabRelatedIssuesUseLinkedItems(t *testing.T) {
 	relatedScore := 0.92
-	result, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	result, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Provider:  "gitlab",
 		Threshold: 0.70,
-		Issue:     IssueOpsRemoteArtifact{Title: "IssueOps GitLab linked item 연결"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{
+		Issue:     ArtifactDraft{Title: "IssueOps GitLab linked item 연결"},
+		IssueCandidates: []IssueCandidate{
 			{ID: "#9", Title: "IssueOps autoresearch quality gate", URL: "https://gitlab.example.com/group/repo/-/issues/9", Score: &relatedScore},
 		},
 	})
@@ -98,9 +98,9 @@ func TestScoreIssueOpsRemoteCandidatesGitLabRelatedIssuesUseLinkedItems(t *testi
 }
 
 func TestScoreIssueOpsRemoteCandidatesDoesNotWarnWhenNoCandidatesExist(t *testing.T) {
-	result, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	result, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Provider: "github",
-		Issue:    IssueOpsRemoteArtifact{Title: "IssueOps remote score with no candidate data"},
+		Issue:    ArtifactDraft{Title: "IssueOps remote score with no candidate data"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -131,14 +131,14 @@ func TestScoreIssueOpsRemoteCandidatesDoesNotWarnWhenNoCandidatesExist(t *testin
 
 func TestScoreIssueOpsRemoteCandidatesRequiresExplicitLabelDecisionWhenAllLabelsRejected(t *testing.T) {
 	labelScore := 0.40
-	result, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	result, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Provider:  "gitlab",
 		Threshold: 0.70,
-		Issue: IssueOpsRemoteArtifact{
+		Issue: ArtifactDraft{
 			Title: "IssueOps MR 라벨 누락 방지",
 			Body:  "원격 이슈와 MR 생성 전에 라벨 결정을 검증한다.",
 		},
-		LabelCandidates: []IssueOpsRemoteLabelCandidate{
+		LabelCandidates: []LabelCandidate{
 			{Name: "documentation", Score: &labelScore},
 		},
 	})

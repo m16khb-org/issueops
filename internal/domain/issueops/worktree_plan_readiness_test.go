@@ -8,10 +8,10 @@ import (
 )
 
 func TestWorktreePlanReadinessMissingPreservesOrderedGates(t *testing.T) {
-	if got := WorktreePlanReadinessMissing(model.IssueOpsRecord{}, false, false, true); !reflect.DeepEqual(got, []string{"worktree_path"}) {
+	if got := WorktreePlanReadinessMissing(model.Record{}, false, false, true); !reflect.DeepEqual(got, []string{"worktree_path"}) {
 		t.Fatalf("empty paths=%v", got)
 	}
-	record := model.IssueOpsRecord{WorktreePath: "tree", PlanPath: "plan.md"}
+	record := model.Record{WorktreePath: "tree", PlanPath: "plan.md"}
 	if got := WorktreePlanReadinessMissing(record, false, false, false); !reflect.DeepEqual(got, []string{"worktree_exists", "plan_exists", "plan_in_worktree"}) {
 		t.Fatalf("broken paths=%v", got)
 	}
@@ -21,7 +21,7 @@ func TestWorktreePlanReadinessMissingPreservesOrderedGates(t *testing.T) {
 }
 
 func TestPlanExistenceRootPrefersLinkedWorktree(t *testing.T) {
-	record := model.IssueOpsRecord{Repo: " repo ", WorktreePath: " tree "}
+	record := model.Record{Repo: " repo ", WorktreePath: " tree "}
 	if got := PlanExistenceRoot(record); got != "tree" {
 		t.Fatalf("linked root=%q", got)
 	}

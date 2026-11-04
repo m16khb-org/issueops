@@ -12,10 +12,10 @@ type Result struct {
 	Kind       string                             `json:"kind"`
 	Version    string                             `json:"version"`
 	Repo       string                             `json:"repo"`
-	Inspect    inspect.InspectInfo                `json:"inspect"`
+	Inspect    inspect.Info                       `json:"inspect"`
 	Doctor     doctorcontract.HarnessDoctorResult `json:"doctor"`
-	State      statecontract.StateListResult      `json:"state"`
-	Workers    workercontract.WorkerListResult    `json:"workers"`
+	State      statecontract.ListResult           `json:"state"`
+	Workers    workercontract.ListResult          `json:"workers"`
 	SelfVerify SelfVerifyStatus                   `json:"self_verify"`
 	Warnings   []string                           `json:"warnings"`
 }

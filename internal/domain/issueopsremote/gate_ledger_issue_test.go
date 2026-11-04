@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"testing"
@@ -7,9 +7,9 @@ import (
 )
 
 func TestGateLedgerIssueNumberPrefersLinkedIssue(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		IssueURL:      "https://github.com/acme/repo/issues/21",
-		BranchPrepare: &model.IssueOpsBranchPrepare{IssueURL: "https://github.com/acme/repo/issues/22"},
+		BranchPrepare: &model.BranchPrepare{IssueURL: "https://github.com/acme/repo/issues/22"},
 	}
 	if got := GateLedgerIssueNumber(record.IssueURL, record.BranchPrepare.IssueURL); got != "21" {
 		t.Fatalf("linked issue number=%q", got)

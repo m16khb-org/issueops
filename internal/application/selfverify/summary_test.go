@@ -13,7 +13,7 @@ import (
 
 func TestSummaryCarriesReusedMarkersWithoutLosingCoverage(t *testing.T) {
 	// Given
-	var input augment.SelfAugmentResult
+	var input augment.Result
 	if err := json.Unmarshal([]byte(`{"ok":true,"runs":[{"iteration":1,"seed":123,"steps":[
 		{"label":"go test","ok":true,"duration_ms":137},
 		{"label":"go test","ok":true,"duration_ms":0,"reused":true},
@@ -53,7 +53,7 @@ func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 	for _, label := range domain.StepOrder() {
 		steps = append(steps, verify.StepResult{Label: label, OK: true, DurationMS: 5})
 	}
-	input := augment.SelfAugmentResult{OK: true, Iterations: 1, BaseSeed: 123, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Seed: 123, Steps: steps}}}
+	input := augment.Result{OK: true, Iterations: 1, BaseSeed: 123, Runs: []augment.Iteration{{Iteration: 1, Seed: 123, Steps: steps}}}
 	success := SummarizeSelfVerification(input, 95)
 	if !success.TerminationEligible || success.MinimumGoalScore != 100 || len(success.CoverageGaps) != 0 || success.TotalSteps != 27 || success.FailedSteps != 0 {
 		t.Fatalf("complete evidence was lost: %+v", success)
@@ -81,7 +81,7 @@ func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 	if len(failure.RerunCommands) != 2 || failure.RerunCommands[0] != "go test ./... -count=1" || !strings.Contains(failure.RerunCommands[1], "--seed=123 --target-score=95") {
 		t.Fatal(failure.RerunCommands)
 	}
-	empty := SummarizeSelfVerification(augment.SelfAugmentResult{}, 95)
+	empty := SummarizeSelfVerification(augment.Result{}, 95)
 	if empty.MinimumGoalScore != 0 || empty.TerminationEligible || empty.TotalSteps != 0 || len(empty.CoverageGaps) == 0 {
 		t.Fatalf("empty evidence passed: %+v", empty)
 	}
@@ -90,7 +90,7 @@ func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 func TestSummaryMarksStepsAndGoalsSkippedByFailFast(t *testing.T) {
 	// Given: fail-fast stopped at "Python script tests" (third planned step).
 	order := domain.StepOrder()
-	input := augment.SelfAugmentResult{Iterations: 1, BaseSeed: 100, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Seed: 100, Steps: []verify.StepResult{
+	input := augment.Result{Iterations: 1, BaseSeed: 100, Runs: []augment.Iteration{{Iteration: 1, Seed: 100, Steps: []verify.StepResult{
 		{Label: order[0], OK: true},
 		{Label: order[1], OK: true},
 		{Label: order[2], OK: false},
@@ -141,7 +141,7 @@ func TestSummaryOfCompletePassReportsNoNotRunSteps(t *testing.T) {
 	for _, label := range domain.StepOrder() {
 		steps = append(steps, verify.StepResult{Label: label, OK: true})
 	}
-	summary := SummarizeSelfVerification(augment.SelfAugmentResult{OK: true, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}, 95)
+	summary := SummarizeSelfVerification(augment.Result{OK: true, Iterations: 1, Runs: []augment.Iteration{{Iteration: 1, Steps: steps}}}, 95)
 	if summary.PlannedSteps != len(steps) || summary.NotRunSteps == nil || len(summary.NotRunSteps) != 0 {
 		t.Fatalf("planned=%d not_run=%#v", summary.PlannedSteps, summary.NotRunSteps)
 	}

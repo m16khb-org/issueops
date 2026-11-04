@@ -75,7 +75,7 @@ type denyAfter struct {
 	allowed, calls int
 }
 
-func (a *denyAfter) Authorize(context.Context, issueops.IssueOpsRecord, issueops.IssueOpsActor) error {
+func (a *denyAfter) Authorize(context.Context, issueops.Record, issueops.Actor) error {
 	a.calls++
 	if a.calls > a.allowed {
 		return errBoom
@@ -88,38 +88,38 @@ type failingRepository struct {
 	readErr, updateErr error
 }
 
-func (r *failingRepository) Read(ctx context.Context, id string) (issueops.IssueOpsRecord, error) {
+func (r *failingRepository) Read(ctx context.Context, id string) (issueops.Record, error) {
 	if r.readErr != nil {
-		return issueops.IssueOpsRecord{}, r.readErr
+		return issueops.Record{}, r.readErr
 	}
 	return r.fakeRepository.Read(ctx, id)
 }
 
-func (r *failingRepository) Update(ctx context.Context, id string, transition RecordTransition) (issueops.IssueOpsRecord, error) {
+func (r *failingRepository) Update(ctx context.Context, id string, transition RecordTransition) (issueops.Record, error) {
 	if r.updateErr != nil {
-		return issueops.IssueOpsRecord{}, r.updateErr
+		return issueops.Record{}, r.updateErr
 	}
 	return r.fakeRepository.Update(ctx, id, transition)
 }
 
 func syncNow() time.Time { return time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC) }
 
-func issueRecord(syncs ...issueops.IssueOpsRemoteBodySync) issueops.IssueOpsRecord {
-	return issueops.IssueOpsRecord{OK: true, ID: "io-sync", IssueURL: syncIssueURL, BodySyncs: syncs}
+func issueRecord(syncs ...issueops.RemoteBodySync) issueops.Record {
+	return issueops.Record{OK: true, ID: "io-sync", IssueURL: syncIssueURL, BodySyncs: syncs}
 }
 
-func prRecord(generation uint64) issueops.IssueOpsRecord {
+func prRecord(generation uint64) issueops.Record {
 	record := issueRecord()
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: syncPRURL, VerifiedAt: "2026-10-04T00:00:00Z"}
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: syncPRURL, VerifiedAt: "2026-10-04T00:00:00Z"}
 	record.Execution = &issueops.Execution{Lease: issueops.WriteLease{Generation: generation}}
 	return record
 }
 
-func issueSync(sha string) issueops.IssueOpsRemoteBodySync {
-	return issueops.IssueOpsRemoteBodySync{Kind: "issue", URL: syncIssueURL, ToSHA256: sha, SyncedAt: "2026-10-01T00:00:00Z"}
+func issueSync(sha string) issueops.RemoteBodySync {
+	return issueops.RemoteBodySync{Kind: "issue", URL: syncIssueURL, ToSHA256: sha, SyncedAt: "2026-10-01T00:00:00Z"}
 }
 
-func newScripted(record issueops.IssueOpsRecord, provider *scriptedProvider, authority Authority) (*Service, *failingRepository) {
+func newScripted(record issueops.Record, provider *scriptedProvider, authority Authority) (*Service, *failingRepository) {
 	repository := &failingRepository{fakeRepository: fakeRepository{record: record}}
 	return NewService(repository, provider, authority, syncNow), repository
 }
@@ -139,7 +139,7 @@ func TestSyncRejectsAnUnusableProposalBeforeAnyIORead(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cmd := issueCommand(false)
 			cmd.ProposedBody = body
-			_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+			_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 			if err == nil || errors.Is(err, errBoom) {
 				t.Fatalf("err = %v, want a proposal rejection raised before the repository read", err)
 			}
@@ -152,7 +152,7 @@ func TestSyncRejectsAnUnusableProposalBeforeAnyIORead(t *testing.T) {
 
 func TestSyncPropagatesARepositoryReadFailure(t *testing.T) {
 	service := NewService(&failingRepository{readErr: errBoom}, &scriptedProvider{}, allowAll{}, syncNow)
-	_, _, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.IssueOpsActor{})
+	_, _, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.Actor{})
 	if !errors.Is(err, errBoom) {
 		t.Fatalf("err = %v", err)
 	}
@@ -161,7 +161,7 @@ func TestSyncPropagatesARepositoryReadFailure(t *testing.T) {
 func TestSyncRefusesAnUnauthorizedActorBeforeReadingTheRemote(t *testing.T) {
 	provider := &scriptedProvider{body: syncLiveBody}
 	service, _ := newScripted(issueRecord(), provider, &denyAfter{})
-	record, _, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.IssueOpsActor{})
+	record, _, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.Actor{})
 	if !errors.Is(err, errBoom) || record.OK || provider.reads != 0 {
 		t.Fatalf("err=%v ok=%v reads=%d", err, record.OK, provider.reads)
 	}
@@ -170,14 +170,14 @@ func TestSyncRefusesAnUnauthorizedActorBeforeReadingTheRemote(t *testing.T) {
 func TestSyncTargetResolutionFailures(t *testing.T) {
 	tests := []struct {
 		name   string
-		record issueops.IssueOpsRecord
+		record issueops.Record
 		cmd    bodysynccontract.Command
 		want   string
 	}{
-		{"issue without a linked issue", issueops.IssueOpsRecord{OK: true}, issueCommand(false), "before the cycle has a linked issue"},
+		{"issue without a linked issue", issueops.Record{OK: true}, issueCommand(false), "before the cycle has a linked issue"},
 		{"unsupported kind", issueRecord(), bodysynccontract.Command{Kind: "wiki", ProposedBody: syncNewBody}, `unsupported body sync kind "wiki"`},
 		{"pr without a verified artifact", issueRecord(), bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody}, "verified remote artifact"},
-		{"pr without a lease", func() issueops.IssueOpsRecord { r := prRecord(1); r.Execution = nil; return r }(), bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 1}, "without an execution lease"},
+		{"pr without a lease", func() issueops.Record { r := prRecord(1); r.Execution = nil; return r }(), bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 1}, "without an execution lease"},
 		{"pr with a stale generation", prRecord(3), bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 2}, "stale lease generation: current=3 expected=2"},
 		{"template for another artifact", issueRecord(), bodysynccontract.Command{Kind: bodysynccontract.KindIssue, ProposedBody: syncNewBody, Template: "pr"}, `template "pr" does not apply`},
 	}
@@ -185,7 +185,7 @@ func TestSyncTargetResolutionFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &scriptedProvider{body: syncLiveBody, state: "open"}
 			service, _ := newScripted(tt.record, provider, allowAll{})
-			_, _, err := service.Sync(t.Context(), "io-sync", tt.cmd, issueops.IssueOpsActor{})
+			_, _, err := service.Sync(t.Context(), "io-sync", tt.cmd, issueops.Actor{})
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("err = %v, want %q", err, tt.want)
 			}
@@ -202,7 +202,7 @@ func TestSyncConfirmRefusesAnUnreadableProposalButPreviewReportsIt(t *testing.T)
 	cmd := issueCommand(true)
 	cmd.ProposedBody = "그냥 한 줄"
 	cmd.ExpectedBodySHA256 = bodysync.SHA256Body(syncLiveBody)
-	_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+	_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 	if err == nil || !strings.Contains(err.Error(), "readability check failed") {
 		t.Fatalf("confirm err = %v", err)
 	}
@@ -210,7 +210,7 @@ func TestSyncConfirmRefusesAnUnreadableProposalButPreviewReportsIt(t *testing.T)
 		t.Fatalf("reads=%d writes=%d updates=%d", provider.reads, provider.writes, repository.updates)
 	}
 	cmd.Confirm = false
-	_, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+	_, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 	if err != nil {
 		t.Fatalf("preview must not be blocked by readability: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestSyncReadFailuresAreReturned(t *testing.T) {
 		service, _ := newScripted(issueRecord(), provider, allowAll{})
 		cmd := issueCommand(false)
 		cmd.URL = syncChildURL
-		_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+		_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 		if !errors.Is(err, errBoom) || provider.reads != 0 {
 			t.Fatalf("err=%v reads=%d", err, provider.reads)
 		}
@@ -233,7 +233,7 @@ func TestSyncReadFailuresAreReturned(t *testing.T) {
 	t.Run("body read", func(t *testing.T) {
 		provider := &scriptedProvider{readErr: errBoom}
 		service, _ := newScripted(issueRecord(), provider, allowAll{})
-		_, _, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.IssueOpsActor{})
+		_, _, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.Actor{})
 		if !errors.Is(err, errBoom) {
 			t.Fatalf("err = %v", err)
 		}
@@ -245,7 +245,7 @@ func TestSyncReadsAVerifiedChildAsAChildArtifact(t *testing.T) {
 	service, _ := newScripted(issueRecord(), provider, allowAll{})
 	cmd := issueCommand(false)
 	cmd.URL = syncChildURL
-	_, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+	_, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +266,7 @@ func TestSyncRefusesAPublicationThatIsNotOpen(t *testing.T) {
 		t.Run("state "+tt.state, func(t *testing.T) {
 			provider := &scriptedProvider{body: syncLiveBody, state: tt.state}
 			service, _ := newScripted(prRecord(2), provider, allowAll{})
-			_, _, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 2}, issueops.IssueOpsActor{})
+			_, _, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 2}, issueops.Actor{})
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("err = %v, want %q", err, tt.want)
 			}
@@ -280,7 +280,7 @@ func TestSyncRefusesAPublicationThatIsNotOpen(t *testing.T) {
 func TestSyncPreviewReportsDriftBaselineAndAgeWithoutWriting(t *testing.T) {
 	tests := []struct {
 		name      string
-		record    issueops.IssueOpsRecord
+		record    issueops.Record
 		wantDrift bodysynccontract.Drift
 		wantSHA   string
 		wantAt    string
@@ -288,9 +288,9 @@ func TestSyncPreviewReportsDriftBaselineAndAgeWithoutWriting(t *testing.T) {
 	}{
 		{"recorded sync matches the live body", issueRecord(issueSync(bodysync.SHA256Body(syncLiveBody))), bodysynccontract.DriftStale, bodysync.SHA256Body(syncLiveBody), "2026-10-01T00:00:00Z", 6},
 		{"recorded sync differs from the live body", issueRecord(issueSync(strings.Repeat("a", 64))), bodysynccontract.DriftRemoteEdited, strings.Repeat("a", 64), "2026-10-01T00:00:00Z", 6},
-		{"issue-create intent is the baseline", func() issueops.IssueOpsRecord {
+		{"issue-create intent is the baseline", func() issueops.Record {
 			r := issueRecord()
-			r.IssueCreateIntent = &issueops.IssueOpsIssueCreateIntent{CanonicalURL: syncIssueURL, BodySHA256: bodysync.SHA256Body(syncLiveBody), UpdatedAt: "2026-10-05T00:00:00Z"}
+			r.IssueCreateIntent = &issueops.IssueCreateIntent{CanonicalURL: syncIssueURL, BodySHA256: bodysync.SHA256Body(syncLiveBody), UpdatedAt: "2026-10-05T00:00:00Z"}
 			return r
 		}(), bodysynccontract.DriftStale, bodysync.SHA256Body(syncLiveBody), "2026-10-05T00:00:00Z", 2},
 		{"no baseline at all", issueRecord(), bodysynccontract.DriftStale, "", "", 0},
@@ -299,7 +299,7 @@ func TestSyncPreviewReportsDriftBaselineAndAgeWithoutWriting(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &scriptedProvider{body: syncLiveBody}
 			service, repository := newScripted(tt.record, provider, allowAll{})
-			record, result, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.IssueOpsActor{})
+			record, result, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.Actor{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -325,7 +325,7 @@ func TestSyncPreviewReportsDriftBaselineAndAgeWithoutWriting(t *testing.T) {
 func TestSyncPublicationBaselineIsTheArtifactVerificationTime(t *testing.T) {
 	provider := &scriptedProvider{body: syncLiveBody, state: "open"}
 	service, _ := newScripted(prRecord(2), provider, allowAll{})
-	_, result, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 2}, issueops.IssueOpsActor{})
+	_, result, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 2}, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -337,7 +337,7 @@ func TestSyncPublicationBaselineIsTheArtifactVerificationTime(t *testing.T) {
 func TestSyncPreviewFailsWhenTheProviderPreviewFails(t *testing.T) {
 	provider := &scriptedProvider{body: syncLiveBody, replaceErr: errBoom}
 	service, _ := newScripted(issueRecord(), provider, allowAll{})
-	record, result, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.IssueOpsActor{})
+	record, result, err := service.Sync(t.Context(), "io-sync", issueCommand(false), issueops.Actor{})
 	if !errors.Is(err, errBoom) || record.OK || result.Preview != "" {
 		t.Fatalf("record=%+v result=%+v err=%v", record, result, err)
 	}
@@ -347,7 +347,7 @@ func TestSyncConfirmRefusals(t *testing.T) {
 	liveSHA := bodysync.SHA256Body(syncLiveBody)
 	tests := []struct {
 		name     string
-		record   issueops.IssueOpsRecord
+		record   issueops.Record
 		expected string
 		want     string
 	}{
@@ -360,7 +360,7 @@ func TestSyncConfirmRefusals(t *testing.T) {
 			service, repository := newScripted(tt.record, provider, allowAll{})
 			cmd := issueCommand(true)
 			cmd.ExpectedBodySHA256 = tt.expected
-			_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+			_, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("err = %v, want %q", err, tt.want)
 			}
@@ -377,7 +377,7 @@ func TestSyncConfirmAcceptsAnOutsideEditWhenAcknowledged(t *testing.T) {
 	cmd := issueCommand(true)
 	cmd.ExpectedBodySHA256 = bodysync.SHA256Body(syncLiveBody)
 	cmd.AcceptRemoteEdits = true
-	_, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+	_, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,7 +391,7 @@ func TestSyncConfirmOfAnIdenticalBodyIsASuccessfulNoOp(t *testing.T) {
 	service, repository := newScripted(issueRecord(issueSync(bodysync.SHA256Body(syncNewBody))), provider, allowAll{})
 	cmd := issueCommand(true)
 	cmd.ExpectedBodySHA256 = bodysync.SHA256Body(syncNewBody)
-	record, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+	record, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,7 +418,7 @@ func TestSyncConfirmFailsWhenTheWriteIsNotVerified(t *testing.T) {
 			service, repository := newScripted(issueRecord(issueSync(liveSHA)), tt.provider, allowAll{})
 			cmd := issueCommand(true)
 			cmd.ExpectedBodySHA256 = liveSHA
-			record, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+			record, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 			if err == nil || !tt.check(err) {
 				t.Fatalf("err = %v", err)
 			}
@@ -435,7 +435,7 @@ func TestSyncConfirmRecordsAPublicationBaselineWithItsGeneration(t *testing.T) {
 	record, result, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{
 		Kind: bodysynccontract.KindPR, ProposedBody: syncPRBody, Confirm: true,
 		ExpectedGeneration: 4, ExpectedBodySHA256: bodysync.SHA256Body(syncLiveBody),
-	}, issueops.IssueOpsActor{})
+	}, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -454,7 +454,7 @@ func TestSyncConfirmIssueBaselineCarriesNoGeneration(t *testing.T) {
 	cmd := issueCommand(true)
 	cmd.ExpectedBodySHA256 = bodysync.SHA256Body(syncLiveBody)
 	cmd.ExpectedGeneration = 9
-	record, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+	record, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -465,9 +465,9 @@ func TestSyncConfirmIssueBaselineCarriesNoGeneration(t *testing.T) {
 
 func TestSyncConfirmBaselineReplacesAliasesAndCapsHistory(t *testing.T) {
 	liveSHA := bodysync.SHA256Body(syncLiveBody)
-	var syncs []issueops.IssueOpsRemoteBodySync
+	var syncs []issueops.RemoteBodySync
 	for i := range issueops.MaxIssueOpsBodySyncs {
-		syncs = append(syncs, issueops.IssueOpsRemoteBodySync{Kind: "child", URL: "https://github.com/o/r/issues/" + string(rune('a'+i)), ToSHA256: "x"})
+		syncs = append(syncs, issueops.RemoteBodySync{Kind: "child", URL: "https://github.com/o/r/issues/" + string(rune('a'+i)), ToSHA256: "x"})
 	}
 	// 같은 산출물의 이전 기준선은 별칭(끝 슬래시) 형태로 맨 뒤에 둔다. 교체 필터가 없으면 상한 자르기로도 사라지지 않는다.
 	prior := issueSync(liveSHA)
@@ -477,7 +477,7 @@ func TestSyncConfirmBaselineReplacesAliasesAndCapsHistory(t *testing.T) {
 	service, _ := newScripted(issueRecord(syncs...), provider, allowAll{})
 	cmd := issueCommand(true)
 	cmd.ExpectedBodySHA256 = liveSHA
-	record, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+	record, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +511,7 @@ func TestSyncConfirmBaselineWriteFailuresKeepTheVerifiedResult(t *testing.T) {
 			provider := &scriptedProvider{body: syncLiveBody}
 			service, repository := newScripted(issueRecord(issueSync(liveSHA)), provider, tt.authority)
 			repository.updateErr = tt.updateErr
-			record, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{})
+			record, result, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{})
 			if !errors.Is(err, errBoom) || record.OK {
 				t.Fatalf("record.OK=%v err=%v", record.OK, err)
 			}
@@ -543,19 +543,19 @@ const syncPRBody = `## 요약
 // lease state still goes through the authority.
 func TestSyncAdmitsACompletedReleasedCycleWithoutTheHolderCheck(t *testing.T) {
 	completed := prRecord(1)
-	completed.Phase = issueops.IssueOpsPhaseDone
+	completed.Phase = issueops.PhaseDone
 	completed.Execution.Lease.Status = issueops.LeaseStatusReleased
 	completed.Execution.Completion = &issueops.ExecutionCompletion{Generation: 1}
 	provider := &scriptedProvider{body: syncLiveBody, state: "OPEN"}
 	service, _ := newScripted(completed, provider, &denyAfter{})
 	cmd := bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 1}
-	if _, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{}); err != nil {
+	if _, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{}); err != nil {
 		t.Fatalf("completed cycle refused: %v", err)
 	}
 	reseeded := completed
 	reseeded.Execution = &issueops.Execution{Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased}}
 	service, _ = newScripted(reseeded, provider, &denyAfter{})
-	if _, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{}); !errors.Is(err, errBoom) {
+	if _, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.Actor{}); !errors.Is(err, errBoom) {
 		t.Fatalf("released lease without completion err = %v, want the authority refusal", err)
 	}
 }

@@ -8,10 +8,10 @@ import (
 )
 
 func TestIntentMissingPreservesOrderedEvidenceKeys(t *testing.T) {
-	if got := IntentMissing(model.IssueOpsRecord{}); !reflect.DeepEqual(got, []string{"intent_contract"}) {
+	if got := IntentMissing(model.Record{}); !reflect.DeepEqual(got, []string{"intent_contract"}) {
 		t.Fatalf("missing intent=%v", got)
 	}
-	record := model.IssueOpsRecord{Intent: &model.IssueOpsIntentContract{RawRequest: " ", InterpretedIntent: "", SuccessCriteria: []string{"\x00"}}}
+	record := model.Record{Intent: &model.IntentContract{RawRequest: " ", InterpretedIntent: "", SuccessCriteria: []string{"\x00"}}}
 	if got := IntentMissing(record); !reflect.DeepEqual(got, []string{"raw_request", "interpreted_intent", "success_criteria"}) {
 		t.Fatalf("incomplete intent=%v", got)
 	}

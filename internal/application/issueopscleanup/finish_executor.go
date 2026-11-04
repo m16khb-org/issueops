@@ -14,13 +14,13 @@ import (
 )
 
 type FinishExecutor struct {
-	MaterialWarning func(model.IssueOpsRecord) string
+	MaterialWarning func(model.Record) string
 	Records         port.CleanupFinishRecords
 	Acquire         func(context.Context, string) (CleanupLifetime, error)
-	Observe         func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishRequest, error)
-	Plan            func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult)
+	Observe         func(context.Context, model.Record, model.CleanupFinishRequest) (model.CleanupFinishRequest, error)
+	Plan            func(context.Context, model.Record, model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult)
 	Fingerprint     func(model.CleanupFinishInventory) (string, error)
-	NewAttempt      func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
+	NewAttempt      func(model.CleanupOperation) (model.CleanupAttempt, error)
 	Stop            func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error)
 	Directory       func(string) (bool, error)
 	// PruneWorktreesParent removes the emptied `<repo>.worktrees` parent; optional.
@@ -36,7 +36,7 @@ type finishRun struct {
 	finalizeCtx context.Context
 	req         model.CleanupFinishRequest
 	snapshot    model.CleanupSnapshot
-	record      model.IssueOpsRecord
+	record      model.Record
 	inventory   model.CleanupFinishInventory
 	result      model.CleanupFinishResult
 	drainer     *cleanupDrainer
@@ -131,7 +131,7 @@ func (r *finishRun) fail(step string, cause error) (model.CleanupFinishResult, e
 	r.result.OK = false
 	r.result.FailedStep = step
 	drainErr := r.drainer.drain(r.finalizeCtx)
-	_, receiptErr := r.s.Records.Fail(r.finalizeCtx, r.snapshot, model.IssueOpsCleanupFinishFailure{Step: step, Message: errors.Join(cause, drainErr).Error(), At: r.s.Now().UTC().Format(time.RFC3339Nano)}, r.drainer.drained)
+	_, receiptErr := r.s.Records.Fail(r.finalizeCtx, r.snapshot, model.CleanupFinishFailure{Step: step, Message: errors.Join(cause, drainErr).Error(), At: r.s.Now().UTC().Format(time.RFC3339Nano)}, r.drainer.drained)
 	r.result.NextCommand = fmt.Sprintf("issueops cleanup finish --id %s --preview --json", r.record.ID)
 	return r.result, fmt.Errorf("cleanup finish step %s failed (record preserved; re-run preview then apply): %w", step, errors.Join(cause, drainErr, receiptErr))
 }
@@ -155,7 +155,7 @@ func (r *finishRun) execute() (model.CleanupFinishResult, error) {
 	if err := r.drainer.drain(r.finalizeCtx); err != nil {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}
-	outcome := domain.CycleOutcomeForRecord(r.snapshot.Record, model.IssueOpsCycleOutcomeFinished, r.s.Now().UTC().Format(time.RFC3339))
+	outcome := domain.CycleOutcomeForRecord(r.snapshot.Record, model.CycleOutcomeFinished, r.s.Now().UTC().Format(time.RFC3339))
 	if err := r.s.Records.Delete(r.finalizeCtx, r.snapshot, outcome); err != nil {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}

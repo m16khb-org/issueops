@@ -7,8 +7,8 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func StepDurationStatByLabel(stats []contract.SelfAugmentStepDurationStat) map[string]contract.SelfAugmentStepDurationStat {
-	out := map[string]contract.SelfAugmentStepDurationStat{}
+func StepDurationStatByLabel(stats []contract.StepDurationStat) map[string]contract.StepDurationStat {
+	out := map[string]contract.StepDurationStat{}
 	for _, stat := range stats {
 		if stat.Label == "" {
 			continue
@@ -18,7 +18,7 @@ func StepDurationStatByLabel(stats []contract.SelfAugmentStepDurationStat) map[s
 	return out
 }
 
-func MaxSlowStepDurationByLabel(steps []contract.SelfAugmentSlowStep) map[string]int64 {
+func MaxSlowStepDurationByLabel(steps []contract.SlowStep) map[string]int64 {
 	out := map[string]int64{}
 	for _, step := range steps {
 		if step.Label == "" {
@@ -31,14 +31,14 @@ func MaxSlowStepDurationByLabel(steps []contract.SelfAugmentSlowStep) map[string
 	return out
 }
 
-func BuildStepDurationStats(durationsByLabel map[string][]int64) []contract.SelfAugmentStepDurationStat {
-	stats := []contract.SelfAugmentStepDurationStat{}
+func BuildStepDurationStats(durationsByLabel map[string][]int64) []contract.StepDurationStat {
+	stats := []contract.StepDurationStat{}
 	for label, durations := range durationsByLabel {
 		if label == "" {
 			continue
 		}
 		if len(durations) == 0 {
-			stats = append(stats, contract.SelfAugmentStepDurationStat{Label: label})
+			stats = append(stats, contract.StepDurationStat{Label: label})
 			continue
 		}
 		sortedDurations := append([]int64{}, durations...)
@@ -48,7 +48,7 @@ func BuildStepDurationStats(durationsByLabel map[string][]int64) []contract.Self
 			sum += duration
 		}
 		p95Index := max((95*len(sortedDurations)+99)/100, 1)
-		stats = append(stats, contract.SelfAugmentStepDurationStat{
+		stats = append(stats, contract.StepDurationStat{
 			Label:             label,
 			Count:             len(sortedDurations),
 			MinDurationMS:     sortedDurations[0],
@@ -61,9 +61,9 @@ func BuildStepDurationStats(durationsByLabel map[string][]int64) []contract.Self
 	return stats
 }
 
-func StepDurationStatsForCompare(summary contract.SelfAugmentSummary) []contract.SelfAugmentStepDurationStat {
+func StepDurationStatsForCompare(summary contract.Summary) []contract.StepDurationStat {
 	if len(summary.StepDurationStats) > 0 {
-		return append([]contract.SelfAugmentStepDurationStat{}, summary.StepDurationStats...)
+		return append([]contract.StepDurationStat{}, summary.StepDurationStats...)
 	}
 	durationsByLabel := map[string][]int64{}
 	for _, step := range summary.SlowestSteps {

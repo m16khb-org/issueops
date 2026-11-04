@@ -12,13 +12,13 @@ import (
 func TestRecordIntentWritesCleanRedactedContract(t *testing.T) {
 	written := false
 	store := Store{
-		Read: func(stateRoot, id string) (model.IssueOpsRecord, error) {
+		Read: func(stateRoot, id string) (model.Record, error) {
 			if stateRoot != "state" || id != "io-1" {
 				t.Fatalf("Read(%q, %q)", stateRoot, id)
 			}
-			return model.IssueOpsRecord{OK: true, ID: id}, nil
+			return model.Record{OK: true, ID: id}, nil
 		},
-		TouchWrite: func(stateRoot string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(stateRoot string, record model.Record) (model.Record, error) {
 			written = true
 			if stateRoot != "state" {
 				t.Fatalf("TouchWrite stateRoot = %q", stateRoot)
@@ -35,7 +35,7 @@ func TestRecordIntentWritesCleanRedactedContract(t *testing.T) {
 			return record, nil
 		},
 	}
-	record, err := RecordIntent(store, "state", "io-1", model.IssueOpsIntentRecordRequest{
+	record, err := RecordIntent(store, "state", "io-1", model.IntentRecordRequest{
 		RawRequest:        "fix flaky quality gate in cmd/issueops",
 		InterpretedIntent: "stabilize quality gate coverage workflow for harness commands",
 		SuccessCriteria:   []string{" tests pass ", "", "docs updated", "tests pass"},
@@ -50,11 +50,11 @@ func TestRecordIntentWritesCleanRedactedContract(t *testing.T) {
 }
 
 func TestRecordIntentRejectsWeakContractsBeforeRead(t *testing.T) {
-	store := Store{Read: func(string, string) (model.IssueOpsRecord, error) {
+	store := Store{Read: func(string, string) (model.Record, error) {
 		t.Fatal("invalid intent should fail before store read")
-		return model.IssueOpsRecord{}, nil
+		return model.Record{}, nil
 	}}
-	cases := []model.IssueOpsIntentRecordRequest{
+	cases := []model.IntentRecordRequest{
 		{InterpretedIntent: "intent", SuccessCriteria: []string{"pass"}},
 		{RawRequest: "raw", SuccessCriteria: []string{"pass"}},
 		{RawRequest: "same request", InterpretedIntent: "same request", SuccessCriteria: []string{"pass"}},
@@ -70,26 +70,26 @@ func TestRecordIntentRejectsWeakContractsBeforeRead(t *testing.T) {
 
 func TestRecordArchitectureReviewWritesApprovedReview(t *testing.T) {
 	store := Store{
-		Document: func(string, model.IssueOpsRecord) (string, error) {
+		Document: func(string, model.Record) (string, error) {
 			return strings.Join(issueopsdomain.RequiredArchitectureSections, "\n내용\n") + "\n내용\n", nil
 		},
-		Read: func(stateRoot, id string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{OK: true, ID: id, Intent: &model.IssueOpsIntentContract{RawRequest: "raw"}}, nil
+		Read: func(stateRoot, id string) (model.Record, error) {
+			return model.Record{OK: true, ID: id, Intent: &model.IntentContract{RawRequest: "raw"}}, nil
 		},
-		PlanReadiness: func(record model.IssueOpsRecord) model.IssueOpsReadiness {
+		PlanReadiness: func(record model.Record) model.Readiness {
 			if record.Intent == nil {
-				return model.IssueOpsReadiness{OK: true, Ready: false, Missing: []string{"intent"}}
+				return model.Readiness{OK: true, Ready: false, Missing: []string{"intent"}}
 			}
-			return model.IssueOpsReadiness{OK: true, Ready: true}
+			return model.Readiness{OK: true, Ready: true}
 		},
-		TouchWrite: func(stateRoot string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(stateRoot string, record model.Record) (model.Record, error) {
 			if record.ArchitectureReview == nil {
 				t.Fatal("architecture review was not recorded")
 			}
 			if !record.ArchitectureReview.Approved {
 				t.Fatal("architecture review should be approved")
 			}
-			if got := record.ArchitectureReview.Verification; !stringSlicesEqual(got, []string{"go test", model.IssueOpsArchitectureReviewEvidenceExample}) {
+			if got := record.ArchitectureReview.Verification; !stringSlicesEqual(got, []string{"go test", model.ArchitectureReviewEvidenceExample}) {
 				t.Fatalf("verification = %#v", got)
 			}
 			return record, nil
@@ -101,7 +101,7 @@ func TestRecordArchitectureReviewWritesApprovedReview(t *testing.T) {
 		RefactorPlan:         "keep production unchanged",
 		Alternatives:         []string{"raise threshold", "ignore package"},
 		Risks:                []string{"brittle tests"},
-		Verification:         []string{"go test", model.IssueOpsArchitectureReviewEvidenceExample},
+		Verification:         []string{"go test", model.ArchitectureReviewEvidenceExample},
 		Approved:             true,
 		ReviewerContext:      "subagent",
 	})
@@ -115,15 +115,15 @@ func TestRecordArchitectureReviewWritesApprovedReview(t *testing.T) {
 
 func TestRecordArchitectureReviewRejectsIncompleteApprovedReview(t *testing.T) {
 	store := Store{
-		Read: func(stateRoot, id string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{OK: true, ID: id, Intent: &model.IssueOpsIntentContract{RawRequest: "raw"}}, nil
+		Read: func(stateRoot, id string) (model.Record, error) {
+			return model.Record{OK: true, ID: id, Intent: &model.IntentContract{RawRequest: "raw"}}, nil
 		},
-		PlanReadiness: func(record model.IssueOpsRecord) model.IssueOpsReadiness {
-			return model.IssueOpsReadiness{OK: true, Ready: true}
+		PlanReadiness: func(record model.Record) model.Readiness {
+			return model.Readiness{OK: true, Ready: true}
 		},
-		TouchWrite: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(string, model.Record) (model.Record, error) {
 			t.Fatal("invalid architecture review should fail before write")
-			return model.IssueOpsRecord{}, nil
+			return model.Record{}, nil
 		},
 	}
 	req := reviewcontract.ArchitectureReviewRequest{
@@ -138,7 +138,7 @@ func TestRecordArchitectureReviewRejectsIncompleteApprovedReview(t *testing.T) {
 	if _, err := RecordArchitectureReview(store, "state", "io-1", req); err == nil {
 		t.Fatal("approved architecture review without architecture review evidence should fail")
 	}
-	req.Verification = []string{model.IssueOpsArchitectureReviewEvidenceExample}
+	req.Verification = []string{model.ArchitectureReviewEvidenceExample}
 	req.OpenQuestions = []string{"what next"}
 	if _, err := RecordArchitectureReview(store, "state", "io-1", req); err == nil {
 		t.Fatal("approved architecture review with open questions should fail")

@@ -23,7 +23,7 @@ type DirectoryPin interface {
 	Close()
 }
 type RootEnvironment struct {
-	Read      func(string, string) (model.IssueOpsRecord, error)
+	Read      func(string, string) (model.Record, error)
 	Directory func(string) (Directory, error)
 	Getwd     func() (string, error)
 	GitTop    func(string) (string, error)

@@ -9,6 +9,6 @@ import (
 // 어떻게 저장하는지 알지 않는다.
 var (
 	StateDir         func() string
-	StatePrunePrefix func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error)
-	StateWrite       func(key, content string) (statecontract.StateResult, error)
+	StatePrunePrefix func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error)
+	StateWrite       func(key, content string) (statecontract.Result, error)
 )

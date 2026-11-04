@@ -7,7 +7,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ValidateIssueReconcileIntent(intent *model.IssueOpsIssueCreateIntent) error {
+func ValidateIssueReconcileIntent(intent *model.IssueCreateIntent) error {
 	if intent == nil {
 		return fmt.Errorf("no issue create intent to reconcile")
 	}
@@ -27,7 +27,7 @@ func ValidateIssueReconcileSearch(truncated bool, count int) error {
 	return nil
 }
 
-func ValidateIssueReconcileCandidate(intent model.IssueOpsIssueCreateIntent, authority, title, body string) error {
+func ValidateIssueReconcileCandidate(intent model.IssueCreateIntent, authority, title, body string) error {
 	if authority == "" || authority != intent.ProjectAuthority {
 		return fmt.Errorf("issue create reconciliation candidate authority %q does not match sealed authority %q", authority, intent.ProjectAuthority)
 	}

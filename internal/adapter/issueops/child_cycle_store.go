@@ -11,8 +11,8 @@ import (
 
 type ChildCycleStore struct{ CycleRecordStore }
 
-func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.IssueOpsRecord) (model.IssueOpsRecord, model.IssueOpsRecord, error) {
-	for _, record := range []model.IssueOpsRecord{parent, child} {
+func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.Record) (model.Record, model.Record, error) {
+	for _, record := range []model.Record{parent, child} {
 		if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 			return parent, child, err
 		}
@@ -46,6 +46,6 @@ func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.Issue
 	return parent, child, err
 }
 
-func (s ChildCycleStore) Scan() ([]model.IssueOpsRecord, error) {
+func (s ChildCycleStore) Scan() ([]model.Record, error) {
 	return ScanReadableIssueOps(s.StateRoot)
 }

@@ -16,7 +16,7 @@ import (
 // another project than the issue. GitHub then creates the linked branch in the
 // issue's repository unless told otherwise (createLinkedBranch repositoryId,
 // gh issue develop --branch-repo), so the steps name the code repository.
-func Steps(provider, issueURL, branch, baseBranch, baseSHA, codeProject string) []model.IssueOpsBranchPrepareStep {
+func Steps(provider, issueURL, branch, baseBranch, baseSHA, codeProject string) []model.BranchPrepareStep {
 	switch provider {
 	case "gitlab":
 		return gitlabSteps(branch, baseBranch, baseSHA)
@@ -60,7 +60,7 @@ const gitlabBranchEndpoint = "projects/:fullpath/repository/branches"
 // 도구 이름은 `glab_api`다. `glab` MCP는 opt-in이라 어노테이션 없는 명령은 등록되지
 // 않지만(server.go의 mcpannotations.HasAnnotation 검사), `glab api`는
 // `mcp:destructive`를 달고 있어 통과하고 이름은 "glab_" + 명령 경로가 된다.
-func gitlabSteps(branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepareStep {
+func gitlabSteps(branch, baseBranch, baseSHA string) []model.BranchPrepareStep {
 	ref := baseSHA
 	base := "the sealed base " + baseSHA + "."
 	if ref == "" {
@@ -70,7 +70,7 @@ func gitlabSteps(branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepa
 	}
 	rawFields := []string{"branch=" + branch, "ref=" + ref}
 
-	return []model.IssueOpsBranchPrepareStep{
+	return []model.BranchPrepareStep{
 		{
 			Order:    1,
 			Strategy: "mcp",
@@ -119,8 +119,8 @@ func gitlabSteps(branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepa
 // node ID 조회를 별도 단계로 두는 이유는 가드다. 한 명령에 셸 치환을 넣으면
 // 정적으로 분류할 수 없고 이 저장소는 그런 명령을 거부한다. `fallback_api`는
 // 지금도 사람이나 에이전트가 실행하는 안내이므로 값을 옮기는 것이 그 주체의 일이다.
-func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model.IssueOpsBranchPrepareStep {
-	steps := []model.IssueOpsBranchPrepareStep{{
+func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model.BranchPrepareStep {
+	steps := []model.BranchPrepareStep{{
 		Order:       1,
 		Strategy:    "mcp_unavailable",
 		Description: "Note, nothing to run and not a failure: there is no GitHub MCP branch-creation tool, so create the branch with the gh steps below; do not silently create a local branch.",
@@ -132,7 +132,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model
 		if codeRepo != "" {
 			develop = append(develop, "--branch-repo", codeRepo)
 		}
-		steps = append(steps, model.IssueOpsBranchPrepareStep{
+		steps = append(steps, model.BranchPrepareStep{
 			Order:    2,
 			Strategy: "fallback_api",
 			Command:  develop,
@@ -141,14 +141,14 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model
 				" points at when this runs — it can diverge from the sealed base (#176).",
 		})
 		steps = append(steps, githubLinkedBranchReadbackSteps(issueURL, branch, "", 3)...)
-		return append(steps, model.IssueOpsBranchPrepareStep{
+		return append(steps, model.BranchPrepareStep{
 			Order:       5,
 			Strategy:    "fail",
 			Description: "Stop the IssueOps branch preparation if the linked development branch cannot be created or the readback does not match.",
 		})
 	}
 	steps = append(steps,
-		model.IssueOpsBranchPrepareStep{
+		model.BranchPrepareStep{
 			Order:    2,
 			Strategy: "resolve_issue_node",
 			Command:  []string{"gh", "api", githubIssueAPIPath(issueURL), "--jq", ".node_id"},
@@ -161,7 +161,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model
 	query := githubCreateLinkedBranchQuery
 	create := []string{"-F", "issueId=<node-id-from-previous-step>", "-F", "oid=" + baseSHA, "-F", "name=" + branch}
 	if codeRepo != "" {
-		steps = append(steps, model.IssueOpsBranchPrepareStep{
+		steps = append(steps, model.BranchPrepareStep{
 			Order:    order,
 			Strategy: "resolve_repository_node",
 			Command:  []string{"gh", "api", "repos/" + codeRepo, "--jq", ".node_id"},
@@ -173,7 +173,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model
 		create = []string{"-F", "issueId=<issue-node-id>", "-F", "repositoryId=<repository-node-id-from-previous-step>", "-F", "oid=" + baseSHA, "-F", "name=" + branch}
 	}
 	steps = append(steps,
-		model.IssueOpsBranchPrepareStep{
+		model.BranchPrepareStep{
 			Order:    order,
 			Strategy: "fallback_api",
 			Command:  append([]string{"gh", "api", "graphql", "-f", "query=" + query}, create...),
@@ -185,7 +185,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model
 		},
 	)
 	steps = append(steps, githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA, order+1)...)
-	return append(steps, model.IssueOpsBranchPrepareStep{
+	return append(steps, model.BranchPrepareStep{
 		Order:       order + 3,
 		Strategy:    "fail",
 		Description: "Stop the IssueOps branch preparation if the linked development branch cannot be created or the readback does not match.",
@@ -201,7 +201,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model
 //
 // 검증은 두 축이다. issue 쪽 `linkedBranches`와 원격 `refs/heads/<branch>`가
 // 서로를 확인한다 — 한쪽만 보면 provider 레코드와 실제 ref의 불일치를 놓친다.
-func githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA string, firstOrder int) []model.IssueOpsBranchPrepareStep {
+func githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA string, firstOrder int) []model.BranchPrepareStep {
 	// omp cuts lines over 768 bytes, and a JSON string is one line: QA lost
 	// the tail of this description (the recovery commands).
 	expectation := "`ref` must be non-null with `ref.name` exactly " + branch
@@ -209,7 +209,7 @@ func githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA string, firstOrde
 		expectation += " and `ref.target.oid` exactly the sealed base " + baseSHA
 	}
 	expectation += "."
-	return []model.IssueOpsBranchPrepareStep{
+	return []model.BranchPrepareStep{
 		{
 			Order:    firstOrder,
 			Strategy: "verify_linked_branch",

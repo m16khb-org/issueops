@@ -48,7 +48,7 @@ func (AppendFiles) AppendLine(path, line string) error {
 	_, err = file.WriteString(line + "\n")
 	return err
 }
-func (AppendFiles) Render(kind, name, description string, request projectdocscontract.ProjectDocsAppendRequest, now time.Time) string {
+func (AppendFiles) Render(kind, name, description string, request projectdocscontract.AppendRequest, now time.Time) string {
 	return renderProjectDocsAppendRecordFile(kind, name, description, request, now)
 }
 func (AppendFiles) Now() time.Time { return time.Now() }

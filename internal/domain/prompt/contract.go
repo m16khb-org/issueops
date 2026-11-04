@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-type PromptDataSection struct {
+type DataSection struct {
 	Title   string
 	Content string
 }
@@ -17,7 +17,7 @@ type StructuredPromptSpec struct {
 	Rules                 []string
 	OutputContract        []string
 	VerificationChecklist []string
-	Data                  []PromptDataSection
+	Data                  []DataSection
 }
 
 const (

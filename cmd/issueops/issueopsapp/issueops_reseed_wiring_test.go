@@ -92,7 +92,7 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	stateRoot, record, _ := seedDirectClaimFixture(t)
 	claimWiringGit(t, record.Execution.Workspace.SourceRoot, "remote", "add", "origin", record.Execution.Workspace.SourceRoot)
 	oldHead := "d6d8c6a5a98fcca6bca33edf9e7965636429ce28"
-	record.Phase = model.IssueOpsPhaseDone
+	record.Phase = model.PhaseDone
 	record.Execution.Lease.Status = model.LeaseStatusReleased
 	record.Execution.Lease.ClaimTokenSHA256 = ""
 	record.Execution.Completion = &model.ExecutionCompletion{Generation: 1, FinalHead: oldHead, VerificationReportPath: ".issueops/verified-execution/old.json", Verification: []string{"old verification"}, RemoteArtifactURL: "https://gitlab.example.com/acme/repo/-/merge_requests/1", CompletedAt: "2026-08-03T00:00:00Z"}
@@ -101,15 +101,15 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	record.AISlopCleanFingerprint = "old-fingerprint"
 	record.AISlopCleanCategories = []string{"duplication"}
 	record.AISlopCleanVerification = []string{"old verification"}
-	record.ImplementationReview = &model.IssueOpsImplementationReview{Verdict: "pass"}
-	record.RemoteCompletion = &model.IssueOpsRemoteCompletion{ReflectedAt: "old"}
-	record.PhaseLedger = model.IssueOpsPhaseLedger{
-		model.IssueOpsPhaseProblem:     {Phase: model.IssueOpsPhaseProblem, CompletedAt: "old-upstream"},
-		model.IssueOpsPhaseImplement:   {Phase: model.IssueOpsPhaseImplement, CompletedAt: "old"},
-		model.IssueOpsPhaseAISlopClean: {Phase: model.IssueOpsPhaseAISlopClean, CompletedAt: "old"},
-		model.IssueOpsPhaseFeedback:    {Phase: model.IssueOpsPhaseFeedback, CompletedAt: "old"},
-		model.IssueOpsPhasePR:          {Phase: model.IssueOpsPhasePR, CompletedAt: "old"},
-		model.IssueOpsPhaseDone:        {Phase: model.IssueOpsPhaseDone, CompletedAt: "old"},
+	record.ImplementationReview = &model.ImplementationReview{Verdict: "pass"}
+	record.RemoteCompletion = &model.RemoteCompletion{ReflectedAt: "old"}
+	record.PhaseLedger = model.PhaseLedger{
+		model.PhaseProblem:     {Phase: model.PhaseProblem, CompletedAt: "old-upstream"},
+		model.PhaseImplement:   {Phase: model.PhaseImplement, CompletedAt: "old"},
+		model.PhaseAISlopClean: {Phase: model.PhaseAISlopClean, CompletedAt: "old"},
+		model.PhaseFeedback:    {Phase: model.PhaseFeedback, CompletedAt: "old"},
+		model.PhasePR:          {Phase: model.PhasePR, CompletedAt: "old"},
+		model.PhaseDone:        {Phase: model.PhaseDone, CompletedAt: "old"},
 	}
 	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
@@ -137,7 +137,7 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if status.Execution.Completion != nil || len(status.Execution.CompletionHistory) != 1 || persisted.Phase != model.IssueOpsPhaseImplement {
+	if status.Execution.Completion != nil || len(status.Execution.CompletionHistory) != 1 || persisted.Phase != model.PhaseImplement {
 		t.Fatalf("status projection=%+v record_phase=%s", status.Execution, persisted.Phase)
 	}
 	if !strings.Contains(status.NextCommand, "issueops execution claim") || strings.Contains(status.NextCommand, "execution complete") {
@@ -146,10 +146,10 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	if persisted.AISlopCleanAt != "" || persisted.ImplementationReview != nil || persisted.RemoteCompletion != nil {
 		t.Fatalf("status retained current proof: %+v", persisted)
 	}
-	if persisted.PhaseLedger[model.IssueOpsPhaseProblem].CompletedAt != "old-upstream" {
+	if persisted.PhaseLedger[model.PhaseProblem].CompletedAt != "old-upstream" {
 		t.Fatalf("upstream ledger changed: %+v", persisted.PhaseLedger)
 	}
-	for _, phase := range []model.IssueOpsPhase{model.IssueOpsPhaseImplement, model.IssueOpsPhaseAISlopClean, model.IssueOpsPhaseFeedback, model.IssueOpsPhasePR, model.IssueOpsPhaseDone} {
+	for _, phase := range []model.Phase{model.PhaseImplement, model.PhaseAISlopClean, model.PhaseFeedback, model.PhasePR, model.PhaseDone} {
 		entry := persisted.PhaseLedger[phase]
 		if entry.CompletedAt != "" || len(entry.Notes) == 0 || entry.Notes[len(entry.Notes)-1] != "stale: completed execution reseed (1 -> 2)" {
 			t.Fatalf("phase %s ledger=%+v", phase, entry)
@@ -202,7 +202,7 @@ func TestCompletedReplacementRejectsPersistingUnstampedCompletionGeneration(t *t
 	}
 }
 
-func completedReplacementPreviewFixture(t *testing.T, drift bool) (string, model.IssueOpsRecord, model.NativeActor) {
+func completedReplacementPreviewFixture(t *testing.T, drift bool) (string, model.Record, model.NativeActor) {
 	t.Helper()
 	stateRoot, record, _ := seedDirectClaimFixture(t)
 	source := record.Execution.Workspace.SourceRoot
@@ -216,7 +216,7 @@ func completedReplacementPreviewFixture(t *testing.T, drift bool) (string, model
 		claimWiringGit(t, source, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "-q", "-m", "test: advance parent")
 	}
 	finalHead := strings.TrimSpace(claimWiringGit(t, worktree, "rev-parse", "HEAD"))
-	record.Phase = model.IssueOpsPhaseDone
+	record.Phase = model.PhaseDone
 	record.Execution.Lease.Status = model.LeaseStatusReleased
 	record.Execution.Lease.Holder = nil
 	record.Execution.Lease.ClaimTokenSHA256 = ""

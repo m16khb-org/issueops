@@ -8,7 +8,7 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
-func SummarizeSelfVerification(result augment.SelfAugmentResult, targetScore float64) augment.SelfAugmentSummary {
+func SummarizeSelfVerification(result augment.Result, targetScore float64) augment.Summary {
 	runs := make([]augmentdomain.SummaryRun, 0, len(result.Runs))
 	for _, run := range result.Runs {
 		steps := make([]augmentdomain.SummaryStep, 0, len(run.Steps))
@@ -25,7 +25,7 @@ func SummarizeSelfVerification(result augment.SelfAugmentResult, targetScore flo
 	summary.PlannedSteps = len(domain.StepOrder())
 	summary.NotRunSteps = domain.NotRunSteps(summary.StepLabels)
 	if summary.FailedStep != "" {
-		summary.RerunCommands = domain.SelfVerifyRerunCommands(summary.FailedStep, result.BaseSeed, targetScore)
+		summary.RerunCommands = domain.RerunCommands(summary.FailedStep, result.BaseSeed, targetScore)
 		summary.FailureClass, summary.FailureClassReason, summary.FailureClusters = ClassifySelfVerificationFailure(result, summary)
 	}
 	evidence := []failurecausecontract.Evidence{}

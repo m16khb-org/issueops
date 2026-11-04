@@ -54,7 +54,7 @@ func (deps parallelIsolationProbeDeps) stageArtifact(buildDir, artifactPath stri
 
 // stateListIsolationError parses the state list output and returns the probe error message, or "" when only the worker's own key is listed.
 func stateListIsolationError(stdout, key string) string {
-	var listResult statecontract.StateListResult
+	var listResult statecontract.ListResult
 	if err := json.Unmarshal([]byte(stdout), &listResult); err != nil {
 		return "state list parse failed: " + err.Error()
 	}
@@ -99,7 +99,7 @@ func runParallelIsolationProbeWithDeps(binary, root string, seed int64, worker i
 		probe.Error = "state read failed: " + read.Error
 		return probe
 	}
-	var readResult statecontract.StateResult
+	var readResult statecontract.Result
 	if err := json.Unmarshal([]byte(read.Stdout), &readResult); err != nil {
 		probe.Error = "state read parse failed: " + err.Error()
 		return probe

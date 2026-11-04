@@ -22,20 +22,20 @@ func testWorkerStore() Store {
 func testWorkerService() workerapp.Service { return workerapp.Service{Effects: testWorkerStore()} }
 
 func openWorkerDB(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }
-func EnqueueWorkerJob(kind, payload string) (workercontract.WorkerJob, error) {
+func EnqueueWorkerJob(kind, payload string) (workercontract.Job, error) {
 	return testWorkerService().Enqueue(context.Background(), kind, payload)
 }
-func CancelWorkerJob(id string) (workercontract.WorkerJob, error) {
+func CancelWorkerJob(id string) (workercontract.Job, error) {
 	return testWorkerService().Cancel(context.Background(), id)
 }
-func ReadWorkerJob(id string) (workercontract.WorkerJob, error) { return testWorkerService().Read(id) }
-func ListWorkerJobs() (workercontract.WorkerListResult, error)  { return testWorkerService().List() }
-func DetectStuckWorkerJobs() (workercontract.WorkerListResult, error) {
+func ReadWorkerJob(id string) (workercontract.Job, error) { return testWorkerService().Read(id) }
+func ListWorkerJobs() (workercontract.ListResult, error)  { return testWorkerService().List() }
+func DetectStuckWorkerJobs() (workercontract.ListResult, error) {
 	return testWorkerService().DetectStuck(context.Background())
 }
-func RunReadOnlyWorkerJob(kind, payload string, req policycontract.CommandPolicyRequest) (workercontract.WorkerJob, error) {
+func RunReadOnlyWorkerJob(kind, payload string, req policycontract.CommandPolicyRequest) (workercontract.Job, error) {
 	return testWorkerService().RunReadOnly(context.Background(), kind, payload, req)
 }
-func writeWorkerJob(job workercontract.WorkerJob) error {
+func writeWorkerJob(job workercontract.Job) error {
 	return testWorkerStore().Write(context.Background(), job)
 }

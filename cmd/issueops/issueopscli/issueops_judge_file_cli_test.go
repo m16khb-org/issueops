@@ -41,8 +41,8 @@ func writeJudgeMapForTest(t *testing.T, content string) string {
 // (source_run_id가 실재하는 다른 run으로 해석됨)를 통과하게 한다.
 func writeProvenancedJudgeMap(t *testing.T, scoresJSON string) string {
 	t.Helper()
-	source := benchmarkcontract.IssueOpsBenchmarkRunResult{ID: "judge-source-run", FixtureCount: 1}
-	if err := saveBenchmarkRunForTest(statestore.StateDir(), source); err != nil {
+	source := benchmarkcontract.RunResult{ID: "judge-source-run", FixtureCount: 1}
+	if err := saveBenchmarkRunForTest(statestore.Dir(), source); err != nil {
 		t.Fatal(err)
 	}
 	return writeJudgeMapForTest(t, `{"source_run_id":"judge-source-run","provenance":"recorded fresh-context judge","scores":`+scoresJSON+`}`)
@@ -58,7 +58,7 @@ func TestRunIssueOpsBenchmarkJudgeFileMergesScores(t *testing.T) {
 	out := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"benchmark", "run", "--fixtures", fixtures, "--judge", "file", "--judge-file", judgeFile, "--json"})
 	})
-	var result benchmarkcontract.IssueOpsBenchmarkRunResult
+	var result benchmarkcontract.RunResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("parse output: %v\n%s", err, out)
 	}
@@ -129,7 +129,7 @@ func TestRunIssueOpsBenchmarkJudgeNoneNeedsNoProvenance(t *testing.T) {
 	out := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"benchmark", "run", "--fixtures", fixtures, "--judge", "none", "--json"})
 	})
-	var result benchmarkcontract.IssueOpsBenchmarkRunResult
+	var result benchmarkcontract.RunResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("parse output: %v\n%s", err, out)
 	}

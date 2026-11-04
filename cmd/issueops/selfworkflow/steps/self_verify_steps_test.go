@@ -219,12 +219,12 @@ func assertStepReuseMarker(t *testing.T, step contract.StepResult, want bool) {
 	}
 }
 
-func fakeSelfVerifyStepDeps(t *testing.T) application.SelfVerifyStepDeps {
+func fakeSelfVerifyStepDeps(t *testing.T) application.StepDeps {
 	t.Helper()
 	ok := func(label string) contract.StepResult {
 		return contract.StepResult{Label: label, OK: true}
 	}
-	return application.SelfVerifyStepDeps{
+	return application.StepDeps{
 		IssueOpsRoot: func() string {
 			return "/repo"
 		},

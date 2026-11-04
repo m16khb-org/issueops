@@ -10,7 +10,7 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remotedomain "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
@@ -48,7 +48,7 @@ func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body, expect
 	digest := sha256.Sum256([]byte(text))
 	result := model.RemoteCommentResult{ID: record.ID, Provider: provider, On: on, TargetURL: target,
 		BodyChars: utf8.RuneCountInString(text), BodySHA256: hex.EncodeToString(digest[:])}
-	if err := remotedomain.ValidateComment(provider, body); err != nil {
+	if err := issueopsremote.ValidateComment(provider, body); err != nil {
 		return result, err
 	}
 	if !confirm {
@@ -70,7 +70,7 @@ func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body, expect
 	return result, nil
 }
 
-func commentTarget(record model.IssueOpsRecord, on string) (string, error) {
+func commentTarget(record model.Record, on string) (string, error) {
 	switch on {
 	case "issue":
 		if url := strings.TrimSpace(record.IssueURL); url != "" {

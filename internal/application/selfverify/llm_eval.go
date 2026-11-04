@@ -8,11 +8,11 @@ import (
 )
 
 type LLMEvalDeps struct {
-	BuildPrompt func(augment.SelfAugmentResult) (string, int, error)
+	BuildPrompt func(augment.Result) (string, int, error)
 	BoundError  func(string, error, string) string
 }
 
-func ApplyLLMEval(result augment.SelfAugmentResult, opts verify.LLMEvalOptions, deps LLMEvalDeps) (augment.SelfAugmentResult, error) {
+func ApplyLLMEval(result augment.Result, opts verify.LLMEvalOptions, deps LLMEvalDeps) (augment.Result, error) {
 	if !opts.Enabled {
 		return result, nil
 	}

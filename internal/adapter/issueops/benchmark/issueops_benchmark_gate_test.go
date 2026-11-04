@@ -9,14 +9,14 @@ import (
 
 func TestRunAndCompareIssueOpsBenchmark(t *testing.T) {
 	dir := t.TempDir()
-	fixtures := []benchmark.IssueOpsBenchmarkFixture{
+	fixtures := []benchmark.Fixture{
 		{ID: "fixture", Title: "Fixture", UserPrompt: "prompt", RepoContext: "ctx", CriticalFailures: []string{"works in source repo"}},
 	}
 
 	baseline, err := RunIssueOpsBenchmark(IssueOpsBenchmarkRunRequest{
 		StateRoot: dir,
 		Fixtures:  fixtures,
-		Artifacts: map[string]benchmark.IssueOpsBenchmarkArtifact{
+		Artifacts: map[string]benchmark.Artifact{
 			"fixture": {},
 		},
 	})
@@ -26,7 +26,7 @@ func TestRunAndCompareIssueOpsBenchmark(t *testing.T) {
 	candidate, err := RunIssueOpsBenchmark(IssueOpsBenchmarkRunRequest{
 		StateRoot: dir,
 		Fixtures:  fixtures,
-		Artifacts: map[string]benchmark.IssueOpsBenchmarkArtifact{
+		Artifacts: map[string]benchmark.Artifact{
 			"fixture": completeBenchmarkArtifactForTest(),
 		},
 	})
@@ -143,8 +143,8 @@ func TestEvaluateIssueOpsAutoresearchGateRejectsNonPassingCandidateRun(t *testin
 	}
 }
 
-func issueOpsBenchmarkRunForGateTest(id string, average, minimum float64, criticalFailures int) benchmark.IssueOpsBenchmarkRunResult {
-	score := benchmark.IssueOpsBenchmarkScore{
+func issueOpsBenchmarkRunForGateTest(id string, average, minimum float64, criticalFailures int) benchmark.RunResult {
+	score := benchmark.Score{
 		OK:           criticalFailures == 0 && minimum >= 100,
 		FixtureID:    "fixture",
 		AverageScore: average,
@@ -158,11 +158,11 @@ func issueOpsBenchmarkRunForGateTest(id string, average, minimum float64, critic
 	for range criticalFailures {
 		score.CriticalFailures = append(score.CriticalFailures, "critical failure")
 	}
-	return domain.FinalizeRun(benchmark.IssueOpsBenchmarkRunResult{ID: id, Scores: []benchmark.IssueOpsBenchmarkScore{score}})
+	return domain.FinalizeRun(benchmark.RunResult{ID: id, Scores: []benchmark.Score{score}})
 }
 
-func issueOpsBenchmarkRunWithDimensionForGateTest(id, dimension string, scoreValue float64) benchmark.IssueOpsBenchmarkRunResult {
-	score := benchmark.IssueOpsBenchmarkScore{
+func issueOpsBenchmarkRunWithDimensionForGateTest(id, dimension string, scoreValue float64) benchmark.RunResult {
+	score := benchmark.Score{
 		OK:           scoreValue >= 100,
 		FixtureID:    "fixture",
 		AverageScore: scoreValue,
@@ -172,5 +172,5 @@ func issueOpsBenchmarkRunWithDimensionForGateTest(id, dimension string, scoreVal
 		},
 		Passed: scoreValue >= 100,
 	}
-	return domain.FinalizeRun(benchmark.IssueOpsBenchmarkRunResult{ID: id, Scores: []benchmark.IssueOpsBenchmarkScore{score}})
+	return domain.FinalizeRun(benchmark.RunResult{ID: id, Scores: []benchmark.Score{score}})
 }

@@ -28,17 +28,17 @@ func TestRootSubcommandErrorExitCodeMapsTypedErrorsPerSubcommand(t *testing.T) {
 		err  error
 		want int
 	}{
-		{"policy denied", "policy", policycontract.PolicyDeniedError{Reasons: []string{"x"}}, 3},
-		{"guard blocked", "guard", guard.GuardBlockedError{}, 3},
+		{"policy denied", "policy", policycontract.DeniedError{Reasons: []string{"x"}}, 3},
+		{"guard blocked", "guard", guard.BlockedError{}, 3},
 		// --json prints the denial envelope and marks the error reported; the
 		// exit code must stay the same as in text mode.
-		{"policy denied under --json", "policy", jsonout.Reported(policycontract.PolicyDeniedError{Reasons: []string{"x"}}), 3},
-		{"policy denial wrapped beyond the marker", "policy", jsonout.Reported(fmt.Errorf("wrap: %w", policycontract.PolicyDeniedError{})), 1},
+		{"policy denied under --json", "policy", jsonout.Reported(policycontract.DeniedError{Reasons: []string{"x"}}), 3},
+		{"policy denial wrapped beyond the marker", "policy", jsonout.Reported(fmt.Errorf("wrap: %w", policycontract.DeniedError{})), 1},
 		{"gates usage", "gates", gatescli.UsageError{Message: "bad"}, 2},
 		{"wrapped gates usage", "gates", fmt.Errorf("wrap: %w", gatescli.UsageError{Message: "bad"}), 2},
 		{"channel timeout", "channel", channelcli.TimedOutError{}, 1},
 		{"model usage", "model", modelcli.UsageError{Message: "bad"}, 2},
-		{"policy denial under other subcommand", "gates", policycontract.PolicyDeniedError{}, 1},
+		{"policy denial under other subcommand", "gates", policycontract.DeniedError{}, 1},
 		{"model usage under gates", "gates", modelcli.UsageError{Message: "bad"}, 1},
 		{"plain policy error", "policy", errors.New("boom"), 1},
 		{"plain guard error", "guard", errors.New("boom"), 1},
@@ -109,31 +109,31 @@ func TestClonePublicationStringsKeepsNilDistinctFromEmpty(t *testing.T) {
 }
 
 func TestNextLocalReadinessObservationDoesNotReuseAcrossExecutionRootOrBaseSHA(t *testing.T) {
-	base := issueopscontract.IssueOpsRecord{
+	base := issueopscontract.Record{
 		ID: "io", Repo: "/r", WorktreePath: "/w", Branch: "b",
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: "s1"},
+		BranchPrepare: &issueopscontract.BranchPrepare{BaseBranch: "main", BaseSHA: "s1"},
 		Execution:     &issueopscontract.Execution{Workspace: issueopscontract.Workspace{Root: "/root"}},
 	}
 	otherRoot := base
 	otherRoot.Execution = &issueopscontract.Execution{Workspace: issueopscontract.Workspace{Root: "/other"}}
 	otherSHA := base
-	otherSHA.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: "s2"}
+	otherSHA.BranchPrepare = &issueopscontract.BranchPrepare{BaseBranch: "main", BaseSHA: "s2"}
 	otherBase := base
-	otherBase.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{BaseBranch: "dev", BaseSHA: "s1"}
+	otherBase.BranchPrepare = &issueopscontract.BranchPrepare{BaseBranch: "dev", BaseSHA: "s1"}
 	noExec := base
 	noExec.Execution = nil
 
 	observer := nextLocalReadinessObservation{
-		observe: func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {
-			return issueopscontract.IssueOpsReadiness{OK: true}, reviewcontract.LocalChangeObservation{Paths: []string{"observed.go"}, Verified: true}
+		observe: func(issueopscontract.Record) (issueopscontract.Readiness, reviewcontract.LocalChangeObservation) {
+			return issueopscontract.Readiness{OK: true}, reviewcontract.LocalChangeObservation{Paths: []string{"observed.go"}, Verified: true}
 		},
-		fallback: func(issueopscontract.IssueOpsRecord) ([]string, bool) { return []string{"fallback.go"}, true },
+		fallback: func(issueopscontract.Record) ([]string, bool) { return []string{"fallback.go"}, true },
 	}
 	observer.localReadiness(base)
 	if paths, _ := observer.changedPaths(base); !reflect.DeepEqual(paths, []string{"observed.go"}) {
 		t.Fatalf("same record must reuse the observation, got %v", paths)
 	}
-	for name, record := range map[string]issueopscontract.IssueOpsRecord{
+	for name, record := range map[string]issueopscontract.Record{
 		"execution root": otherRoot, "base sha": otherSHA, "base branch": otherBase, "no execution": noExec,
 	} {
 		if paths, _ := observer.changedPaths(record); !reflect.DeepEqual(paths, []string{"fallback.go"}) {
@@ -144,7 +144,7 @@ func TestNextLocalReadinessObservationDoesNotReuseAcrossExecutionRootOrBaseSHA(t
 
 func TestNextLocalReadinessObservationChangedPathsWithoutFallbackIsUnverified(t *testing.T) {
 	observer := nextLocalReadinessObservation{}
-	paths, verified := observer.changedPaths(issueopscontract.IssueOpsRecord{ID: "io"})
+	paths, verified := observer.changedPaths(issueopscontract.Record{ID: "io"})
 	if paths != nil || verified {
 		t.Fatalf("no observation and no fallback must be unverified, got %v %v", paths, verified)
 	}

@@ -23,10 +23,10 @@ type DoctorRecord struct {
 	InvalidRecord bool
 }
 
-func InspectDoctor(dir string, entries []DoctorEntry, rows []DoctorRecord) statecontract.StateDoctorResult {
-	result := statecontract.StateDoctorResult{
+func InspectDoctor(dir string, entries []DoctorEntry, rows []DoctorRecord) statecontract.DoctorResult {
+	result := statecontract.DoctorResult{
 		OK: false, Healthy: false, StateDir: dir,
-		ValidKeys: []string{}, Valid: []statecontract.StateListEntry{}, Issues: []statecontract.StateDoctorIssue{},
+		ValidKeys: []string{}, Valid: []statecontract.ListEntry{}, Issues: []statecontract.DoctorIssue{},
 	}
 	for _, entry := range entries {
 		if issue, ok := inspectDoctorEntry(entry); ok {
@@ -36,19 +36,19 @@ func InspectDoctor(dir string, entries []DoctorEntry, rows []DoctorRecord) state
 	for _, row := range rows {
 		result.Checked++
 		if row.InvalidKey != "" {
-			result.Issues = append(result.Issues, statecontract.StateDoctorIssue{Path: row.Path, Key: row.Key, Severity: "error", Code: "invalid_key", Message: row.InvalidKey})
+			result.Issues = append(result.Issues, statecontract.DoctorIssue{Path: row.Path, Key: row.Key, Severity: "error", Code: "invalid_key", Message: row.InvalidKey})
 			continue
 		}
 		if row.InvalidRecord {
-			result.Issues = append(result.Issues, statecontract.StateDoctorIssue{Path: row.Path, Key: row.Key, Severity: "error", Code: "invalid_state", Message: "invalid state"})
+			result.Issues = append(result.Issues, statecontract.DoctorIssue{Path: row.Path, Key: row.Key, Severity: "error", Code: "invalid_state", Message: "invalid state"})
 			continue
 		}
-		result.Valid = append(result.Valid, statecontract.StateListEntry{Key: row.Record.Key, UpdatedAt: row.Record.UpdatedAt, Bytes: row.Record.Bytes, SchemaVersion: row.Record.SchemaVersion})
+		result.Valid = append(result.Valid, statecontract.ListEntry{Key: row.Record.Key, UpdatedAt: row.Record.UpdatedAt, Bytes: row.Record.Bytes, SchemaVersion: row.Record.SchemaVersion})
 		result.ValidKeys = append(result.ValidKeys, row.Record.Key)
 	}
 	sort.Strings(result.ValidKeys)
 	sort.Slice(result.Valid, func(i, j int) bool { return result.Valid[i].Key < result.Valid[j].Key })
-	slices.SortFunc(result.Issues, func(a, b statecontract.StateDoctorIssue) int {
+	slices.SortFunc(result.Issues, func(a, b statecontract.DoctorIssue) int {
 		return cmp.Or(cmp.Compare(a.Path, b.Path), cmp.Compare(a.Code, b.Code), cmp.Compare(a.Message, b.Message))
 	})
 	result.OK = true
@@ -85,20 +85,20 @@ func retiredStateEntry(name string) bool {
 	return false
 }
 
-func inspectDoctorEntry(entry DoctorEntry) (statecontract.StateDoctorIssue, bool) {
+func inspectDoctorEntry(entry DoctorEntry) (statecontract.DoctorIssue, bool) {
 	if retiredStateEntry(entry.Name) {
-		return statecontract.StateDoctorIssue{Path: entry.Path, Severity: "warning", Code: "retired_path", Message: "state directory contains a path left by a removed subsystem; issueops update removes it"}, true
+		return statecontract.DoctorIssue{Path: entry.Path, Severity: "warning", Code: "retired_path", Message: "state directory contains a path left by a removed subsystem; issueops update removes it"}, true
 	}
 	if entry.IsDir {
 		if harnessOwnedStateDirectory(entry.Name) {
-			return statecontract.StateDoctorIssue{}, false
+			return statecontract.DoctorIssue{}, false
 		}
-		return statecontract.StateDoctorIssue{Path: entry.Path, Severity: "warning", Code: "unexpected_directory", Message: "state directory contains an unexpected subdirectory"}, true
+		return statecontract.DoctorIssue{Path: entry.Path, Severity: "warning", Code: "unexpected_directory", Message: "state directory contains an unexpected subdirectory"}, true
 	}
 	if harnessOwnedStateFile(entry.Name) {
-		return statecontract.StateDoctorIssue{}, false
+		return statecontract.DoctorIssue{}, false
 	}
-	return statecontract.StateDoctorIssue{Path: entry.Path, Severity: "warning", Code: "unexpected_file", Message: "state directory contains an unexpected file"}, true
+	return statecontract.DoctorIssue{Path: entry.Path, Severity: "warning", Code: "unexpected_file", Message: "state directory contains an unexpected file"}, true
 }
 
 func harnessOwnedStateDirectory(name string) bool {

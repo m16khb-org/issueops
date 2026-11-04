@@ -3,9 +3,9 @@ package issueopscycle
 import model "issueops/internal/contract/issueops"
 
 type AISlopCleanRefreshStore struct {
-	Readiness   func(model.IssueOpsRecord) model.IssueOpsReadiness
+	Readiness   func(model.Record) model.Readiness
 	Now         func() string
-	Head        func(model.IssueOpsRecord) string
-	Fingerprint func(model.IssueOpsRecord) string
-	TouchWrite  func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Head        func(model.Record) string
+	Fingerprint func(model.Record) string
+	TouchWrite  func(string, model.Record) (model.Record, error)
 }

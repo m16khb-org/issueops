@@ -35,18 +35,18 @@ func TestAdvanceToImplementGatesOnArchitectureApproval(t *testing.T) {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
 
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsIntentForTest(t, stateRoot, record.ID)
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseGrill)); err != nil {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhaseGrill)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := LinkIssueOpsIssue(stateRoot, record.ID, "https://github.com/example/repo/issues/1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider: "github", IssueURL: "https://github.com/example/repo/issues/1",
 		Branch: branch, BaseBranch: "main", LinkVerified: true,
 	}); err != nil {
@@ -59,7 +59,7 @@ func TestAdvanceToImplementGatesOnArchitectureApproval(t *testing.T) {
 
 	// No architecture review recorded: implement entry is blocked because the review
 	// is missing entirely.
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "architecture_review") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhaseImplement)); err == nil || !strings.Contains(err.Error(), "architecture_review") {
 		t.Fatalf("implement entry with no architecture review must be blocked on architecture_review, got %v", err)
 	}
 
@@ -74,14 +74,14 @@ func TestAdvanceToImplementGatesOnArchitectureApproval(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "architecture_approval") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhaseImplement)); err == nil || !strings.Contains(err.Error(), "architecture_approval") {
 		t.Fatalf("implement entry with an unapproved architecture review must be blocked on architecture_approval, got %v", err)
 	}
 
 	// Recording an approved architecture review clears the architecture_approval block (other
 	// readiness items such as the plan may remain, but the approval gate is gone).
 	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err != nil && strings.Contains(err.Error(), "architecture_approval") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhaseImplement)); err != nil && strings.Contains(err.Error(), "architecture_approval") {
 		t.Fatalf("approved architecture review must clear the architecture_approval block, still got %v", err)
 	}
 }

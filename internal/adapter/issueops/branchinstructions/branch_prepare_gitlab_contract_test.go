@@ -165,7 +165,7 @@ func TestGitLabKeepsThreeStepsAndItsStrategies(t *testing.T) {
 	}
 }
 
-func gitlabMCPStep(t *testing.T, steps []model.IssueOpsBranchPrepareStep) model.IssueOpsBranchPrepareStep {
+func gitlabMCPStep(t *testing.T, steps []model.BranchPrepareStep) model.BranchPrepareStep {
 	t.Helper()
 	for _, step := range steps {
 		if step.Strategy == "mcp" {
@@ -173,10 +173,10 @@ func gitlabMCPStep(t *testing.T, steps []model.IssueOpsBranchPrepareStep) model.
 		}
 	}
 	t.Fatal("gitlab 경로에는 mcp 단계가 있다")
-	return model.IssueOpsBranchPrepareStep{}
+	return model.BranchPrepareStep{}
 }
 
-func gitlabFallbackStep(t *testing.T, steps []model.IssueOpsBranchPrepareStep) model.IssueOpsBranchPrepareStep {
+func gitlabFallbackStep(t *testing.T, steps []model.BranchPrepareStep) model.BranchPrepareStep {
 	t.Helper()
 	for _, step := range steps {
 		if step.Strategy == "fallback_api" {
@@ -184,7 +184,7 @@ func gitlabFallbackStep(t *testing.T, steps []model.IssueOpsBranchPrepareStep) m
 		}
 	}
 	t.Fatal("gitlab 경로에는 fallback_api 단계가 있다")
-	return model.IssueOpsBranchPrepareStep{}
+	return model.BranchPrepareStep{}
 }
 
 func gitlabRawFieldValues(t *testing.T, arguments map[string]any) []string {

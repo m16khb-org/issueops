@@ -16,13 +16,13 @@ func ValidateWorkspaceLinkPath(field, path string) error {
 	}
 	return nil
 }
-func ValidateLinkBranchEvidence(record model.IssueOpsRecord, kind string) error {
+func ValidateLinkBranchEvidence(record model.Record, kind string) error {
 	if missing := BranchEvidenceMissing(record); len(missing) > 0 {
 		return fmt.Errorf("cannot link %s before branch evidence: missing %s", kind, strings.Join(missing, ", "))
 	}
 	return nil
 }
-func ValidatePlanLinkReadiness(record model.IssueOpsRecord, architectureMissing []string) error {
+func ValidatePlanLinkReadiness(record model.Record, architectureMissing []string) error {
 	if err := ValidateLinkBranchEvidence(record, "plan"); err != nil {
 		return err
 	}
@@ -61,12 +61,12 @@ func ValidateLinkedPlanSections(missing []string) error {
 	}
 	return nil
 }
-func ApplyPlanLink(record model.IssueOpsRecord, path, now string) model.IssueOpsRecord {
+func ApplyPlanLink(record model.Record, path, now string) model.Record {
 	record.PlanPath = path
 	record.UpdatedAt = now
 	return record
 }
-func ApplyWorktreeLink(record model.IssueOpsRecord, path, now string) model.IssueOpsRecord {
+func ApplyWorktreeLink(record model.Record, path, now string) model.Record {
 	record.WorktreePath = path
 	record.UpdatedAt = now
 	return record

@@ -6,7 +6,7 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func ApplyLoopGate(ready model.IssueOpsReadiness, repo string, observe func(string) ([]string, []string)) model.IssueOpsReadiness {
+func ApplyLoopGate(ready model.Readiness, repo string, observe func(string) ([]string, []string)) model.Readiness {
 	missing, warnings := observe(repo)
 	return domain.MergeGateReadiness(ready, missing, warnings)
 }

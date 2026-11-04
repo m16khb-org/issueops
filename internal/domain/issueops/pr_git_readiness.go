@@ -27,7 +27,7 @@ type PRGitFacts struct {
 	UpstreamCounts string
 }
 
-func PRGitReadiness(record model.IssueOpsRecord, facts PRGitFacts) ([]string, []string) {
+func PRGitReadiness(record model.Record, facts PRGitFacts) ([]string, []string) {
 	missing := []string{}
 	warnings := []string{}
 	if !facts.RootAvailable {
@@ -44,7 +44,7 @@ func PRGitReadiness(record model.IssueOpsRecord, facts PRGitFacts) ([]string, []
 }
 
 // prWorktreeReadiness는 git worktree가 확인된 뒤의 브랜치/청결/upstream 사실을 누적한다.
-func prWorktreeReadiness(record model.IssueOpsRecord, facts PRGitFacts, missing, warnings []string) ([]string, []string) {
+func prWorktreeReadiness(record model.Record, facts PRGitFacts, missing, warnings []string) ([]string, []string) {
 	if !facts.FingerprintVerified {
 		missing = append(missing, "current_fingerprint")
 	}

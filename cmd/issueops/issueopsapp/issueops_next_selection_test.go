@@ -27,14 +27,14 @@ func TestNextPersistedCLISelectionAndRootConflict(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	selected := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-		ID:            "io-selected", Repo: repo, Branch: "topic/one", Phase: issueopscontract.IssueOpsPhasePlan,
+	selected := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
+		ID:            "io-selected", Repo: repo, Branch: "topic/one", Phase: issueopscontract.PhasePlan,
 	}
-	claim := func(id, source string) issueopscontract.IssueOpsRecord {
-		return issueopscontract.IssueOpsRecord{
-			SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-			ID:            id, Repo: source, Branch: "topic/one", Phase: issueopscontract.IssueOpsPhasePlan,
+	claim := func(id, source string) issueopscontract.Record {
+		return issueopscontract.Record{
+			SchemaVersion: issueopscontract.SchemaVersion,
+			ID:            id, Repo: source, Branch: "topic/one", Phase: issueopscontract.PhasePlan,
 			Execution: &issueopscontract.Execution{
 				Workspace: issueopscontract.Workspace{
 					SourceRoot: source, Root: repo + ".worktrees/extra/../topic-one",
@@ -44,9 +44,9 @@ func TestNextPersistedCLISelectionAndRootConflict(t *testing.T) {
 			},
 		}
 	}
-	for _, record := range []issueopscontract.IssueOpsRecord{
+	for _, record := range []issueopscontract.Record{
 		selected, claim("io-foreign", foreign), claim("io-first", alias), claim("io-last", repo),
-		{SchemaVersion: issueopscontract.IssueOpsSchemaVersion, ID: "io-alias", Repo: alias, Phase: issueopscontract.IssueOpsPhaseGrill},
+		{SchemaVersion: issueopscontract.SchemaVersion, ID: "io-alias", Repo: alias, Phase: issueopscontract.PhaseGrill},
 	} {
 		data, err := issueopsrecord.Encode(record)
 		if err != nil {

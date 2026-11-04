@@ -11,7 +11,7 @@ import (
 	channelapp "issueops/internal/application/channel"
 )
 
-func testChannelService() channelapp.Service { return testChannelServiceAt(statestore.StateDir()) }
+func testChannelService() channelapp.Service { return testChannelServiceAt(statestore.Dir()) }
 func testChannelServiceAt(root string) channelapp.Service {
 	return channelapp.Service{Effects: channel.Store{Root: filepath.Join(root, "channel"), Clock: time.Now, Sleep: issueopsadapter.SleepWithContext, WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (channel.StateDatabase, error) { return sqlstore.Open(dir) }}}
 }

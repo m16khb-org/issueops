@@ -169,7 +169,7 @@ func TestRunProjectAppend_passesEveryFieldIntoTheRecord(t *testing.T) {
 			"--decision", "DECISION-X", "--consequences", "CONSEQ-X", "--source", "SOURCE-X", "--json",
 		})
 	})
-	var result projectdocscontract.ProjectDocsAppendResult
+	var result projectdocscontract.AppendResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode: %v\n%s", err, out)
 	}
@@ -186,7 +186,7 @@ func TestRunProjectAppend_passesEveryFieldIntoTheRecord(t *testing.T) {
 	caution := captureStatusVerifyStdout(t, func() error {
 		return runProjectAppend(testProjectDocsService(), []string{"--repo", repo, "--kind", "caution", "--title", "Fix", "--summary", "s", "--resolution", "RESOLUTION-X", "--json"})
 	})
-	var cautionResult projectdocscontract.ProjectDocsAppendResult
+	var cautionResult projectdocscontract.AppendResult
 	if err := json.Unmarshal([]byte(caution), &cautionResult); err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestRunProjectCommitSuggest_printsPromptForStagedChanges(t *testing.T) {
 	unstaged := captureStatusVerifyStdout(t, func() error {
 		return runProjectCommitSuggest(testCommitService(), []string{"--repo", repo, "--json"})
 	})
-	var result commitsuggestcontract.CommitSuggestResult
+	var result commitsuggestcontract.Result
 	if err := json.Unmarshal([]byte(unstaged), &result); err != nil || result.Executed || result.Staged {
 		t.Fatalf("without --staged the staged-only file is not part of the diff: %+v err=%v", result, err)
 	}

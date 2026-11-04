@@ -5,6 +5,6 @@ import (
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-func CompatibilityReviewMissing(record model.IssueOpsRecord) []string {
+func CompatibilityReviewMissing(record model.Record) []string {
 	return reviewdomain.CompatibilityReviewMissing(record.CompatibilityReview)
 }

@@ -10,8 +10,8 @@ import (
 
 type CLIDeps struct {
 	PrintJSON func(any) error
-	History   func(string, int, contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error)
-	Compare   func(string, string, float64) (contract.SelfAugmentCompareResult, error)
+	History   func(string, int, contract.HistoryRetentionOptions) (contract.HistoryResult, error)
+	Compare   func(string, string, float64) (contract.CompareResult, error)
 }
 
 func RunSelfVerifyCompare(args []string, deps CLIDeps) error {
@@ -62,7 +62,7 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
-	result, err := deps.History(*prefix, *limit, contract.SelfAugmentHistoryRetentionOptions{
+	result, err := deps.History(*prefix, *limit, contract.HistoryRetentionOptions{
 		Limit:          *retentionLimit,
 		PruneRequested: *pruneRetention,
 		Confirm:        *confirm,
@@ -80,7 +80,7 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 	return nil
 }
 
-func printSelfVerifyHistoryText(result contract.SelfAugmentHistoryResult) {
+func printSelfVerifyHistoryText(result contract.HistoryResult) {
 	fmt.Printf("self-verify history: %d/%d entries from %s (prefix=%q)\n", result.Returned, result.TotalMatches, result.StateDir, result.Prefix)
 	for _, entry := range result.Entries {
 		status := "fail"

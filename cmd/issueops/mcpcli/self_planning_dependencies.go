@@ -7,8 +7,8 @@ import (
 )
 
 type SelfPlanningDependencies struct {
-	Plan             func(contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult
+	Plan             func(contract.PlanRequest) contract.PlanResult
 	ExportCandidates func() contract.SelfVerificationCandidateExportResult
 	SaveCandidates   func(context.Context, *contract.SelfVerificationCandidateExportResult, string) error
-	SaveLesson       func(context.Context, contract.SelfAugmentLessonRequest) (contract.SelfAugmentLessonResult, error)
+	SaveLesson       func(context.Context, contract.LessonRequest) (contract.LessonResult, error)
 }

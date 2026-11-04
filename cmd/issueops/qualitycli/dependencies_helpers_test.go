@@ -17,8 +17,8 @@ type testHostDeps struct {
 
 	// StateRead와 StateWrite는 composition root가 주입한다. default를 두면 이
 	// package가 concrete state store를 알게 되므로 비워 둔다.
-	StateRead  func(key string) (statecontract.StateResult, error)
-	StateWrite func(key, content string) (statecontract.StateResult, error)
+	StateRead  func(key string) (statecontract.Result, error)
+	StateWrite func(key, content string) (statecontract.Result, error)
 }
 
 // hostDeps holds the host-provided dependencies. It is named distinctly from the

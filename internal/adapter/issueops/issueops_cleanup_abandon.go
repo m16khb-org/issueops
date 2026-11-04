@@ -22,10 +22,10 @@ func (CleanupAbandonRuntime) SameLinkedPath(a, b string) bool {
 	return (CleanupFinishEnvironment{}).SamePath(a, b)
 }
 func (CleanupAbandonRuntime) SamePath(a, b string) bool { return samePath(a, b) }
-func (r CleanupAbandonRuntime) ReadChild(id string) (issueops.IssueOpsRecord, error) {
+func (r CleanupAbandonRuntime) ReadChild(id string) (issueops.Record, error) {
 	return ReadIssueOpsExisting(r.StateRoot, id)
 }
-func (r CleanupAbandonRuntime) Workspace(ctx context.Context, record issueops.IssueOpsRecord, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
+func (r CleanupAbandonRuntime) Workspace(ctx context.Context, record issueops.Record, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
 	return NewCleanupWorkspaceCleaner(r.Processes).Observe(root, record.Repo)
 }
 func (r CleanupAbandonRuntime) Worktree(ctx context.Context, root string) cleanupapp.AbandonWorktreeObservation {

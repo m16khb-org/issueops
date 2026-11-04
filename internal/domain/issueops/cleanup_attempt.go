@@ -8,7 +8,7 @@ import (
 
 // RequireNoCleanupAttempt fences ordinary mutations, including crash recovery.
 // Only the matching cleanup executor may replace or clear a persisted attempt.
-func RequireNoCleanupAttempt(attempt *model.IssueOpsCleanupAttempt) error {
+func RequireNoCleanupAttempt(attempt *model.CleanupAttempt) error {
 	if attempt != nil {
 		return fmt.Errorf("cleanup %s apply is in progress", attempt.Operation)
 	}
@@ -17,14 +17,14 @@ func RequireNoCleanupAttempt(attempt *model.IssueOpsCleanupAttempt) error {
 
 // ValidateCleanupOperationAccess allows recovery only through the operation
 // that owns the abandoned attempt. The caller must first acquire its lifetime.
-func ValidateCleanupOperationAccess(record model.IssueOpsRecord, operation model.CleanupOperation) error {
+func ValidateCleanupOperationAccess(record model.Record, operation model.CleanupOperation) error {
 	if attempt := record.CleanupAttempt; attempt != nil && attempt.Operation != operation {
 		return fmt.Errorf("cleanup %s owns this cycle; resume cleanup %s before cleanup %s", attempt.Operation, attempt.Operation, operation)
 	}
 	return nil
 }
 
-func ArmCleanup(record model.IssueOpsRecord, attempt model.IssueOpsCleanupAttempt) (model.IssueOpsRecord, error) {
+func ArmCleanup(record model.Record, attempt model.CleanupAttempt) (model.Record, error) {
 	if err := model.ValidateCleanupAttempt(&attempt); err != nil {
 		return record, err
 	}
@@ -42,14 +42,14 @@ func ArmCleanup(record model.IssueOpsRecord, attempt model.IssueOpsCleanupAttemp
 	return record, nil
 }
 
-func ValidateCleanupOwner(record model.IssueOpsRecord, expected model.IssueOpsCleanupAttempt) error {
+func ValidateCleanupOwner(record model.Record, expected model.CleanupAttempt) error {
 	if expected.Token == "" || record.CleanupAttempt == nil || *record.CleanupAttempt != expected {
 		return fmt.Errorf("cleanup attempt ownership changed")
 	}
 	return nil
 }
 
-func ReleaseCleanupAttempt(record model.IssueOpsRecord, now string) model.IssueOpsRecord {
+func ReleaseCleanupAttempt(record model.Record, now string) model.Record {
 	record.CleanupAttempt = nil
 	record.UpdatedAt = now
 	return record

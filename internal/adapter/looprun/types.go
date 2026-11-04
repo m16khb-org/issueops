@@ -1,3 +1,3 @@
 package looprun
 
-const LoopRunCurrentSchemaVersion = 1
+const CurrentSchemaVersion = 1

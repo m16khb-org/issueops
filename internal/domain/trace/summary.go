@@ -29,7 +29,7 @@ func selfVerifySummaryFindings(summary Summary) []Finding {
 	if len(parts) > 0 {
 		pattern = strings.Join(parts, "; ")
 	}
-	command := classification.DefaultVerificationCommand(failedStep)
+	command := traceclassification.DefaultVerificationCommand(failedStep)
 	if len(summary.RerunCommands) > 0 {
 		command = policy.RedactFreeform(summary.RerunCommands[0])
 	}
@@ -38,8 +38,8 @@ func selfVerifySummaryFindings(summary Summary) []Finding {
 		FailureCause:         summary.Cause,
 		FailureCauseEvidence: summary.Evidence,
 		RecurringPattern:     policy.RedactFreeform(pattern),
-		ProposedKnob:         classification.ProposedKnobForStep(failedStep),
-		OverfitRisk:          classification.OverfitRiskForClass(failureClass),
+		ProposedKnob:         traceclassification.ProposedKnobForStep(failedStep),
+		OverfitRisk:          traceclassification.OverfitRiskForClass(failureClass),
 		VerificationCommand:  command,
 	}}
 }

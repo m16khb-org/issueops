@@ -123,7 +123,7 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 }
 
 // runExecutionSyncBaseMutation은 변형 3모드를 모드별 절차로 분기한다.
-func runExecutionSyncBaseMutation(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest,
+func runExecutionSyncBaseMutation(ctx context.Context, stateRoot string, record issueops.Record, req issueops.ExecutionSyncBaseRequest,
 	actor issueops.NativeActor, inventory executionSyncBaseInventory, fingerprint string,
 	deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	// --confirm은 파괴적 머지 커밋과 push를 만드는 apply에만 요구한다
@@ -166,7 +166,7 @@ func executionSyncBaseVerifyActor(ctx context.Context, verifier authorityport.Ac
 
 // executionSyncBaseNotReadyError는 unmet gate 목록을 기본 오류로 만들고,
 // 게이트별 복구 안내를 같은 순서로 덧붙인다.
-func executionSyncBaseNotReadyError(record issueops.IssueOpsRecord, mode string, inventory executionSyncBaseInventory, missing []string) error {
+func executionSyncBaseNotReadyError(record issueops.Record, mode string, inventory executionSyncBaseInventory, missing []string) error {
 	err := fmt.Errorf("execution sync-base %s is not ready; unmet gates: %s", mode, strings.Join(missing, ", "))
 	if slices.Contains(missing, "cwd_canonical") && inventory.Root != "" {
 		// An agent ran it from the source checkout as the replace step is.
@@ -188,7 +188,7 @@ func executionSyncBaseNotReadyError(record issueops.IssueOpsRecord, mode string,
 }
 
 // executionSyncBasePreviewNextCommands는 preview 결과에 다음 명령(들)을 채운다.
-func executionSyncBasePreviewNextCommands(record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest, inventory executionSyncBaseInventory, fingerprint string, result *issueops.ExecutionSyncBaseResult) {
+func executionSyncBasePreviewNextCommands(record issueops.Record, req issueops.ExecutionSyncBaseRequest, inventory executionSyncBaseInventory, fingerprint string, result *issueops.ExecutionSyncBaseResult) {
 	if !result.MergeNeeded && inventory.RemoteWorkOID != "" && (strings.EqualFold(inventory.RemoteWorkOID, inventory.WorkOID) || inventory.BaseOnRemote) {
 		// The base is already in the pushed branch: an apply would only
 		// record a no-op sync (or push the branch's own commits, which is
@@ -215,7 +215,7 @@ func executionSyncBasePreviewNextCommands(record issueops.IssueOpsRecord, req is
 // 나열한다(fail-closed). execution/worktree 부재는 부분 진단으로 반환한다.
 // record/authority 등 원격 조회 전 확정된 blocker도 도달 가능한 로컬 진단만
 // 수집하고 반환한다. 거부 결과는 관측하지 않은 원격 게이트를 보장하지 않는다.
-func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest, mode string,
+func executionSyncBaseGates(ctx context.Context, record issueops.Record, req issueops.ExecutionSyncBaseRequest, mode string,
 	actor issueops.NativeActor, deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (executionSyncBaseInventory, []string) {
 	inventory := executionSyncBaseInventory{ID: record.ID, Repo: record.Repo}
 	execution := record.Execution
@@ -280,7 +280,7 @@ func executionSyncBaseAuthorityMissing(execution *issueops.Execution, req issueo
 // 파일을 나열한 채 merge-in-progress로 정지한다(해소 편집은 같은 holder).
 // 병합이 이미 반영된 상태에서의 재실행은 merge를 건너뛰고 push만 수행해
 // non-fast-forward 거부 이후로 멱등 수렴한다(설계 v2 push 계약).
-func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest,
+func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.Record, req issueops.ExecutionSyncBaseRequest,
 	actor issueops.NativeActor, inventory executionSyncBaseInventory, fingerprint string,
 	deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	// ⑩ TOCTOU: apply 직전 재계산 일치. 외부 변경이 있었다면 preview 재발급을
@@ -355,7 +355,7 @@ func (e *executionSyncBaseApplyEffects) Now() string {
 
 // finalizeExecutionSyncBase는 해소가 끝난 merge-in-progress를 커밋하고 push한다.
 // unmerged 인덱스 항목이나 충돌 마커가 남아 있으면 커밋하지 않는다.
-func finalizeExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, actor issueops.NativeActor,
+func finalizeExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.Record, actor issueops.NativeActor,
 	inventory executionSyncBaseInventory, deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	fail := executionSyncBaseFail(record, result)
 	outcome, err := basesyncapp.Finalize(ctx, basesyncapp.FinalizeRequest{Push: basesyncapp.PushRequest{
@@ -409,7 +409,7 @@ func (e *executionSyncBaseFinalizeEffects) Now() string {
 
 // abortExecutionSyncBase는 진행 중 머지를 명시적으로 철회한다. 되돌림이므로
 // durable 이벤트를 남기지 않는다(이벤트는 apply/finalize 성공 전용).
-func abortExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, inventory executionSyncBaseInventory,
+func abortExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.Record, inventory executionSyncBaseInventory,
 	deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	fail := executionSyncBaseFail(record, result)
 	outcome, err := basesyncapp.Abort(ctx, basesyncapp.AbortRequest{
@@ -523,7 +523,7 @@ func executionSyncBaseResolutionState(execution *issueops.Execution) basesyncdom
 	return state
 }
 
-func executionSyncBaseFail(record issueops.IssueOpsRecord, result *issueops.ExecutionSyncBaseResult) func(string, error) (issueops.ExecutionSyncBaseResult, error) {
+func executionSyncBaseFail(record issueops.Record, result *issueops.ExecutionSyncBaseResult) func(string, error) (issueops.ExecutionSyncBaseResult, error) {
 	return func(step string, stepErr error) (issueops.ExecutionSyncBaseResult, error) {
 		result.OK = false
 		result.FailedStep = step
@@ -704,7 +704,7 @@ func executionSyncBaseActorLabel(actor issueops.NativeActor) string {
 	return label
 }
 
-func executionSyncBaseCommandPrefix(record issueops.IssueOpsRecord) string {
+func executionSyncBaseCommandPrefix(record issueops.Record) string {
 	command := "issueops execution sync-base --id " + quoteShellArg(record.ID)
 	if record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased &&
 		record.Execution.Completion != nil && record.Execution.Completion.Generation != 0 {
@@ -731,7 +731,7 @@ func executionSyncBaseActorFlags(actor issueops.NativeActor, cwd string) string 
 		" --session-executable " + quoteShellArg(process.Executable) + " --cwd " + quoteShellArg(cwd)
 }
 
-func executionSyncBasePreviewCommand(record issueops.IssueOpsRecord) string {
+func executionSyncBasePreviewCommand(record issueops.Record) string {
 	return executionSyncBaseCommandPrefix(record) + " --preview --json"
 }
 

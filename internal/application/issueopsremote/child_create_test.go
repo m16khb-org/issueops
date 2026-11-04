@@ -14,9 +14,9 @@ import (
 	"issueops/internal/port"
 )
 
-type childRecordReader func(context.Context, string) (model.IssueOpsRecord, error)
+type childRecordReader func(context.Context, string) (model.Record, error)
 
-func (f childRecordReader) Read(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+func (f childRecordReader) Read(ctx context.Context, id string) (model.Record, error) {
 	return f(ctx, id)
 }
 
@@ -51,11 +51,11 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var events []string
-			record := model.IssueOpsRecord{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.IssueOpsBranchPrepare{Branch: "1-parent"}}
+			record := model.Record{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.BranchPrepare{Branch: "1-parent"}}
 			if tc.leased {
 				record.Execution = &model.Execution{}
 			}
-			cmd := ChildCreateCommand{ID: record.ID, Title: "Child", BodyFile: "body.md", Labels: []string{" bug ", "bug"}, Assignees: []string{" owner ", "owner"}, Confirm: tc.confirm, Actor: model.IssueOpsActor{Host: "codex", SessionID: "session", CWD: "/worktree"}}
+			cmd := ChildCreateCommand{ID: record.ID, Title: "Child", BodyFile: "body.md", Labels: []string{" bug ", "bug"}, Assignees: []string{" owner ", "owner"}, Confirm: tc.confirm, Actor: model.Actor{Host: "codex", SessionID: "session", CWD: "/worktree"}}
 			switch tc.problem {
 			case "parent":
 				record.IssueURL = ""
@@ -71,7 +71,7 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 				cmd.Assignees = nil
 			}
 			ancestry := []model.NativeProcessReceipt{{PID: 321}}
-			assertActor := func(actor model.IssueOpsActor) {
+			assertActor := func(actor model.Actor) {
 				t.Helper()
 				if tc.leased {
 					want := cmd.Actor
@@ -79,12 +79,12 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 					if !reflect.DeepEqual(actor, want) {
 						t.Fatalf("actor=%+v want=%+v", actor, want)
 					}
-				} else if !reflect.DeepEqual(actor, model.IssueOpsActor{}) {
+				} else if !reflect.DeepEqual(actor, model.Actor{}) {
 					t.Fatalf("unleased actor changed: %+v", actor)
 				}
 			}
 			service := ChildCreator{
-				Records: childRecordReader(func(_ context.Context, id string) (model.IssueOpsRecord, error) {
+				Records: childRecordReader(func(_ context.Context, id string) (model.Record, error) {
 					events = append(events, "read")
 					if id != record.ID {
 						t.Fatal(id)
@@ -123,7 +123,7 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 					}
 					return []byte(readableChildBody), nil
 				}),
-				Authorize: func(_ context.Context, id string, actor model.IssueOpsActor) error {
+				Authorize: func(_ context.Context, id string, actor model.Actor) error {
 					events = append(events, "authorize")
 					assertActor(actor)
 					if tc.problem == "actor" {
@@ -131,7 +131,7 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 					}
 					return nil
 				},
-				Intents: &ChildCreateIntents{Store: &testChildStore{record: record, before: func(updated model.IssueOpsRecord) error {
+				Intents: &ChildCreateIntents{Store: &testChildStore{record: record, before: func(updated model.Record) error {
 					if len(updated.ChildCreateOperations) > 0 && updated.ChildCreateOperations[0].Status == model.IssueCreateIntentCompleted {
 						events = append(events, "link")
 						if len(updated.IssueLinks) != 1 || updated.IssueLinks[0].URL != "https://github.com/acme/repo/issues/2" {
@@ -184,16 +184,16 @@ const readableChildBody = `## 요약
 부모 브랜치에 병합한 뒤 하위 작업을 닫습니다.`
 
 func TestChildCreatorRestartAfterReceiptFailureDoesNotCreateAgain(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.IssueOpsBranchPrepare{Branch: "1-parent"}}
+	record := model.Record{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.BranchPrepare{Branch: "1-parent"}}
 	calls := 0
-	store := &testChildStore{record: record, before: func(updated model.IssueOpsRecord) error {
+	store := &testChildStore{record: record, before: func(updated model.Record) error {
 		if updated.ChildCreateOperations[0].Status == model.IssueCreateIntentCompleted {
 			return errors.New("disk full")
 		}
 		return nil
 	}}
 	service := ChildCreator{
-		Records: childRecordReader(func(context.Context, string) (model.IssueOpsRecord, error) { return store.read(), nil }),
+		Records: childRecordReader(func(context.Context, string) (model.Record, error) { return store.read(), nil }),
 		Resolve: func(string) (ChildProvider, error) {
 			return childProviderFunc(func(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 				calls++
@@ -217,25 +217,25 @@ func TestChildCreatorRestartAfterReceiptFailureDoesNotCreateAgain(t *testing.T) 
 
 type testChildAuthority struct{}
 
-func (testChildAuthority) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+func (testChildAuthority) Authorize(context.Context, model.Record, model.Actor) error {
 	return nil
 }
 
 type testChildStore struct {
 	mu     sync.Mutex
-	record model.IssueOpsRecord
-	before func(model.IssueOpsRecord) error
+	record model.Record
+	before func(model.Record) error
 }
 
-func (s *testChildStore) read() model.IssueOpsRecord {
+func (s *testChildStore) read() model.Record {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return cloneChildRecord(s.record)
 }
-func (s *testChildStore) Read(context.Context, string) (model.IssueOpsRecord, error) {
+func (s *testChildStore) Read(context.Context, string) (model.Record, error) {
 	return s.read(), nil
 }
-func (s *testChildStore) Update(ctx context.Context, id string, transition RecordTransition) (model.IssueOpsRecord, error) {
+func (s *testChildStore) Update(ctx context.Context, id string, transition RecordTransition) (model.Record, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	updated, err := transition(cloneChildRecord(s.record))
@@ -250,9 +250,9 @@ func (s *testChildStore) Update(ctx context.Context, id string, transition Recor
 	s.record = cloneChildRecord(updated)
 	return cloneChildRecord(updated), nil
 }
-func cloneChildRecord(r model.IssueOpsRecord) model.IssueOpsRecord {
+func cloneChildRecord(r model.Record) model.Record {
 	b, _ := json.Marshal(r)
-	var out model.IssueOpsRecord
+	var out model.Record
 	_ = json.Unmarshal(b, &out)
 	return out
 }
@@ -261,14 +261,14 @@ func TestChildRecoveryCommandQuotesArgumentsAndIncludesActorOnlyWhenIdentified(t
 	const base = "issueops remote reconcile-child --id 'io-1' --operation-id 'op-1'"
 	for _, tc := range []struct {
 		name   string
-		actors []model.IssueOpsActor
+		actors []model.Actor
 		want   string
 	}{
 		{"no actor", nil, base + " $RECORD_ACTOR_FLAGS --confirm --json"},
-		{"actor without host", []model.IssueOpsActor{{SessionID: "s", CWD: "/w"}}, base + " $RECORD_ACTOR_FLAGS --confirm --json"},
-		{"actor without agent", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
-		{"actor with agent", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w", AgentID: "a1"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --agent-id 'a1' --confirm --json"},
-		{"only first actor used", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w"}, {Host: "claude", SessionID: "x", CWD: "/x"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
+		{"actor without host", []model.Actor{{SessionID: "s", CWD: "/w"}}, base + " $RECORD_ACTOR_FLAGS --confirm --json"},
+		{"actor without agent", []model.Actor{{Host: "codex", SessionID: "s", CWD: "/w"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
+		{"actor with agent", []model.Actor{{Host: "codex", SessionID: "s", CWD: "/w", AgentID: "a1"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --agent-id 'a1' --confirm --json"},
+		{"only first actor used", []model.Actor{{Host: "codex", SessionID: "s", CWD: "/w"}, {Host: "claude", SessionID: "x", CWD: "/x"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := ChildRecoveryCommand("io-1", "op-1", tc.actors...); got != tc.want {
@@ -276,7 +276,7 @@ func TestChildRecoveryCommandQuotesArgumentsAndIncludesActorOnlyWhenIdentified(t
 			}
 		})
 	}
-	if got := ChildRecoveryCommand("a'b", "op", model.IssueOpsActor{Host: "h", SessionID: "s", CWD: "/it's"}); !strings.Contains(got, `--id 'a'"'"'b'`) || !strings.Contains(got, `--cwd '/it'"'"'s'`) {
+	if got := ChildRecoveryCommand("a'b", "op", model.Actor{Host: "h", SessionID: "s", CWD: "/it's"}); !strings.Contains(got, `--id 'a'"'"'b'`) || !strings.Contains(got, `--cwd '/it'"'"'s'`) {
 		t.Fatalf("embedded quotes not escaped: %q", got)
 	}
 }
@@ -287,15 +287,15 @@ func TestChildCreatorReportsOKOnlyWhenCreateSucceeds(t *testing.T) {
 		failLink bool
 	}{{"success", false}, {"link failure", true}} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.IssueOpsBranchPrepare{Branch: "1-parent"}}
-			store := &testChildStore{record: record, before: func(updated model.IssueOpsRecord) error {
+			record := model.Record{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.BranchPrepare{Branch: "1-parent"}}
+			store := &testChildStore{record: record, before: func(updated model.Record) error {
 				if tc.failLink && updated.ChildCreateOperations[0].Status == model.IssueCreateIntentCompleted {
 					return errors.New("link refused")
 				}
 				return nil
 			}}
 			service := ChildCreator{
-				Records: childRecordReader(func(context.Context, string) (model.IssueOpsRecord, error) { return store.read(), nil }),
+				Records: childRecordReader(func(context.Context, string) (model.Record, error) { return store.read(), nil }),
 				Resolve: func(string) (ChildProvider, error) {
 					return childProviderFunc(func(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 						return port.IssueProviderCreateChildResult{OK: true, ChildURL: "https://github.com/acme/repo/issues/2", HierarchyVerified: true}, nil

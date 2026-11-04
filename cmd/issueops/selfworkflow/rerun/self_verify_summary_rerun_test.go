@@ -34,7 +34,7 @@ func TestSelfVerifyStepRerunCommandCoversOperationalLabels(t *testing.T) {
 	}
 	for label, want := range tests {
 		t.Run(label, func(t *testing.T) {
-			got, ok := domain.SelfVerifyStepRerunCommand(label)
+			got, ok := domain.StepRerunCommand(label)
 			if want == "" {
 				if ok || got != "" {
 					t.Fatalf("expected no rerun command for %q, got %q ok=%v", label, got, ok)
@@ -42,17 +42,17 @@ func TestSelfVerifyStepRerunCommandCoversOperationalLabels(t *testing.T) {
 				return
 			}
 			if !ok || !strings.Contains(got, want) {
-				t.Fatalf("SelfVerifyStepRerunCommand(%q)=%q ok=%v, want substring %q", label, got, ok, want)
+				t.Fatalf("StepRerunCommand(%q)=%q ok=%v, want substring %q", label, got, ok, want)
 			}
 			if strings.Contains(got, "--full") || strings.Contains(got, "--iterations") {
-				t.Fatalf("SelfVerifyStepRerunCommand(%q) uses retired self-verify flags: %q", label, got)
+				t.Fatalf("StepRerunCommand(%q) uses retired self-verify flags: %q", label, got)
 			}
 		})
 	}
 }
 
 func TestSelfVerifyRerunCommandsAndScoreFormatting(t *testing.T) {
-	commands := domain.SelfVerifyRerunCommands("go test", 100, 95.5)
+	commands := domain.RerunCommands("go test", 100, 95.5)
 	if len(commands) != 2 {
 		t.Fatalf("expected specific and collect-all rerun commands, got %#v", commands)
 	}
@@ -62,7 +62,7 @@ func TestSelfVerifyRerunCommandsAndScoreFormatting(t *testing.T) {
 		strings.Contains(commands[1], "--iterations") {
 		t.Fatalf("collect-all rerun command does not match the current deterministic CLI contract: %q", commands[1])
 	}
-	commands = domain.SelfVerifyRerunCommands("unknown", 200, 95)
+	commands = domain.RerunCommands("unknown", 200, 95)
 	if len(commands) != 1 ||
 		!strings.Contains(commands[0], "--collect-all-steps") ||
 		!strings.Contains(commands[0], "--llm-eval=false") ||

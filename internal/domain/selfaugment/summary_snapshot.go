@@ -8,8 +8,8 @@ import (
 
 const SelfVerificationSummaryKind = "self_verification_summary"
 
-func NewSelfVerificationSummarySnapshot(result contract.SelfAugmentResult, generatedAt time.Time) contract.SelfAugmentStateSnapshot {
-	return contract.SelfAugmentStateSnapshot{
+func NewSelfVerificationSummarySnapshot(result contract.Result, generatedAt time.Time) contract.StateSnapshot {
+	return contract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          SelfVerificationSummaryKind,
 		LoopKind:      result.LoopKind,

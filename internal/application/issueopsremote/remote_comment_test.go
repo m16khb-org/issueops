@@ -20,7 +20,7 @@ func (f *fakeCommenter) Comment(_ context.Context, _, target, kind, body string)
 	return target + "#issuecomment-1", f.err
 }
 
-func runComment(t *testing.T, record model.IssueOpsRecord, commenter *fakeCommenter, on string, confirm bool) (model.RemoteCommentResult, error) {
+func runComment(t *testing.T, record model.Record, commenter *fakeCommenter, on string, confirm bool) (model.RemoteCommentResult, error) {
 	t.Helper()
 	service := NewRemoteCommentService(mergeRecordReader{record}, func(string) (port.IssueProviderCommenter, error) { return commenter, nil })
 	return service.Comment(context.Background(), record.ID, on, "리뷰 부탁드립니다.", "", confirm)

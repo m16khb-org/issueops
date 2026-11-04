@@ -31,7 +31,7 @@ func TestValidatePreflightFuzzWithDepsCoversSuccessAndSetupFailure(t *testing.T)
 			return 0, "", ""
 		},
 		run: func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
-			return preflightFuzzStep(t, label, command, preflight.PreflightResult{
+			return preflightFuzzStep(t, label, command, preflight.Result{
 				OK: true,
 				CommitStyleHints: map[string]any{
 					"conventional_subjects": 1,
@@ -95,7 +95,7 @@ func TestValidatePreflightFuzzWithDepsCoversGitCommandParseAndContractFailures(t
 
 	deps = preflightFuzzTestDeps(t, tempRepo)
 	deps.run = func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
-		return preflightFuzzStep(t, label, command, preflight.PreflightResult{
+		return preflightFuzzStep(t, label, command, preflight.Result{
 			OK:               true,
 			CommitStyleHints: map[string]any{"conventional_subjects": 1, "lore_bodies": 0},
 			SecretLikePaths:  nil,
@@ -117,7 +117,7 @@ func preflightFuzzTestDeps(t *testing.T, tempRepo string) preflightFuzzValidatio
 			return 0, "", ""
 		},
 		run: func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
-			return preflightFuzzStep(t, label, command, preflight.PreflightResult{
+			return preflightFuzzStep(t, label, command, preflight.Result{
 				OK: true,
 				CommitStyleHints: map[string]any{
 					"conventional_subjects": 1,
@@ -129,7 +129,7 @@ func preflightFuzzTestDeps(t *testing.T, tempRepo string) preflightFuzzValidatio
 	}
 }
 
-func preflightFuzzStep(t *testing.T, label string, command []string, payload preflight.PreflightResult) selfverify.StepResult {
+func preflightFuzzStep(t *testing.T, label string, command []string, payload preflight.Result) selfverify.StepResult {
 	t.Helper()
 	b, err := json.Marshal(payload)
 	if err != nil {

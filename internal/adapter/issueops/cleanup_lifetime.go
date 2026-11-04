@@ -72,10 +72,10 @@ func (l cleanupLifetime) Drain(ctx context.Context) (cleanupapp.CleanupLifetime,
 	return cleanupLifetime{next}, nil
 }
 
-func NewCleanupAttempt(operation model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
+func NewCleanupAttempt(operation model.CleanupOperation) (model.CleanupAttempt, error) {
 	token := make([]byte, 32)
 	if _, err := rand.Read(token); err != nil {
-		return model.IssueOpsCleanupAttempt{}, err
+		return model.CleanupAttempt{}, err
 	}
-	return model.IssueOpsCleanupAttempt{Operation: operation, Token: hex.EncodeToString(token), StartedAt: time.Now().UTC().Format(time.RFC3339Nano)}, nil
+	return model.CleanupAttempt{Operation: operation, Token: hex.EncodeToString(token), StartedAt: time.Now().UTC().Format(time.RFC3339Nano)}, nil
 }

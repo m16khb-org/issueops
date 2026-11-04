@@ -66,7 +66,7 @@ func TestWorkerJobLifecycleIsNoShellStateOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
-	if job.Status != workercontract.WorkerStatusQueued || !job.NoShell || strings.Contains(job.Payload, "secret-value") {
+	if job.Status != workercontract.StatusQueued || !job.NoShell || strings.Contains(job.Payload, "secret-value") {
 		t.Fatalf("unexpected job: %+v", job)
 	}
 	listed, err := ListWorkerJobs()
@@ -77,14 +77,14 @@ func TestWorkerJobLifecycleIsNoShellStateOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cancel: %v", err)
 	}
-	if cancelled.Status != workercontract.WorkerStatusCancelled {
+	if cancelled.Status != workercontract.StatusCancelled {
 		t.Fatalf("not cancelled: %+v", cancelled)
 	}
 	cancelledAgain, err := CancelWorkerJob(job.ID)
 	if err != nil {
 		t.Fatalf("cancel again: %v", err)
 	}
-	if cancelledAgain.Status != workercontract.WorkerStatusCancelled {
+	if cancelledAgain.Status != workercontract.StatusCancelled {
 		t.Fatalf("second cancel should be no-op: %+v", cancelledAgain)
 	}
 }
@@ -126,7 +126,7 @@ func TestWorkerCancelRejectsNonQueuedJobs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	job.Status = workercontract.WorkerStatusSucceeded
+	job.Status = workercontract.StatusSucceeded
 	if err := writeWorkerJob(job); err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestWorkerCancelRejectsNonQueuedJobs(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "cannot be cancelled from status succeeded") {
 		t.Fatalf("cancel succeeded job error = %v", err)
 	}
-	if cancelled.Status != workercontract.WorkerStatusSucceeded {
+	if cancelled.Status != workercontract.StatusSucceeded {
 		t.Fatalf("cancel should preserve succeeded status: %+v", cancelled)
 	}
 }
@@ -168,14 +168,14 @@ func TestWorkerRunReadOnlyJobExecutesPolicyAllowedCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("worker run: %v", err)
 	}
-	if job.Status != workercontract.WorkerStatusSucceeded || job.Result == nil || job.Result.Stdout != "worker\n" {
+	if job.Status != workercontract.StatusSucceeded || job.Result == nil || job.Result.Stdout != "worker\n" {
 		t.Fatalf("unexpected worker run job: %+v", job)
 	}
 	stored, err := ReadWorkerJob(job.ID)
 	if err != nil {
 		t.Fatalf("read stored job: %v", err)
 	}
-	if stored.Status != workercontract.WorkerStatusSucceeded || stored.Result == nil || stored.Result.ExitCode != 0 {
+	if stored.Status != workercontract.StatusSucceeded || stored.Result == nil || stored.Result.ExitCode != 0 {
 		t.Fatalf("stored job missing result: %+v", stored)
 	}
 }
@@ -194,7 +194,7 @@ func TestWorkerRunReadOnlyDeniedCommandFailsJobWithoutMarker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("worker run denied: %v", err)
 	}
-	if job.Status != workercontract.WorkerStatusFailed || job.Result == nil || job.Result.Executed || job.Result.ExitCode != 3 {
+	if job.Status != workercontract.StatusFailed || job.Result == nil || job.Result.Executed || job.Result.ExitCode != 3 {
 		t.Fatalf("expected denied failed job without execution: %+v", job)
 	}
 	if !strings.Contains(strings.Join(job.Result.Policy.DenyReasons, ","), "write_not_allowed") {
@@ -214,7 +214,7 @@ func TestWorkerDetectStuckJobsMarksDeadPIDAsFailed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	job.Status = workercontract.WorkerStatusRunning
+	job.Status = workercontract.StatusRunning
 	job.StartedAt = "2020-01-01T00:00:00Z"
 	// Use a PID that is extremely unlikely to exist (max pid_t on most
 	// systems is 2^22 ~ 4M; 99999999 is far beyond that and kill(2)
@@ -238,7 +238,7 @@ func TestWorkerDetectStuckJobsMarksDeadPIDAsFailed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored.Status != workercontract.WorkerStatusFailed {
+	if stored.Status != workercontract.StatusFailed {
 		t.Fatalf("expected status failed, got %s", stored.Status)
 	}
 	if !strings.Contains(stored.SafetyNotice, "stuck") {
@@ -264,7 +264,7 @@ func TestWorkerDetectStuckJobsSkipsAlivePID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	job.Status = workercontract.WorkerStatusRunning
+	job.Status = workercontract.StatusRunning
 	job.StartedAt = "2020-01-01T00:00:00Z"
 	job.PID = os.Getpid()
 	job.UpdatedAt = "2020-01-01T00:00:00Z"
@@ -294,7 +294,7 @@ func TestWorkerConcurrentCancelAndRunDoesNotLoseUpdates(t *testing.T) {
 	}
 
 	errCh := make(chan error, 2)
-	resultCh := make(chan workercontract.WorkerJob, 2)
+	resultCh := make(chan workercontract.Job, 2)
 
 	go func() {
 		cj, e := CancelWorkerJob(job.ID)
@@ -307,7 +307,7 @@ func TestWorkerConcurrentCancelAndRunDoesNotLoseUpdates(t *testing.T) {
 		errCh <- e
 	}()
 
-	var results []workercontract.WorkerJob
+	var results []workercontract.Job
 	for i := range 2 {
 		results = append(results, <-resultCh)
 		if e := <-errCh; e != nil {
@@ -317,7 +317,7 @@ func TestWorkerConcurrentCancelAndRunDoesNotLoseUpdates(t *testing.T) {
 
 	cancelledCount := 0
 	for _, r := range results {
-		if r.Status == workercontract.WorkerStatusCancelled {
+		if r.Status == workercontract.StatusCancelled {
 			cancelledCount++
 		}
 	}
@@ -329,7 +329,7 @@ func TestWorkerConcurrentCancelAndRunDoesNotLoseUpdates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if final.Status != workercontract.WorkerStatusCancelled {
+	if final.Status != workercontract.StatusCancelled {
 		t.Fatalf("expected final status cancelled, got %s", final.Status)
 	}
 }

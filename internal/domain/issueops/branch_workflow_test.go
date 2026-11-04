@@ -66,7 +66,7 @@ func TestValidatePreparationParentPathRequiresAbsolute(t *testing.T) {
 }
 
 func TestAdoptPreparedBranchBindsOnlyBranchlessLinkedCycle(t *testing.T) {
-	linked := model.IssueOpsRecord{IssueURL: "https://example.com/o/r/issues/1"}
+	linked := model.Record{IssueURL: "https://example.com/o/r/issues/1"}
 
 	adopted, err := AdoptPreparedBranch(linked, linked.IssueURL, "feature/x")
 	if err != nil || adopted.Branch != "feature/x" {
@@ -83,12 +83,12 @@ func TestAdoptPreparedBranchBindsOnlyBranchlessLinkedCycle(t *testing.T) {
 
 	cases := []struct {
 		name   string
-		record model.IssueOpsRecord
+		record model.Record
 		url    string
 		branch string
 		want   string
 	}{
-		{"unlinked", model.IssueOpsRecord{IssueURL: "  "}, "u", "b", "issue must be linked before branch prepare"},
+		{"unlinked", model.Record{IssueURL: "  "}, "u", "b", "issue must be linked before branch prepare"},
 		{"issue mismatch", linked, "https://other", "b", "issue_url does not match linked IssueOps issue"},
 		{"branch mismatch", same, linked.IssueURL, "feature/y", "branch does not match IssueOps record branch"},
 	}
@@ -104,10 +104,10 @@ func TestAdoptPreparedBranchBindsOnlyBranchlessLinkedCycle(t *testing.T) {
 }
 
 func TestValidatePreparationUmbrellaAllowsMatchingOrUnbranchedUmbrella(t *testing.T) {
-	if err := ValidatePreparationUmbrella(model.IssueOpsRecord{}, "child", "main"); err != nil {
+	if err := ValidatePreparationUmbrella(model.Record{}, "child", "main"); err != nil {
 		t.Fatalf("branchless umbrella: %v", err)
 	}
-	umbrella := model.IssueOpsRecord{ID: "u-1", Branch: " feature/umbrella "}
+	umbrella := model.Record{ID: "u-1", Branch: " feature/umbrella "}
 	if err := ValidatePreparationUmbrella(umbrella, "child", "feature/umbrella"); err != nil {
 		t.Fatalf("matching base: %v", err)
 	}
@@ -123,9 +123,9 @@ func TestValidatePreparationUmbrellaAllowsMatchingOrUnbranchedUmbrella(t *testin
 }
 
 func TestApplyBranchPreparationRecordsRequestWithoutMutatingInput(t *testing.T) {
-	input := model.IssueOpsRecord{ID: "r", UpdatedAt: "old"}
-	steps := []model.IssueOpsBranchPrepareStep{{}}
-	req := model.IssueOpsBranchPrepareRequest{
+	input := model.Record{ID: "r", UpdatedAt: "old"}
+	steps := []model.BranchPrepareStep{{}}
+	req := model.BranchPrepareRequest{
 		Provider: "github", IssueURL: "u", Branch: "b", BaseBranch: "main", BaseSHA: "sha",
 		ParentWorktree: "/p", RemoteBranchURL: "rb", LinkVerified: true,
 	}
@@ -141,19 +141,19 @@ func TestApplyBranchPreparationRecordsRequestWithoutMutatingInput(t *testing.T) 
 	}
 }
 
-func retargetableRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: " main ", Retargets: []model.IssueOpsBranchRetarget{{ToBase: "main"}}},
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: " https://example.com/pr/1 ", TargetBranch: "main"},
+func retargetableRecord() model.Record {
+	return model.Record{
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: " main ", Retargets: []model.BranchRetarget{{ToBase: "main"}}},
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: " https://example.com/pr/1 ", TargetBranch: "main"},
 	}
 }
 
 func TestRetargetRequiresHolderWithoutExecution(t *testing.T) {
-	required, err := RetargetRequiresHolder(model.IssueOpsRecord{})
+	required, err := RetargetRequiresHolder(model.Record{})
 	if err != nil || required {
 		t.Fatalf("no execution = %v, %v", required, err)
 	}
-	_, err = RetargetRequiresHolder(model.IssueOpsRecord{Execution: &model.Execution{}})
+	_, err = RetargetRequiresHolder(model.Record{Execution: &model.Execution{}})
 	if err == nil || !strings.HasPrefix(err.Error(), "invalid IssueOps execution v1 record: ") {
 		t.Fatalf("invalid execution error = %v", err)
 	}
@@ -185,7 +185,7 @@ func TestValidateRetargetRecordRequiresPreparedBranchArtifactAndNewBase(t *testi
 	blankURL := retargetableRecord()
 	blankURL.RemoteArtifact.URL = "  "
 	for name, tc := range map[string]struct {
-		record model.IssueOpsRecord
+		record model.Record
 		base   string
 		want   string
 	}{
@@ -201,13 +201,13 @@ func TestValidateRetargetRecordRequiresPreparedBranchArtifactAndNewBase(t *testi
 }
 
 func TestValidateRetargetArtifactDetectsConcurrentChange(t *testing.T) {
-	current := model.IssueOpsRemoteArtifactVerification{URL: "u", Labels: []string{"a"}}
-	same := model.IssueOpsRemoteArtifactVerification{URL: "u", Labels: []string{"a"}}
+	current := model.RemoteArtifactVerification{URL: "u", Labels: []string{"a"}}
+	same := model.RemoteArtifactVerification{URL: "u", Labels: []string{"a"}}
 	if err := ValidateRetargetArtifact(&same, current); err != nil {
 		t.Fatalf("equal artifact: %v", err)
 	}
-	changed := model.IssueOpsRemoteArtifactVerification{URL: "u", Labels: []string{"b"}}
-	for name, observed := range map[string]*model.IssueOpsRemoteArtifactVerification{"nil": nil, "changed": &changed} {
+	changed := model.RemoteArtifactVerification{URL: "u", Labels: []string{"b"}}
+	for name, observed := range map[string]*model.RemoteArtifactVerification{"nil": nil, "changed": &changed} {
 		if err := ValidateRetargetArtifact(observed, current); !errors.Is(err, ErrRetargetObservationStale) {
 			t.Errorf("%s: %v", name, err)
 		}
@@ -265,7 +265,7 @@ func TestApplyBranchRetargetAppendsHistoryAndLeavesInputUntouched(t *testing.T) 
 	if got.BranchPrepare.BaseBranch != "develop" || got.RemoteArtifact.TargetBranch != "develop" || got.UpdatedAt != "upd" {
 		t.Fatalf("retarget not applied: %+v %+v", got.BranchPrepare, got.RemoteArtifact)
 	}
-	want := model.IssueOpsBranchRetarget{FromBase: "main", ToBase: "develop", Reason: "why", ArtifactURL: "https://example.com/pr/1", ObservedAt: "obs"}
+	want := model.BranchRetarget{FromBase: "main", ToBase: "develop", Reason: "why", ArtifactURL: "https://example.com/pr/1", ObservedAt: "obs"}
 	history := got.BranchPrepare.Retargets
 	if len(history) != 2 || history[0].ToBase != "main" || history[1] != want {
 		t.Fatalf("history = %+v", history)

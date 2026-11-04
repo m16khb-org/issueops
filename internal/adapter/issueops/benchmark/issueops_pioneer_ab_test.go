@@ -15,13 +15,13 @@ import (
 // regression gate for the scoring path, not proof that issueops invoked the
 // skills (the plan's honesty rule: unmeasured != failing).
 
-func pioneerABFixturesForTest(t *testing.T) []benchmark.IssueOpsBenchmarkFixture {
+func pioneerABFixturesForTest(t *testing.T) []benchmark.Fixture {
 	t.Helper()
 	fixtures, err := LoadIssueOpsBenchmarkFixtures(filepath.Join("..", "..", "..", "..", "testdata", "issueops", "fixtures"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var pioneers []benchmark.IssueOpsBenchmarkFixture
+	var pioneers []benchmark.Fixture
 	for _, fixture := range fixtures {
 		if strings.HasPrefix(fixture.ID, "pioneer-") {
 			pioneers = append(pioneers, fixture)
@@ -67,9 +67,9 @@ func pioneerABEvidenceForTest(target string) string {
 	}
 }
 
-func pioneerABRunForTest(t *testing.T, fixtures []benchmark.IssueOpsBenchmarkFixture, withEvidence bool) benchmark.IssueOpsBenchmarkRunResult {
+func pioneerABRunForTest(t *testing.T, fixtures []benchmark.Fixture, withEvidence bool) benchmark.RunResult {
 	t.Helper()
-	artifacts := make(map[string]benchmark.IssueOpsBenchmarkArtifact, len(fixtures))
+	artifacts := make(map[string]benchmark.Artifact, len(fixtures))
 	for _, fixture := range fixtures {
 		artifact := completeBenchmarkArtifactForTest()
 		if withEvidence {
@@ -117,10 +117,10 @@ func TestPioneerDimensionAbsenceIsNotARegression(t *testing.T) {
 	pioneers := pioneerABFixturesForTest(t)
 	baseline := pioneerABRunForTest(t, pioneers, true)
 
-	workflowOnly := benchmark.IssueOpsBenchmarkFixture{ID: "workflow-only"}
+	workflowOnly := benchmark.Fixture{ID: "workflow-only"}
 	candidate, err := RunIssueOpsBenchmark(IssueOpsBenchmarkRunRequest{
-		Fixtures:  []benchmark.IssueOpsBenchmarkFixture{workflowOnly},
-		Artifacts: map[string]benchmark.IssueOpsBenchmarkArtifact{"workflow-only": completeBenchmarkArtifactForTest()},
+		Fixtures:  []benchmark.Fixture{workflowOnly},
+		Artifacts: map[string]benchmark.Artifact{"workflow-only": completeBenchmarkArtifactForTest()},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +140,7 @@ func TestPioneerGateRejectsSignatureRegression(t *testing.T) {
 
 	// Candidate drops one fixture's signature: the gate must catch the
 	// pioneer dimension regression and discard the candidate.
-	artifacts := make(map[string]benchmark.IssueOpsBenchmarkArtifact, len(fixtures))
+	artifacts := make(map[string]benchmark.Artifact, len(fixtures))
 	for i, fixture := range fixtures {
 		artifact := completeBenchmarkArtifactForTest()
 		artifact.PioneerSkillEvidence = pioneerABEvidenceForTest(fixture.PioneerSkillTarget)

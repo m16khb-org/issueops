@@ -82,7 +82,7 @@ func TestRunPolicyRunReturnsDeniedPolicyError(t *testing.T) {
 
 	err := runPolicyRun([]string{"--read-only", "--workspace-root", repo, "--cwd", repo, "--", "sh", "-c", "true"})
 
-	var denied policy.PolicyDeniedError
+	var denied policy.DeniedError
 	if !errors.As(err, &denied) {
 		t.Fatalf("expected policy denied error, got %T %v", err, err)
 	}

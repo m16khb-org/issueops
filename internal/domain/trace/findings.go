@@ -2,7 +2,7 @@ package trace
 
 import (
 	"issueops/internal/domain/policy"
-	traceclassification "issueops/internal/domain/traceclassification"
+	"issueops/internal/domain/traceclassification"
 	"sort"
 	"strings"
 )

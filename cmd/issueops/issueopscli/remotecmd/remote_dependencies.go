@@ -19,9 +19,9 @@ type Command struct {
 type RemoteDeps struct {
 	ReconcileChild               func(context.Context, string, remoteapp.ChildReconcileCommand, remoteapp.AncestryObserver) (issueopscontract.ChildReconcileResult, error)
 	CreateChild                  func(context.Context, string, remoteapp.ChildCreateCommand, remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error)
-	VerifyRemoteArtifact         func(context.Context, string, string, issueopscontract.IssueOpsRemoteArtifactVerificationRequest, issueopscontract.IssueOpsActor, remoteapp.ArtifactLiveVerifier, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error)
-	CloseRemoteIssue             func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)
-	ReflectRemoteCompletion      func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error)
+	VerifyRemoteArtifact         func(context.Context, string, string, issueopscontract.RemoteArtifactVerificationRequest, issueopscontract.Actor, remoteapp.ArtifactLiveVerifier, remoteapp.AncestryObserver) (issueopscontract.Record, error)
+	CloseRemoteIssue             func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.Record, port.IssueProviderCloseIssueResult, error)
+	ReflectRemoteCompletion      func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.Record, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error)
 	MergeRemotePullRequest       func(ctx context.Context, stateRoot, id, method string, confirm bool) (issueopscontract.RemoteMergeResult, error)
 	MarkRemotePullRequestReady   func(ctx context.Context, stateRoot, id string, confirm bool) (issueopscontract.RemoteReadyResult, error)
 	CommentRemote                func(ctx context.Context, stateRoot, id, on, body, expectedSHA256 string, confirm bool) (issueopscontract.RemoteCommentResult, error)
@@ -31,11 +31,11 @@ type RemoteDeps struct {
 	MilestoneRemote              func(ctx context.Context, stateRoot, id, on, title string, confirm bool) (issueopscontract.RemoteMilestoneResult, error)
 	CreateIssue                  func(context.Context, string, remoteapp.IssueCreateCommand, remoteapp.IssueLiveVerifier) (remoteapp.IssueCreateResult, error)
 	ReadScoreSummaryFile         func(string) (string, error)
-	ReconcileIssueCreate         func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)
+	ReconcileIssueCreate         func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueCreateReconcileResult, error)
 	CreatePublication            func(context.Context, string, remoteapp.PublicationInput, issueopscontract.RemotePullRequestCreateHandler, remoteapp.AncestryObserver) (remoteapp.PublicationResult, error)
 	IssueOpsStateRoot            func() string
 	ObserveNativeProcessAncestry func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
-	ReflectReviewFindings        func(ctx context.Context, stateRoot, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
-	SyncRemoteBody               func(context.Context, string, remoteapp.BodySyncInput, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error)
+	ReflectReviewFindings        func(ctx context.Context, stateRoot, id, providerOverride string, confirm bool, actor issueopscontract.Actor, observe remoteapp.AncestryObserver) (issueopscontract.Record, port.IssueProviderUpdateIssueBodySectionResult, error)
+	SyncRemoteBody               func(context.Context, string, remoteapp.BodySyncInput, remoteapp.AncestryObserver) (issueopscontract.Record, bodysynccontract.Result, error)
 	SyncIssueGraph               func(context.Context, string, string, bool) (map[string]any, error)
 }

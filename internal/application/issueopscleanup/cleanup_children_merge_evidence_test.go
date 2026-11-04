@@ -12,11 +12,11 @@ import (
 // 만들 수 없다. 그 사이클의 자식이 원격에서 이미 모두 닫혀 있다면 고아 자식
 // 위험이 없으므로 정리가 진행되어야 한다(#129 AC-05).
 func TestCloseChildrenAcceptsAlreadyClosedChildrenWithoutParentMergeEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
-		IssueLinks: []model.IssueOpsIssueLink{
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/79", Provider: "github"},
 			{Type: "child", URL: "https://github.com/acme/repo/issues/80", Provider: "github"},
 		},
@@ -24,7 +24,7 @@ func TestCloseChildrenAcceptsAlreadyClosedChildrenWithoutParentMergeEvidence(t *
 	store := newCloseChildrenStoreForTest(record)
 	store.provider.previewState = "closed"
 
-	result, err := ByID(store.store(), t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{
+	result, err := ByID(store.store(), t.TempDir(), record.ID, model.CloseChildrenRequest{
 		Merged:                 false,
 		MergeEvidenceRequested: true,
 		Confirm:                true,
@@ -48,11 +48,11 @@ func TestCloseChildrenAcceptsAlreadyClosedChildrenWithoutParentMergeEvidence(t *
 // 자식이 하나라도 원격에서 열려 있으면 차단은 유지된다. 열린 자식을 부모 정리와
 // 함께 닫으면 그 작업이 검토 없이 사라진다(#129 AC-06).
 func TestCloseChildrenRejectsOpenChildWithoutParentMergeEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
-		IssueLinks: []model.IssueOpsIssueLink{
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/79", Provider: "github"},
 			{Type: "child", URL: "https://github.com/acme/repo/issues/80", Provider: "github"},
 		},
@@ -63,7 +63,7 @@ func TestCloseChildrenRejectsOpenChildWithoutParentMergeEvidence(t *testing.T) {
 		"https://github.com/acme/repo/issues/80": "open",
 	}
 
-	result, err := ByID(store.store(), t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{
+	result, err := ByID(store.store(), t.TempDir(), record.ID, model.CloseChildrenRequest{
 		Merged:                 false,
 		MergeEvidenceRequested: true,
 		Confirm:                true,
@@ -79,18 +79,18 @@ func TestCloseChildrenRejectsOpenChildWithoutParentMergeEvidence(t *testing.T) {
 // 원격 상태를 읽지 못하면 통과가 아니라 거부다. 미상을 통과로 다루면 게이트가
 // 네트워크 실패 한 번으로 무력해진다.
 func TestCloseChildrenRejectsUnknownChildStateWithoutParentMergeEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
-		IssueLinks: []model.IssueOpsIssueLink{
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/79", Provider: "github"},
 		},
 	}
 	store := newCloseChildrenStoreForTest(record)
 	store.provider.previewState = ""
 
-	if _, err := ByID(store.store(), t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{
+	if _, err := ByID(store.store(), t.TempDir(), record.ID, model.CloseChildrenRequest{
 		Merged:                 false,
 		MergeEvidenceRequested: true,
 		Confirm:                true,
@@ -102,18 +102,18 @@ func TestCloseChildrenRejectsUnknownChildStateWithoutParentMergeEvidence(t *test
 // --merged를 요청하지 않은 호출은 원격을 조회하지 않는다. 대체 증거 탐색은
 // 운영자가 정리 의도를 명시했을 때만 일어난다.
 func TestCloseChildrenWithoutRequestDoesNotProbeRemote(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
-		IssueLinks: []model.IssueOpsIssueLink{
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/79", Provider: "github"},
 		},
 	}
 	store := newCloseChildrenStoreForTest(record)
 	store.provider.previewState = "closed"
 
-	if _, err := ByID(store.store(), t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{
+	if _, err := ByID(store.store(), t.TempDir(), record.ID, model.CloseChildrenRequest{
 		Merged: false, MergeEvidenceRequested: false, Confirm: true,
 	}); err == nil {
 		t.Fatal("expected the merge evidence gate to reject the request")
@@ -125,12 +125,12 @@ func TestCloseChildrenWithoutRequestDoesNotProbeRemote(t *testing.T) {
 
 // 부모 머지 증거가 검증된 경우에는 종전 경로가 그대로 쓰인다.
 func TestCloseChildrenKeepsParentMergeEvidenceBasis(t *testing.T) {
-	record := model.IssueOpsRecord{
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+	record := model.Record{
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
 		ID:             "io-umbrella",
 		Repo:           "/repo",
 		IssueURL:       "https://github.com/acme/repo/issues/78",
-		IssueLinks: []model.IssueOpsIssueLink{
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/79", Provider: "github"},
 		},
 	}
@@ -139,7 +139,7 @@ func TestCloseChildrenKeepsParentMergeEvidenceBasis(t *testing.T) {
 		OK: true, Provider: "github", HierarchyVerified: true, Closed: true, State: "closed",
 	}
 
-	result, err := ByID(store.store(), t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{
+	result, err := ByID(store.store(), t.TempDir(), record.ID, model.CloseChildrenRequest{
 		Merged: true, MergeEvidenceRequested: true, Confirm: true,
 	})
 	if err != nil {

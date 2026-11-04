@@ -9,14 +9,14 @@ import (
 
 type Source interface {
 	ResolveRoot(string) string
-	TargetFiles(string, guardcontract.GuardCheckRequest) []string
+	TargetFiles(string, guardcontract.CheckRequest) []string
 	ExistingSymbols(string, []string) map[string][]string
 	ReadFile(root, rel string, staged bool) (string, bool)
 }
 
 type Service struct{ Source Source }
 
-func (service Service) Check(request guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult {
+func (service Service) Check(request guardcontract.CheckRequest) guardcontract.CheckResult {
 	root := service.Source.ResolveRoot(request.RepoRoot)
 	files := service.Source.TargetFiles(root, request)
 	existingSymbols := service.Source.ExistingSymbols(root, files)
@@ -30,7 +30,7 @@ func (service Service) Check(request guardcontract.GuardCheckRequest) guardcontr
 		observed = append(observed, guarddomain.FileObservation{Path: rel, Content: content, Read: ok})
 	}
 	analysis := guarddomain.Analyze(observed, existingSymbols)
-	return guardcontract.GuardCheckResult{
+	return guardcontract.CheckResult{
 		OK: analysis.OK, RepoRoot: root, Mode: guarddomain.Mode(request), CheckedFiles: files,
 		Findings: analysis.Findings, Summary: analysis.Summary, Warnings: skippedFileWarnings(request.Files, files),
 	}
@@ -56,7 +56,7 @@ func skippedFileWarnings(requested, checked []string) []string {
 	return []string{"not checked: " + strings.Join(skipped, ", ") + " (guard reads repo-relative source, config, and docs files plus secret-like paths; other extensions, absolute paths, and paths outside the repo are skipped)"}
 }
 
-func (service Service) CheckForCommand(request guardcontract.GuardCheckRequest) (guardcontract.GuardCheckResult, error) {
+func (service Service) CheckForCommand(request guardcontract.CheckRequest) (guardcontract.CheckResult, error) {
 	result := service.Check(request)
 	return result, guarddomain.BlockingError(result)
 }

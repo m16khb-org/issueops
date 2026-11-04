@@ -18,7 +18,7 @@ import (
 type RemoteBranchCleaner struct {
 	Records    port.CleanupRemoteBranchRecords
 	Acquire    func(context.Context, string) (CleanupLifetime, error)
-	NewAttempt func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
+	NewAttempt func(model.CleanupOperation) (model.CleanupAttempt, error)
 	Preview    RemoteBranchPreviewer
 	Now        func() time.Time
 }
@@ -80,7 +80,7 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 }
 
 // planRun previews the branch and plans an absent or present remote branch. stop reports that Run must return result and err as is.
-func (s RemoteBranchCleaner) planRun(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult, bool, error) {
+func (s RemoteBranchCleaner) planRun(ctx context.Context, record model.Record, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult, bool, error) {
 	inventory, result := s.Preview.Plan(ctx, record, req)
 	if len(result.Missing) > 0 {
 		result.NextCommand = domain.CleanupFinishRemedyCommand(record.ID, result.Missing)
@@ -97,7 +97,7 @@ func (s RemoteBranchCleaner) planRun(ctx context.Context, record model.IssueOpsR
 }
 
 // planAbsentBranch handles an already-absent remote branch. stop reports that Run must return the result as is.
-func planAbsentBranch(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool) {
+func planAbsentBranch(record model.Record, req model.CleanupRemoteBranchRequest, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool) {
 	// Absence still precedes confirmation and fingerprint. Only an explicit
 	// apply may release a crashed same-operation attempt; preview never writes.
 	result.AlreadyAbsent = true
@@ -146,7 +146,7 @@ func cleanupStatusAfterRemoteBranch(id string) string {
 
 // planPresentBranch fingerprints a present remote branch and validates the apply request.
 // On a fingerprint failure it returns the bare failed result, matching Run's contract.
-func planPresentBranch(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool, error) {
+func planPresentBranch(record model.Record, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool, error) {
 	fingerprint, err := cleanupRemoteBranchFingerprint(inventory)
 	if err != nil {
 		return model.CleanupRemoteBranchResult{OK: false, ID: req.ID}, true, err

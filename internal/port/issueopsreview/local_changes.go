@@ -3,7 +3,7 @@ package issueopsreview
 import model "issueops/internal/contract/issueops"
 
 type LocalChangeSource struct {
-	BaseRef     func(model.IssueOpsRecord, string) string
+	BaseRef     func(model.Record, string) string
 	Paths       func(string, string) ([]string, bool)
 	Fingerprint func(string, []string) (string, bool)
 }

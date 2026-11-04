@@ -14,7 +14,7 @@ import (
 	"issueops/internal/port"
 )
 
-var bucket = fmt.Sprintf("issueops_v%d", issueopscontract.IssueOpsSchemaVersion)
+var bucket = fmt.Sprintf("issueops_v%d", issueopscontract.SchemaVersion)
 
 type Store struct {
 	Scope    string
@@ -27,11 +27,11 @@ type ScanDiagnostic struct {
 }
 
 type Mutation func(
-	issueopscontract.IssueOpsRecord,
-) (issueopscontract.IssueOpsRecord, bool, error)
+	issueopscontract.Record,
+) (issueopscontract.Record, bool, error)
 
 type RelatedMutation func(
-	issueopscontract.IssueOpsRecord,
+	issueopscontract.Record,
 	[]byte,
 	bool,
 ) ([]byte, bool, error)
@@ -40,20 +40,20 @@ func (Store) Read(
 	ctx context.Context,
 	stateRoot string,
 	id string,
-) (issueopscontract.IssueOpsRecord, error) {
+) (issueopscontract.Record, error) {
 	if err := ctx.Err(); err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
 	id, err := NormalizeID(id)
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false}, err
+		return issueopscontract.Record{OK: false}, err
 	}
 	data, found, err := sqlstore.GetExisting(stateRoot, bucket, id)
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
 	if !found {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, notFound(ctx, stateRoot, id)
+		return issueopscontract.Record{OK: false, ID: id}, notFound(ctx, stateRoot, id)
 	}
 	return Decode(id, data)
 }
@@ -83,7 +83,7 @@ func notFound(ctx context.Context, stateRoot, id string) error {
 
 // cycleOutcomeBucket mirrors the bucket cleanup writes a deleted cycle's
 // outcome to (adapter/issueops); both derive from the outcome schema version.
-var cycleOutcomeBucket = fmt.Sprintf("issueops_cycle_outcome_v%d", issueopscontract.IssueOpsCycleOutcomeSchemaVersion)
+var cycleOutcomeBucket = fmt.Sprintf("issueops_cycle_outcome_v%d", issueopscontract.CycleOutcomeSchemaVersion)
 
 // retiredOutcome names how a deleted cycle ended. QA: after abandon, `status
 // --id` said only "file does not exist", which reads like a failure rather
@@ -92,7 +92,7 @@ func retiredOutcome(data []byte, ok bool, err error) string {
 	if err != nil || !ok {
 		return ""
 	}
-	var outcome issueopscontract.IssueOpsCycleOutcome
+	var outcome issueopscontract.CycleOutcome
 	if json.Unmarshal(data, &outcome) != nil {
 		return ""
 	}
@@ -113,9 +113,9 @@ func (Store) ListIDs(ctx context.Context, stateRoot string) ([]string, error) {
 func (Store) Scan(
 	ctx context.Context,
 	stateRoot string,
-) ([]issueopscontract.IssueOpsRecord, []ScanDiagnostic, error) {
-	records := []issueopscontract.IssueOpsRecord{}
-	diagnostics, err := (Store{}).ScanEach(ctx, stateRoot, func(record issueopscontract.IssueOpsRecord) error {
+) ([]issueopscontract.Record, []ScanDiagnostic, error) {
+	records := []issueopscontract.Record{}
+	diagnostics, err := (Store{}).ScanEach(ctx, stateRoot, func(record issueopscontract.Record) error {
 		records = append(records, record)
 		return nil
 	})
@@ -128,7 +128,7 @@ func (Store) Scan(
 func (Store) ScanEach(
 	ctx context.Context,
 	stateRoot string,
-	visit func(issueopscontract.IssueOpsRecord) error,
+	visit func(issueopscontract.Record) error,
 ) ([]ScanDiagnostic, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -161,12 +161,12 @@ func (store Store) Update(
 	stateRoot string,
 	id string,
 	mutate Mutation,
-) (issueopscontract.IssueOpsRecord, error) {
+) (issueopscontract.Record, error) {
 	id, database, err := open(ctx, stateRoot, id)
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
-	result := issueopscontract.IssueOpsRecord{OK: false, ID: id}
+	result := issueopscontract.Record{OK: false, ID: id}
 	err = database.WithSpan(store.ObserveSpans(ctx, "update"), func(spanContext context.Context) error {
 		record, err := readLocked(spanContext, database, id)
 		if err != nil {
@@ -200,12 +200,12 @@ func (store Store) UpdateRelated(
 	id string,
 	relatedBucket string,
 	mutate RelatedMutation,
-) (issueopscontract.IssueOpsRecord, error) {
+) (issueopscontract.Record, error) {
 	id, database, err := open(ctx, stateRoot, id)
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
-	result := issueopscontract.IssueOpsRecord{OK: false, ID: id}
+	result := issueopscontract.Record{OK: false, ID: id}
 	err = database.WithSpan(store.ObserveSpans(ctx, "related_update"), func(spanContext context.Context) error {
 		record, err := readLocked(spanContext, database, id)
 		if err != nil {
@@ -230,7 +230,7 @@ func (store Store) UpdateRelated(
 		return err
 	})
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
 	result.OK = true
 	return result, nil
@@ -304,7 +304,7 @@ func (store Store) DeleteIfUnchanged(
 	ctx context.Context,
 	stateRoot string,
 	id string,
-	expected issueopscontract.IssueOpsRecord,
+	expected issueopscontract.Record,
 	relatedBuckets ...string,
 ) error {
 	if err := ctx.Err(); err != nil {
@@ -357,31 +357,31 @@ func readLocked(
 	ctx context.Context,
 	database *sqlstore.DB,
 	id string,
-) (issueopscontract.IssueOpsRecord, error) {
+) (issueopscontract.Record, error) {
 	if err := ctx.Err(); err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
 	data, found, err := database.Get(bucket, id)
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
 	if !found {
 		err := fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
 		if retired := retiredOutcome(database.Get(cycleOutcomeBucket, id)); retired != "" {
 			err = fmt.Errorf("%w; %s", err, retired)
 		}
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
 	record, err := Decode(id, data)
 	if err != nil {
 		return record, err
 	}
 	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
+		return issueopscontract.Record{OK: false, ID: id}, err
 	}
 	if record.CleanupAbandonFailure != nil &&
 		record.CleanupAbandonFailure.Step == "applying" {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, fmt.Errorf(
+		return issueopscontract.Record{OK: false, ID: id}, fmt.Errorf(
 			"cleanup abandon apply is in progress",
 		)
 	}

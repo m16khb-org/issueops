@@ -2,11 +2,11 @@
 // 결과를 읽는 쪽은 그 구현을 알 필요가 없다.
 package issueops
 
-// IssueOpsActor identifies the native host session that is authorized to make
+// Actor identifies the native host session that is authorized to make
 // a durable mutation for one IssueOps cycle. CWD is deliberately part of the
 // request identity: a valid session in the source checkout is not authority
 // for the isolated workspace, and vice versa.
-type IssueOpsActor struct {
+type Actor struct {
 	Host                  string                 `json:"host"`
 	SessionID             string                 `json:"session_id"`
 	AgentID               string                 `json:"agent_id,omitempty"`
@@ -147,7 +147,7 @@ type CleanupAbandonResult struct {
 	// Record는 삭제 대상 레코드 전문이다. C2-F6 예외의 유일한 보존 채널이므로
 	// preview와 apply 양쪽 결과에 담는다 — preview에만 담으면 preview 이후
 	// apply 직전까지의 변경분이 어디에도 남지 않는다.
-	Record *IssueOpsRecord `json:"record,omitempty"`
+	Record *Record `json:"record,omitempty"`
 }
 type CleanupFinishResult struct {
 	OK              bool     `json:"ok"`

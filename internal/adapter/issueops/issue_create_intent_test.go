@@ -18,11 +18,11 @@ func TestIssueCreateIntentPersistsBeforeMutationAndBlocksConcurrentBegin(t *test
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "42-durable-issue"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "42-durable-issue"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := issueopscontract.IssueOpsIssueCreateIntentRequest{
+	request := issueopscontract.IssueCreateIntentRequest{
 		OperationID:      "11111111111111111111111111111111",
 		Provider:         "github",
 		ProjectAuthority: "github.com/acme/repo",
@@ -52,11 +52,11 @@ func TestIssueCreateIntentRetriesOnlyProvenNonInvocation(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "43-retry-issue"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "43-retry-issue"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := issueopscontract.IssueOpsIssueCreateIntentRequest{
+	request := issueopscontract.IssueCreateIntentRequest{
 		OperationID:      "22222222222222222222222222222222",
 		Provider:         "gitlab",
 		ProjectAuthority: "gitlab.example.com/acme/repo",
@@ -67,7 +67,7 @@ func TestIssueCreateIntentRetriesOnlyProvenNonInvocation(t *testing.T) {
 	if _, err := newIssueCreateIntentsForTest(stateRoot).Begin(context.Background(), record.ID, request); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := newIssueCreateIntentsForTest(stateRoot).Outcome(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateOutcome{
+	if _, err := newIssueCreateIntentsForTest(stateRoot).Outcome(context.Background(), record.ID, issueopscontract.IssueCreateOutcome{
 		Status:     issueopscontract.IssueCreateIntentNotInvoked,
 		Failure:    "process start failed",
 		ObservedAt: "2026-08-14T00:01:00Z",
@@ -81,14 +81,14 @@ func TestIssueCreateIntentRetriesOnlyProvenNonInvocation(t *testing.T) {
 	if retried.IssueCreateIntent.Attempt != 2 || retried.IssueCreateIntent.Status != issueopscontract.IssueCreateIntentPending {
 		t.Fatalf("retried intent = %+v", retried.IssueCreateIntent)
 	}
-	if _, err := newIssueCreateIntentsForTest(stateRoot).Outcome(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateOutcome{
+	if _, err := newIssueCreateIntentsForTest(stateRoot).Outcome(context.Background(), record.ID, issueopscontract.IssueCreateOutcome{
 		Status:     issueopscontract.IssueCreateIntentInvokedUnknown,
 		Failure:    "timeout after process start",
 		ObservedAt: "2026-08-14T00:02:00Z",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := newIssueCreateIntentsForTest(stateRoot).Outcome(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateOutcome{
+	if _, err := newIssueCreateIntentsForTest(stateRoot).Outcome(context.Background(), record.ID, issueopscontract.IssueCreateOutcome{
 		Status:     issueopscontract.IssueCreateIntentNotInvoked,
 		Failure:    "invalid downgrade",
 		ObservedAt: "2026-08-14T00:03:00Z",
@@ -104,11 +104,11 @@ func TestCompleteIssueCreateIntentLinksCanonicalURLAtomically(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "44-complete-issue"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "44-complete-issue"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := issueopscontract.IssueOpsIssueCreateIntentRequest{
+	request := issueopscontract.IssueCreateIntentRequest{
 		OperationID:      "33333333333333333333333333333333",
 		Provider:         "github",
 		ProjectAuthority: "github.com/acme/repo",
@@ -144,11 +144,11 @@ func TestCompleteIssueCreateIntentRejectsDifferentProjectAuthority(t *testing.T)
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "45-authority-mismatch"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "45-authority-mismatch"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := issueopscontract.IssueOpsIssueCreateIntentRequest{
+	request := issueopscontract.IssueCreateIntentRequest{
 		OperationID:      "0123456789abcdef0123456789abcdef",
 		Provider:         "github",
 		ProjectAuthority: "github.com/acme/repo",
@@ -182,16 +182,16 @@ func TestIssueCreateIntentRejectedRetryPreservesRawState(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "46-sealed-retry"})
+	record, err := startIssueOpsFixture(root, issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "46-sealed-retry"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	service := newIssueCreateIntentsForTest(root)
-	request := issueopscontract.IssueOpsIssueCreateIntentRequest{OperationID: "0123456789abcdef0123456789abcdef", Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "sealed title", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-09-28T00:00:00Z"}
+	request := issueopscontract.IssueCreateIntentRequest{OperationID: "0123456789abcdef0123456789abcdef", Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "sealed title", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-09-28T00:00:00Z"}
 	if _, err := service.Begin(context.Background(), record.ID, request); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Outcome(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateOutcome{Status: issueopscontract.IssueCreateIntentNotInvoked, Failure: "not started", ObservedAt: "2026-09-28T00:01:00Z"}); err != nil {
+	if _, err := service.Outcome(context.Background(), record.ID, issueopscontract.IssueCreateOutcome{Status: issueopscontract.IssueCreateIntentNotInvoked, Failure: "not started", ObservedAt: "2026-09-28T00:01:00Z"}); err != nil {
 		t.Fatal(err)
 	}
 	db, err := sqlstore.Open(root)
@@ -219,12 +219,12 @@ func TestIssueCreateIntentConcurrentBeginsPersistOnlyOneAttempt(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "47-concurrent-intents"})
+	record, err := startIssueOpsFixture(root, issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "47-concurrent-intents"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	service := newIssueCreateIntentsForTest(root)
-	request := issueopscontract.IssueOpsIssueCreateIntentRequest{OperationID: "0123456789abcdef0123456789abcdef", Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "one issue", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-09-28T00:00:00Z"}
+	request := issueopscontract.IssueCreateIntentRequest{OperationID: "0123456789abcdef0123456789abcdef", Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "one issue", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-09-28T00:00:00Z"}
 	start, results := make(chan struct{}), make(chan error, 6)
 	for range 6 {
 		go func() {
@@ -258,12 +258,12 @@ func TestIssueCreateIntentFailedCompletionDoesNotPartiallyLink(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "47-concurrent-intents"})
+	record, err := startIssueOpsFixture(root, issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "47-concurrent-intents"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	service := newIssueCreateIntentsForTest(root)
-	request := issueopscontract.IssueOpsIssueCreateIntentRequest{OperationID: "0123456789abcdef0123456789abcdef", Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "one issue", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-09-28T00:00:00Z"}
+	request := issueopscontract.IssueCreateIntentRequest{OperationID: "0123456789abcdef0123456789abcdef", Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "one issue", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-09-28T00:00:00Z"}
 	if _, err := service.Begin(context.Background(), record.ID, request); err != nil {
 		t.Fatal(err)
 	}

@@ -8,7 +8,7 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
-func ApplySelfVerifyLLMGate(result contract.SelfAugmentResult, targetScore float64) (contract.SelfAugmentResult, error) {
+func ApplySelfVerifyLLMGate(result contract.Result, targetScore float64) (contract.Result, error) {
 	if result.LLMEval == nil || result.LLMEval.Mode != "gate" {
 		return result, nil
 	}

@@ -11,7 +11,7 @@ type Deps struct {
 	IssueOpsRoot   func() string
 	ResolveTarget  func(string) string
 	Version        string
-	InspectHarness func(string) inspect.InspectInfo
+	InspectHarness func(string) inspect.Info
 }
 
 var deps = defaultDeps()
@@ -21,7 +21,7 @@ func defaultDeps() Deps {
 		IssueOpsRoot:   defaultIssueOpsRoot,
 		ResolveTarget:  defaultResolveTarget,
 		Version:        "dev",
-		InspectHarness: func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
+		InspectHarness: func(string) inspect.Info { return inspect.Info{} },
 	}
 }
 

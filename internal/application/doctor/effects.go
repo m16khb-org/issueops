@@ -11,7 +11,7 @@ import (
 type Effects struct {
 	NormalizeRoot      func(string) (string, error)
 	StateDir           func() string
-	StateDoctor        func() (statecontract.StateDoctorResult, error)
+	StateDoctor        func() (statecontract.DoctorResult, error)
 	ValidateLifecycle  func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error)
 	ProjectDocs        func(string) doctordomain.ProjectDocsObservation
 	RuntimeState       func(string) doctordomain.RuntimeStateObservation

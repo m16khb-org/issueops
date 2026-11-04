@@ -28,7 +28,7 @@ func (service *Service) Record(
 	id string,
 	phase string,
 	skill string,
-	actor issueopscontract.IssueOpsActor,
+	actor issueopscontract.Actor,
 ) (issueopsroutingcontract.Record, error) {
 	if service == nil || service.repository == nil || service.clock == nil || service.paths == nil {
 		return issueopsroutingcontract.Record{OK: false, ID: id}, fmt.Errorf(

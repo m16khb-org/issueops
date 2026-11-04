@@ -13,10 +13,10 @@ type Command struct {
 }
 
 type CleanupDeps struct {
-	Status                                            func(context.Context, string, string, bool, Deps) (issueopscontract.IssueOpsCleanupStatus, error)
-	AddIssueOpsFeedbackWithActor                      func(stateRoot, id, source, body, classification string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	CloseIssueOpsChildren                             func(stateRoot, id string, req issueopscontract.IssueOpsCloseChildrenRequest, deps Deps) (issueopscontract.IssueOpsCloseChildrenResult, error)
+	Status                                            func(context.Context, string, string, bool, Deps) (issueopscontract.CleanupStatus, error)
+	AddIssueOpsFeedbackWithActor                      func(stateRoot, id, source, body, classification string, actor issueopscontract.Actor) (issueopscontract.Record, error)
+	CloseIssueOpsChildren                             func(stateRoot, id string, req issueopscontract.CloseChildrenRequest, deps Deps) (issueopscontract.CloseChildrenResult, error)
 	IssueOpsStateRoot                                 func() string
-	MarkIssueOpsContractFeedbackIssueUpdatedWithActor func(stateRoot, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	MarkIssueOpsContractFeedbackIssueUpdatedWithActor func(stateRoot, id string, actor issueopscontract.Actor) (issueopscontract.Record, error)
 	ObserveNativeProcessAncestry                      func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
 }

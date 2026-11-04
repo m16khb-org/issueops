@@ -2,11 +2,11 @@
 // 결과를 필드로 담아 전달하는 쪽은 그 구현을 알 필요가 없다.
 package executionissue
 
-type ExecutionIssueSnapshotRequest struct {
+type SnapshotRequest struct {
 	Repo string `json:"repo"`
 	URL  string `json:"url"`
 }
-type ExecutionIssueSnapshot struct {
+type Snapshot struct {
 	URL    string `json:"url"`
 	Body   string `json:"body"`
 	State  string `json:"state,omitempty"`

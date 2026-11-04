@@ -13,15 +13,15 @@ type Service struct {
 	Files    port.Files
 	Runs     port.Runs
 	Now      func() time.Time
-	Artifact func(contract.IssueOpsBenchmarkFixture) contract.IssueOpsBenchmarkArtifact
+	Artifact func(contract.Fixture) contract.Artifact
 }
 
-func (s Service) Run(fixturesPath, judge, judgeFile string) (contract.IssueOpsBenchmarkRunResult, error) {
+func (s Service) Run(fixturesPath, judge, judgeFile string) (contract.RunResult, error) {
 	fixtures, err := s.Files.LoadFixtures(fixturesPath)
 	if err != nil {
-		return contract.IssueOpsBenchmarkRunResult{}, err
+		return contract.RunResult{}, err
 	}
-	artifacts := make(map[string]contract.IssueOpsBenchmarkArtifact, len(fixtures))
+	artifacts := make(map[string]contract.Artifact, len(fixtures))
 	for _, fixture := range fixtures {
 		artifacts[fixture.ID] = s.Artifact(fixture)
 	}
@@ -30,21 +30,21 @@ func (s Service) Run(fixturesPath, judge, judgeFile string) (contract.IssueOpsBe
 	case "file":
 		judgeMap, err := s.Files.ReadJudgeMap(judgeFile, fixtures)
 		if err != nil {
-			return contract.IssueOpsBenchmarkRunResult{}, err
+			return contract.RunResult{}, err
 		}
 		if err := s.ValidateJudgeProvenance(judgeMap, result.ID); err != nil {
-			return contract.IssueOpsBenchmarkRunResult{}, err
+			return contract.RunResult{}, err
 		}
 		for i, fixture := range fixtures {
 			result.Scores[i] = domain.MergeScoreWithJudge(result.Scores[i], judgeMap.Scores[fixture.ID])
 		}
 	case "none":
 	default:
-		return contract.IssueOpsBenchmarkRunResult{}, fmt.Errorf("unsupported issueops benchmark judge %q", judge)
+		return contract.RunResult{}, fmt.Errorf("unsupported issueops benchmark judge %q", judge)
 	}
 	result = domain.FinalizeRun(result)
 	if err := s.Runs.Save(result); err != nil {
-		return contract.IssueOpsBenchmarkRunResult{}, err
+		return contract.RunResult{}, err
 	}
 	return result, nil
 }
@@ -60,14 +60,14 @@ func (s Service) ValidateJudgeProvenance(judge contract.IssueOpsJudgeMap, scored
 	return nil
 }
 
-func (s Service) Compare(baselineID, candidateID string) (contract.IssueOpsBenchmarkCompareResult, error) {
+func (s Service) Compare(baselineID, candidateID string) (contract.CompareResult, error) {
 	baseline, err := s.Runs.Read(baselineID)
 	if err != nil {
-		return contract.IssueOpsBenchmarkCompareResult{}, err
+		return contract.CompareResult{}, err
 	}
 	candidate, err := s.Runs.Read(candidateID)
 	if err != nil {
-		return contract.IssueOpsBenchmarkCompareResult{}, err
+		return contract.CompareResult{}, err
 	}
 	return domain.CompareRuns(baseline, candidate), nil
 }

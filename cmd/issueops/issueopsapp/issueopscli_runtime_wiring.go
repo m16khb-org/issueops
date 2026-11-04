@@ -17,60 +17,60 @@ import (
 
 // IssueOps CLI는 사이클 저장소 구현을 알지 않는다. 어댑터를 아는 곳은
 // composition root 하나뿐이다.
-func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
+func newIssueOpsCLIRuntime(stateRoot string) issueopscli.Deps {
 	observer := issueOpsCLIRecordObserver(os.Getenv("TRACEPARENT"), os.Stderr)
 	readiness := newCycleReadiness()
 	changes := newChangeReader()
 	artifacts := issueOpsArtifactHandlers(observer)
 	decisions := issueOpsDecisionHandlers(observer)
 	routing := issueOpsRoutingHandlers(observer)
-	return issueopscli.IssueOpsCLIDeps{
-		AcceptIssueOpsChildWithActor: func(root, parentID, childID string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+	return issueopscli.Deps{
+		AcceptIssueOpsChildWithActor: func(root, parentID, childID string, evidence []string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error) {
 			return newChildValidator(root).Accept(context.Background(), parentID, childID, evidence, &actor)
 		},
 		AddIssueOpsDecisionWithActor: decisions.AddWithActor,
-		DropIssueOpsChildWithActor: func(root, parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+		DropIssueOpsChildWithActor: func(root, parentID, childID, reason string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error) {
 			return newChildValidator(root).Drop(context.Background(), parentID, childID, reason, &actor)
 		},
-		IssueOpsChildStatusWithActor: func(root, id string, repair bool, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStatusResult, error) {
+		IssueOpsChildStatusWithActor: func(root, id string, repair bool, actor issueopscontract.Actor) (issueopscontract.ChildStatusResult, error) {
 			return newChildStatusService(root).Status(context.Background(), id, repair, &actor)
 		},
 		IssueOpsPRReadiness: readiness.PR,
 		IssueOpsNext:        issueOpsNextHandler(artifacts.Staged, observer),
 		IssueOpsStateRoot:   func() string { return stateRoot },
 		IssueOpsStatus:      issueOpsStatusHandler(observer),
-		LinkIssueOpsChildWithActor: func(root, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		LinkIssueOpsChildWithActor: func(root, id, childURL, title string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newIssueLinker(root).Child(context.Background(), id, childURL, title, &actor)
 		},
-		LinkIssueOpsIssueWithActor: func(root, id, issueURL string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		LinkIssueOpsIssueWithActor: func(root, id, issueURL string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newIssueLinker(root).Issue(context.Background(), id, issueURL, &actor)
 		},
-		LinkIssueOpsPlanWithActor: func(root, id, planPath string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		LinkIssueOpsPlanWithActor: func(root, id, planPath string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newWorkspaceLinker(root).Plan(context.Background(), id, planPath, &actor)
 		},
-		LinkIssueOpsRelatedWithActor: func(root, id, linkType, relatedURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		LinkIssueOpsRelatedWithActor: func(root, id, linkType, relatedURL, title string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newIssueLinker(root).Related(context.Background(), id, linkType, relatedURL, title, &actor)
 		},
-		LinkIssueOpsWorktreeWithActor: func(root, id, worktreePath string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		LinkIssueOpsWorktreeWithActor: func(root, id, worktreePath string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newWorkspaceLinker(root).Worktree(context.Background(), id, worktreePath, &actor)
 		},
 		ListIssueOpsCycles: issueOpsInventoryListHandler(observer),
-		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
+		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.ReviewMetricsResult, error) {
 			return (reviewapp.MetricsReader{ReadRecord: issueopscore.ReadIssueOps, Now: time.Now,
 				ListCycleIDs: issueOpsCycleIDLister(observer),
 				ListOutcomes: issueOpsCycleOutcomeLister,
 			}).Read(stateRoot, id, repo)
 		},
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		PrepareIssueOpsBranchWithActor: func(root, id string, req issueopscontract.IssueOpsBranchPrepareRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		PrepareIssueOpsBranchWithActor: func(root, id string, req issueopscontract.BranchPrepareRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newBranchPreparer(root).Prepare(context.Background(), id, req, &actor)
 		},
-		RetargetIssueOpsBranchWithActor: func(stateRoot, id string, req issueopscontract.IssueOpsBranchRetargetRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RetargetIssueOpsBranchWithActor: func(stateRoot, id string, req issueopscontract.BranchRetargetRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newBranchRetargeter(stateRoot, newRemoteVerifier().ObserveTarget).Retarget(context.Background(), id, req, actor)
 		},
 		AwaitIssueOpsBranchLink: func(ctx context.Context, stateRoot string, req issueopscontract.AwaitBranchLinkRequest) (issueopscontract.AwaitBranchLinkResult, error) {
 			return (branchapp.LinkAwaiter{
-				Load: func(id string) (issueopscontract.IssueOpsRecord, error) {
+				Load: func(id string) (issueopscontract.Record, error) {
 					return issueopscore.ReadIssueOps(stateRoot, id)
 				},
 				RemoteRef:             (issueopscore.LinkedBranchRemoteRef{}).Observe,
@@ -80,56 +80,56 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		},
 		PruneIssueOps: issueOpsRetentionPruneHandler(observer),
 		ReadIssueOps:  issueopscore.ReadIssueOps,
-		RecordIssueOpsAISlopCleanEvidenceWithActor: func(root, id string, categories, verification []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsAISlopCleanEvidenceWithActor: func(root, id string, categories, verification []string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{ReviewMutationStore: issueopscore.NewReviewMutationStore(&actor), Refresh: newCyclePhaseService(&actor).Refresh}, root, id, categories, verification)
 		},
-		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newPlanningRecorder(&actor).Compatibility(root, id, req)
 		},
-		RecordIssueOpsArchitectureReviewWithActor: func(root, id string, req reviewcontract.ArchitectureReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsArchitectureReviewWithActor: func(root, id string, req reviewcontract.ArchitectureReviewRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newPlanningRecorder(&actor).Architecture(root, id, req)
 		},
-		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newPlanningRecorder(&actor).DevilsAdvocate(root, id, req)
 		},
-		RecordIssueOpsDomainReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDomainReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsDomainReviewWithActor: func(root, id string, req issueopscontract.DomainReviewRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.RecordDomainReview(issueopscore.NewReviewMutationStore(&actor), root, id, req)
 		},
-		RecordIssueOpsImplementationReviewWithActor: func(root, id string, req issueopscontract.IssueOpsImplementationReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsImplementationReviewWithActor: func(root, id string, req issueopscontract.ImplementationReviewRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.RecordImplementationReview(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)
 		},
-		RecordIssueOpsProjectDocsReviewWithActor: func(root, id string, req issueopscontract.IssueOpsProjectDocsReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsProjectDocsReviewWithActor: func(root, id string, req issueopscontract.ProjectDocsReviewRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{EvidenceReviewStore: issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), ChangedPaths: changes.ChangedPaths, Root: issueopscore.ReviewDocumentPaths{}.Root, RelativePath: issueopscore.ReviewDocumentPaths{}.RelativePath, FileExists: issueopscore.ReviewDocumentPaths{}.FileExists, ProjectDocsPresent: issueopscore.ReviewDocumentPaths{}.ProjectDocsPresent}, root, id, req)
 		},
-		RecordIssueOpsSchemaEvidenceWithActor: func(root, id string, req issueopscontract.IssueOpsSchemaEvidenceRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsSchemaEvidenceWithActor: func(root, id string, req issueopscontract.SchemaEvidenceRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.RecordSchemaEvidence(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)
 		},
-		RecordIssueOpsIntentWithActor: func(root, id string, req issueopscontract.IssueOpsIntentRecordRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsIntentWithActor: func(root, id string, req issueopscontract.IntentRecordRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newPlanningRecorder(&actor).Intent(root, id, req)
 		},
-		RecordIssueOpsPlanPrepWithActor: func(root, id string, req issueopscontract.IssueOpsPlanPrepRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsPlanPrepWithActor: func(root, id string, req issueopscontract.PlanPrepRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newPlanningRecorder(&actor).PlanPrep(root, id, req)
 		},
 		RecordIssueOpsRoutingWithActor: routing.Record,
-		RegressIssueOpsForReplanWithActor: func(root, id, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RegressIssueOpsForReplanWithActor: func(root, id, reason string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newPlanningRecorder(&actor).Regress(root, id, reason)
 		},
-		RejectIssueOpsChildWithActor: func(root, parentID, childID, reason string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+		RejectIssueOpsChildWithActor: func(root, parentID, childID, reason string, evidence []string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error) {
 			return newChildValidator(root).Reject(context.Background(), parentID, childID, reason, evidence, &actor)
 		},
-		ResolveIssueOpsFeedbackWithActor: func(root, id string, index int, resolution string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		ResolveIssueOpsFeedbackWithActor: func(root, id string, index int, resolution string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.ResolveFeedback(issueopscore.NewReviewMutationStore(&actor), root, id, index, resolution)
 		},
 		ScoreLiveRoutingFidelity:    routing.Score,
 		StageIssueOpsArtifact:       artifacts.Stage,
 		StagedIssueOpsArtifactNames: artifacts.Names,
-		StartIssueOps: func(stateRoot string, req issueopscontract.IssueOpsStartRequest) (issueopscontract.IssueOpsRecord, error) {
+		StartIssueOps: func(stateRoot string, req issueopscontract.StartRequest) (issueopscontract.Record, error) {
 			return (branchapp.Starter{Records: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Retired: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{RunGit: branchpreflight.GitCmd}, IsGitRepo: func(repo string) bool {
 				code, _, _ := branchpreflight.GitCmd(repo, "rev-parse", "--git-dir")
 				return code == 0
 			}, Now: time.Now}).Start(context.Background(), req)
 		},
-		StartIssueOpsChildWithActor: func(root string, req issueopscontract.IssueOpsChildStartRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStartResult, error) {
+		StartIssueOpsChildWithActor: func(root string, req issueopscontract.ChildStartRequest, actor issueopscontract.Actor) (issueopscontract.ChildStartResult, error) {
 			return newChildStarter(root).Start(context.Background(), req, &actor)
 		},
 		UnstageIssueOpsArtifact: artifacts.Unstage,

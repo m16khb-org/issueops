@@ -54,7 +54,7 @@ func guardSkippedDir(name string) bool {
 
 func collectGuardSymbols(symbols map[string][]string, rel, content string) {
 	for line := range strings.SplitSeq(content, "\n") {
-		if m := pattern.NewSymbol().FindStringSubmatch(line); len(m) == 2 {
+		if m := guardpattern.NewSymbol().FindStringSubmatch(line); len(m) == 2 {
 			key := guarddomain.NormalizeSymbol(m[1])
 			if key != "" {
 				symbols[key] = append(symbols[key], rel)

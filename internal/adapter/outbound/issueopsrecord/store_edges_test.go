@@ -15,7 +15,7 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
-func putRecord(t *testing.T, root string, record issueopscontract.IssueOpsRecord) {
+func putRecord(t *testing.T, root string, record issueopscontract.Record) {
 	t.Helper()
 	data, err := Encode(record)
 	if err != nil {
@@ -30,12 +30,12 @@ func putRecord(t *testing.T, root string, record issueopscontract.IssueOpsRecord
 	}
 }
 
-func baseRecord(id string) issueopscontract.IssueOpsRecord {
-	return issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+func baseRecord(id string) issueopscontract.Record {
+	return issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
 		Repo:          "/repo",
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	}
 }
 
@@ -44,11 +44,11 @@ func TestStoreRejectsCancelledContextBeforeTouchingState(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	store := Store{}
-	mutate := func(r issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	mutate := func(r issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		t.Error("mutation ran under cancelled context")
 		return r, false, nil
 	}
-	related := func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+	related := func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 		t.Error("related mutation ran under cancelled context")
 		return nil, false, nil
 	}
@@ -86,11 +86,11 @@ func TestStoreRejectsInvalidIDsBeforeTouchingState(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "state")
 	store := Store{}
 	ctx := t.Context()
-	mutate := func(r issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	mutate := func(r issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		t.Error("mutation ran for invalid id")
 		return r, false, nil
 	}
-	related := func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+	related := func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 		t.Error("related mutation ran for invalid id")
 		return nil, false, nil
 	}
@@ -163,7 +163,7 @@ func TestStoreUpdateMissingRecordAndMutationOutcomes(t *testing.T) {
 	store := Store{}
 	putRecord(t, root, baseRecord("io-upd"))
 
-	_, err := store.Update(t.Context(), root, "io-missing", func(r issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	_, err := store.Update(t.Context(), root, "io-missing", func(r issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		t.Error("mutation ran for missing record")
 		return r, true, nil
 	})
@@ -172,7 +172,7 @@ func TestStoreUpdateMissingRecordAndMutationOutcomes(t *testing.T) {
 	}
 
 	boom := errors.New("boom")
-	result, err := store.Update(t.Context(), root, "io-upd", func(r issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	result, err := store.Update(t.Context(), root, "io-upd", func(r issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		r.Branch = "discarded"
 		return r, true, boom
 	})
@@ -180,7 +180,7 @@ func TestStoreUpdateMissingRecordAndMutationOutcomes(t *testing.T) {
 		t.Fatalf("mutation error result=%+v err=%v", result, err)
 	}
 
-	result, err = store.Update(t.Context(), root, "io-upd", func(r issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	result, err = store.Update(t.Context(), root, "io-upd", func(r issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		r.Branch = "unsaved"
 		return r, false, nil
 	})
@@ -196,21 +196,21 @@ func TestStoreUpdateMissingRecordAndMutationOutcomes(t *testing.T) {
 func TestStoreRefusesRecordsWithApplyingAbandonFailure(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "state")
 	record := baseRecord("io-abandon")
-	record.Phase = issueopscontract.IssueOpsPhaseDone
-	record.CleanupAbandonFailure = &issueopscontract.IssueOpsCleanupAbandonFailure{
+	record.Phase = issueopscontract.PhaseDone
+	record.CleanupAbandonFailure = &issueopscontract.CleanupAbandonFailure{
 		Step: issueopscontract.CleanupFailureStepApplying,
 	}
 	putRecord(t, root, record)
 
 	called := false
-	_, err := (Store{}).Update(t.Context(), root, record.ID, func(r issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	_, err := (Store{}).Update(t.Context(), root, record.ID, func(r issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		called = true
 		return r, true, nil
 	})
 	if err == nil || err.Error() != "cleanup abandon apply is in progress" || called {
 		t.Fatalf("update err=%v called=%v", err, called)
 	}
-	_, err = (Store{}).UpdateRelated(t.Context(), root, record.ID, "rel", func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+	_, err = (Store{}).UpdateRelated(t.Context(), root, record.ID, "rel", func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 		called = true
 		return []byte("x"), false, nil
 	})
@@ -230,7 +230,7 @@ func TestStoreUpdateRelatedCreatesReplacesAndRemovesRelatedRow(t *testing.T) {
 	var observed []seen
 	step := func(next []byte, remove bool) {
 		t.Helper()
-		result, err := store.UpdateRelated(t.Context(), root, "io-rel", "rel_v1", func(r issueopscontract.IssueOpsRecord, data []byte, found bool) ([]byte, bool, error) {
+		result, err := store.UpdateRelated(t.Context(), root, "io-rel", "rel_v1", func(r issueopscontract.Record, data []byte, found bool) ([]byte, bool, error) {
 			observed = append(observed, seen{string(data), found})
 			if r.ID != "io-rel" {
 				t.Errorf("mutation saw record %q", r.ID)
@@ -240,7 +240,7 @@ func TestStoreUpdateRelatedCreatesReplacesAndRemovesRelatedRow(t *testing.T) {
 		if err != nil || !result.OK || result.ID != "io-rel" {
 			t.Fatalf("result=%+v err=%v", result, err)
 		}
-		if result.Repo != "/repo" || result.Phase != issueopscontract.IssueOpsPhaseProblem {
+		if result.Repo != "/repo" || result.Phase != issueopscontract.PhaseProblem {
 			t.Fatalf("result must carry the record read inside the span: %+v", result)
 		}
 	}
@@ -261,7 +261,7 @@ func TestStoreUpdateRelatedCreatesReplacesAndRemovesRelatedRow(t *testing.T) {
 	}
 
 	boom := errors.New("boom")
-	_, err = store.UpdateRelated(t.Context(), root, "io-rel", "rel_v1", func(issueopscontract.IssueOpsRecord, []byte, bool) ([]byte, bool, error) {
+	_, err = store.UpdateRelated(t.Context(), root, "io-rel", "rel_v1", func(issueopscontract.Record, []byte, bool) ([]byte, bool, error) {
 		return []byte("lost"), false, boom
 	})
 	if !errors.Is(err, boom) {
@@ -272,7 +272,7 @@ func TestStoreUpdateRelatedCreatesReplacesAndRemovesRelatedRow(t *testing.T) {
 		t.Fatalf("failed mutation changed related row: %q", data)
 	}
 
-	_, err = store.UpdateRelated(t.Context(), root, "io-none", "rel_v1", func(issueopscontract.IssueOpsRecord, []byte, bool) ([]byte, bool, error) {
+	_, err = store.UpdateRelated(t.Context(), root, "io-none", "rel_v1", func(issueopscontract.Record, []byte, bool) ([]byte, bool, error) {
 		t.Error("mutation ran for missing record")
 		return nil, false, nil
 	})

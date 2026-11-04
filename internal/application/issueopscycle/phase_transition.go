@@ -7,14 +7,14 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func ApplyPhaseTransition(observations cycleport.PhaseTransitionObservations, record model.IssueOpsRecord, phase model.IssueOpsPhase) model.IssueOpsRecord {
+func ApplyPhaseTransition(observations cycleport.PhaseTransitionObservations, record model.Record, phase model.Phase) model.Record {
 	now := observations.Now()
 	head, fingerprint := "", ""
 	switch phase {
-	case model.IssueOpsPhaseAISlopClean:
+	case model.PhaseAISlopClean:
 		head = observations.Head(record)
 		fingerprint = observations.Fingerprint(record)
-	case model.IssueOpsPhasePR:
+	case model.PhasePR:
 		head = observations.Head(record)
 	}
 	return cycledomain.ApplyPhaseTransition(record, phase, now, head, fingerprint, statusdomain.ArtifactKeys(record.Phase))

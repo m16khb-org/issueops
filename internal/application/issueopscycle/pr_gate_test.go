@@ -11,7 +11,7 @@ import (
 )
 
 func TestApplyLoopGatePreservesMissingAndWarningOrder(t *testing.T) {
-	ready := model.IssueOpsReadiness{Ready: true, Missing: []string{"base"}, Warnings: []string{"existing"}}
+	ready := model.Readiness{Ready: true, Missing: []string{"base"}, Warnings: []string{"existing"}}
 	got := ApplyLoopGate(ready, "repo", func(string) ([]string, []string) { return []string{"loop_active", "base"}, []string{"loop running"} })
 	if got.Ready || !reflect.DeepEqual(got.Missing, []string{"base", "loop_active"}) || !reflect.DeepEqual(got.Warnings, []string{"existing", "loop running"}) {
 		t.Fatalf("loop readiness=%+v", got)
@@ -21,13 +21,13 @@ func TestApplyLoopGatePreservesMissingAndWarningOrder(t *testing.T) {
 func TestGuardPRPhaseSkipsUnrelatedTargetsAndGatesPRReentry(t *testing.T) {
 	reads, gates := 0, 0
 	ports := cycleport.PRPhaseGuard{
-		Read: func(string, string) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) {
 			reads++
-			return model.IssueOpsRecord{Phase: model.IssueOpsPhasePR}, nil
+			return model.Record{Phase: model.PhasePR}, nil
 		},
-		Gate: func(model.IssueOpsRecord) model.IssueOpsReadiness {
+		Gate: func(model.Record) model.Readiness {
 			gates++
-			return model.IssueOpsReadiness{Missing: []string{"loop_active"}}
+			return model.Readiness{Missing: []string{"loop_active"}}
 		},
 	}
 	if err := GuardPRPhase("state", "id", "feedback", ports); err != nil || reads != 0 || gates != 0 {
@@ -43,8 +43,8 @@ func TestGuardPRPhaseReturnsReadErrorWithoutEvaluatingGate(t *testing.T) {
 	boom := errors.New("record unreadable")
 	gates := 0
 	err := GuardPRPhase("state", "id", " pr ", cycleport.PRPhaseGuard{
-		Read: func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, boom },
-		Gate: func(model.IssueOpsRecord) model.IssueOpsReadiness { gates++; return model.IssueOpsReadiness{} },
+		Read: func(string, string) (model.Record, error) { return model.Record{}, boom },
+		Gate: func(model.Record) model.Readiness { gates++; return model.Readiness{} },
 	})
 	if !errors.Is(err, boom) || gates != 0 {
 		t.Fatalf("err=%v gates=%d", err, gates)

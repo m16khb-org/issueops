@@ -13,13 +13,13 @@ type Handlers struct {
 		string,
 		string,
 		issueopsdecisioncontract.Request,
-	) (issueopscontract.IssueOpsRecord, error)
+	) (issueopscontract.Record, error)
 	AddWithActor func(
 		string,
 		string,
 		issueopsdecisioncontract.Request,
-		issueopscontract.IssueOpsActor,
-	) (issueopscontract.IssueOpsRecord, error)
+		issueopscontract.Actor,
+	) (issueopscontract.Record, error)
 }
 
 func NewHandlers(service *issueopsdecisionapplication.Service) Handlers {
@@ -28,15 +28,15 @@ func NewHandlers(service *issueopsdecisionapplication.Service) Handlers {
 			stateRoot string,
 			id string,
 			request issueopsdecisioncontract.Request,
-		) (issueopscontract.IssueOpsRecord, error) {
+		) (issueopscontract.Record, error) {
 			return service.Add(context.Background(), stateRoot, id, request, nil)
 		},
 		AddWithActor: func(
 			stateRoot string,
 			id string,
 			request issueopsdecisioncontract.Request,
-			actor issueopscontract.IssueOpsActor,
-		) (issueopscontract.IssueOpsRecord, error) {
+			actor issueopscontract.Actor,
+		) (issueopscontract.Record, error) {
 			return service.Add(context.Background(), stateRoot, id, request, &actor)
 		},
 	}

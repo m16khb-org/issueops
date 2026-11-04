@@ -18,7 +18,7 @@ type SelfVerificationCandidateExportResult struct {
 	SatisfiedCandidateIDs []string                               `json:"satisfied_candidate_ids"`
 	SelectedCandidate     *selfverify.SelfVerificationCandidate  `json:"selected_candidate,omitempty"`
 	Candidates            []selfverify.SelfVerificationCandidate `json:"candidates"`
-	StateCheckpoint       *SelfAugmentStateCheckpoint            `json:"state_checkpoint,omitempty"`
+	StateCheckpoint       *StateCheckpoint                       `json:"state_checkpoint,omitempty"`
 	Warnings              []string                               `json:"warnings"`
 }
 

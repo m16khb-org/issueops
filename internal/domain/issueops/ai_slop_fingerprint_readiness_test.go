@@ -10,16 +10,16 @@ import (
 func TestAISlopCleanFingerprintReadinessMissingPreservesObservedCases(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
-		record  model.IssueOpsRecord
+		record  model.Record
 		current string
 		want    []string
 	}{
-		{"not cleaned", model.IssueOpsRecord{AISlopCleanFingerprint: "old"}, "new", nil},
-		{"both empty", model.IssueOpsRecord{AISlopCleanAt: "now"}, "", nil},
-		{"stored missing", model.IssueOpsRecord{AISlopCleanAt: "now"}, "new", []string{"ai_slop_clean_fingerprint"}},
-		{"current missing", model.IssueOpsRecord{AISlopCleanAt: "now", AISlopCleanFingerprint: "old"}, "", []string{"current_fingerprint"}},
-		{"stale", model.IssueOpsRecord{AISlopCleanAt: "now", AISlopCleanFingerprint: "old"}, "new", []string{"ai_slop_clean_stale"}},
-		{"same", model.IssueOpsRecord{AISlopCleanAt: "now", AISlopCleanFingerprint: "same"}, "same", nil},
+		{"not cleaned", model.Record{AISlopCleanFingerprint: "old"}, "new", nil},
+		{"both empty", model.Record{AISlopCleanAt: "now"}, "", nil},
+		{"stored missing", model.Record{AISlopCleanAt: "now"}, "new", []string{"ai_slop_clean_fingerprint"}},
+		{"current missing", model.Record{AISlopCleanAt: "now", AISlopCleanFingerprint: "old"}, "", []string{"current_fingerprint"}},
+		{"stale", model.Record{AISlopCleanAt: "now", AISlopCleanFingerprint: "old"}, "new", []string{"ai_slop_clean_stale"}},
+		{"same", model.Record{AISlopCleanAt: "now", AISlopCleanFingerprint: "same"}, "same", nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := AISlopCleanFingerprintReadinessMissing(tc.record, tc.current); !reflect.DeepEqual(got, tc.want) {

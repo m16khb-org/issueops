@@ -126,20 +126,20 @@ func startCoreLoopGateLoop(t *testing.T, repo, name string, maxAttempts int) loo
 	return loop
 }
 
-func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsRecord {
+func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.Record {
 	t.Helper()
 	repo := initCoreLoopGateRepo(t)
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            (issueops.CycleStartIdentity{}).StableID(repo, "main"),
 		Repo:          repo,
 		Branch:        "main",
-		Phase:         issueopscontract.IssueOpsPhasePR,
+		Phase:         issueopscontract.PhasePR,
 		IssueURL:      "https://github.com/acme/repo/issues/11",
 		PlanPath:      "plans/demo.md",
 		WorktreePath:  repo,
-		Intent: &issueopscontract.IssueOpsIntentContract{
+		Intent: &issueopscontract.IntentContract{
 			RawRequest:        "ship task 11",
 			InterpretedIntent: "ship task 11",
 			SuccessCriteria:   []string{"loop gate works"},
@@ -155,7 +155,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 			Approved:             true,
 			ReviewedAt:           "2026-07-07T00:00:00Z",
 		},
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
+		BranchPrepare: &issueopscontract.BranchPrepare{
 			Provider:     "github",
 			IssueURL:     "https://github.com/acme/repo/issues/11",
 			Branch:       "main",
@@ -165,7 +165,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 		},
 		AISlopCleanAt: "2026-07-07T00:00:00Z",
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
-		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
+		ProjectDocsReview: &issueopscontract.ProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 	if _, err := (issueops.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
@@ -226,7 +226,7 @@ func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	written.Phase = issueopscontract.IssueOpsPhaseFeedback
+	written.Phase = issueopscontract.PhaseFeedback
 	written, err = (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), written)
 	if err != nil {
 		t.Fatal(err)
@@ -249,12 +249,12 @@ func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	inPR, err := AdvancePhase(stateRoot, written.ID, "pr")
-	if err != nil || inPR.Phase != issueopscontract.IssueOpsPhasePR {
+	if err != nil || inPR.Phase != issueopscontract.PhasePR {
 		t.Fatalf("pr entry after successful loop = %#v err=%v", inPR, err)
 	}
 	// 이미 pr인 레코드의 pr 재진입도 통과한다.
 	again, err := AdvancePhase(stateRoot, written.ID, "pr")
-	if err != nil || again.Phase != issueopscontract.IssueOpsPhasePR {
+	if err != nil || again.Phase != issueopscontract.PhasePR {
 		t.Fatalf("pr re-entry must pass for recovery: %#v err=%v", again, err)
 	}
 }

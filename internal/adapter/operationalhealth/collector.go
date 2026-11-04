@@ -215,9 +215,9 @@ func checkCanonicalWorktrees(snapshot *corehealth.Snapshot) {
 
 func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) {
 	stateRoot := collector.IssueOps.StateRoot
-	records := []issueopscontract.IssueOpsRecord{}
+	records := []issueopscontract.Record{}
 	unreadable := []string{}
-	err := collector.IssueOps.Scan(stateRoot, func(id string, record issueopscontract.IssueOpsRecord, err error) {
+	err := collector.IssueOps.Scan(stateRoot, func(id string, record issueopscontract.Record, err error) {
 		if err != nil {
 			unreadable = append(unreadable, id)
 			return
@@ -249,11 +249,11 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) {
 	}
 }
 
-func cycleFromRecord(record issueopscontract.IssueOpsRecord, inspect NativeProcessInspector) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
+func cycleFromRecord(record issueopscontract.Record, inspect NativeProcessInspector) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
 	return cycleFromRecordAt(record, inspect, time.Now().UTC())
 }
 
-func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativeProcessInspector, now time.Time) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
+func cycleFromRecordAt(record issueopscontract.Record, inspect NativeProcessInspector, now time.Time) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
 	cycle := operationalhealthcontract.Cycle{
 		ID: strings.TrimSpace(record.ID), Repo: canonicalInventoryPath(record.Repo), Branch: strings.TrimSpace(record.Branch),
 		Phase:                     string(record.Phase),
@@ -320,7 +320,7 @@ func applyCycleHolder(cycle *operationalhealthcontract.Cycle, execution *issueop
 	return nil
 }
 
-func issueCreateIntentNeedsReconciliationAt(intent *issueopscontract.IssueOpsIssueCreateIntent, now time.Time) bool {
+func issueCreateIntentNeedsReconciliationAt(intent *issueopscontract.IssueCreateIntent, now time.Time) bool {
 	if intent == nil {
 		return false
 	}

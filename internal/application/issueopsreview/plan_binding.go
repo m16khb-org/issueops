@@ -6,7 +6,7 @@ import (
 )
 
 type PlanDigestSource interface {
-	LinkedDigest(model.IssueOpsRecord) (string, error)
+	LinkedDigest(model.Record) (string, error)
 	StagedPlans(string, string) (map[string]string, error)
 }
 
@@ -16,7 +16,7 @@ func NewPlanDigestResolver(source PlanDigestSource) PlanDigestResolver {
 	return PlanDigestResolver{source: source}
 }
 
-func (r PlanDigestResolver) Digest(stateRoot string, record model.IssueOpsRecord) (string, error) {
+func (r PlanDigestResolver) Digest(stateRoot string, record model.Record) (string, error) {
 	if domain.HasLinkedReviewPlan(record.PlanPath) {
 		return r.source.LinkedDigest(record)
 	}

@@ -28,12 +28,12 @@ func TestSaveCandidateExportFailureBoundaries(t *testing.T) {
 					}
 					return []byte("serialized"), nil
 				},
-				Write: func(key, body string) (state.StateResult, error) {
+				Write: func(key, body string) (state.Result, error) {
 					calls = append(calls, "write")
 					if key != "self-verify-candidates-latest" || body != "serialized" {
 						t.Fatalf("write(%q,%q)", key, body)
 					}
-					return state.StateResult{}, failure
+					return state.Result{}, failure
 				},
 				StateDir: func() string { calls = append(calls, "state-dir"); return "/state" },
 			})
@@ -67,16 +67,16 @@ func TestSaveCandidateExportPreservesProjectionAndWriteReceipt(t *testing.T) {
 			}
 			return []byte("encoded"), nil
 		},
-		Write: func(key, body string) (state.StateResult, error) {
+		Write: func(key, body string) (state.Result, error) {
 			writes++
 			if key != " custom " || body != "encoded" {
 				t.Fatalf("write(%q,%q)", key, body)
 			}
-			return state.StateResult{OK: true, StateDir: "/actual", Path: "/actual/db", Record: state.RecordEnvelope{Key: "custom", Bytes: 7}}, nil
+			return state.Result{OK: true, StateDir: "/actual", Path: "/actual/db", Record: state.RecordEnvelope{Key: "custom", Bytes: 7}}, nil
 		},
 		StateDir: func() string { t.Fatal("successful write must use receipt"); return "" },
 	})
-	want := &contract.SelfAugmentStateCheckpoint{OK: true, Key: "custom", StateDir: "/actual", Path: "/actual/db", Bytes: 7}
+	want := &contract.StateCheckpoint{OK: true, Key: "custom", StateDir: "/actual", Path: "/actual/db", Bytes: 7}
 	if err != nil || writes != 1 || !reflect.DeepEqual(result.StateCheckpoint, want) || result.GeneratedAt != "old timestamp" {
 		t.Fatalf("result=%+v writes=%d err=%v", result, writes, err)
 	}

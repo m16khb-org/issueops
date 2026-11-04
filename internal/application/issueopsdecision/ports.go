@@ -11,8 +11,8 @@ type Repository interface {
 		context.Context,
 		string,
 		string,
-		func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error),
-	) (issueopscontract.IssueOpsRecord, error)
+		func(issueopscontract.Record) (issueopscontract.Record, error),
+	) (issueopscontract.Record, error)
 }
 
 type Clock interface {

@@ -7,7 +7,7 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
-func ValidateFixture(f contract.IssueOpsBenchmarkFixture) error {
+func ValidateFixture(f contract.Fixture) error {
 	if strings.TrimSpace(f.ID) == "" {
 		return fmt.Errorf("id is required")
 	}
@@ -26,7 +26,7 @@ func ValidateFixture(f contract.IssueOpsBenchmarkFixture) error {
 	return nil
 }
 
-func ValidateJudgeScore(score contract.IssueOpsBenchmarkScore) error {
+func ValidateJudgeScore(score contract.Score) error {
 	if len(score.DimensionScores) == 0 {
 		return fmt.Errorf("issueops benchmark host-agent judge output missing dimension_scores")
 	}
@@ -36,8 +36,8 @@ func ValidateJudgeScore(score contract.IssueOpsBenchmarkScore) error {
 // ResolveJudgeScores validates fixture coverage in fixture order. The decoder
 // handles each opaque payload before the next fixture is checked, preserving
 // malformed-score versus missing-fixture error precedence.
-func ResolveJudgeScores(fixtures []contract.IssueOpsBenchmarkFixture, payloads map[string][]byte, decode func([]byte) (contract.IssueOpsBenchmarkScore, error)) (map[string]contract.IssueOpsBenchmarkScore, error) {
-	scores := make(map[string]contract.IssueOpsBenchmarkScore, len(payloads))
+func ResolveJudgeScores(fixtures []contract.Fixture, payloads map[string][]byte, decode func([]byte) (contract.Score, error)) (map[string]contract.Score, error) {
+	scores := make(map[string]contract.Score, len(payloads))
 	known := make(map[string]bool, len(fixtures))
 	for _, fixture := range fixtures {
 		known[fixture.ID] = true

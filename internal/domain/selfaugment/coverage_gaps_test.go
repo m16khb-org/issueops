@@ -13,61 +13,61 @@ import (
 func TestMarkSatisfiedCandidateRequiresItsSignals(t *testing.T) {
 	cases := []struct {
 		id  string
-		set func(*contract.SelfAugmentRepoSignals)
+		set func(*contract.RepoSignals)
 		// partial leaves a required signal unset for compound rules.
-		partial func(*contract.SelfAugmentRepoSignals)
+		partial func(*contract.RepoSignals)
 	}{
-		{"loop-taxonomy-score-gates", func(s *contract.SelfAugmentRepoSignals) {
+		{"loop-taxonomy-score-gates", func(s *contract.RepoSignals) {
 			s.HasSelfVerifyCLI, s.HasSelfAugmentPlanner, s.HasSelfVerificationDocs, s.HasGoalScoreSummary = true, true, true, true
-		}, func(s *contract.SelfAugmentRepoSignals) {
+		}, func(s *contract.RepoSignals) {
 			s.HasSelfVerifyCLI, s.HasSelfAugmentPlanner, s.HasSelfVerificationDocs = true, true, true
 		}},
-		{"agent-skill-executor", func(s *contract.SelfAugmentRepoSignals) { s.HasSelfAugmentSkill = true }, nil},
-		{"durable-augmentation-memory", func(s *contract.SelfAugmentRepoSignals) { s.HasSelfAugmentStateCapture = true }, nil},
-		{"reflexion-state-memory", func(s *contract.SelfAugmentRepoSignals) { s.HasSelfAugmentLessonCapture = true }, nil},
-		{"qa-dashboard-summary", func(s *contract.SelfAugmentRepoSignals) { s.HasGoalScoreSummary = true }, nil},
-		{"qa-race-tier", func(s *contract.SelfAugmentRepoSignals) { s.HasRiskQATier = true }, nil},
-		{"adapter-contract-matrix", func(s *contract.SelfAugmentRepoSignals) { s.HasAdapterContractMatrix = true }, nil},
-		{"repo-local-augmentation-sandbox", func(s *contract.SelfAugmentRepoSignals) { s.HasRepoLocalSandbox = true }, nil},
-		{"performance-baseline", func(s *contract.SelfAugmentRepoSignals) { s.HasPerformanceBaseline = true }, nil},
-		{"self-augment-signal-table", func(s *contract.SelfAugmentRepoSignals) { s.HasSelfAugmentSignalTable = true }, nil},
-		{"quality-signal-harvester", func(s *contract.SelfAugmentRepoSignals) {
+		{"agent-skill-executor", func(s *contract.RepoSignals) { s.HasSelfAugmentSkill = true }, nil},
+		{"durable-augmentation-memory", func(s *contract.RepoSignals) { s.HasSelfAugmentStateCapture = true }, nil},
+		{"reflexion-state-memory", func(s *contract.RepoSignals) { s.HasSelfAugmentLessonCapture = true }, nil},
+		{"qa-dashboard-summary", func(s *contract.RepoSignals) { s.HasGoalScoreSummary = true }, nil},
+		{"qa-race-tier", func(s *contract.RepoSignals) { s.HasRiskQATier = true }, nil},
+		{"adapter-contract-matrix", func(s *contract.RepoSignals) { s.HasAdapterContractMatrix = true }, nil},
+		{"repo-local-augmentation-sandbox", func(s *contract.RepoSignals) { s.HasRepoLocalSandbox = true }, nil},
+		{"performance-baseline", func(s *contract.RepoSignals) { s.HasPerformanceBaseline = true }, nil},
+		{"self-augment-signal-table", func(s *contract.RepoSignals) { s.HasSelfAugmentSignalTable = true }, nil},
+		{"quality-signal-harvester", func(s *contract.RepoSignals) {
 			s.HasQualityInspectCLI, s.HasQualityInspectSignals = true, true
-		}, func(s *contract.SelfAugmentRepoSignals) { s.HasQualityInspectCLI = true }},
-		{"coverage-mcp-resources", func(s *contract.SelfAugmentRepoSignals) { s.HasMCPResourceCoverage = true }, nil},
-		{"coverage-host-judgement", func(s *contract.SelfAugmentRepoSignals) { s.HasHostJudgementCoverage = true }, nil},
-		{"coverage-issueops-linking", func(s *contract.SelfAugmentRepoSignals) { s.HasIssueOpsLinkingBoundaryCoverage = true }, nil},
-		{"coverage-issueops-inbound-adapters", func(s *contract.SelfAugmentRepoSignals) { s.HasIssueOpsInboundAdapterCoverage = true }, nil},
-		{"coverage-issueops-transport-boundaries", func(s *contract.SelfAugmentRepoSignals) { s.HasToolConformanceTransportCoverage = true }, nil},
-		{"state-write-locking", func(s *contract.SelfAugmentRepoSignals) { s.HasStateWriteLocking = true }, nil},
-		{"worker-stuck-running-detection", func(s *contract.SelfAugmentRepoSignals) { s.HasWorkerStuckRunningDetection = true }, nil},
-		{"genius-mermaid-lint", func(s *contract.SelfAugmentRepoSignals) { s.HasGeniusMermaidLint = true }, nil},
-		{"install-dry-run-mode", func(s *contract.SelfAugmentRepoSignals) { s.HasInstallDryRunMode = true }, nil},
-		{"cli-mcp-adapter-split", func(s *contract.SelfAugmentRepoSignals) {
+		}, func(s *contract.RepoSignals) { s.HasQualityInspectCLI = true }},
+		{"coverage-mcp-resources", func(s *contract.RepoSignals) { s.HasMCPResourceCoverage = true }, nil},
+		{"coverage-host-judgement", func(s *contract.RepoSignals) { s.HasHostJudgementCoverage = true }, nil},
+		{"coverage-issueops-linking", func(s *contract.RepoSignals) { s.HasIssueOpsLinkingBoundaryCoverage = true }, nil},
+		{"coverage-issueops-inbound-adapters", func(s *contract.RepoSignals) { s.HasIssueOpsInboundAdapterCoverage = true }, nil},
+		{"coverage-issueops-transport-boundaries", func(s *contract.RepoSignals) { s.HasToolConformanceTransportCoverage = true }, nil},
+		{"state-write-locking", func(s *contract.RepoSignals) { s.HasStateWriteLocking = true }, nil},
+		{"worker-stuck-running-detection", func(s *contract.RepoSignals) { s.HasWorkerStuckRunningDetection = true }, nil},
+		{"genius-mermaid-lint", func(s *contract.RepoSignals) { s.HasGeniusMermaidLint = true }, nil},
+		{"install-dry-run-mode", func(s *contract.RepoSignals) { s.HasInstallDryRunMode = true }, nil},
+		{"cli-mcp-adapter-split", func(s *contract.RepoSignals) {
 			s.HasCLIAdapterSplit, s.HasMCPAdapterCatalog = true, true
-		}, func(s *contract.SelfAugmentRepoSignals) { s.HasMCPAdapterCatalog = true }},
-		{"dto-compatibility-contract", func(s *contract.SelfAugmentRepoSignals) { s.HasCompatibilityContract = true }, nil},
-		{"candidate-refill-curriculum", func(s *contract.SelfAugmentRepoSignals) { s.HasCandidateRefill = true }, nil},
-		{"policy-audit-redaction", func(s *contract.SelfAugmentRepoSignals) { s.HasCommandAuditLog = true }, nil},
-		{"worker-mvp-no-shell", func(s *contract.SelfAugmentRepoSignals) { s.HasWorkerMVP = true }, nil},
-		{"release-repro-pack", func(s *contract.SelfAugmentRepoSignals) { s.HasReleaseReproPack = true }, nil},
-		{"release-user-readme", func(s *contract.SelfAugmentRepoSignals) { s.HasReleaseUserReadme = true }, nil},
-		{"cross-platform-build-matrix", func(s *contract.SelfAugmentRepoSignals) { s.HasCrossPlatformBuildMatrix = true }, nil},
-		{"distribution-decision-record", func(s *contract.SelfAugmentRepoSignals) { s.HasDistributionDecision = true }, nil},
-		{"release-dogfood-notes", func(s *contract.SelfAugmentRepoSignals) { s.HasReleaseDogfoodNotes = true }, nil},
+		}, func(s *contract.RepoSignals) { s.HasMCPAdapterCatalog = true }},
+		{"dto-compatibility-contract", func(s *contract.RepoSignals) { s.HasCompatibilityContract = true }, nil},
+		{"candidate-refill-curriculum", func(s *contract.RepoSignals) { s.HasCandidateRefill = true }, nil},
+		{"policy-audit-redaction", func(s *contract.RepoSignals) { s.HasCommandAuditLog = true }, nil},
+		{"worker-mvp-no-shell", func(s *contract.RepoSignals) { s.HasWorkerMVP = true }, nil},
+		{"release-repro-pack", func(s *contract.RepoSignals) { s.HasReleaseReproPack = true }, nil},
+		{"release-user-readme", func(s *contract.RepoSignals) { s.HasReleaseUserReadme = true }, nil},
+		{"cross-platform-build-matrix", func(s *contract.RepoSignals) { s.HasCrossPlatformBuildMatrix = true }, nil},
+		{"distribution-decision-record", func(s *contract.RepoSignals) { s.HasDistributionDecision = true }, nil},
+		{"release-dogfood-notes", func(s *contract.RepoSignals) { s.HasReleaseDogfoodNotes = true }, nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.id, func(t *testing.T) {
-			open := func() contract.SelfAugmentCandidate {
-				return contract.SelfAugmentCandidate{ID: tc.id, Status: contract.CandidateStatusOpen, Score: 50, WhyNow: []string{"why"}}
+			open := func() contract.Candidate {
+				return contract.Candidate{ID: tc.id, Status: contract.CandidateStatusOpen, Score: 50, WhyNow: []string{"why"}}
 			}
 			none := open()
-			MarkSatisfiedCandidate(&none, contract.SelfAugmentRepoSignals{})
+			MarkSatisfiedCandidate(&none, contract.RepoSignals{})
 			if none.Status != contract.CandidateStatusOpen || none.Score != 50 || len(none.WhyNow) != 1 {
 				t.Fatalf("no signals must leave candidate untouched: %+v", none)
 			}
 			if tc.partial != nil {
-				var partial contract.SelfAugmentRepoSignals
+				var partial contract.RepoSignals
 				tc.partial(&partial)
 				c := open()
 				MarkSatisfiedCandidate(&c, partial)
@@ -75,7 +75,7 @@ func TestMarkSatisfiedCandidateRequiresItsSignals(t *testing.T) {
 					t.Fatalf("partial signals must not satisfy: %+v", c)
 				}
 			}
-			var full contract.SelfAugmentRepoSignals
+			var full contract.RepoSignals
 			tc.set(&full)
 			c := open()
 			MarkSatisfiedCandidate(&c, full)
@@ -90,36 +90,36 @@ func TestMarkSatisfiedCandidateRequiresItsSignals(t *testing.T) {
 }
 
 func TestMarkSatisfiedCandidateIgnoresUnknownID(t *testing.T) {
-	c := contract.SelfAugmentCandidate{ID: "no-such-candidate", Status: contract.CandidateStatusOpen, Score: 7}
-	MarkSatisfiedCandidate(&c, contract.SelfAugmentRepoSignals{HasSelfAugmentSkill: true, HasReleaseReproPack: true})
+	c := contract.Candidate{ID: "no-such-candidate", Status: contract.CandidateStatusOpen, Score: 7}
+	MarkSatisfiedCandidate(&c, contract.RepoSignals{HasSelfAugmentSkill: true, HasReleaseReproPack: true})
 	if c.Status != contract.CandidateStatusOpen || c.Score != 7 {
 		t.Fatalf("unknown id must stay open: %+v", c)
 	}
 }
 
 func TestCandidateScoreWeightsAndClamps(t *testing.T) {
-	if got := CandidateScore(contract.SelfAugmentCandidate{Impact: 100, Feasibility: 100, Novelty: 100, Risk: 0}); got != 100 {
+	if got := CandidateScore(contract.Candidate{Impact: 100, Feasibility: 100, Novelty: 100, Risk: 0}); got != 100 {
 		t.Fatalf("max score=%v", got)
 	}
-	if got := CandidateScore(contract.SelfAugmentCandidate{Impact: 200, Feasibility: 200, Novelty: 200, Risk: 0}); got != 100 {
+	if got := CandidateScore(contract.Candidate{Impact: 200, Feasibility: 200, Novelty: 200, Risk: 0}); got != 100 {
 		t.Fatalf("score above 100 must clamp, got %v", got)
 	}
-	if got := CandidateScore(contract.SelfAugmentCandidate{Impact: -100, Risk: 100}); got != 0 {
+	if got := CandidateScore(contract.Candidate{Impact: -100, Risk: 100}); got != 0 {
 		t.Fatalf("negative score must clamp to 0, got %v", got)
 	}
-	got := CandidateScore(contract.SelfAugmentCandidate{Impact: 50, Feasibility: 0, Novelty: 0, Risk: 100})
+	got := CandidateScore(contract.Candidate{Impact: 50, Feasibility: 0, Novelty: 0, Risk: 100})
 	if got < 18.99 || got > 19.01 {
 		t.Fatalf("impact weight 0.38 expected 19, got %v", got)
 	}
-	got = CandidateScore(contract.SelfAugmentCandidate{Risk: 0})
+	got = CandidateScore(contract.Candidate{Risk: 0})
 	if got < 11.99 || got > 12.01 {
 		t.Fatalf("risk weight 0.12 expected 12, got %v", got)
 	}
 }
 
 func TestCandidatesCatalogDefaultsAndSatisfaction(t *testing.T) {
-	quality := contract.SelfAugmentCandidate{ID: "quality-extra", Title: "q", Impact: 100, Feasibility: 100, Novelty: 100}
-	open := Candidates(contract.SelfAugmentRepoSignals{}, []contract.SelfAugmentCandidate{quality})
+	quality := contract.Candidate{ID: "quality-extra", Title: "q", Impact: 100, Feasibility: 100, Novelty: 100}
+	open := Candidates(contract.RepoSignals{}, []contract.Candidate{quality})
 	seen := map[string]bool{}
 	for _, c := range open {
 		if seen[c.ID] {
@@ -139,7 +139,7 @@ func TestCandidatesCatalogDefaultsAndSatisfaction(t *testing.T) {
 	if !seen["quality-extra"] {
 		t.Fatal("quality candidates must be appended")
 	}
-	byID := map[string]contract.SelfAugmentCandidate{}
+	byID := map[string]contract.Candidate{}
 	for _, c := range open {
 		byID[c.ID] = c
 	}
@@ -147,7 +147,7 @@ func TestCandidatesCatalogDefaultsAndSatisfaction(t *testing.T) {
 		t.Fatalf("kinds: quality=%q readme=%q", byID["quality-extra"].VerificationKind, byID["release-user-readme"].VerificationKind)
 	}
 
-	satisfied := Candidates(contract.SelfAugmentRepoSignals{HasSelfAugmentSkill: true}, nil)
+	satisfied := Candidates(contract.RepoSignals{HasSelfAugmentSkill: true}, nil)
 	for _, c := range satisfied {
 		want := contract.CandidateStatusOpen
 		if c.ID == "agent-skill-executor" {
@@ -166,7 +166,7 @@ func TestSelectedCandidateID(t *testing.T) {
 	if got := SelectedCandidateID(nil); got != "" {
 		t.Fatalf("nil candidate id=%q", got)
 	}
-	if got := SelectedCandidateID(&contract.SelfAugmentCandidate{ID: "x"}); got != "x" {
+	if got := SelectedCandidateID(&contract.Candidate{ID: "x"}); got != "x" {
 		t.Fatalf("id=%q", got)
 	}
 }
@@ -207,7 +207,7 @@ func TestParseHistoryTimestamp(t *testing.T) {
 }
 
 func TestSortHistoryEntriesOrdersNewestFirstWithFallbacks(t *testing.T) {
-	entries := []contract.SelfAugmentHistoryEntry{
+	entries := []contract.HistoryEntry{
 		{Key: "invalid-gen-new-update", GeneratedAt: "bogus", UpdatedAt: "2026-05-01T00:00:00Z"},
 		{Key: "old", GeneratedAt: "2026-01-01T00:00:00Z"},
 		{Key: "tie-b", GeneratedAt: "2026-03-01T00:00:00Z", UpdatedAt: "2026-03-02T00:00:00Z"},
@@ -229,13 +229,13 @@ func TestSortHistoryEntriesOrdersNewestFirstWithFallbacks(t *testing.T) {
 }
 
 func TestValidateHistoryRequest(t *testing.T) {
-	if err := ValidateHistoryRequest(-1, contract.SelfAugmentHistoryRetentionOptions{}); err == nil || !strings.Contains(err.Error(), "limit") {
+	if err := ValidateHistoryRequest(-1, contract.HistoryRetentionOptions{}); err == nil || !strings.Contains(err.Error(), "limit") {
 		t.Fatalf("negative limit err=%v", err)
 	}
-	if err := ValidateHistoryRequest(5, contract.SelfAugmentHistoryRetentionOptions{Confirm: true}); err == nil || !strings.Contains(err.Error(), "prune-retention") {
+	if err := ValidateHistoryRequest(5, contract.HistoryRetentionOptions{Confirm: true}); err == nil || !strings.Contains(err.Error(), "prune-retention") {
 		t.Fatalf("confirm without prune err=%v", err)
 	}
-	if err := ValidateHistoryRequest(0, contract.SelfAugmentHistoryRetentionOptions{Limit: 3, PruneRequested: true}); err != nil {
+	if err := ValidateHistoryRequest(0, contract.HistoryRetentionOptions{Limit: 3, PruneRequested: true}); err != nil {
 		t.Fatalf("valid request err=%v", err)
 	}
 }
@@ -266,7 +266,7 @@ func TestValidateComparisonRequest(t *testing.T) {
 }
 
 func TestHistorySnapshotDiagnostics(t *testing.T) {
-	good := contract.SelfAugmentStateSnapshot{Kind: SelfVerificationSummaryKind, SchemaVersion: 1, GeneratedAt: "2026-01-01T00:00:00Z"}
+	good := contract.StateSnapshot{Kind: SelfVerificationSummaryKind, SchemaVersion: 1, GeneratedAt: "2026-01-01T00:00:00Z"}
 	if skip, warn := HistorySnapshotDiagnostics("k", good); skip != "" || warn != "" {
 		t.Fatalf("good skip=%q warn=%q", skip, warn)
 	}
@@ -288,16 +288,16 @@ func TestHistorySnapshotDiagnostics(t *testing.T) {
 }
 
 func TestNewHistoryEntryNormalizesNilCollections(t *testing.T) {
-	entry := NewHistoryEntry(contract.SelfAugmentStateSnapshot{GeneratedAt: "g", OK: true, Iterations: 3, BaseSeed: 9, ElapsedMS: 12,
-		Summary: contract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 4, FailedSteps: 2}})
+	entry := NewHistoryEntry(contract.StateSnapshot{GeneratedAt: "g", OK: true, Iterations: 3, BaseSeed: 9, ElapsedMS: 12,
+		Summary: contract.Summary{TotalRuns: 1, TotalSteps: 4, FailedSteps: 2}})
 	if entry.StepLabels == nil || len(entry.StepLabels) != 0 || entry.SlowestSteps == nil || len(entry.SlowestSteps) != 0 {
 		t.Fatalf("nil collections must become empty: %+v", entry)
 	}
 	if entry.GeneratedAt != "g" || !entry.OK || entry.Iterations != 3 || entry.BaseSeed != 9 || entry.ElapsedMS != 12 || entry.TotalRuns != 1 || entry.TotalSteps != 4 || entry.FailedSteps != 2 {
 		t.Fatalf("entry=%+v", entry)
 	}
-	withData := NewHistoryEntry(contract.SelfAugmentStateSnapshot{Summary: contract.SelfAugmentSummary{
-		StepLabels: []string{"a"}, SlowestSteps: []contract.SelfAugmentSlowStep{{Label: "a", DurationMS: 1}}}})
+	withData := NewHistoryEntry(contract.StateSnapshot{Summary: contract.Summary{
+		StepLabels: []string{"a"}, SlowestSteps: []contract.SlowStep{{Label: "a", DurationMS: 1}}}})
 	if !slices.Equal(withData.StepLabels, []string{"a"}) || len(withData.SlowestSteps) != 1 {
 		t.Fatalf("entry=%+v", withData)
 	}
@@ -342,17 +342,17 @@ func TestRecentLessonWindowBoundaries(t *testing.T) {
 
 func TestLessonPenalizesCandidate(t *testing.T) {
 	now := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
-	base := contract.SelfAugmentLessonStateSnapshot{
+	base := contract.LessonStateSnapshot{
 		Kind: contract.SelfAugmentationLessonKind, CandidateID: "c", Severity: "error", GeneratedAt: now.Add(-time.Hour).Format(time.RFC3339Nano),
 	}
 	if !LessonPenalizesCandidate(base, now) {
 		t.Fatal("severe recent lesson must penalize")
 	}
-	mutations := map[string]func(*contract.SelfAugmentLessonStateSnapshot){
-		"kind":     func(s *contract.SelfAugmentLessonStateSnapshot) { s.Kind = "other" },
-		"no id":    func(s *contract.SelfAugmentLessonStateSnapshot) { s.CandidateID = "" },
-		"severity": func(s *contract.SelfAugmentLessonStateSnapshot) { s.Severity = "info" },
-		"stale": func(s *contract.SelfAugmentLessonStateSnapshot) {
+	mutations := map[string]func(*contract.LessonStateSnapshot){
+		"kind":     func(s *contract.LessonStateSnapshot) { s.Kind = "other" },
+		"no id":    func(s *contract.LessonStateSnapshot) { s.CandidateID = "" },
+		"severity": func(s *contract.LessonStateSnapshot) { s.Severity = "info" },
+		"stale": func(s *contract.LessonStateSnapshot) {
 			s.GeneratedAt = now.Add(-90 * 24 * time.Hour).Format(time.RFC3339Nano)
 		},
 	}
@@ -366,7 +366,7 @@ func TestLessonPenalizesCandidate(t *testing.T) {
 }
 
 func TestApplyLessonPenaltiesOnlyDemotesOpenCandidatesAtThreshold(t *testing.T) {
-	candidates := []contract.SelfAugmentCandidate{
+	candidates := []contract.Candidate{
 		{ID: "below", Status: contract.CandidateStatusOpen, Score: 90},
 		{ID: "hit", Status: contract.CandidateStatusOpen, Score: 90},
 		{ID: "floor", Status: contract.CandidateStatusOpen, Score: 20},
@@ -405,8 +405,8 @@ func TestPreparePromotionValidatesKeysAndDryRunFlag(t *testing.T) {
 }
 
 func TestObservePromotionSourceGate(t *testing.T) {
-	passing := contract.SelfAugmentStateSnapshot{OK: true, GeneratedAt: "g", Summary: contract.SelfAugmentSummary{TerminationEligible: true, TotalRuns: 4}}
-	failing := contract.SelfAugmentStateSnapshot{OK: true, GeneratedAt: "g2", Summary: contract.SelfAugmentSummary{TerminationEligible: false}}
+	passing := contract.StateSnapshot{OK: true, GeneratedAt: "g", Summary: contract.Summary{TerminationEligible: true, TotalRuns: 4}}
+	failing := contract.StateSnapshot{OK: true, GeneratedAt: "g2", Summary: contract.Summary{TerminationEligible: false}}
 
 	dry, _ := PreparePromotion("f", "b", false, "/d")
 	got, err := ObservePromotionSource(dry, failing, false)
@@ -454,9 +454,9 @@ func TestSelectGeniusFormulas(t *testing.T) {
 }
 
 func TestStepDurationStatsForCompare(t *testing.T) {
-	stored := contract.SelfAugmentSummary{
-		StepDurationStats: []contract.SelfAugmentStepDurationStat{{Label: "a", P95DurationMS: 5}},
-		SlowestSteps:      []contract.SelfAugmentSlowStep{{Label: "ignored", DurationMS: 99}},
+	stored := contract.Summary{
+		StepDurationStats: []contract.StepDurationStat{{Label: "a", P95DurationMS: 5}},
+		SlowestSteps:      []contract.SlowStep{{Label: "ignored", DurationMS: 99}},
 	}
 	got := StepDurationStatsForCompare(stored)
 	if len(got) != 1 || got[0].Label != "a" {
@@ -467,7 +467,7 @@ func TestStepDurationStatsForCompare(t *testing.T) {
 		t.Fatal("returned stats must be a copy")
 	}
 
-	derived := StepDurationStatsForCompare(contract.SelfAugmentSummary{SlowestSteps: []contract.SelfAugmentSlowStep{
+	derived := StepDurationStatsForCompare(contract.Summary{SlowestSteps: []contract.SlowStep{
 		{Label: "b", DurationMS: 10}, {Label: "b", DurationMS: 30}, {Label: "", DurationMS: 500}, {Label: "a", DurationMS: 7},
 	}})
 	if len(derived) != 2 || derived[0].Label != "a" || derived[1].Label != "b" {
@@ -479,14 +479,14 @@ func TestStepDurationStatsForCompare(t *testing.T) {
 }
 
 func TestStepDurationStatByLabelSkipsEmptyLabels(t *testing.T) {
-	m := StepDurationStatByLabel([]contract.SelfAugmentStepDurationStat{{Label: "", Count: 1}, {Label: "x", Count: 2}, {Label: "x", Count: 3}})
+	m := StepDurationStatByLabel([]contract.StepDurationStat{{Label: "", Count: 1}, {Label: "x", Count: 2}, {Label: "x", Count: 3}})
 	if len(m) != 1 || m["x"].Count != 3 {
 		t.Fatalf("m=%+v", m)
 	}
 }
 
 func TestFinalizeSummary(t *testing.T) {
-	empty := contract.SelfAugmentSummary{}
+	empty := contract.Summary{}
 	FinalizeSummary(&empty, true)
 	if empty.MinimumGoalScore != 0 || !empty.TerminationEligible {
 		t.Fatalf("empty goals: %+v", empty)
@@ -496,13 +496,13 @@ func TestFinalizeSummary(t *testing.T) {
 		t.Fatal("failed run must not be eligible")
 	}
 
-	passing := contract.SelfAugmentSummary{GoalScores: []selfverify.SelfVerificationGoalScore{{Score: 98, Passed: true}, {Score: 96, Passed: true}}}
+	passing := contract.Summary{GoalScores: []selfverify.SelfVerificationGoalScore{{Score: 98, Passed: true}, {Score: 96, Passed: true}}}
 	FinalizeSummary(&passing, true)
 	if passing.MinimumGoalScore != 96 || !passing.TerminationEligible {
 		t.Fatalf("passing: %+v", passing)
 	}
 
-	oneFailed := contract.SelfAugmentSummary{GoalScores: []selfverify.SelfVerificationGoalScore{{Score: 100, Passed: true}, {Score: 40, Passed: false}}}
+	oneFailed := contract.Summary{GoalScores: []selfverify.SelfVerificationGoalScore{{Score: 100, Passed: true}, {Score: 40, Passed: false}}}
 	FinalizeSummary(&oneFailed, true)
 	if oneFailed.MinimumGoalScore != 40 || oneFailed.TerminationEligible {
 		t.Fatalf("one failed goal must block termination: %+v", oneFailed)
@@ -510,8 +510,8 @@ func TestFinalizeSummary(t *testing.T) {
 }
 
 func TestCompareSnapshotsSummaryRegressions(t *testing.T) {
-	baseline := contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 100, Summary: contract.SelfAugmentSummary{TerminationEligible: true, MinimumGoalScore: 98}}
-	candidate := contract.SelfAugmentStateSnapshot{OK: false, ElapsedMS: 200, Summary: contract.SelfAugmentSummary{MinimumGoalScore: 90, FailedSteps: 2}}
+	baseline := contract.StateSnapshot{OK: true, ElapsedMS: 100, Summary: contract.Summary{TerminationEligible: true, MinimumGoalScore: 98}}
+	candidate := contract.StateSnapshot{OK: false, ElapsedMS: 200, Summary: contract.Summary{MinimumGoalScore: 90, FailedSteps: 2}}
 	result := CompareSnapshots("b", "c", 10, baseline, candidate, "/d")
 	for _, want := range []string{"candidate_not_ok", "candidate_not_termination_eligible", "minimum_goal_score_decreased_by_8.00", "failed_steps_increased_by_2", "elapsed_ms_increased_by_100.00_pct"} {
 		if !slices.Contains(result.Regressions, want) {
@@ -530,30 +530,30 @@ func TestCompareSnapshotsSummaryRegressions(t *testing.T) {
 
 func TestCompareStepRegressionsThresholds(t *testing.T) {
 	slow := CompareSlowestStepRegressions(
-		[]contract.SelfAugmentSlowStep{{Label: "a", DurationMS: 100}, {Label: "zero", DurationMS: 0}, {Label: "b", DurationMS: 100}, {Label: "c", DurationMS: 100}},
-		[]contract.SelfAugmentSlowStep{{Label: "a", DurationMS: 150}, {Label: "zero", DurationMS: 50}, {Label: "b", DurationMS: 110}, {Label: "new", DurationMS: 999}, {Label: "c", DurationMS: 50}},
+		[]contract.SlowStep{{Label: "a", DurationMS: 100}, {Label: "zero", DurationMS: 0}, {Label: "b", DurationMS: 100}, {Label: "c", DurationMS: 100}},
+		[]contract.SlowStep{{Label: "a", DurationMS: 150}, {Label: "zero", DurationMS: 50}, {Label: "b", DurationMS: 110}, {Label: "new", DurationMS: 999}, {Label: "c", DurationMS: 50}},
 		20)
 	if len(slow) != 1 || slow[0].Label != "a" || slow[0].DeltaMS != 50 || slow[0].DeltaPct != 50 {
 		t.Fatalf("slow=%+v (zero baseline, new label, improvements and under-threshold must be ignored)", slow)
 	}
 
 	budget := CompareStepBudgetRegressions(
-		[]contract.SelfAugmentStepDurationStat{{Label: "big", P95DurationMS: 100, Count: 2}, {Label: "tiny", P95DurationMS: 10}, {Label: "zero"}, {Label: "faster", P95DurationMS: 100}},
-		[]contract.SelfAugmentStepDurationStat{{Label: "big", P95DurationMS: 200, Count: 3}, {Label: "tiny", P95DurationMS: 30}, {Label: "zero", P95DurationMS: 500}, {Label: "faster", P95DurationMS: 50}, {Label: "added", P95DurationMS: 500}},
+		[]contract.StepDurationStat{{Label: "big", P95DurationMS: 100, Count: 2}, {Label: "tiny", P95DurationMS: 10}, {Label: "zero"}, {Label: "faster", P95DurationMS: 100}},
+		[]contract.StepDurationStat{{Label: "big", P95DurationMS: 200, Count: 3}, {Label: "tiny", P95DurationMS: 30}, {Label: "zero", P95DurationMS: 500}, {Label: "faster", P95DurationMS: 50}, {Label: "added", P95DurationMS: 500}},
 		20)
 	if len(budget) != 1 || budget[0].Label != "big" || budget[0].Metric != "p95_duration_ms" || budget[0].DeltaMS != 100 || budget[0].BaselineCount != 2 || budget[0].CandidateCount != 3 {
 		t.Fatalf("budget=%+v (tiny delta below %dms floor must be ignored)", budget, stepBudgetMinRegressionMS)
 	}
 
 	ordered := CompareSlowestStepRegressions(
-		[]contract.SelfAugmentSlowStep{{Label: "x", DurationMS: 100}, {Label: "y", DurationMS: 100}, {Label: "z", DurationMS: 100}},
-		[]contract.SelfAugmentSlowStep{{Label: "x", DurationMS: 200}, {Label: "y", DurationMS: 300}, {Label: "z", DurationMS: 200}}, 0)
+		[]contract.SlowStep{{Label: "x", DurationMS: 100}, {Label: "y", DurationMS: 100}, {Label: "z", DurationMS: 100}},
+		[]contract.SlowStep{{Label: "x", DurationMS: 200}, {Label: "y", DurationMS: 300}, {Label: "z", DurationMS: 200}}, 0)
 	if len(ordered) != 3 || ordered[0].Label != "y" || ordered[1].Label != "x" || ordered[2].Label != "z" {
 		t.Fatalf("ordered=%+v", ordered)
 	}
 	budgetOrdered := CompareStepBudgetRegressions(
-		[]contract.SelfAugmentStepDurationStat{{Label: "x", P95DurationMS: 100}, {Label: "y", P95DurationMS: 100}, {Label: "z", P95DurationMS: 100}},
-		[]contract.SelfAugmentStepDurationStat{{Label: "x", P95DurationMS: 200}, {Label: "y", P95DurationMS: 300}, {Label: "z", P95DurationMS: 200}}, 0)
+		[]contract.StepDurationStat{{Label: "x", P95DurationMS: 100}, {Label: "y", P95DurationMS: 100}, {Label: "z", P95DurationMS: 100}},
+		[]contract.StepDurationStat{{Label: "x", P95DurationMS: 200}, {Label: "y", P95DurationMS: 300}, {Label: "z", P95DurationMS: 200}}, 0)
 	if len(budgetOrdered) != 3 || budgetOrdered[0].Label != "y" || budgetOrdered[1].Label != "x" || budgetOrdered[2].Label != "z" {
 		t.Fatalf("budgetOrdered=%+v", budgetOrdered)
 	}

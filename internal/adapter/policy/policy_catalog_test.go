@@ -257,14 +257,14 @@ func TestPolicyTierClassifiesEveryFlagCombination(t *testing.T) {
 		wantName string
 		wantCaps []string
 	}{
-		{false, false, false, policycontract.PolicyTierReadOnly, []string{}},
-		{true, false, false, policycontract.PolicyTierWorkspaceWrite, []string{"write"}},
-		{false, true, false, policycontract.PolicyTierNetworkAccess, []string{"network"}},
-		{true, true, false, policycontract.PolicyTierNetworkAccess, []string{"network", "write"}},
-		{false, false, true, policycontract.PolicyTierShellException, []string{"shell"}},
-		{true, false, true, policycontract.PolicyTierShellException, []string{"shell", "write"}},
-		{false, true, true, policycontract.PolicyTierShellException, []string{"network", "shell"}},
-		{true, true, true, policycontract.PolicyTierShellException, []string{"network", "shell", "write"}},
+		{false, false, false, policycontract.TierReadOnly, []string{}},
+		{true, false, false, policycontract.TierWorkspaceWrite, []string{"write"}},
+		{false, true, false, policycontract.TierNetworkAccess, []string{"network"}},
+		{true, true, false, policycontract.TierNetworkAccess, []string{"network", "write"}},
+		{false, false, true, policycontract.TierShellException, []string{"shell"}},
+		{true, false, true, policycontract.TierShellException, []string{"shell", "write"}},
+		{false, true, true, policycontract.TierShellException, []string{"network", "shell"}},
+		{true, true, true, policycontract.TierShellException, []string{"network", "shell", "write"}},
 	}
 	for _, tc := range cases {
 		result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{

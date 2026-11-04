@@ -135,7 +135,7 @@ func buildMatrixDims() []matrixDim {
 	dims[dArtifact] = matrixDim{"remote_artifact", []matrixValue{
 		simpleValue("no-artifact", nil),
 		simpleValue("artifact", func(in *Input) {
-			in.Record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+			in.Record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 				Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/12", VerifiedAt: "2026-09-05T00:03:00Z",
 			}
 		}),
@@ -316,7 +316,7 @@ func cleanupValues() []matrixValue {
 		issueopsnextcontract.CleanupOperationRemoteBranch, "bogus-op",
 	} {
 		out = append(out, simpleValue("cleanup="+string(operation), func(in *Input) {
-			in.Record.CleanupAttempt = &issueopscontract.IssueOpsCleanupAttempt{Operation: operation, StartedAt: "2026-09-05T00:04:00Z"}
+			in.Record.CleanupAttempt = &issueopscontract.CleanupAttempt{Operation: operation, StartedAt: "2026-09-05T00:04:00Z"}
 		}))
 	}
 	return out
@@ -325,7 +325,7 @@ func cleanupValues() []matrixValue {
 func branchPrepareValues() []matrixValue {
 	prepare := func(sha string, verified bool) func(*Input) {
 		return func(in *Input) {
-			in.Record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+			in.Record.BranchPrepare = &issueopscontract.BranchPrepare{
 				Provider: "github", IssueURL: in.Record.IssueURL, Branch: matrixBranch, BaseBranch: "main", BaseSHA: sha, LinkVerified: verified,
 			}
 		}
@@ -357,7 +357,7 @@ func archReviewValues() []matrixValue {
 func devilsAdvocateValues() []matrixValue {
 	review := func(verdict string, waived bool) func(*Input) {
 		return func(in *Input) {
-			in.Record.DevilsAdvocateReview = &issueopscontract.IssueOpsDevilsAdvocateReview{
+			in.Record.DevilsAdvocateReview = &issueopscontract.DevilsAdvocateReview{
 				Verdict: verdict, Waived: waived, ReviewedPlanDigest: "digest", RecordedAt: "2026-09-05T00:01:00Z",
 			}
 		}
@@ -437,15 +437,15 @@ func localValues() []matrixValue {
 }
 
 func remoteCompletionValues() []matrixValue {
-	completion := func(label string, value issueopscontract.IssueOpsRemoteCompletion) matrixValue {
+	completion := func(label string, value issueopscontract.RemoteCompletion) matrixValue {
 		return simpleValue("remote-completion="+label, func(in *Input) { in.Record.RemoteCompletion = &value })
 	}
 	return []matrixValue{
 		simpleValue("remote-completion=nil", nil),
-		completion("merged", issueopscontract.IssueOpsRemoteCompletion{MergedAt: "2026-09-05T01:00:00Z"}),
-		completion("reflected", issueopscontract.IssueOpsRemoteCompletion{ReflectedAt: "2026-09-05T01:00:00Z"}),
-		completion("issue-closed", issueopscontract.IssueOpsRemoteCompletion{IssueClosedAt: "2026-09-05T01:00:00Z"}),
-		completion("empty", issueopscontract.IssueOpsRemoteCompletion{}),
+		completion("merged", issueopscontract.RemoteCompletion{MergedAt: "2026-09-05T01:00:00Z"}),
+		completion("reflected", issueopscontract.RemoteCompletion{ReflectedAt: "2026-09-05T01:00:00Z"}),
+		completion("issue-closed", issueopscontract.RemoteCompletion{IssueClosedAt: "2026-09-05T01:00:00Z"}),
+		completion("empty", issueopscontract.RemoteCompletion{}),
 	}
 }
 
@@ -457,7 +457,7 @@ var unsettledIntentStatuses = []string{
 
 // intentIsUnsettled is the spec: a create whose provider outcome is not recorded
 // as settled (the statuses operational health also flags).
-func intentIsUnsettled(intent *issueopscontract.IssueOpsIssueCreateIntent) bool {
+func intentIsUnsettled(intent *issueopscontract.IssueCreateIntent) bool {
 	return intent != nil && slices.Contains(unsettledIntentStatuses, intent.Status)
 }
 
@@ -466,7 +466,7 @@ func intentValues() []matrixValue {
 	// pending first among the non-nil values so the small product reaches it.
 	for _, status := range append(slices.Clone(unsettledIntentStatuses), "completed", "not_invoked", "") {
 		out = append(out, simpleValue("intent="+status, func(in *Input) {
-			in.Record.IssueCreateIntent = &issueopscontract.IssueOpsIssueCreateIntent{OperationID: "op-issue", Status: status}
+			in.Record.IssueCreateIntent = &issueopscontract.IssueCreateIntent{OperationID: "op-issue", Status: status}
 		}))
 	}
 	return out
@@ -476,7 +476,7 @@ func childOpValues() []matrixValue {
 	op := func(status string) func(*Input) {
 		return func(in *Input) {
 			in.Record.ChildCreateOperations = []issueopscontract.ChildCreateOperation{{
-				IssueOpsIssueCreateIntent: issueopscontract.IssueOpsIssueCreateIntent{OperationID: matrixChildOp, Status: status},
+				IssueCreateIntent: issueopscontract.IssueCreateIntent{OperationID: matrixChildOp, Status: status},
 			}}
 		}
 	}

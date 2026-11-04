@@ -9,7 +9,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func StrictGitRoot(record model.IssueOpsRecord) string {
+func StrictGitRoot(record model.Record) string {
 	if path := strings.TrimSpace(record.WorktreePath); path != "" {
 		return path
 	}
@@ -37,7 +37,7 @@ func PlanPathExists(repo, path string) bool {
 	return err == nil && !info.IsDir()
 }
 
-func PlanInLinkedWorktree(record model.IssueOpsRecord) bool {
+func PlanInLinkedWorktree(record model.Record) bool {
 	planPath := strings.TrimSpace(record.PlanPath)
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if planPath == "" || worktree == "" {

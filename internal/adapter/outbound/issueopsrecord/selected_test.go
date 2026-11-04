@@ -18,9 +18,9 @@ func TestReadSelectedStrictlyReadsOnlySelectedRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	valid, err := Encode(issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-		ID:            "io-valid", Repo: "/repo", Phase: issueopscontract.IssueOpsPhaseProblem,
+	valid, err := Encode(issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
+		ID:            "io-valid", Repo: "/repo", Phase: issueopscontract.PhaseProblem,
 	})
 	if err != nil {
 		t.Fatal(err)

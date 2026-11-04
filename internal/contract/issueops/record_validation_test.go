@@ -3,13 +3,13 @@ package issueops
 import "testing"
 
 func TestValidateRecordAcceptsEveryCurrentPhase(t *testing.T) {
-	for _, phase := range IssueOpsPhases {
+	for _, phase := range Phases {
 		t.Run(string(phase), func(t *testing.T) {
-			record := IssueOpsRecord{
-				SchemaVersion: IssueOpsSchemaVersion,
+			record := Record{
+				SchemaVersion: SchemaVersion,
 				ID:            "io-valid",
 				Phase:         phase,
-				PhaseLedger: IssueOpsPhaseLedger{
+				PhaseLedger: PhaseLedger{
 					phase: {Phase: phase},
 				},
 			}
@@ -22,13 +22,13 @@ func TestValidateRecordAcceptsEveryCurrentPhase(t *testing.T) {
 }
 
 func TestValidateRecordAcceptsCompletePlanPreparation(t *testing.T) {
-	evidence := IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"source"}}
-	waived := IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "not needed"}
-	record := IssueOpsRecord{
-		SchemaVersion: IssueOpsSchemaVersion,
+	evidence := PlanPrepItem{Status: "evidence", Evidence: []string{"source"}}
+	waived := PlanPrepItem{Status: "waived", WaiveReason: "not needed"}
+	record := Record{
+		SchemaVersion: SchemaVersion,
 		ID:            "io-planprep",
-		Phase:         IssueOpsPhasePlan,
-		PlanPrep: &IssueOpsPlanPrep{
+		Phase:         PhasePlan,
+		PlanPrep: &PlanPrep{
 			PriorDecisions: evidence,
 			RelatedIssues:  waived,
 			WebResearch:    evidence,
@@ -42,17 +42,17 @@ func TestValidateRecordAcceptsCompletePlanPreparation(t *testing.T) {
 }
 
 func TestValidateRecordLeavesPlanPreparationPolicyToDomain(t *testing.T) {
-	tests := []IssueOpsPlanPrepItem{
+	tests := []PlanPrepItem{
 		{Status: "evidence", Evidence: []string{"source"}, WaiveReason: "also waived"},
 		{Status: "waived"},
 		{Status: "waived", Evidence: []string{"source"}, WaiveReason: "not needed"},
 	}
 	for index, item := range tests {
-		record := IssueOpsRecord{
-			SchemaVersion: IssueOpsSchemaVersion,
+		record := Record{
+			SchemaVersion: SchemaVersion,
 			ID:            "io-invalid-planprep",
-			Phase:         IssueOpsPhasePlan,
-			PlanPrep: &IssueOpsPlanPrep{
+			Phase:         PhasePlan,
+			PlanPrep: &PlanPrep{
 				PriorDecisions: item,
 			},
 		}

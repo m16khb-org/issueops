@@ -36,7 +36,7 @@ func (s CleanupRecordStore) Load(ctx context.Context, id string) (model.CleanupS
 	return model.CleanupSnapshot{Record: record, Revision: string(raw)}, nil
 }
 
-func (s CleanupRecordStore) Arm(ctx context.Context, expected model.CleanupSnapshot, attempt model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
+func (s CleanupRecordStore) Arm(ctx context.Context, expected model.CleanupSnapshot, attempt model.CleanupAttempt) (model.CleanupSnapshot, error) {
 	if attempt.Operation == model.CleanupOperationAbandon {
 		return model.CleanupSnapshot{}, fmt.Errorf("abandon requires its sealed inventory arm")
 	}
@@ -60,7 +60,7 @@ func (s CleanupRecordStore) Check(ctx context.Context, expected model.CleanupSna
 	return s.compare(ctx, expected, nil)
 }
 
-func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnapshot, failure model.IssueOpsCleanupFinishFailure, drained bool) (model.CleanupSnapshot, error) {
+func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnapshot, failure model.CleanupFinishFailure, drained bool) (model.CleanupSnapshot, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationFinish)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
@@ -68,7 +68,7 @@ func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnap
 	return s.save(ctx, expected, domain.ApplyCleanupFinishFailure(record, failure, drained))
 }
 
-func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) error {
+func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSnapshot, outcome model.CycleOutcome) error {
 	if _, err := cleanupOperationRecord(expected, model.CleanupOperationFinish); err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSn
 	})
 }
 
-func (s CleanupRecordStore) save(ctx context.Context, expected model.CleanupSnapshot, next model.IssueOpsRecord) (model.CleanupSnapshot, error) {
+func (s CleanupRecordStore) save(ctx context.Context, expected model.CleanupSnapshot, next model.Record) (model.CleanupSnapshot, error) {
 	encoded, raw, err := encodeIssueOpsRecord(next)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
@@ -104,18 +104,18 @@ func (s CleanupRecordStore) compare(ctx context.Context, expected model.CleanupS
 	})
 }
 
-func cleanupSnapshotRecord(snapshot model.CleanupSnapshot, owned bool) (model.IssueOpsRecord, error) {
+func cleanupSnapshotRecord(snapshot model.CleanupSnapshot, owned bool) (model.Record, error) {
 	record, err := decodeIssueOpsRecord(snapshot.Record.ID, []byte(snapshot.Revision))
 	if err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	if owned {
-		expected := model.IssueOpsCleanupAttempt{}
+		expected := model.CleanupAttempt{}
 		if snapshot.Record.CleanupAttempt != nil {
 			expected = *snapshot.Record.CleanupAttempt
 		}
 		if err := domain.ValidateCleanupOwner(record, expected); err != nil {
-			return model.IssueOpsRecord{}, err
+			return model.Record{}, err
 		}
 	}
 	return record, nil
@@ -123,13 +123,13 @@ func cleanupSnapshotRecord(snapshot model.CleanupSnapshot, owned bool) (model.Is
 
 var _ port.CleanupFinishRecords = CleanupRecordStore{}
 
-func cleanupOperationRecord(snapshot model.CleanupSnapshot, operation model.CleanupOperation) (model.IssueOpsRecord, error) {
+func cleanupOperationRecord(snapshot model.CleanupSnapshot, operation model.CleanupOperation) (model.Record, error) {
 	record, err := cleanupSnapshotRecord(snapshot, true)
 	if err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	if err := domain.ValidateCleanupOperationAccess(record, operation); err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	return record, nil
 }

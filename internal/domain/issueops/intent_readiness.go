@@ -6,7 +6,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func IntentMissing(record model.IssueOpsRecord) []string {
+func IntentMissing(record model.Record) []string {
 	if record.Intent == nil {
 		return []string{"intent_contract"}
 	}

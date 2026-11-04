@@ -14,15 +14,15 @@ import (
 func workspaceLinkerForTest(root string) branchapp.WorkspaceLinker {
 	return branchapp.WorkspaceLinker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Files: core.LinkEnvironment{}, Now: time.Now}
 }
-func LinkIssueOpsPlanForTest(root, id, planPath string) (model.IssueOpsRecord, error) {
+func LinkIssueOpsPlanForTest(root, id, planPath string) (model.Record, error) {
 	return workspaceLinkerForTest(root).Plan(context.Background(), id, planPath, nil)
 }
-func LinkIssueOpsPlanWithActorForTest(root, id, planPath string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func LinkIssueOpsPlanWithActorForTest(root, id, planPath string, actor model.Actor) (model.Record, error) {
 	return workspaceLinkerForTest(root).Plan(context.Background(), id, planPath, &actor)
 }
-func LinkIssueOpsWorktreeForTest(root, id, worktreePath string) (model.IssueOpsRecord, error) {
+func LinkIssueOpsWorktreeForTest(root, id, worktreePath string) (model.Record, error) {
 	return workspaceLinkerForTest(root).Worktree(context.Background(), id, worktreePath, nil)
 }
-func LinkIssueOpsWorktreeWithActorForTest(root, id, worktreePath string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func LinkIssueOpsWorktreeWithActorForTest(root, id, worktreePath string, actor model.Actor) (model.Record, error) {
 	return workspaceLinkerForTest(root).Worktree(context.Background(), id, worktreePath, &actor)
 }

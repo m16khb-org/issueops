@@ -14,9 +14,9 @@ import (
 
 type RemoteVerification struct {
 	Child         func(string) error
-	Verify        func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
-	VerifyContext func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
-	Merged        func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerification) error
+	Verify        func(issueopscontract.RemoteArtifactVerificationRequest) error
+	VerifyContext func(context.Context, issueopscontract.RemoteArtifactVerificationRequest) error
+	Merged        func(context.Context, issueopscontract.RemoteArtifactVerification) error
 }
 
 type Dependencies struct {
@@ -26,7 +26,7 @@ type Dependencies struct {
 	CleanupRuntime feedbackcleanup.Deps
 	Benchmark      benchmarkcmd.Command
 	Execution      executioncmd.ExecutionDeps
-	Runtime        IssueOpsCLIDeps
+	Runtime        Deps
 	Gates          LoopGateDeps
 	Usage          string
 	ChildUsage     string
@@ -50,6 +50,6 @@ func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {
 // command owns the runtime used by one CLI invocation.
 type command struct {
 	VerifyChild func(string) error
-	Runtime     IssueOpsCLIDeps
+	Runtime     Deps
 	Gates       LoopGateDeps
 }

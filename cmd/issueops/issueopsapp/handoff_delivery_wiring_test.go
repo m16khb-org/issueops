@@ -18,22 +18,22 @@ func TestManualHandoffDeliveryRejectsClaimForgeryAndUsesIsolatedLineage(t *testi
 	stateRoot := t.TempDir()
 	eventNow := handoffDeliveryEventClock(time.Now)
 	observation := manualHerdrHandoffObservation("io-manual-forgery", 1, "attempt-1", eventNow())
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID:        observation.LifecycleID,
 		Execution: &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased}},
 	}
 	if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(record, observation); err != nil {
 		t.Fatal(err)
 	}
-	for _, mutate := range []func(*issueopscontract.IssueOpsHandoffDeliveryObservation){
-		func(value *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+	for _, mutate := range []func(*issueopscontract.HandoffDeliveryObservation){
+		func(value *issueopscontract.HandoffDeliveryObservation) {
 			value.OwnerActor = &issueopscontract.NativeActor{Host: "codex", SessionID: "forged"}
 		},
-		func(value *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+		func(value *issueopscontract.HandoffDeliveryObservation) {
 			value.OwnerClaimed = handoffDeliveryObserved(eventNow, "issueops_claim")
 		},
-		func(value *issueopscontract.IssueOpsHandoffDeliveryObservation) {
-			value.OwnerClaim = issueopscontract.IssueOpsHandoffDeliveryOwnerClaim{Claimed: true, Generation: 1, ClaimedAt: observation.UpdatedAt}
+		func(value *issueopscontract.HandoffDeliveryObservation) {
+			value.OwnerClaim = issueopscontract.HandoffDeliveryOwnerClaim{Claimed: true, Generation: 1, ClaimedAt: observation.UpdatedAt}
 		},
 	} {
 		forged := observation
@@ -53,7 +53,7 @@ func TestManualHandoffDeliveryRejectsClaimForgeryAndUsesIsolatedLineage(t *testi
 }
 
 func TestManualCmuxHandoffDeliveryAllowsOnlyReleasedDirectStaging(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID: "io-cmux-manual",
 		Execution: &issueopscontract.Execution{
 			Lease: issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusReleased},
@@ -83,15 +83,15 @@ func TestPublicManualHandoffProducerRejectsEveryOwnerClaimField(t *testing.T) {
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	eventNow := handoffDeliveryEventClock(time.Now)
 	observation := manualHerdrHandoffObservation(record.ID, 1, "attempt-1", eventNow())
-	for name, mutate := range map[string]func(*issueopscontract.IssueOpsHandoffDeliveryObservation){
-		"owner_actor": func(value *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+	for name, mutate := range map[string]func(*issueopscontract.HandoffDeliveryObservation){
+		"owner_actor": func(value *issueopscontract.HandoffDeliveryObservation) {
 			value.OwnerActor = &issueopscontract.NativeActor{Host: "codex", SessionID: "forged"}
 		},
-		"owner_claimed": func(value *issueopscontract.IssueOpsHandoffDeliveryObservation) {
-			value.OwnerClaimed = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
+		"owner_claimed": func(value *issueopscontract.HandoffDeliveryObservation) {
+			value.OwnerClaimed = handoffDeliveryObserved(eventNow, issueopscontract.HandoffDeliveryEvidenceIssueOpsClaim)
 		},
-		"owner_claim": func(value *issueopscontract.IssueOpsHandoffDeliveryObservation) {
-			value.OwnerClaim = issueopscontract.IssueOpsHandoffDeliveryOwnerClaim{Claimed: true, Generation: 1, ClaimedAt: observation.UpdatedAt}
+		"owner_claim": func(value *issueopscontract.HandoffDeliveryObservation) {
+			value.OwnerClaim = issueopscontract.HandoffDeliveryOwnerClaim{Claimed: true, Generation: 1, ClaimedAt: observation.UpdatedAt}
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -127,46 +127,46 @@ func TestPublicManualHandoffProducerUsesIssueOpsStateNamespace(t *testing.T) {
 	}
 }
 
-func manualCmuxHandoffObservation(lifecycleID string, generation uint64) issueopscontract.IssueOpsHandoffDeliveryObservation {
+func manualCmuxHandoffObservation(lifecycleID string, generation uint64) issueopscontract.HandoffDeliveryObservation {
 	created := "2026-09-20T10:00:01Z"
-	return issueopscontract.IssueOpsHandoffDeliveryObservation{
-		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
+	return issueopscontract.HandoffDeliveryObservation{
+		SchemaVersion:  issueopscontract.HandoffDeliverySchemaVersion,
 		AttemptID:      "manual-direct:" + lifecycleID + ":3:cmux:attempt",
 		LineageID:      "manual-direct:" + "generation:3:cmux:window:window-1",
 		LifecycleID:    lifecycleID,
 		PromptSHA256:   strings.Repeat("a", 64),
 		MaterialSHA256: strings.Repeat("b", 64),
-		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
-			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: "0.64.10",
+		Launcher: issueopscontract.HandoffDeliveryLauncher{
+			Name: issueopscontract.HandoffDeliveryLauncherCmux, Version: "0.64.10",
 			Path: cmuxPath,
-			EndpointIncarnation: &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
+			EndpointIncarnation: &issueopscontract.HandoffDeliveryEndpointIncarnation{
 				Path: socketPath, Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
 				OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: filepath.Dir(socketPath), ParentDevice: 1,
 				ParentInode: 1, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,
 			},
 		},
-		Target:             issueopscontract.IssueOpsHandoffDeliveryTarget{WindowID: "window-1", CWD: "/repo/worktree"},
+		Target:             issueopscontract.HandoffDeliveryTarget{WindowID: "window-1", CWD: "/repo/worktree"},
 		ExpectedOwnerHost:  "codex",
 		SourceGeneration:   generation,
 		CreatedAt:          created,
 		UpdatedAt:          created,
-		Receipt:            issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/cmux.json", Digest: strings.Repeat("d", 64)},
-		CallStaged:         issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: created, Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged},
-		InputAccepted:      issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
-		NativeTurnObserved: issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
-		OwnerClaimed:       issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
-		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		Receipt:            issueopscontract.HandoffDeliveryReceipt{Location: "audit/cmux.json", Digest: strings.Repeat("d", 64)},
+		CallStaged:         issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateObserved, ObservedAt: created, Evidence: issueopscontract.HandoffDeliveryEvidenceExternalCallStaged},
+		InputAccepted:      issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved},
+		NativeTurnObserved: issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved},
+		OwnerClaimed:       issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved},
+		Ambiguous:          issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved},
 	}
 }
 
-func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscontract.IssueOpsRecord {
+func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscontract.Record {
 	t.Helper()
 	testsupport.IsolateGitConfig(t)
 	repo := t.TempDir()
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(claimWiringGit(t, repo, "rev-parse", "HEAD"))
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "11-manual-handoff"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: repo, Branch: "11-manual-handoff"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,10 +174,10 @@ func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscon
 	if err := os.MkdirAll(worktree, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueopscontract.IssueOpsPhaseImplement
+	record.Phase = issueopscontract.PhaseImplement
 	record.WorktreePath = worktree
 	record.IssueURL = "https://github.com/example/issueops/issues/11"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}

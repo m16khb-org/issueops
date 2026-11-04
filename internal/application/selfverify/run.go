@@ -14,12 +14,12 @@ type ExecuteRequest struct {
 }
 
 type ExecuteDeps struct {
-	Verify       func(LoopRequest) (selfaugmentcontract.SelfAugmentResult, error)
-	ApplyLLMEval func(selfaugmentcontract.SelfAugmentResult, selfverifycontract.LLMEvalOptions) (selfaugmentcontract.SelfAugmentResult, error)
-	SaveSummary  func(*selfaugmentcontract.SelfAugmentResult, string) error
+	Verify       func(LoopRequest) (selfaugmentcontract.Result, error)
+	ApplyLLMEval func(selfaugmentcontract.Result, selfverifycontract.LLMEvalOptions) (selfaugmentcontract.Result, error)
+	SaveSummary  func(*selfaugmentcontract.Result, string) error
 }
 
-func Execute(request ExecuteRequest, deps ExecuteDeps) (selfaugmentcontract.SelfAugmentResult, error) {
+func Execute(request ExecuteRequest, deps ExecuteDeps) (selfaugmentcontract.Result, error) {
 	result, err := deps.Verify(request.Loop)
 	if err == nil && request.LLMEnabled {
 		result, err = deps.ApplyLLMEval(result, selfverifycontract.LLMEvalOptions{

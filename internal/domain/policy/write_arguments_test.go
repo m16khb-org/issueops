@@ -257,7 +257,7 @@ func TestSedAndAwkAreNotReadOnlyAllowed(t *testing.T) {
 // check applies to the builtin bases regardless.
 func TestWorkspaceOverridesDoNotUnlockWriteArguments(t *testing.T) {
 	catalog := BuiltinCatalog()
-	catalog.Apply(policycontract.PolicyOverrides{
+	catalog.Apply(policycontract.Overrides{
 		AdditionalReadOnlyCommands:    []string{"repo-tool"},
 		AdditionalReadOnlySubcommands: map[string][]string{"git": {"blame"}},
 	})

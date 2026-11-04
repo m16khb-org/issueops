@@ -32,13 +32,13 @@ func (p *issueReconcileProvider) FindIssueCreateCandidates(_ context.Context, re
 
 func TestIssueReconcileCompositionPreservesPreviewAndRecoversVerificationFailure(t *testing.T) {
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "51-reconcile"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: t.TempDir(), Branch: "51-reconcile"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	body := "sealed body"
 	digest := sha256.Sum256([]byte(body))
-	record, err = application.NewIssueCreateIntents(issueops.RemoteRecordStore{StateRoot: root}, time.Now).Begin(context.Background(), record.ID, model.IssueOpsIssueCreateIntentRequest{OperationID: strings.Repeat("1", 32), Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "Title", BodySHA256: fmt.Sprintf("%x", digest), StartedAt: "2026-09-28T00:00:00Z", Labels: []string{"bug"}, Assignees: []string{"owner"}})
+	record, err = application.NewIssueCreateIntents(issueops.RemoteRecordStore{StateRoot: root}, time.Now).Begin(context.Background(), record.ID, model.IssueCreateIntentRequest{OperationID: strings.Repeat("1", 32), Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "Title", BodySHA256: fmt.Sprintf("%x", digest), StartedAt: "2026-09-28T00:00:00Z", Labels: []string{"bug"}, Assignees: []string{"owner"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestIssueReconcileCompositionPreservesPreviewAndRecoversVerificationFailure
 			t.Fatalf("provider = %s", name)
 		}
 		return provider, nil
-	}, func(_ context.Context, req model.IssueOpsRemoteArtifactVerificationRequest) error {
+	}, func(_ context.Context, req model.RemoteArtifactVerificationRequest) error {
 		verified++
 		if req.URL != provider.result.Candidates[0].URL || strings.Join(req.Labels, ",") != "bug" || strings.Join(req.Assignees, ",") != "owner" {
 			t.Fatalf("verify request = %+v", req)

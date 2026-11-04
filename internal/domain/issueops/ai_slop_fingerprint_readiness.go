@@ -6,7 +6,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func AISlopCleanFingerprintReadinessMissing(record model.IssueOpsRecord, currentFingerprint string) []string {
+func AISlopCleanFingerprintReadinessMissing(record model.Record, currentFingerprint string) []string {
 	if strings.TrimSpace(record.AISlopCleanAt) == "" {
 		return nil
 	}

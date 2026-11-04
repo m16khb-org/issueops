@@ -9,12 +9,12 @@ import (
 
 type BodySyncRepository struct{ StateRoot string }
 
-func (r BodySyncRepository) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
+func (r BodySyncRepository) Read(_ context.Context, id string) (model.Record, error) {
 	return ReadIssueOps(r.StateRoot, id)
 }
 
-func (r BodySyncRepository) Update(ctx context.Context, id string, transition application.RecordTransition) (model.IssueOpsRecord, error) {
-	var persisted model.IssueOpsRecord
+func (r BodySyncRepository) Update(ctx context.Context, id string, transition application.RecordTransition) (model.Record, error) {
+	var persisted model.Record
 	err := withIssueOpsLock(ctx, r.StateRoot, id, func(spanCtx context.Context) error {
 		current, err := ReadIssueOps(r.StateRoot, id)
 		if err != nil {
@@ -28,7 +28,7 @@ func (r BodySyncRepository) Update(ctx context.Context, id string, transition ap
 		return err
 	})
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	return persisted, nil
 }

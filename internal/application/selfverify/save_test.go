@@ -13,13 +13,13 @@ import (
 func TestSaveSummaryEncodingFailureDoesNotWrite(t *testing.T) {
 	wantErr := errors.New("encode failed")
 	writeCalls := 0
-	result := selfaugmentcontract.SelfAugmentResult{OK: true}
+	result := selfaugmentcontract.Result{OK: true}
 	err := SaveSummary(&result, "", SaveSummaryDeps{
 		Now:    time.Now,
-		Encode: func(selfaugmentcontract.SelfAugmentStateSnapshot) ([]byte, error) { return nil, wantErr },
-		Write: func(string, string) (statecontract.StateResult, error) {
+		Encode: func(selfaugmentcontract.StateSnapshot) ([]byte, error) { return nil, wantErr },
+		Write: func(string, string) (statecontract.Result, error) {
 			writeCalls++
-			return statecontract.StateResult{}, nil
+			return statecontract.Result{}, nil
 		},
 	})
 	if !errors.Is(err, wantErr) || writeCalls != 0 || result.StateCheckpoint == nil || result.StateCheckpoint.OK || result.StateCheckpoint.Key != "self-verify-latest" || result.StateCheckpoint.Error != wantErr.Error() {
@@ -29,15 +29,15 @@ func TestSaveSummaryEncodingFailureDoesNotWrite(t *testing.T) {
 
 func TestSaveSummaryWriteFailureRecordsStateDir(t *testing.T) {
 	wantErr := errors.New("write failed")
-	result := selfaugmentcontract.SelfAugmentResult{OK: true}
+	result := selfaugmentcontract.Result{OK: true}
 	err := SaveSummary(&result, "custom", SaveSummaryDeps{
 		Now:    time.Now,
-		Encode: func(selfaugmentcontract.SelfAugmentStateSnapshot) ([]byte, error) { return []byte("{}"), nil },
-		Write: func(key, body string) (statecontract.StateResult, error) {
+		Encode: func(selfaugmentcontract.StateSnapshot) ([]byte, error) { return []byte("{}"), nil },
+		Write: func(key, body string) (statecontract.Result, error) {
 			if key != "custom" || body != "{}" {
 				t.Fatalf("write key=%q body=%q", key, body)
 			}
-			return statecontract.StateResult{}, wantErr
+			return statecontract.Result{}, wantErr
 		},
 		StateDir: func() string { return "/state" },
 	})
@@ -59,15 +59,15 @@ func TestSaveSummaryClassifiesFailureCauseOnlyWhenStepsFailed(t *testing.T) {
 		{"failed step", 1, failurecausecontract.Transport, "transport:dial_timeout", 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var saved selfaugmentcontract.SelfAugmentStateSnapshot
-			result := selfaugmentcontract.SelfAugmentResult{Summary: selfaugmentcontract.SelfAugmentSummary{FailedSteps: tc.failedSteps, FailureCauseEvidence: evidence}}
+			var saved selfaugmentcontract.StateSnapshot
+			result := selfaugmentcontract.Result{Summary: selfaugmentcontract.Summary{FailedSteps: tc.failedSteps, FailureCauseEvidence: evidence}}
 			err := SaveSummary(&result, "k", SaveSummaryDeps{
 				Now: time.Now,
-				Encode: func(s selfaugmentcontract.SelfAugmentStateSnapshot) ([]byte, error) {
+				Encode: func(s selfaugmentcontract.StateSnapshot) ([]byte, error) {
 					saved = s
 					return []byte("{}"), nil
 				},
-				Write: func(string, string) (statecontract.StateResult, error) { return statecontract.StateResult{}, nil },
+				Write: func(string, string) (statecontract.Result, error) { return statecontract.Result{}, nil },
 			})
 			got := saved.Summary
 			if err != nil || got.FailureCause != tc.wantCause || got.FailureCauseReason != tc.wantReason || len(got.FailureCauseEvidence) != tc.wantItems {

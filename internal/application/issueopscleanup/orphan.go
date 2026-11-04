@@ -25,7 +25,7 @@ type OrphanEnvironment interface {
 type OrphanCleaner struct {
 	Environment  OrphanEnvironment
 	Collect      func(context.Context, string) (health.Snapshot, error)
-	VerifyMerged func(context.Context, model.IssueOpsRemoteArtifactVerification) error
+	VerifyMerged func(context.Context, model.RemoteArtifactVerification) error
 }
 
 func (s OrphanCleaner) normalize(request contract.Request) (contract.Request, error) {

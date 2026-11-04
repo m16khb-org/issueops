@@ -13,7 +13,7 @@ import (
 )
 
 func TestSelfVerifyLLMEvalDefaultOmittedFromJSON(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{OK: true, LoopKind: "self_verification"}
+	result := augmentcontract.Result{OK: true, LoopKind: "self_verification"}
 	b, err := json.Marshal(result)
 	if err != nil {
 		t.Fatal(err)
@@ -99,7 +99,7 @@ func TestBoundedLLMEvalErrorJoinsPrefixErrorAndTrimmedOutput(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalRendersPromptOnlyResult(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true}
+	result := augmentcontract.Result{OK: true, TerminationEligible: true}
 	updated, err := ApplySelfVerifyLLMEval(result, selfverifyx.LLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
 	if err != nil {
 		t.Fatalf("advisory prompt-only eval should be recorded, not returned as gate error: %v", err)
@@ -110,7 +110,7 @@ func TestSelfVerifyLLMEvalRendersPromptOnlyResult(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalResultClassifiesForegroundReadOnlyGate(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
+	result := augmentcontract.Result{OK: true, TerminationEligible: true, Summary: augmentcontract.Summary{MinimumGoalScore: 100, TerminationEligible: true}}
 	updated, _ := ApplySelfVerifyLLMEval(result, selfverifyx.LLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
 	if updated.LLMEval == nil {
 		t.Fatal("expected llm_eval result")
@@ -121,7 +121,7 @@ func TestSelfVerifyLLMEvalResultClassifiesForegroundReadOnlyGate(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalGateFailsOnBlocker(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
+	result := augmentcontract.Result{OK: true, TerminationEligible: true, Summary: augmentcontract.Summary{MinimumGoalScore: 100, TerminationEligible: true}}
 	updated, err := ApplySelfVerifyLLMEval(result, selfverifyx.LLMEvalOptions{Enabled: true, Mode: "gate", TargetScore: 95})
 	if err == nil || !strings.Contains(err.Error(), "LLM evaluation gate failed") {
 		t.Fatalf("expected gate failure, got err=%v result=%+v", err, updated)

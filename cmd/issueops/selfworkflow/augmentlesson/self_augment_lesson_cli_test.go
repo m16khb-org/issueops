@@ -45,7 +45,7 @@ func assertStateRecordContains(t *testing.T, key string, want string) {
 }
 
 func RunSelfAugmentLesson(args []string, deps lessonTestDeps) error {
-	return Run(args, Deps{PrintJSON: deps.PrintJSON, Save: func(req augmentcontract.SelfAugmentLessonRequest) (augmentcontract.SelfAugmentLessonResult, error) {
+	return Run(args, Deps{PrintJSON: deps.PrintJSON, Save: func(req augmentcontract.LessonRequest) (augmentcontract.LessonResult, error) {
 		return SaveSelfAugmentLesson(req, deps)
 	}})
 }

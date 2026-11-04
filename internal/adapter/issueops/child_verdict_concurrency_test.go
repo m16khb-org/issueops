@@ -33,12 +33,12 @@ func TestChildAcceptanceRechecksStateUnderParentSpan(t *testing.T) {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
 			parent := createDelegationReadyParentForTest(t, root)
-			started, err := startIssueOpsChildForTest(root, parent, model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: "124-changing-child", TaskScope: "accept fresh state", AcceptanceCriteria: []string{"stale observations refused"}})
+			started, err := startIssueOpsChildForTest(root, parent, model.ChildStartRequest{ParentID: parent.ID, Branch: "124-changing-child", TaskScope: "accept fresh state", AcceptanceCriteria: []string{"stale observations refused"}})
 			if err != nil {
 				t.Fatal(err)
 			}
 			child := started.Child
-			child.Phase = model.IssueOpsPhaseDone
+			child.Phase = model.PhaseDone
 			child = writeIssueOpsRecordForDelegationTest(t, root, child)
 			parent, err = ReadIssueOps(root, parent.ID)
 			if err != nil {
@@ -49,13 +49,13 @@ func TestChildAcceptanceRechecksStateUnderParentSpan(t *testing.T) {
 			service.Records = childChangedBeforeParentSpan{CycleRecordStore: CycleRecordStore{StateRoot: root}, parentID: parent.ID, change: func() {
 				switch scenario {
 				case "reopened":
-					child.Phase = model.IssueOpsPhaseImplement
+					child.Phase = model.PhaseImplement
 					want = "child_not_done"
 				case "reparented":
 					child.Delegation.ParentCycleID = "io-other-parent"
 					want = "child_parent_mismatch"
 				case "cleanup applying":
-					child.CleanupAbandonFailure = &model.IssueOpsCleanupAbandonFailure{Step: "applying"}
+					child.CleanupAbandonFailure = &model.CleanupAbandonFailure{Step: "applying"}
 					want = "cleanup abandon apply"
 				case "other repo":
 					child.Repo = "/other"
@@ -83,12 +83,12 @@ func TestChildAcceptancePreservesConcurrentSiblingReceipts(t *testing.T) {
 	parent := createDelegationReadyParentForTest(t, root)
 	var ids []string
 	for i := range 8 {
-		started, err := startIssueOpsChildForTest(root, parent, model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: fmt.Sprintf("124-child-%d", i), TaskScope: "concurrent acceptance", AcceptanceCriteria: []string{"all receipts persist"}})
+		started, err := startIssueOpsChildForTest(root, parent, model.ChildStartRequest{ParentID: parent.ID, Branch: fmt.Sprintf("124-child-%d", i), TaskScope: "concurrent acceptance", AcceptanceCriteria: []string{"all receipts persist"}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		child := started.Child
-		child.Phase = model.IssueOpsPhaseDone
+		child.Phase = model.PhaseDone
 		writeIssueOpsRecordForDelegationTest(t, root, child)
 		ids = append(ids, child.ID)
 	}

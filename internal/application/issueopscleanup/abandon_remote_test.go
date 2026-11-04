@@ -31,11 +31,11 @@ func remoteRefFake(oid string, err error, calls *[]remoteRefCall) func(context.C
 	}
 }
 
-func remoteAbandonRecordFixture() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
+func remoteAbandonRecordFixture() model.Record {
+	return model.Record{
 		ID: "cycle", Repo: "/repo", IssueURL: " https://example.test/issues/1 ",
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Kind: " pr ", URL: " https://example.test/pull/2 "},
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: "main"},
+		RemoteArtifact: &model.RemoteArtifactVerification{Kind: " pr ", URL: " https://example.test/pull/2 "},
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: "main"},
 	}
 }
 
@@ -140,7 +140,7 @@ func TestAbandonRemoteObserveRefusesUnsatisfiablePrerequisites(t *testing.T) {
 	var calls []remoteRefCall
 	reader := &recordingBodyReader{}
 	observer := AbandonRemoteObserver{RemoteRef: remoteRefFake("abc", nil, &calls)}
-	noRemote := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "main"}}
+	noRemote := model.Record{ID: "cycle", Repo: "/repo", BranchPrepare: &model.BranchPrepare{BaseBranch: "main"}}
 	_, observed := observer.Observe(t.Context(), noRemote, allRemoteFlags, reader, model.CleanupAbandonInventory{})
 	if want := []string{"remote_artifact_required", "issue_url_required", "branch_recorded"}; !slices.Equal(observed.RemoteMissing, want) {
 		t.Fatalf("missing=%v want %v", observed.RemoteMissing, want)

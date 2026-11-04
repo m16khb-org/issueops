@@ -22,7 +22,7 @@ func TestValidateBranchAcceptsEveryDecimalDigitInIssueNumber(t *testing.T) {
 }
 
 func TestChildDroppedReasonMinimumLengthIsInclusive(t *testing.T) {
-	entry := model.IssueOpsChildStatusEntry{ValidationVerdict: "dropped", ValidationReason: "0123456789", ValidatedAt: "2026-01-01T00:00:00Z"}
+	entry := model.ChildStatusEntry{ValidationVerdict: "dropped", ValidationReason: "0123456789", ValidatedAt: "2026-01-01T00:00:00Z"}
 	if !ChildDropped(entry) {
 		t.Fatal("10-character reason must count as dropped")
 	}
@@ -43,7 +43,7 @@ func TestPrepareChildVerdictReasonMinimumLengthIsInclusive(t *testing.T) {
 }
 
 func TestBuildChildStatusDroppedReceiptAtMinimumReasonIsNotOrphaned(t *testing.T) {
-	parent := model.IssueOpsRecord{ID: "parent", ChildCycles: []model.IssueOpsChildCycleRef{
+	parent := model.Record{ID: "parent", ChildCycles: []model.ChildCycleRef{
 		{CycleID: "edge", ValidationVerdict: "dropped", ValidationReason: "0123456789", ValidatedAt: "2026-01-01T00:00:00Z"},
 		{CycleID: "short", ValidationVerdict: "dropped", ValidationReason: "012345678", ValidatedAt: "2026-01-01T00:00:00Z"},
 	}}
@@ -54,16 +54,16 @@ func TestBuildChildStatusDroppedReceiptAtMinimumReasonIsNotOrphaned(t *testing.T
 }
 
 func TestBuildChildStatusChildIssueURLPrefersParentRefOverDelegation(t *testing.T) {
-	parent := model.IssueOpsRecord{ID: "parent", ChildCycles: []model.IssueOpsChildCycleRef{
+	parent := model.Record{ID: "parent", ChildCycles: []model.ChildCycleRef{
 		{CycleID: "kept", ChildIssueURL: "https://example.test/ref"},
 		{CycleID: "filled"},
 		{CycleID: "plain"},
 	}}
-	scanned := map[string]model.IssueOpsRecord{
-		"kept":   {ID: "kept", Delegation: &model.IssueOpsDelegationContract{ChildIssueURL: " https://example.test/delegation-kept "}},
-		"filled": {ID: "filled", Delegation: &model.IssueOpsDelegationContract{ChildIssueURL: " https://example.test/delegation-filled "}},
+	scanned := map[string]model.Record{
+		"kept":   {ID: "kept", Delegation: &model.DelegationContract{ChildIssueURL: " https://example.test/delegation-kept "}},
+		"filled": {ID: "filled", Delegation: &model.DelegationContract{ChildIssueURL: " https://example.test/delegation-filled "}},
 		"plain":  {ID: "plain"},
-		"extra":  {ID: "extra", Delegation: &model.IssueOpsDelegationContract{ChildIssueURL: "https://example.test/extra"}},
+		"extra":  {ID: "extra", Delegation: &model.DelegationContract{ChildIssueURL: "https://example.test/extra"}},
 	}
 	got := map[string]string{}
 	for _, entry := range BuildChildStatus(parent, scanned).Children {
@@ -93,7 +93,7 @@ func TestValidateClosedChildObservationNamesRemoteState(t *testing.T) {
 }
 
 func TestCleanupFinishPreviewUnmergedNeedsRecordedSupersessionWithoutError(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "cycle", Phase: model.IssueOpsPhaseDone}
+	record := model.Record{ID: "cycle", Phase: model.PhaseDone}
 	missingMerged := func(inventory model.CleanupFinishInventory, observed CleanupFinishObservation) bool {
 		result := BuildCleanupFinishPreview(record, model.CleanupFinishRequest{}, inventory, observed)
 		return slices.Contains(result.Missing, "remote_artifact_merged")
@@ -114,16 +114,16 @@ func TestCleanupFinishPreviewUnmergedNeedsRecordedSupersessionWithoutError(t *te
 }
 
 func TestBuildCleanupStatusPRPhaseSatisfiesPRRequirement(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "cycle", WorktreePath: "/worktree", Branch: "1-x", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{
+	record := model.Record{ID: "cycle", WorktreePath: "/worktree", Branch: "1-x", RemoteArtifact: &model.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1", Labels: []string{"ready"}, Assignees: []string{"owner"},
 	}}
-	req := model.IssueOpsCleanupStatusRequest{Merged: true}
+	req := model.CleanupStatusRequest{Merged: true}
 	facts := CleanupStatusObservation{WorktreeExists: true, Branch: "1-x", Remote: "origin"}
-	record.Phase = model.IssueOpsPhasePR
+	record.Phase = model.PhasePR
 	if got := BuildCleanupStatus(record, req, facts); slices.Contains(got.Missing, "pr_phase") {
 		t.Fatalf("pr phase flagged: %v", got.Missing)
 	}
-	record.Phase = model.IssueOpsPhasePlan
+	record.Phase = model.PhasePlan
 	if got := BuildCleanupStatus(record, req, facts); !slices.Contains(got.Missing, "pr_phase") {
 		t.Fatalf("earlier phase not flagged: %v", got.Missing)
 	}
@@ -131,7 +131,7 @@ func TestBuildCleanupStatusPRPhaseSatisfiesPRRequirement(t *testing.T) {
 
 func TestExecutionReadinessMissingRequiresActiveLeaseWithHolder(t *testing.T) {
 	exec := covExecDirect()
-	record := model.IssueOpsRecord{Execution: &exec}
+	record := model.Record{Execution: &exec}
 	if got := ExecutionReadinessMissing(record, true); len(got) != 0 {
 		t.Fatalf("active lease with holder: %v", got)
 	}
@@ -183,10 +183,10 @@ func TestRenderSectionCompletionBudgetIsInclusive(t *testing.T) {
 }
 
 func TestValidatePhaseProgressionAllowsStayingInPhase(t *testing.T) {
-	if err := ValidatePhaseProgression(model.IssueOpsPhasePR, model.IssueOpsPhasePR); err != nil {
+	if err := ValidatePhaseProgression(model.PhasePR, model.PhasePR); err != nil {
 		t.Fatalf("same phase: %v", err)
 	}
-	if err := ValidatePhaseProgression(model.IssueOpsPhasePR, model.IssueOpsPhasePlan); err == nil {
+	if err := ValidatePhaseProgression(model.PhasePR, model.PhasePlan); err == nil {
 		t.Fatal("backward move accepted")
 	}
 }
@@ -195,7 +195,7 @@ func TestPRGitReadinessUpstreamSyncRequiresExactlyZeroZero(t *testing.T) {
 	facts := PRGitFacts{RootAvailable: true, GitWorktree: true, FingerprintVerified: true, WorktreeClean: true, Upstream: "origin/x", SyncUpstream: true}
 	for counts, wantMissing := range map[string]bool{"0 0": false, "1 0": true, "0 1": true, "0": true, "0 0 0": true, "": true} {
 		facts.UpstreamCounts = counts
-		missing, _ := PRGitReadiness(model.IssueOpsRecord{}, facts)
+		missing, _ := PRGitReadiness(model.Record{}, facts)
 		if slices.Contains(missing, "upstream_synced") != wantMissing {
 			t.Errorf("counts=%q missing=%v", counts, missing)
 		}
@@ -203,9 +203,9 @@ func TestPRGitReadinessUpstreamSyncRequiresExactlyZeroZero(t *testing.T) {
 }
 
 func TestReviewMetricsNamesOneBasedRoundOfUnparseableTimestamp(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "cycle", DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{
+	record := model.Record{ID: "cycle", DevilsAdvocateReview: &model.DevilsAdvocateReview{
 		Verdict: "pass", RecordedAt: "2026-01-01T00:00:10Z",
-		History: []model.IssueOpsDevilsAdvocateRound{{Verdict: "revise", RecordedAt: "bad"}},
+		History: []model.DevilsAdvocateRound{{Verdict: "revise", RecordedAt: "bad"}},
 	}}
 	_, warnings := ReviewMetricsForRecord(record)
 	if len(warnings) != 1 || !strings.Contains(warnings[0], "devil's-advocate round 1 has an unparseable recorded_at") {

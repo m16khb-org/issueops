@@ -6,14 +6,14 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func PlanExistenceRoot(record model.IssueOpsRecord) string {
+func PlanExistenceRoot(record model.Record) string {
 	if worktree := strings.TrimSpace(record.WorktreePath); worktree != "" {
 		return worktree
 	}
 	return strings.TrimSpace(record.Repo)
 }
 
-func WorktreePlanReadinessMissing(record model.IssueOpsRecord, worktreeValid, planExists, planInWorktree bool) []string {
+func WorktreePlanReadinessMissing(record model.Record, worktreeValid, planExists, planInWorktree bool) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.WorktreePath) == "" {
 		missing = append(missing, "worktree_path")

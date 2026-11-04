@@ -7,8 +7,8 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func SelectChildren(parent model.IssueOpsRecord, records []model.IssueOpsRecord) map[string]model.IssueOpsRecord {
-	children := map[string]model.IssueOpsRecord{}
+func SelectChildren(parent model.Record, records []model.Record) map[string]model.Record {
+	children := map[string]model.Record{}
 	for _, child := range records {
 		if strings.TrimSpace(child.Repo) == strings.TrimSpace(parent.Repo) &&
 			child.Delegation != nil && strings.TrimSpace(child.Delegation.ParentCycleID) == parent.ID {
@@ -18,7 +18,7 @@ func SelectChildren(parent model.IssueOpsRecord, records []model.IssueOpsRecord)
 	return children
 }
 
-func RepairChildIndex(parent model.IssueOpsRecord, scanned map[string]model.IssueOpsRecord) (model.IssueOpsRecord, []string) {
+func RepairChildIndex(parent model.Record, scanned map[string]model.Record) (model.Record, []string) {
 	appended := []string{}
 	seen := map[string]bool{}
 	for _, ref := range parent.ChildCycles {
@@ -33,15 +33,15 @@ func RepairChildIndex(parent model.IssueOpsRecord, scanned map[string]model.Issu
 	if len(appended) == 0 {
 		return parent, appended
 	}
-	parent.ChildCycles = append([]model.IssueOpsChildCycleRef(nil), parent.ChildCycles...)
+	parent.ChildCycles = append([]model.ChildCycleRef(nil), parent.ChildCycles...)
 	for _, id := range appended {
 		parent.ChildCycles = append(parent.ChildCycles, ParentRefFromChild(scanned[id]))
 	}
 	return parent, appended
 }
 
-func BuildChildStatus(parent model.IssueOpsRecord, scanned map[string]model.IssueOpsRecord) model.IssueOpsChildStatusResult {
-	result := model.IssueOpsChildStatusResult{OK: true, ParentID: parent.ID}
+func BuildChildStatus(parent model.Record, scanned map[string]model.Record) model.ChildStatusResult {
+	result := model.ChildStatusResult{OK: true, ParentID: parent.ID}
 	seen := map[string]bool{}
 	for _, ref := range parent.ChildCycles {
 		entry := childStatusEntryFromRef(ref)
@@ -67,7 +67,7 @@ func BuildChildStatus(parent model.IssueOpsRecord, scanned map[string]model.Issu
 	sort.Slice(result.Children, func(i, j int) bool {
 		return result.Children[i].CycleID < result.Children[j].CycleID
 	})
-	if parent.Phase == model.IssueOpsPhaseDone {
+	if parent.Phase == model.PhaseDone {
 		for i := range result.Children {
 			if ChildPRGateKey(result.Children[i]) != "" {
 				result.Children[i].ParentClosedState = "parent_closed"
@@ -78,8 +78,8 @@ func BuildChildStatus(parent model.IssueOpsRecord, scanned map[string]model.Issu
 	return result
 }
 
-func childStatusEntryFromRef(ref model.IssueOpsChildCycleRef) model.IssueOpsChildStatusEntry {
-	entry := model.IssueOpsChildStatusEntry{
+func childStatusEntryFromRef(ref model.ChildCycleRef) model.ChildStatusEntry {
+	entry := model.ChildStatusEntry{
 		CycleID:            ref.CycleID,
 		Branch:             ref.Branch,
 		Title:              ref.Title,
@@ -92,14 +92,14 @@ func childStatusEntryFromRef(ref model.IssueOpsChildCycleRef) model.IssueOpsChil
 	// accepted는 done child만 기록할 수 있으므로 parent receipt 자체가 cleanup
 	// 이후에도 terminal phase의 내구성 있는 증거다.
 	if strings.TrimSpace(ref.ValidationVerdict) == "accepted" && strings.TrimSpace(ref.ValidatedAt) != "" {
-		entry.Phase = model.IssueOpsPhaseDone
+		entry.Phase = model.PhaseDone
 	}
 	return entry
 }
 
 // issueOpsChildRefHasTerminalCleanupReceipt는 parent가 명시적으로 승인하거나
 // 제외한 child만 cleanup 이후의 정상 레코드 부재로 판정한다.
-func issueOpsChildRefHasTerminalCleanupReceipt(ref model.IssueOpsChildCycleRef) bool {
+func issueOpsChildRefHasTerminalCleanupReceipt(ref model.ChildCycleRef) bool {
 	if strings.TrimSpace(ref.ValidatedAt) == "" {
 		return false
 	}
@@ -113,13 +113,13 @@ func issueOpsChildRefHasTerminalCleanupReceipt(ref model.IssueOpsChildCycleRef) 
 	}
 }
 
-func childStatusEntryFromChild(child model.IssueOpsRecord) model.IssueOpsChildStatusEntry {
-	entry := model.IssueOpsChildStatusEntry{CycleID: child.ID}
+func childStatusEntryFromChild(child model.Record) model.ChildStatusEntry {
+	entry := model.ChildStatusEntry{CycleID: child.ID}
 	mergeChildStatusRecord(&entry, child)
 	return entry
 }
 
-func mergeChildStatusRecord(entry *model.IssueOpsChildStatusEntry, child model.IssueOpsRecord) {
+func mergeChildStatusRecord(entry *model.ChildStatusEntry, child model.Record) {
 	entry.CycleID = child.ID
 	entry.Branch = child.Branch
 	entry.Phase = child.Phase
@@ -133,8 +133,8 @@ func mergeChildStatusRecord(entry *model.IssueOpsChildStatusEntry, child model.I
 	}
 }
 
-func ParentRefFromChild(child model.IssueOpsRecord) model.IssueOpsChildCycleRef {
-	ref := model.IssueOpsChildCycleRef{
+func ParentRefFromChild(child model.Record) model.ChildCycleRef {
+	ref := model.ChildCycleRef{
 		CycleID:   child.ID,
 		Branch:    child.Branch,
 		Title:     child.Branch,

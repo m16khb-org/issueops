@@ -135,7 +135,7 @@ Rules:
 - Omit or mark unconfirmed topics as "Unknown / not confirmed"; do not paste generic advice.
 `
 
-func ProjectDocNames() []string {
+func Names() []string {
 	return append([]string(nil), requiredProjectDocNames...)
 }
 
@@ -144,6 +144,6 @@ func OptionalProjectDocNames() []string {
 }
 
 func AllowedProjectDocNames() []string {
-	out := ProjectDocNames()
+	out := Names()
 	return append(out, optionalProjectDocNames...)
 }

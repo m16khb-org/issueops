@@ -21,7 +21,7 @@ func TestRunIssueOpsBenchmarkRunCoversPioneerFixturesViaCLI(t *testing.T) {
 		return runIssueOps([]string{"benchmark", "run", "--fixtures", fixturesPath, "--judge", "none", "--json"})
 	})
 
-	var result benchmarkcontract.IssueOpsBenchmarkRunResult
+	var result benchmarkcontract.RunResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("parse benchmark run output: %v\n%s", err, out)
 	}
@@ -56,11 +56,11 @@ func TestRunIssueOpsBenchmarkRunCoversPioneerFixturesViaCLI(t *testing.T) {
 }
 
 func TestFromFixturePioneerEvidenceWiring(t *testing.T) {
-	target := benchmarkartifact.FromFixture(benchmarkcontract.IssueOpsBenchmarkFixture{ID: "pioneer-algorithm-optimization", PioneerSkillTarget: "algorithm-optimization"})
+	target := benchmarkartifact.FromFixture(benchmarkcontract.Fixture{ID: "pioneer-algorithm-optimization", PioneerSkillTarget: "algorithm-optimization"})
 	if strings.TrimSpace(target.PioneerSkillEvidence) == "" {
 		t.Fatal("targeted fixture must produce pioneer evidence")
 	}
-	nonTarget := benchmarkartifact.FromFixture(benchmarkcontract.IssueOpsBenchmarkFixture{ID: "ambiguous-intent"})
+	nonTarget := benchmarkartifact.FromFixture(benchmarkcontract.Fixture{ID: "ambiguous-intent"})
 	if nonTarget.PioneerSkillEvidence != "" {
 		t.Fatalf("non-targeted fixture must not fabricate pioneer evidence, got %q", nonTarget.PioneerSkillEvidence)
 	}

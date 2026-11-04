@@ -117,7 +117,7 @@ func TestRiskQATierHelpersCoverGitWarningsAndJSON(t *testing.T) {
 		t.Fatalf("unexpected clean git risk plan: %+v", plan)
 	}
 
-	jsonText := PlanJSON(riskqacontract.RiskQATierPlan{Tier: "static", ChangedPaths: []string{"b.go", "a.go"}, Commands: []string{"go vet ./..."}})
+	jsonText := PlanJSON(riskqacontract.TierPlan{Tier: "static", ChangedPaths: []string{"b.go", "a.go"}, Commands: []string{"go vet ./..."}})
 	if !strings.Contains(jsonText, `"tier":"static"`) || !strings.Contains(jsonText, `"changed_paths":["b.go","a.go"]`) {
 		t.Fatalf("unexpected risk QA JSON: %s", jsonText)
 	}
@@ -125,7 +125,7 @@ func TestRiskQATierHelpersCoverGitWarningsAndJSON(t *testing.T) {
 
 func TestValidateRiskQATierWithDepsCoversCommandSuccessAndFailure(t *testing.T) {
 	root := t.TempDir()
-	plan := riskqacontract.RiskQATierPlan{
+	plan := riskqacontract.TierPlan{
 		Tier:         "elevated",
 		ChangedPaths: []string{"cmd/issueops/risk_qa.go"},
 		Reasons:      []string{"go changes detected"},
@@ -133,7 +133,7 @@ func TestValidateRiskQATierWithDepsCoversCommandSuccessAndFailure(t *testing.T) 
 	}
 	calls := []string{}
 	success := ValidateWithDeps(root, riskqacontractx.ExecuteDeps{
-		Plan: func(gotRoot string) riskqacontract.RiskQATierPlan {
+		Plan: func(gotRoot string) riskqacontract.TierPlan {
 			if gotRoot != root {
 				t.Fatalf("plan root=%q want %q", gotRoot, root)
 			}
@@ -155,7 +155,7 @@ func TestValidateRiskQATierWithDepsCoversCommandSuccessAndFailure(t *testing.T) 
 	}
 
 	failure := ValidateWithDeps(root, riskqacontractx.ExecuteDeps{
-		Plan: func(string) riskqacontract.RiskQATierPlan { return plan },
+		Plan: func(string) riskqacontract.TierPlan { return plan },
 		Run: func(_ string, command string) selfverify.StepResult {
 			if command == "go test -race ./... -count=1" {
 				return selfverify.StepResult{Label: "risk QA race test", Command: "stub race", OK: false, Error: "race failed", Stdout: "race out"}
@@ -266,7 +266,7 @@ func TestScopedPlanEmptyAndInvalidRefs(t *testing.T) {
 	for _, ref := range []string{"absent-ref", "--all", "HEAD^{tree}", " "} {
 		t.Run(ref, func(t *testing.T) {
 			deps := defaultDeps()
-			deps.Plan = func(string) riskqacontract.RiskQATierPlan { return PlanWithScope(root, ref) }
+			deps.Plan = func(string) riskqacontract.TierPlan { return PlanWithScope(root, ref) }
 			deps.Run = func(string, string) selfverify.StepResult {
 				t.Fatal("invalid scope ran a command")
 				return selfverify.StepResult{}

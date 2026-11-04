@@ -12,13 +12,13 @@ func TestCycleForWorkspacePrefersWorktreeOverSourceRepo(t *testing.T) {
 	repo := t.TempDir()
 	worktree := filepath.Join(t.TempDir(), "child")
 
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID: "io-parent", OK: true, Repo: repo, Branch: "1-parent",
-		Phase: model.IssueOpsPhaseImplement,
+		Phase: model.PhaseImplement,
 	})
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID: "io-child", OK: true, Repo: repo, Branch: "2-child",
-		Phase: model.IssueOpsPhaseImplement, WorktreePath: worktree,
+		Phase: model.PhaseImplement, WorktreePath: worktree,
 	})
 
 	got, ok := store.reader().ForWorkspace(worktree)
@@ -33,9 +33,9 @@ func TestCycleForWorkspacePrefersWorktreeOverSourceRepo(t *testing.T) {
 func TestCycleForWorkspaceFallsBackToSourceRepo(t *testing.T) {
 	store := newActiveTestStore(t)
 	repo := t.TempDir()
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID: "io-source", OK: true, Repo: repo, Branch: "1-source",
-		Phase: model.IssueOpsPhasePlan,
+		Phase: model.PhasePlan,
 	})
 
 	got, ok := store.reader().ForWorkspace(repo)
@@ -50,9 +50,9 @@ func TestCycleForWorkspaceExcludesDoneCycles(t *testing.T) {
 	store := newActiveTestStore(t)
 	repo := t.TempDir()
 	worktree := filepath.Join(t.TempDir(), "merged")
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID: "io-done", OK: true, Repo: repo, Branch: "1-done",
-		Phase: model.IssueOpsPhaseDone, WorktreePath: worktree,
+		Phase: model.PhaseDone, WorktreePath: worktree,
 	})
 
 	if _, ok := store.reader().ForWorkspace(worktree); ok {
@@ -73,7 +73,7 @@ func TestPreparedBaseBranchForWorkspaceReportsNoBaseWhenCycleMissingOrUnprepared
 	if base, ok := store.reader().PreparedBaseBranchForWorkspace(repo); ok || base != "" {
 		t.Fatalf("no cycle: base=%q ok=%v", base, ok)
 	}
-	store.writeRecord(t, model.IssueOpsRecord{ID: "io-unprepared", Repo: repo, Phase: model.IssueOpsPhasePlan})
+	store.writeRecord(t, model.Record{ID: "io-unprepared", Repo: repo, Phase: model.PhasePlan})
 	if base, ok := store.reader().PreparedBaseBranchForWorkspace(repo); ok || base != "" {
 		t.Fatalf("unprepared cycle: base=%q ok=%v", base, ok)
 	}

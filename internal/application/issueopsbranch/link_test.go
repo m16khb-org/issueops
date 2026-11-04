@@ -13,7 +13,7 @@ import (
 )
 
 type relationStore struct {
-	records map[string]model.IssueOpsRecord
+	records map[string]model.Record
 	locked  bool
 	saves   int
 }
@@ -23,7 +23,7 @@ func (s *relationStore) WithinLock(ctx context.Context, _ string, fn func(contex
 	defer func() { s.locked = false }()
 	return fn(ctx)
 }
-func (s *relationStore) Load(id string) (model.IssueOpsRecord, error) {
+func (s *relationStore) Load(id string) (model.Record, error) {
 	if !s.locked {
 		panic("load outside lock")
 	}
@@ -33,7 +33,7 @@ func (s *relationStore) Load(id string) (model.IssueOpsRecord, error) {
 	}
 	return r, nil
 }
-func (s *relationStore) Save(_ context.Context, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *relationStore) Save(_ context.Context, r model.Record) (model.Record, error) {
 	if !s.locked {
 		panic("save outside lock")
 	}
@@ -41,20 +41,20 @@ func (s *relationStore) Save(_ context.Context, r model.IssueOpsRecord) (model.I
 	s.saves++
 	return r, nil
 }
-func newRelationStoreForTest(records ...model.IssueOpsRecord) (*relationStore, Linker) {
-	s := &relationStore{records: map[string]model.IssueOpsRecord{}}
+func newRelationStoreForTest(records ...model.Record) (*relationStore, Linker) {
+	s := &relationStore{records: map[string]model.Record{}}
 	for _, r := range records {
 		s.records[r.ID] = r
 	}
 	return s, Linker{Records: s, Authority: cycleapp.NewMutationAuthority(func(a, b string) bool { return a == b }, liveVerifier()), Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
 }
 func TestLinkIssuePersistsURLAndAdvancesReadyRecord(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:     "io-link-issue",
 		Repo:   "/repo/example",
 		Branch: "feature/link-issue",
-		Phase:  model.IssueOpsPhaseProblem,
-		Intent: &model.IssueOpsIntentContract{RawRequest: "link issue", InterpretedIntent: "link issue", SuccessCriteria: []string{"issue linked"}, IntentClass: "trivial"},
+		Phase:  model.PhaseProblem,
+		Intent: &model.IntentContract{RawRequest: "link issue", InterpretedIntent: "link issue", SuccessCriteria: []string{"issue linked"}, IntentClass: "trivial"},
 	}
 	linkStore, store := newRelationStoreForTest(record)
 
@@ -65,8 +65,8 @@ func TestLinkIssuePersistsURLAndAdvancesReadyRecord(t *testing.T) {
 	if got.IssueURL != "https://github.com/example/repo/issues/10" {
 		t.Fatalf("IssueURL=%q", got.IssueURL)
 	}
-	if got.Phase != model.IssueOpsPhasePlan {
-		t.Fatalf("Phase=%q, want %q", got.Phase, model.IssueOpsPhasePlan)
+	if got.Phase != model.PhasePlan {
+		t.Fatalf("Phase=%q, want %q", got.Phase, model.PhasePlan)
 	}
 	if reloaded := linkStore.records[record.ID]; reloaded.IssueURL != got.IssueURL || reloaded.Phase != got.Phase {
 		t.Fatalf("persisted record mismatch: %+v", reloaded)
@@ -74,32 +74,32 @@ func TestLinkIssuePersistsURLAndAdvancesReadyRecord(t *testing.T) {
 }
 
 func TestLinkIssueRejectsInvalidURL(t *testing.T) {
-	_, store := newRelationStoreForTest(model.IssueOpsRecord{ID: "io-bad-url"})
+	_, store := newRelationStoreForTest(model.Record{ID: "io-bad-url"})
 	if _, err := store.Issue(context.Background(), "io-bad-url", "not-a-url", nil); err == nil || !strings.Contains(err.Error(), "http(s) URL") {
 		t.Fatalf("expected issue URL validation error, got %v", err)
 	}
 }
 
 func TestLinkChildPersistsProviderNeutralGraph(t *testing.T) {
-	parent := model.IssueOpsRecord{
+	parent := model.Record{
 		ID:       "io-parent",
 		Repo:     "/repo/example",
 		Branch:   "1-demo",
-		Phase:    model.IssueOpsPhasePlan,
+		Phase:    model.PhasePlan,
 		IssueURL: "https://github.com/example/repo/issues/10",
 	}
-	gitlab := model.IssueOpsRecord{
+	gitlab := model.Record{
 		ID:       "io-gitlab",
 		Repo:     "/repo/gitlab",
 		Branch:   "20-gitlab",
-		Phase:    model.IssueOpsPhasePlan,
+		Phase:    model.PhasePlan,
 		IssueURL: "https://gitlab.example/group/project/-/issues/20",
 	}
-	generic := model.IssueOpsRecord{
+	generic := model.Record{
 		ID:       "io-generic",
 		Repo:     "/repo/generic",
 		Branch:   "10-generic",
-		Phase:    model.IssueOpsPhasePlan,
+		Phase:    model.PhasePlan,
 		IssueURL: "https://tracker.example/acme/repo/issues/10",
 	}
 	linkStore, store := newRelationStoreForTest(parent, gitlab, generic)
@@ -144,11 +144,11 @@ func TestLinkChildPersistsProviderNeutralGraph(t *testing.T) {
 	if _, err := store.Child(context.Background(), gitlab.ID, "https://gitlab.example/group/project/-/issues/21", "same project child", nil); err != nil {
 		t.Fatalf("GitLab child in same project should be accepted: %v", err)
 	}
-	gitlabWorkItem := model.IssueOpsRecord{
+	gitlabWorkItem := model.Record{
 		ID:       "io-gitlab-work-item",
 		Repo:     "/repo/gitlab",
 		Branch:   "21-gitlab",
-		Phase:    model.IssueOpsPhasePlan,
+		Phase:    model.PhasePlan,
 		IssueURL: "https://gitlab.example/group/project/-/issues/20",
 	}
 	_, workItemStore := newRelationStoreForTest(gitlabWorkItem)
@@ -168,11 +168,11 @@ func TestLinkChildPersistsProviderNeutralGraph(t *testing.T) {
 }
 
 func TestLinkRelatedPersistsProviderAndRejectsDuplicates(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-related",
 		Repo:     "/repo/example",
 		Branch:   "feature/related",
-		Phase:    model.IssueOpsPhasePlan,
+		Phase:    model.PhasePlan,
 		IssueURL: "https://github.com/example/repo/issues/10",
 	}
 	_, store := newRelationStoreForTest(record)
@@ -205,16 +205,16 @@ func TestLinkRelatedPersistsProviderAndRejectsDuplicates(t *testing.T) {
 func TestIssueLinkUsesCompleteReadinessAndNeverRegressesPhase(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		phase  model.IssueOpsPhase
-		intent *model.IssueOpsIntentContract
-		want   model.IssueOpsPhase
+		phase  model.Phase
+		intent *model.IntentContract
+		want   model.Phase
 	}{
-		{"missing intent", model.IssueOpsPhaseProblem, nil, model.IssueOpsPhaseProblem},
-		{"missing preparation", model.IssueOpsPhaseProblem, &model.IssueOpsIntentContract{RawRequest: "fix", InterpretedIntent: "fix", SuccessCriteria: []string{"fixed"}}, model.IssueOpsPhaseProblem},
-		{"later phase", model.IssueOpsPhaseImplement, &model.IssueOpsIntentContract{RawRequest: "fix", InterpretedIntent: "fix", SuccessCriteria: []string{"fixed"}, IntentClass: "trivial"}, model.IssueOpsPhaseImplement},
+		{"missing intent", model.PhaseProblem, nil, model.PhaseProblem},
+		{"missing preparation", model.PhaseProblem, &model.IntentContract{RawRequest: "fix", InterpretedIntent: "fix", SuccessCriteria: []string{"fixed"}}, model.PhaseProblem},
+		{"later phase", model.PhaseImplement, &model.IntentContract{RawRequest: "fix", InterpretedIntent: "fix", SuccessCriteria: []string{"fixed"}, IntentClass: "trivial"}, model.PhaseImplement},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, s := newRelationStoreForTest(model.IssueOpsRecord{ID: "id", Phase: tc.phase, Intent: tc.intent})
+			_, s := newRelationStoreForTest(model.Record{ID: "id", Phase: tc.phase, Intent: tc.intent})
 			got, err := s.Issue(context.Background(), "id", "https://github.com/acme/repo/issues/1", nil)
 			if err != nil || got.Phase != tc.want || got.UpdatedAt != "2026-09-28T00:00:00Z" {
 				t.Fatalf("link = %+v, %v", got, err)
@@ -229,13 +229,13 @@ func TestRelationsAuthorizeBeforeValidationAndDoNotWriteOnRefusal(t *testing.T) 
 	r.ID = "id"
 	r.IssueURL = "https://github.com/acme/repo/issues/1"
 	store, s := newRelationStoreForTest(r)
-	actor := model.IssueOpsActor{Host: "codex", SessionID: "other", CWD: root, NativeProcessAncestry: []model.NativeProcessReceipt{*holder.SessionProcess}}
-	calls := []func() (model.IssueOpsRecord, error){
-		func() (model.IssueOpsRecord, error) { return s.Issue(context.Background(), "id", "bad", &actor) },
-		func() (model.IssueOpsRecord, error) {
+	actor := model.Actor{Host: "codex", SessionID: "other", CWD: root, NativeProcessAncestry: []model.NativeProcessReceipt{*holder.SessionProcess}}
+	calls := []func() (model.Record, error){
+		func() (model.Record, error) { return s.Issue(context.Background(), "id", "bad", &actor) },
+		func() (model.Record, error) {
 			return s.Child(context.Background(), "id", "bad", "title", &actor)
 		},
-		func() (model.IssueOpsRecord, error) {
+		func() (model.Record, error) {
 			return s.Related(context.Background(), "id", "bad", "bad", "title", &actor)
 		},
 	}

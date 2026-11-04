@@ -6,7 +6,7 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
-func FinalizeRun(result contract.IssueOpsBenchmarkRunResult) contract.IssueOpsBenchmarkRunResult {
+func FinalizeRun(result contract.RunResult) contract.RunResult {
 	result.FixtureCount = len(result.Scores)
 	result.CriticalFailureCount = 0
 	for _, score := range result.Scores {
@@ -23,7 +23,7 @@ func FinalizeRun(result contract.IssueOpsBenchmarkRunResult) contract.IssueOpsBe
 	return result
 }
 
-func MergeScoreWithJudge(deterministic, judge contract.IssueOpsBenchmarkScore) contract.IssueOpsBenchmarkScore {
+func MergeScoreWithJudge(deterministic, judge contract.Score) contract.Score {
 	merged := deterministic
 	judgeByDimension := make(map[string]contract.IssueOpsDimensionScore)
 	for _, score := range judge.DimensionScores {

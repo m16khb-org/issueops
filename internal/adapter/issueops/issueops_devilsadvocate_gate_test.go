@@ -16,7 +16,7 @@ func TestImplementationReadinessRequiresDevilsAdvocateVerdict(t *testing.T) {
 
 	repo := filepath.Join(t.TempDir(), "example")
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		OK:                  true,
 		Repo:                repo,
 		Branch:              "1-demo",
@@ -26,7 +26,7 @@ func TestImplementationReadinessRequiresDevilsAdvocateVerdict(t *testing.T) {
 		Intent:              issueOpsIntentContractForTest(),
 		ArchitectureReview:  issueOpsArchitectureReviewForTest(),
 		CompatibilityReview: issueOpsCompatibilityReviewForTest(),
-		BranchPrepare:       &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
+		BranchPrepare:       &issueops.BranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
 		Execution:           issueOpsExecutionForTest(repo, worktree, "1-demo"),
 	}
 	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
@@ -37,12 +37,12 @@ func TestImplementationReadinessRequiresDevilsAdvocateVerdict(t *testing.T) {
 	}
 	// pass → clears the gate.
 	bound := digestBytes([]byte(planBodyForTest()))
-	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent", ReviewedPlanDigest: bound, RecordedAt: "t"}
+	record.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent", ReviewedPlanDigest: bound, RecordedAt: "t"}
 	if ready := IssueOpsImplementationReadiness(record); !ready.Ready || len(ready.Missing) != 0 {
 		t.Fatalf("pass verdict should clear the gate: %+v", ready.Missing)
 	}
 	// unwaived stop → blocked.
-	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, ReviewerContext: "subagent", ReviewedPlanDigest: bound, RecordedAt: "t"}
+	record.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, ReviewerContext: "subagent", ReviewedPlanDigest: bound, RecordedAt: "t"}
 	if ready := IssueOpsImplementationReadiness(record); !containsString(ready.Missing, "devils_advocate_review") {
 		t.Fatalf("unwaived stop must block implement: %+v", ready.Missing)
 	}
@@ -54,13 +54,13 @@ func TestImplementationReadinessRequiresDevilsAdvocateVerdict(t *testing.T) {
 	}
 }
 
-func issueOpsPlanBoundRecordForTest(t *testing.T) (issueops.IssueOpsRecord, string) {
+func issueOpsPlanBoundRecordForTest(t *testing.T) (issueops.Record, string) {
 	t.Helper()
 	repo := filepath.Join(t.TempDir(), "example")
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "2-bound")
 	planPath := filepath.Join(worktree, "plans/bound.md")
 	writeIssueOpsFile(t, worktree, "plans/bound.md", "# plan v1\n")
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		OK:                  true,
 		Repo:                repo,
 		Branch:              "2-bound",
@@ -70,7 +70,7 @@ func issueOpsPlanBoundRecordForTest(t *testing.T) (issueops.IssueOpsRecord, stri
 		Intent:              issueOpsIntentContractForTest(),
 		ArchitectureReview:  issueOpsArchitectureReviewForTest(),
 		CompatibilityReview: issueOpsCompatibilityReviewForTest(),
-		BranchPrepare:       &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/2", Branch: "2-bound", BaseBranch: "main", LinkVerified: true},
+		BranchPrepare:       &issueops.BranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/2", Branch: "2-bound", BaseBranch: "main", LinkVerified: true},
 		Execution:           issueOpsExecutionForTest(repo, worktree, "2-bound"),
 	}
 	return record, planPath
@@ -80,7 +80,7 @@ func TestImplementationReadinessRejectsStaleDevilsAdvocateReview(t *testing.T) {
 	t.Parallel()
 
 	record, planPath := issueOpsPlanBoundRecordForTest(t)
-	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
+	record.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{
 		Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent",
 		ReviewedPlanDigest: digestBytes([]byte("# plan v1\n")), RecordedAt: "t",
 	}
@@ -124,7 +124,7 @@ func TestImplementationReadinessRejectsStaleDevilsAdvocateReview(t *testing.T) {
 		t.Fatalf("review without a plan digest must be stale: %+v", ready.Missing)
 	}
 	// A delegated child inherits the parent verdict by policy; it is exempt.
-	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Waived: true, WaiverRationale: "delegated:io-parent parent DA verdict pass", ReviewerPattern: "delegated-parent-review", RecordedAt: "t"}
+	record.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{Verdict: "pass", Waived: true, WaiverRationale: "delegated:io-parent parent DA verdict pass", ReviewerPattern: "delegated-parent-review", RecordedAt: "t"}
 	if ready := IssueOpsImplementationReadiness(record); containsString(ready.Missing, "devils_advocate_review_stale") {
 		t.Fatalf("delegated parent review must be exempt from plan binding: %+v", ready.Missing)
 	}
@@ -134,7 +134,7 @@ func TestAISlopCleanReadinessDoesNotCheckPlanBinding(t *testing.T) {
 	t.Parallel()
 
 	record, planPath := issueOpsPlanBoundRecordForTest(t)
-	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
+	record.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{
 		Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent",
 		ReviewedPlanDigest: digestBytes([]byte("# plan v1\n")), RecordedAt: "t",
 	}

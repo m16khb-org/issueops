@@ -17,7 +17,7 @@ import (
 
 func newQualityDependencies(root, dir string) qualitycli.Deps {
 	state := newStateService(dir)
-	baseline := app.SNRBaselineStore{CanonicalRepository: outbound.CanonicalRepository, ReadState: state.Read, WriteState: func(key, content string) (statecontract.StateResult, error) {
+	baseline := app.SNRBaselineStore{CanonicalRepository: outbound.CanonicalRepository, ReadState: state.Read, WriteState: func(key, content string) (statecontract.Result, error) {
 		return state.Write(context.Background(), key, content)
 	}}
 	return qualitycli.Deps{Root: root, PrintJSON: printJSON, ReadSNRBaseline: baseline.Read, SaveSNRBaseline: baseline.Save, Inspect: func(target string) contract.InspectResult {
@@ -36,14 +36,14 @@ func newQualityDependencies(root, dir string) qualitycli.Deps {
 			BranchFunctions: outbound.CollectBranchFunctions, AuditItems: outbound.CollectAuditItems,
 			CodeSNR: outbound.ComputeCodeSNR, PioneerCoverage: outbound.CollectPioneerCoverage,
 			SelfAugmentOpenCount: func(string) (int, error) {
-				plan := planning.Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+				plan := planning.Plan(augmentcontract.PlanRequest{Cycles: 1, TargetScore: 95})
 				return len(augmentdomain.CandidateIDsByStatus(plan.Candidates, "open")), nil
 			},
 			SelfVerifyOpenCount: func(string) (int, error) {
 				return len(verifydomain.CandidateIDsByStatus(planning.ExportCandidates().Candidates, "open")), nil
 			},
 			Candidates: func(string) []qualitycatalogcontract.Candidate {
-				plan := planning.Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+				plan := planning.Plan(augmentcontract.PlanRequest{Cycles: 1, TargetScore: 95})
 				return app.CandidatesForPlan(plan.Candidates)
 			},
 		})

@@ -16,11 +16,11 @@ type FileObservation struct {
 
 type Analysis struct {
 	OK       bool
-	Findings []guardcontract.GuardFinding
-	Summary  guardcontract.GuardSummary
+	Findings []guardcontract.Finding
+	Summary  guardcontract.Summary
 }
 
-func Mode(request guardcontract.GuardCheckRequest) string {
+func Mode(request guardcontract.CheckRequest) string {
 	if request.All {
 		return "all"
 	}
@@ -53,12 +53,12 @@ func (kinds *changeKinds) observe(rel string) {
 }
 
 func Analyze(files []FileObservation, existingSymbols map[string][]string) Analysis {
-	result := Analysis{Findings: []guardcontract.GuardFinding{}}
+	result := Analysis{Findings: []guardcontract.Finding{}}
 	var kinds changeKinds
 	for _, file := range files {
 		rel := file.Path
 		if SecretLikePath(rel) {
-			result.Findings = append(result.Findings, guardcontract.GuardFinding{
+			result.Findings = append(result.Findings, guardcontract.Finding{
 				Severity: "block", Rule: "secret-like-path", File: rel,
 				Message: "Secret-like paths must not be committed or analyzed as ordinary source.",
 			})
@@ -70,13 +70,13 @@ func Analyze(files []FileObservation, existingSymbols map[string][]string) Analy
 		}
 	}
 	if kinds.prod && !kinds.test {
-		result.Findings = append(result.Findings, guardcontract.GuardFinding{
+		result.Findings = append(result.Findings, guardcontract.Finding{
 			Severity: "warn", Rule: "prod-change-without-test",
 			Message: "Production source changed without a changed test file; verify this is documentation/config-only or add focused coverage.",
 		})
 	}
 	if kinds.contractSurface && !kinds.golden {
-		result.Findings = append(result.Findings, guardcontract.GuardFinding{
+		result.Findings = append(result.Findings, guardcontract.Finding{
 			Severity: "warn", Rule: "contract-surface-without-golden",
 			Message: "CLI/MCP/adapter contract surface changed without a golden/testdata update.",
 		})
@@ -91,7 +91,7 @@ func Analyze(files []FileObservation, existingSymbols map[string][]string) Analy
 }
 
 // findingLess orders by severity rank, then file, line and rule.
-func findingLess(a, b guardcontract.GuardFinding) bool {
+func findingLess(a, b guardcontract.Finding) bool {
 	if SeverityRank(a.Severity) != SeverityRank(b.Severity) {
 		return SeverityRank(a.Severity) < SeverityRank(b.Severity)
 	}
@@ -104,8 +104,8 @@ func findingLess(a, b guardcontract.GuardFinding) bool {
 	return a.Rule < b.Rule
 }
 
-func summarizeFindings(findings []guardcontract.GuardFinding) guardcontract.GuardSummary {
-	var summary guardcontract.GuardSummary
+func summarizeFindings(findings []guardcontract.Finding) guardcontract.Summary {
+	var summary guardcontract.Summary
 	for _, finding := range findings {
 		switch finding.Severity {
 		case "block":

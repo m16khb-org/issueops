@@ -28,7 +28,7 @@ var _ stateport.ExistingReader = ExistingRecords{}
 // directory and the shared SQLite store.
 func NewService() *stateapplication.Service {
 	return stateapplication.NewService(stateapplication.Dependencies{
-		StateDir:        StateDir,
+		StateDir:        Dir,
 		StatePath:       statepath.Path,
 		OpenStore:       openStateStore,
 		ExistingRecords: ExistingRecords{},

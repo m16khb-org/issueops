@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"encoding/json"
@@ -7,14 +7,14 @@ import (
 )
 
 func TestIssueOpsRemoteJudgeFileUsesStrictJSONWrapper(t *testing.T) {
-	out := IssueOpsRemoteScoringResult{
+	out := ScoringResult{
 		OK:             true,
 		Provider:       "github",
 		Threshold:      0.70,
 		ExecutionClass: "background_join",
 		ReadOnly:       true,
 		JoinBefore:     "remote_artifact_write",
-		SelectedRelatedIssues: []IssueOpsRemoteScoredItem{{
+		SelectedRelatedIssues: []ScoredItem{{
 			ID:        "#9",
 			Score:     0.91,
 			Threshold: 0.70,
@@ -22,7 +22,7 @@ func TestIssueOpsRemoteJudgeFileUsesStrictJSONWrapper(t *testing.T) {
 			Evidence:  []string{"shared IssueOps workflow"},
 			ApplyHint: "link in issue body: #9",
 		}},
-		SelectedLabels: []IssueOpsRemoteScoredItem{{
+		SelectedLabels: []ScoredItem{{
 			Name:      "enhancement",
 			Score:     0.93,
 			Threshold: 0.70,
@@ -77,9 +77,9 @@ func TestIssueOpsRemoteJudgeFileRejectsInvalidLifecycleMetadata(t *testing.T) {
 }
 
 func TestIssueOpsRemoteLLMJudgePromptRequiresReadOnlyBackgroundJoin(t *testing.T) {
-	prompt, err := buildIssueOpsRemoteLLMJudgePrompt(IssueOpsRemoteScoringRequest{
+	prompt, err := buildIssueOpsRemoteLLMJudgePrompt(ScoringRequest{
 		Provider: "github",
-		Issue:    IssueOpsRemoteArtifact{Title: "IssueOps remote scoring prompt hardening"},
+		Issue:    ArtifactDraft{Title: "IssueOps remote scoring prompt hardening"},
 	})
 	if err != nil {
 		t.Fatal(err)

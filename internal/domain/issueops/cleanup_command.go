@@ -6,7 +6,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func CleanupCommandGeneration(record model.IssueOpsRecord) uint64 {
+func CleanupCommandGeneration(record model.Record) uint64 {
 	if record.Execution == nil {
 		return 0
 	}

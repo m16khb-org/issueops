@@ -45,8 +45,8 @@ func runSelfVerify(args []string) error {
 		return runSelfVerifyCandidates(args[1:])
 	}
 	return verifycmd.Run(args, verifycmd.Deps{
-		SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
-			return newSelfWorkflowState(statestore.StateDir()).SaveSummary(context.Background(), result, key)
+		SaveSummary: func(result *augmentcontract.Result, key string) error {
+			return newSelfWorkflowState(statestore.Dir()).SaveSummary(context.Background(), result, key)
 		},
 		PrintJSON: printJSON,
 		Verify:    newSelfWorkflowExecutor(issueOpsRoot()),
@@ -54,7 +54,7 @@ func runSelfVerify(args []string) error {
 }
 
 func runSelfVerifyCandidates(args []string) error {
-	planning := newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version)
+	planning := newSelfWorkflowPlanning(issueOpsRoot(), statestore.Dir(), version)
 	return candidatescmd.Run(args, candidatescmd.Deps{Export: planning.ExportCandidates, Save: func(result *augmentcontract.SelfVerificationCandidateExportResult, key string) error {
 		return planning.SaveCandidates(context.Background(), result, key)
 	}, PrintJSON: printJSON})
@@ -69,14 +69,14 @@ func runSelfVerifyHistory(args []string) error {
 }
 
 func runSelfVerifyPromote(args []string) error {
-	return promotecmd.Run(args, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (augmentcontract.SelfAugmentPromoteResult, error) {
-		return newSelfWorkflowState(statestore.StateDir()).Promote(context.Background(), from, to, confirm, allowFailed)
+	return promotecmd.Run(args, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (augmentcontract.PromoteResult, error) {
+		return newSelfWorkflowState(statestore.Dir()).Promote(context.Background(), from, to, confirm, allowFailed)
 	}, PrintJSON: printJSON})
 }
 
-func newSelfWorkflowExecutor(root string) func(app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+func newSelfWorkflowExecutor(root string) func(app.LoopRequest) (augmentcontract.Result, error) {
 	deps := selfVerifyLoopDeps(root)
-	return func(request app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+	return func(request app.LoopRequest) (augmentcontract.Result, error) {
 		return app.ExecuteLoop(request, deps)
 	}
 }
@@ -96,11 +96,11 @@ func selfVerifyLoopDeps(root string) app.LoopDeps {
 	}
 }
 
-func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
+func selfVerifyStepDeps(root string) app.StepDeps {
 	stateProbe := newStateRoundtripProbe()
 	budgetProbe := newStepBudgetProbe()
 	docsProbe := newDocsQAProbe()
-	return app.SelfVerifyStepDeps{
+	return app.StepDeps{
 		IssueOpsRoot:                func() string { return root },
 		RunCommandStep:              runCommandStep,
 		ValidateHarnessInvariants:   invariants.ValidateHarnessInvariants,

@@ -66,18 +66,18 @@ func (s Service) startList(root string) ([]docscontract.Candidate, func() []stri
 }
 
 // Index lists every selected document, history records included.
-func (s Service) Index(root, version string) docscontract.DocsIndexResult {
+func (s Service) Index(root, version string) docscontract.IndexResult {
 	return s.index(root, version, true)
 }
 
 // IndexScoped lists the documents an agent applies (indexes, modules,
 // cautions, ADRs). Dated history records are read and listed only when
 // includeHistory is set; otherwise they are just counted in HistoryOmitted.
-func (s Service) IndexScoped(root, version string, includeHistory bool) docscontract.DocsIndexResult {
+func (s Service) IndexScoped(root, version string, includeHistory bool) docscontract.IndexResult {
 	return s.index(root, version, includeHistory)
 }
 
-func (s Service) index(root, version string, includeHistory bool) docscontract.DocsIndexResult {
+func (s Service) index(root, version string, includeHistory bool) docscontract.IndexResult {
 	// Selection only drops eligible candidates, so they are read while Git is
 	// still resolving which of them are selected.
 	candidates, selected := s.startList(root)
@@ -122,5 +122,5 @@ func (s Service) index(root, version string, includeHistory bool) docscontract.D
 		}
 	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].RelPath < docs[j].RelPath })
-	return docscontract.DocsIndexResult{OK: true, Version: version, IssueOpsRoot: root, Docs: docs, HistoryOmitted: omitted, GeneratedAt: s.Now().UTC().Format(time.RFC3339)}
+	return docscontract.IndexResult{OK: true, Version: version, IssueOpsRoot: root, Docs: docs, HistoryOmitted: omitted, GeneratedAt: s.Now().UTC().Format(time.RFC3339)}
 }

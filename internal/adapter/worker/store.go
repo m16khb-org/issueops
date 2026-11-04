@@ -28,34 +28,34 @@ func (e jobNotFound) Error() string {
 }
 func (jobNotFound) Unwrap() error { return fs.ErrNotExist }
 
-func (store Store) Read(id string) (workercontract.WorkerJob, error) {
+func (store Store) Read(id string) (workercontract.Job, error) {
 	if !workerdomain.ValidID(id) {
-		return workercontract.WorkerJob{OK: false, ID: id}, fmt.Errorf("invalid worker job id %q; run `issueops worker list --json` for job ids", id)
+		return workercontract.Job{OK: false, ID: id}, fmt.Errorf("invalid worker job id %q; run `issueops worker list --json` for job ids", id)
 	}
 	dir, err := store.Dir()
 	if err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id}, err
+		return workercontract.Job{OK: false, ID: id}, err
 	}
 	db, err := store.open()
 	if err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, err
 	}
 	b, ok, err := db.Get(workerBucket, id)
 	if err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, err
 	}
 	if !ok {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, jobNotFound{id: id}
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, jobNotFound{id: id}
 	}
-	var job workercontract.WorkerJob
+	var job workercontract.Job
 	if err := json.Unmarshal(b, &job); err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, err
 	}
 	job.WorkerDir = dir
 	return job, nil
 }
 
-func (store Store) Write(ctx context.Context, job workercontract.WorkerJob) error {
+func (store Store) Write(ctx context.Context, job workercontract.Job) error {
 	if !workerdomain.ValidID(job.ID) {
 		return fmt.Errorf("invalid worker job id")
 	}

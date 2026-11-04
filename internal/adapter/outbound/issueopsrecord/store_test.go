@@ -18,13 +18,13 @@ func TestDeleteIfUnchangedRejectsRecordDrift(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-delete-cas"
 	store := Store{}
-	data, err := Encode(issueopscontract.IssueOpsRecord{
+	data, err := Encode(issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
 		Repo:          t.TempDir(),
 		Branch:        "100-before",
-		Phase:         issueopscontract.IssueOpsPhaseDone,
+		Phase:         issueopscontract.PhaseDone,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -40,7 +40,7 @@ func TestDeleteIfUnchangedRejectsRecordDrift(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Update(context.Background(), stateRoot, id, func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	if _, err := store.Update(context.Background(), stateRoot, id, func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		record.Branch = "100-after"
 		return record, true, nil
 	}); err != nil {
@@ -62,13 +62,13 @@ func TestDeleteIfUnchangedSerializesNewRelatedState(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-delete-related"
 	store := Store{}
-	expected := issueopscontract.IssueOpsRecord{
+	expected := issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
 		Repo:          t.TempDir(),
 		Branch:        "101-related",
-		Phase:         issueopscontract.IssueOpsPhaseDone,
+		Phase:         issueopscontract.PhaseDone,
 	}
 	data, err := Encode(expected)
 	if err != nil {
@@ -92,7 +92,7 @@ func TestDeleteIfUnchangedSerializesNewRelatedState(t *testing.T) {
 			stateRoot,
 			id,
 			"artifact_stage_v1",
-			func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+			func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 				// 이 콜백은 이미 관련 트랜잭션(직렬화 게이트 + BEGIN IMMEDIATE)
 				// 안에서 실행 중이다. delete가 먼저 커밋되고 이 Put이 되살리는
 				// 순서 반전을 막으려면, delete는 이 트랜잭션이 커밋된 뒤에만
@@ -152,13 +152,13 @@ func TestDeleteIfUnchangedWaitsForOpenRelatedUpdateSpan(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-delete-span"
 	store := Store{}
-	expected := issueopscontract.IssueOpsRecord{
+	expected := issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
 		Repo:          t.TempDir(),
 		Branch:        "102-span",
-		Phase:         issueopscontract.IssueOpsPhaseDone,
+		Phase:         issueopscontract.PhaseDone,
 	}
 	data, err := Encode(expected)
 	if err != nil {
@@ -181,7 +181,7 @@ func TestDeleteIfUnchangedWaitsForOpenRelatedUpdateSpan(t *testing.T) {
 			stateRoot,
 			id,
 			"artifact_stage_v1",
-			func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+			func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 				close(spanEntered)
 				<-releaseSpan
 				return []byte(`{"plan":"new"}`), false, nil
@@ -235,10 +235,10 @@ func TestDeleteIfUnchangedWaitsForOpenRelatedUpdateSpan(t *testing.T) {
 func TestStoreReadsUpdatesRelatedDataAndDeletesAtomically(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-record01"
-	data, err := json.Marshal(issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	data, err := json.Marshal(issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -256,7 +256,7 @@ func TestStoreReadsUpdatesRelatedDataAndDeletesAtomically(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		id,
-		func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+		func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 			record.Branch = "record-store"
 			return record, true, nil
 		},
@@ -269,7 +269,7 @@ func TestStoreReadsUpdatesRelatedDataAndDeletesAtomically(t *testing.T) {
 		stateRoot,
 		id,
 		"related_v1",
-		func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+		func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 			return []byte("related"), false, nil
 		},
 	); err != nil {
@@ -292,10 +292,10 @@ func TestStoreScansValidAndInvalidRowsInOneInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	valid := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	valid := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            "io-valid",
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	}
 	encoded, err := json.Marshal(valid)
 	if err != nil {

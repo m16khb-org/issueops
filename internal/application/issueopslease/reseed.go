@@ -262,19 +262,19 @@ func reopenCompletedExecution(record *leasecontract.Record, completionGeneration
 }
 
 func staleCompletedReseedLedger(record *leasecontract.Record, previousGeneration, nextGeneration uint64) error {
-	ledger := issueopscontract.IssueOpsPhaseLedger{}
+	ledger := issueopscontract.PhaseLedger{}
 	if len(record.PhaseLedger) > 0 {
 		if err := json.Unmarshal(record.PhaseLedger, &ledger); err != nil {
 			return fmt.Errorf("decode phase ledger: %w", err)
 		}
 	}
 	note := fmt.Sprintf("stale: completed execution reseed (%d -> %d)", previousGeneration, nextGeneration)
-	for _, phase := range []issueopscontract.IssueOpsPhase{
-		issueopscontract.IssueOpsPhaseImplement,
-		issueopscontract.IssueOpsPhaseAISlopClean,
-		issueopscontract.IssueOpsPhaseFeedback,
-		issueopscontract.IssueOpsPhasePR,
-		issueopscontract.IssueOpsPhaseDone,
+	for _, phase := range []issueopscontract.Phase{
+		issueopscontract.PhaseImplement,
+		issueopscontract.PhaseAISlopClean,
+		issueopscontract.PhaseFeedback,
+		issueopscontract.PhasePR,
+		issueopscontract.PhaseDone,
 	} {
 		entry := ledger[phase]
 		entry.Phase = phase

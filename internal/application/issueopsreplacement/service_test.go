@@ -12,8 +12,8 @@ import (
 )
 
 type replacementFixture struct {
-	record     model.IssueOpsRecord
-	saved      *model.IssueOpsRecord
+	record     model.Record
+	saved      *model.Record
 	previous   *model.NativeActor
 	events     []string
 	locked     bool
@@ -22,7 +22,7 @@ type replacementFixture struct {
 	saveError  error
 }
 
-func (f *replacementFixture) Load(string) (model.IssueOpsRecord, error) {
+func (f *replacementFixture) Load(string) (model.Record, error) {
 	f.events = append(f.events, "load")
 	record := f.record
 	execution := *record.Execution
@@ -35,13 +35,13 @@ func (f *replacementFixture) WithinLock(ctx context.Context, _ string, fn func(c
 	defer func() { f.locked = false; f.events = append(f.events, "unlock") }()
 	return fn(ctx)
 }
-func (f *replacementFixture) Persist(_ context.Context, record model.IssueOpsRecord, previous *model.NativeActor) (model.IssueOpsRecord, error) {
+func (f *replacementFixture) Persist(_ context.Context, record model.Record, previous *model.NativeActor) (model.Record, error) {
 	if !f.locked {
 		panic("write outside lock")
 	}
 	f.events = append(f.events, "persist")
 	if f.saveError != nil {
-		return model.IssueOpsRecord{}, f.saveError
+		return model.Record{}, f.saveError
 	}
 	f.saved = &record
 	f.previous = previous
@@ -56,7 +56,7 @@ func (f *replacementFixture) WorkspaceProcesses(string, map[int]bool) ([]model.R
 	f.events = append(f.events, "workspace-processes")
 	return nil, nil
 }
-func (f *replacementFixture) Cleanup(model.IssueOpsRecord) error {
+func (f *replacementFixture) Cleanup(model.Record) error {
 	f.events = append(f.events, "cleanup")
 	return nil
 }
@@ -64,7 +64,7 @@ func (f *replacementFixture) WorkspaceAbsent(string) bool {
 	f.events = append(f.events, "absent")
 	return f.absent
 }
-func (f *replacementFixture) CreateToken(model.IssueOpsRecord) (string, string, error) {
+func (f *replacementFixture) CreateToken(model.Record) (string, string, error) {
 	f.events = append(f.events, "token")
 	if f.tokenError != nil {
 		return "", "", f.tokenError
@@ -85,7 +85,7 @@ func fixtureService() (Service, *replacementFixture, model.ExecutionReplaceReque
 	actor := model.NativeActor{Host: "codex", SessionID: "requester", SessionProcess: &process, ProcessAncestry: []model.NativeProcessReceipt{process}}
 	oldProcess := model.NativeProcessReceipt{PID: 41, StartedAt: "old", Executable: "/old-host"}
 	holder := model.NativeActor{Host: "codex", SessionID: "previous", SessionProcess: &oldProcess}
-	fixture := &replacementFixture{record: model.IssueOpsRecord{ID: "io-test", Execution: &model.Execution{Workspace: model.Workspace{Root: "/workspace", SourceRoot: "/source"}, Lease: model.WriteLease{Generation: 7, Status: model.LeaseStatusActive, Holder: &holder}}}}
+	fixture := &replacementFixture{record: model.Record{ID: "io-test", Execution: &model.Execution{Workspace: model.Workspace{Root: "/workspace", SourceRoot: "/source"}, Lease: model.WriteLease{Generation: 7, Status: model.LeaseStatusActive, Holder: &holder}}}}
 	service := Service{Records: fixture, Workspace: fixture, Artifacts: fixture, PID: 43, ObserveProcesses: func() port.ReplacementProcessSnapshot { return deadProcesses{} }, InspectProcess: func(p model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) { return "live", p, nil }, Verifier: liveVerifier(), Now: func() string { return "now" }}
 	request := model.ExecutionReplaceRequest{ID: "io-test", Action: model.ExecutionReplacePreview, Actor: actor, CWD: "/workspace", ExpectedGeneration: 7, Confirm: true, Reason: " recovery "}
 	return service, fixture, request

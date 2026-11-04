@@ -7,7 +7,7 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func ValidateHistoryRequest(limit int, retention contract.SelfAugmentHistoryRetentionOptions) error {
+func ValidateHistoryRequest(limit int, retention contract.HistoryRetentionOptions) error {
 	if limit < 0 {
 		return fmt.Errorf("limit must be non-negative")
 	}
@@ -27,7 +27,7 @@ func ValidateComparisonRequest(baselineKey, candidateKey string, maxElapsedRegre
 	return nil
 }
 
-func HistorySnapshotDiagnostics(key string, snapshot contract.SelfAugmentStateSnapshot) (skipReason, warning string) {
+func HistorySnapshotDiagnostics(key string, snapshot contract.StateSnapshot) (skipReason, warning string) {
 	if !IsSelfVerificationSummaryKind(snapshot.Kind) {
 		return "kind:" + snapshot.Kind, ""
 	}
@@ -40,16 +40,16 @@ func HistorySnapshotDiagnostics(key string, snapshot contract.SelfAugmentStateSn
 	return "", ""
 }
 
-func NewHistoryEntry(snapshot contract.SelfAugmentStateSnapshot) contract.SelfAugmentHistoryEntry {
+func NewHistoryEntry(snapshot contract.StateSnapshot) contract.HistoryEntry {
 	labels := snapshot.Summary.StepLabels
 	if labels == nil {
 		labels = []string{}
 	}
 	slowest := snapshot.Summary.SlowestSteps
 	if slowest == nil {
-		slowest = []contract.SelfAugmentSlowStep{}
+		slowest = []contract.SlowStep{}
 	}
-	return contract.SelfAugmentHistoryEntry{
+	return contract.HistoryEntry{
 		GeneratedAt:  snapshot.GeneratedAt,
 		OK:           snapshot.OK,
 		Iterations:   snapshot.Iterations,

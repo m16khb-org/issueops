@@ -2,7 +2,7 @@ package issueops
 
 import model "issueops/internal/contract/issueops"
 
-func ExecutionReadinessMissing(record model.IssueOpsRecord, workspaceMatches bool) []string {
+func ExecutionReadinessMissing(record model.Record, workspaceMatches bool) []string {
 	if record.Execution == nil {
 		return []string{"execution"}
 	}

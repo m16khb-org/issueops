@@ -6,28 +6,28 @@ import (
 	intentport "issueops/internal/port/issueopsintent"
 )
 
-func RecordPlanPrep(store intentport.Store, stateRoot, id string, req model.IssueOpsPlanPrepRequest) (model.IssueOpsRecord, error) {
+func RecordPlanPrep(store intentport.Store, stateRoot, id string, req model.PlanPrepRequest) (model.Record, error) {
 	decisions, err := planPrepRecordItem("decisions", req.PriorDecisions)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	related, err := planPrepRecordItem("related_issues", req.RelatedIssues)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	research, err := planPrepRecordItem("web_research", req.WebResearch)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	survey, err := planPrepRecordItem("codebase_survey", req.CodebaseSurvey)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	record, err := store.Read(stateRoot, id)
 	if err != nil {
 		return record, err
 	}
-	record.PlanPrep = &model.IssueOpsPlanPrep{
+	record.PlanPrep = &model.PlanPrep{
 		PriorDecisions: decisions,
 		RelatedIssues:  related,
 		WebResearch:    research,
@@ -37,10 +37,10 @@ func RecordPlanPrep(store intentport.Store, stateRoot, id string, req model.Issu
 	return store.TouchWrite(stateRoot, record)
 }
 
-func planPrepRecordItem(name string, req model.IssueOpsPlanPrepItemRequest) (model.IssueOpsPlanPrepItem, error) {
+func planPrepRecordItem(name string, req model.PlanPrepItemRequest) (model.PlanPrepItem, error) {
 	item, err := intentdomain.BuildPlanPrepItem(name, req.Evidence, req.WaiveReason)
 	if err != nil {
-		return model.IssueOpsPlanPrepItem{}, err
+		return model.PlanPrepItem{}, err
 	}
-	return model.IssueOpsPlanPrepItem{Status: item.Status, Evidence: item.Evidence, WaiveReason: item.WaiveReason}, nil
+	return model.PlanPrepItem{Status: item.Status, Evidence: item.Evidence, WaiveReason: item.WaiveReason}, nil
 }

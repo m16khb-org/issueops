@@ -7,21 +7,21 @@ import (
 )
 
 func TestSchemaEvidenceMissingForPathsMapsConditionalReview(t *testing.T) {
-	record := model.IssueOpsRecord{}
+	record := model.Record{}
 	changed := []string{"internal/adapter/outbound/issueopslease/migrations/001.sql"}
 	if got := SchemaEvidenceMissingForPaths(record, changed, ""); got != "schema_evidence" {
 		t.Fatalf("missing schema evidence=%q", got)
 	}
-	record.SchemaEvidence = &model.IssueOpsSchemaEvidence{Waived: true, WaiverRationale: "measured elsewhere", ReviewedFingerprint: "old"}
+	record.SchemaEvidence = &model.SchemaEvidence{Waived: true, WaiverRationale: "measured elsewhere", ReviewedFingerprint: "old"}
 	if got := SchemaEvidenceMissingForPaths(record, changed, "new"); got != "schema_evidence_stale" {
 		t.Fatalf("stale schema evidence=%q", got)
 	}
 }
 
 func TestObservedSchemaEvidenceMissingReobservesOnlyStrictExecution(t *testing.T) {
-	record := model.IssueOpsRecord{}
+	record := model.Record{}
 	calls := 0
-	observe := func(model.IssueOpsRecord) []string {
+	observe := func(model.Record) []string {
 		calls++
 		return []string{"db/migrations/001.sql"}
 	}

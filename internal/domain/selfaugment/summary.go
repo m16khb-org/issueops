@@ -20,13 +20,13 @@ type SummaryRun struct {
 	Steps     []SummaryStep
 }
 
-func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugmentSummary {
-	summary := contract.SelfAugmentSummary{
+func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.Summary {
+	summary := contract.Summary{
 		TotalRuns:         len(runs),
 		TargetScore:       targetScore,
 		StepLabels:        []string{},
-		SlowestSteps:      []contract.SelfAugmentSlowStep{},
-		StepDurationStats: []contract.SelfAugmentStepDurationStat{},
+		SlowestSteps:      []contract.SlowStep{},
+		StepDurationStats: []contract.StepDurationStat{},
 	}
 	seenLabels := map[string]bool{}
 	durationsByLabel := map[string][]int64{}
@@ -53,13 +53,13 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 				reusedByLabel[step.Label]++
 				continue
 			}
-			summary.SlowestSteps = append(summary.SlowestSteps, contract.SelfAugmentSlowStep{
+			summary.SlowestSteps = append(summary.SlowestSteps, contract.SlowStep{
 				Iteration: run.Iteration, Seed: run.Seed, Label: step.Label, DurationMS: step.DurationMS,
 			})
 			durationsByLabel[step.Label] = append(durationsByLabel[step.Label], step.DurationMS)
 		}
 	}
-	slices.SortFunc(summary.SlowestSteps, func(a, b contract.SelfAugmentSlowStep) int {
+	slices.SortFunc(summary.SlowestSteps, func(a, b contract.SlowStep) int {
 		return cmp.Or(cmp.Compare(b.DurationMS, a.DurationMS), cmp.Compare(a.Iteration, b.Iteration), cmp.Compare(a.Label, b.Label))
 	})
 	if len(summary.SlowestSteps) > 5 {
@@ -72,7 +72,7 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 	return summary
 }
 
-func FinalizeSummary(summary *contract.SelfAugmentSummary, runOK bool) {
+func FinalizeSummary(summary *contract.Summary, runOK bool) {
 	summary.MinimumGoalScore = 100
 	if len(summary.GoalScores) == 0 {
 		summary.MinimumGoalScore = 0

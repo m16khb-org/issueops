@@ -10,7 +10,7 @@ import (
 )
 
 func testReader() Reader { return Reader{GitCmd: preflight.GitCmd, GitCmdRaw: preflight.GitCmdRaw} }
-func observeLocalChangesAt(record model.IssueOpsRecord, root string, readFile func(string) ([]byte, error)) contract.LocalChangeObservation {
+func observeLocalChangesAt(record model.Record, root string, readFile func(string) ([]byte, error)) contract.LocalChangeObservation {
 	reader := testReader()
 	var fingerprint func(string, []string) (string, bool)
 	if readFile != nil {
@@ -18,6 +18,6 @@ func observeLocalChangesAt(record model.IssueOpsRecord, root string, readFile fu
 	}
 	return (app.LocalChangeObserver{Source: port.LocalChangeSource{BaseRef: reader.DiffBaseRef, Paths: reader.ObservedPathsIn, Fingerprint: fingerprint}}).Observe(record, root)
 }
-func ObserveLocalChangesAt(record model.IssueOpsRecord, root string) contract.LocalChangeObservation {
+func ObserveLocalChangesAt(record model.Record, root string) contract.LocalChangeObservation {
 	return observeLocalChangesAt(record, root, os.ReadFile)
 }

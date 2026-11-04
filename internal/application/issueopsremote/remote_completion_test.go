@@ -31,26 +31,26 @@ func (p *completionProviderFake) CloseIssue(_ context.Context, req port.IssuePro
 
 const completionReport = "검증을 마치고 병합까지 끝냈습니다. 남은 작업은 없습니다."
 
-func completionRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
+func completionRecord() model.Record {
+	return model.Record{
 		ID: "io-done", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/4",
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/8"},
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/8"},
 	}
 }
 
 type completionHarness struct {
 	store    *artifactStoreForTest
 	provider *completionProviderFake
-	verified []model.IssueOpsRemoteArtifactVerification
+	verified []model.RemoteArtifactVerification
 	service  *RemoteCompletionService
 }
 
-func newCompletionHarness(record model.IssueOpsRecord, provider *completionProviderFake) *completionHarness {
+func newCompletionHarness(record model.Record, provider *completionProviderFake) *completionHarness {
 	store, _ := newArtifactStoreForTest(record)
 	h := &completionHarness{store: store, provider: provider}
 	h.service = NewRemoteCompletionService(store, TrackedMaterials{}, NewCompletionReceipts(store, fixedNow),
 		func(string) (CompletionProvider, error) { return provider, nil },
-		func(a model.IssueOpsRemoteArtifactVerification) error { h.verified = append(h.verified, a); return nil })
+		func(a model.RemoteArtifactVerification) error { h.verified = append(h.verified, a); return nil })
 	return h
 }
 
@@ -95,10 +95,10 @@ func TestRemoteCompletionReflectRefusesBeforeRemoteWrite(t *testing.T) {
 	long := strings.Repeat("가", 2100)
 	noIssue := completionRecord()
 	noIssue.IssueURL = ""
-	noIssue.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github"}
+	noIssue.BranchPrepare = &model.BranchPrepare{Provider: "github"}
 	for _, tc := range []struct {
 		name    string
-		record  model.IssueOpsRecord
+		record  model.Record
 		body    string
 		confirm bool
 		want    string
@@ -129,13 +129,13 @@ func TestRemoteCompletionPrepareRefusals(t *testing.T) {
 	boom := errors.New("boom")
 	noProvider := completionRecord()
 	noProvider.IssueURL = "https://example.com/issues/1"
-	noProvider.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{URL: "u"}
+	noProvider.RemoteArtifact = &model.RemoteArtifactVerification{URL: "u"}
 	noArtifact := completionRecord()
 	noArtifact.RemoteArtifact = nil
 	for _, tc := range []struct {
 		name     string
 		id       string
-		record   model.IssueOpsRecord
+		record   model.Record
 		resolve  CompletionProviderResolver
 		verify   MergeVerifier
 		noVerify bool
@@ -147,7 +147,7 @@ func TestRemoteCompletionPrepareRefusals(t *testing.T) {
 		{name: "resolver fails", id: "io-done", record: completionRecord(), resolve: func(string) (CompletionProvider, error) { return nil, boom }, want: "boom"},
 		{name: "no verified artifact", id: "io-done", record: noArtifact, want: "before a verified remote artifact"},
 		{name: "verifier not configured", id: "io-done", record: completionRecord(), noVerify: true, want: "merge verification is not configured"},
-		{name: "readback fails", id: "io-done", record: completionRecord(), verify: func(model.IssueOpsRemoteArtifactVerification) error { return boom }, want: "merge evidence readback failed"},
+		{name: "readback fails", id: "io-done", record: completionRecord(), verify: func(model.RemoteArtifactVerification) error { return boom }, want: "merge evidence readback failed"},
 		{name: "nil provider", id: "io-done", record: completionRecord(), resolve: func(string) (CompletionProvider, error) { return nil, nil }, want: "no issue provider configured"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -159,7 +159,7 @@ func TestRemoteCompletionPrepareRefusals(t *testing.T) {
 			}
 			verify := tc.verify
 			if verify == nil && !tc.noVerify {
-				verify = func(model.IssueOpsRemoteArtifactVerification) error { return nil }
+				verify = func(model.RemoteArtifactVerification) error { return nil }
 			}
 			service := NewRemoteCompletionService(store, TrackedMaterials{}, NewCompletionReceipts(store, fixedNow), resolve, verify)
 			_, _, err := service.Close(context.Background(), tc.id, tc.override, true)
@@ -175,7 +175,7 @@ func TestRemoteCompletionProviderOverrideBeatsRecordProvider(t *testing.T) {
 	var resolved string
 	service := NewRemoteCompletionService(store, TrackedMaterials{}, NewCompletionReceipts(store, fixedNow),
 		func(name string) (CompletionProvider, error) { resolved = name; return &completionProviderFake{}, nil },
-		func(model.IssueOpsRemoteArtifactVerification) error { return nil })
+		func(model.RemoteArtifactVerification) error { return nil })
 	if _, _, err := service.Close(context.Background(), "io-done", " gitlab ", false); err != nil || resolved != "gitlab" {
 		t.Fatalf("resolved=%q err=%v", resolved, err)
 	}
@@ -214,7 +214,7 @@ func TestRemoteCompletionCloseWithoutClosureLeavesRecordAlone(t *testing.T) {
 func TestRemoteCompletionCloseRefusalsAndProviderFailure(t *testing.T) {
 	noIssue := completionRecord()
 	noIssue.IssueURL = ""
-	noIssue.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github"}
+	noIssue.BranchPrepare = &model.BranchPrepare{Provider: "github"}
 	h := newCompletionHarness(noIssue, &completionProviderFake{})
 	if _, _, err := h.service.Close(context.Background(), "io-done", "", true); err == nil || !strings.Contains(err.Error(), "cannot close before a linked issue") || len(h.provider.closes) != 0 {
 		t.Fatalf("err = %v", err)

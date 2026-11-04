@@ -6,13 +6,13 @@ import (
 	"issueops/internal/domain/judgement"
 )
 
-func DecodeJudgeScore(out []byte) (contract.IssueOpsBenchmarkScore, error) {
-	var score contract.IssueOpsBenchmarkScore
+func DecodeJudgeScore(out []byte) (contract.Score, error) {
+	var score contract.Score
 	if err := judgement.DecodeStructuredJSONObject("issueops benchmark host-agent judge", out, &score); err != nil {
-		return contract.IssueOpsBenchmarkScore{}, err
+		return contract.Score{}, err
 	}
 	if err := domain.ValidateJudgeScore(score); err != nil {
-		return contract.IssueOpsBenchmarkScore{}, err
+		return contract.Score{}, err
 	}
 	return score, nil
 }

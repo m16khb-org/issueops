@@ -11,11 +11,11 @@ func TestCoverageThresholdAndGateStatus(t *testing.T) {
 	if len(packages) != 1 || packages[0].Package != "issueops/a" {
 		t.Fatalf("packages=%+v", packages)
 	}
-	collection, health, gate := QualityStatuses(nil, []contract.Finding{{Blocking: false}})
+	collection, health, gate := Statuses(nil, []contract.Finding{{Blocking: false}})
 	if collection != contract.CollectionStatusOK || health != contract.HealthStatusNeedsAttention || gate != contract.GateStatusReportOnly {
 		t.Fatalf("statuses=%s/%s/%s", collection, health, gate)
 	}
-	collection, health, gate = QualityStatuses([]string{"collector failed"}, nil)
+	collection, health, gate = Statuses([]string{"collector failed"}, nil)
 	if collection != contract.CollectionStatusError || health != contract.HealthStatusUnknown || gate != contract.GateStatusBlock {
 		t.Fatalf("collector statuses=%s/%s/%s", collection, health, gate)
 	}

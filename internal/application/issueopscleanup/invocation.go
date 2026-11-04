@@ -15,7 +15,7 @@ import (
 // Invocation connects record/provider observations and next-command provenance
 // to the cleanup executors while preserving their observation and mutation fences.
 type Invocation struct {
-	Read                       func(string) (model.IssueOpsRecord, error)
+	Read                       func(string) (model.Record, error)
 	Provider                   func(string) (port.IssueProvider, error)
 	CurrentDirectory           func() (string, error)
 	Provenance                 provenanceport.Observer

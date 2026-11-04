@@ -17,24 +17,24 @@ func NewCompletionReceipts(store RecordStore, now func() time.Time) CompletionRe
 	return CompletionReceipts{store: store, now: now}
 }
 
-func (s CompletionReceipts) Reflected(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+func (s CompletionReceipts) Reflected(ctx context.Context, id string) (model.Record, error) {
 	return s.update(ctx, id, domain.MarkRemoteCompletionReflected)
 }
 
-func (s CompletionReceipts) Closed(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+func (s CompletionReceipts) Closed(ctx context.Context, id string) (model.Record, error) {
 	return s.update(ctx, id, domain.MarkRemoteIssueClosed)
 }
 
-func (s CompletionReceipts) Merged(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+func (s CompletionReceipts) Merged(ctx context.Context, id string) (model.Record, error) {
 	return s.update(ctx, id, domain.MarkRemoteMerged)
 }
 
-func (s CompletionReceipts) update(ctx context.Context, id string, apply func(model.IssueOpsRecord, string) model.IssueOpsRecord) (model.IssueOpsRecord, error) {
-	record, err := s.store.Update(ctx, id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s CompletionReceipts) update(ctx context.Context, id string, apply func(model.Record, string) model.Record) (model.Record, error) {
+	record, err := s.store.Update(ctx, id, func(record model.Record) (model.Record, error) {
 		return apply(record, s.now().UTC().Format(time.RFC3339Nano)), nil
 	})
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	return record, nil
 }

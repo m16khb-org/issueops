@@ -19,7 +19,7 @@ import (
 )
 
 func exportSelfVerificationCandidates() augmentcontract.SelfVerificationCandidateExportResult {
-	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).ExportCandidates()
+	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.Dir(), version).ExportCandidates()
 }
 
 func runSelfVerifyCandidatesWithDeps(args []string, deps selfVerifyCandidatesDeps) error {
@@ -30,48 +30,48 @@ func runSelfVerifyCandidatesWithDeps(args []string, deps selfVerifyCandidatesDep
 }
 
 func saveSelfVerificationCandidateExport(result *augmentcontract.SelfVerificationCandidateExportResult, key string) error {
-	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).SaveCandidates(context.Background(), result, key)
+	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.Dir(), version).SaveCandidates(context.Background(), result, key)
 }
 
-func compareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (augmentcontract.SelfAugmentCompareResult, error) {
-	return newSelfWorkflowHistory(statestore.StateDir()).Compare(baselineKey, candidateKey, maxElapsedRegressionPct)
+func compareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (augmentcontract.CompareResult, error) {
+	return newSelfWorkflowHistory(statestore.Dir()).Compare(baselineKey, candidateKey, maxElapsedRegressionPct)
 }
 
-func compareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate augmentcontract.SelfAugmentStateSnapshot) augmentcontract.SelfAugmentCompareResult {
-	return domain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, statestore.StateDir())
+func compareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate augmentcontract.StateSnapshot) augmentcontract.CompareResult {
+	return domain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, statestore.Dir())
 }
 
-func newSelfAugmentCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64) augmentcontract.SelfAugmentCompareResult {
-	return domain.NewCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct, statestore.StateDir())
+func newSelfAugmentCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64) augmentcontract.CompareResult {
+	return domain.NewCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct, statestore.Dir())
 }
 
-func selfAugmentHistory(prefix string, limit int, retentionOptions ...augmentcontract.SelfAugmentHistoryRetentionOptions) (augmentcontract.SelfAugmentHistoryResult, error) {
-	options := augmentcontract.SelfAugmentHistoryRetentionOptions{}
+func selfAugmentHistory(prefix string, limit int, retentionOptions ...augmentcontract.HistoryRetentionOptions) (augmentcontract.HistoryResult, error) {
+	options := augmentcontract.HistoryRetentionOptions{}
 	if len(retentionOptions) > 0 {
 		options = retentionOptions[0]
 	}
-	return newSelfWorkflowHistory(statestore.StateDir()).History(context.Background(), prefix, limit, options)
+	return newSelfWorkflowHistory(statestore.Dir()).History(context.Background(), prefix, limit, options)
 }
 
 func runSelfVerifyPromoteWithDeps(args []string, deps selfVerifyPromoteDeps) error {
 	return promotecmd.Run(args, promotecmd.Deps{Promote: deps.promote, PrintJSON: printJSON})
 }
 
-func promoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.SelfAugmentPromoteResult, error) {
-	return newSelfWorkflowState(statestore.StateDir()).Promote(context.Background(), fromKey, baselineKey, confirm, allowFailedSource)
+func promoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.PromoteResult, error) {
+	return newSelfWorkflowState(statestore.Dir()).Promote(context.Background(), fromKey, baselineKey, confirm, allowFailedSource)
 }
 
-func readSelfAugmentStateSnapshot(key string) (augmentcontract.SelfAugmentStateSnapshot, error) {
-	return (app.SnapshotStore{ReadState: newStateService(statestore.StateDir()).Read}).Read(key)
+func readSelfAugmentStateSnapshot(key string) (augmentcontract.StateSnapshot, error) {
+	return (app.SnapshotStore{ReadState: newStateService(statestore.Dir()).Read}).Read(key)
 }
 
-func writeSelfAugmentSnapshotRecord(dir, key string, snapshot augmentcontract.SelfAugmentStateSnapshot) error {
+func writeSelfAugmentSnapshotRecord(dir, key string, snapshot augmentcontract.StateSnapshot) error {
 	return (app.SnapshotStore{NormalizeKey: statepath.NormalizeKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return newStateService(dir).WriteRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}).Write(dir, key, snapshot)
 }
 
-func newSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) augmentcontract.SelfAugmentResult {
+func newSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) augmentcontract.Result {
 	return verifyapp.NewLoopResult(iterations, baseSeed, targetScore, selfWorkflowRootForTest())
 }
 
@@ -89,15 +89,15 @@ func emitSelfVerifyLoopEnd(progress *selfVerifyProgressReporter, loopKind string
 	progress.inner.Emit(verifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: new(ok), Error: errorText})
 }
 
-func saveSelfVerificationSummary(result *augmentcontract.SelfAugmentResult, key string) error {
-	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(context.Background(), result, key)
+func saveSelfVerificationSummary(result *augmentcontract.Result, key string) error {
+	return newSelfWorkflowState(statestore.Dir()).SaveSummary(context.Background(), result, key)
 }
 
-func saveSelfAugmentSummary(result *augmentcontract.SelfAugmentResult, key string) error {
-	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(context.Background(), result, key)
+func saveSelfAugmentSummary(result *augmentcontract.Result, key string) error {
+	return newSelfWorkflowState(statestore.Dir()).SaveSummary(context.Background(), result, key)
 }
 
-func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *verifycontract.StepResult) []verifyapp.SelfVerifyPlannedStep {
+func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *verifycontract.StepResult) []verifyapp.PlannedStep {
 	return verifyapp.PlannedSteps(root, tempBin, seed, goTestStep, selfVerifyStepDeps(issueOpsRoot()))
 }
 
@@ -111,7 +111,7 @@ type selfVerifyCandidatesDeps struct {
 }
 
 type selfVerifyPromoteDeps struct {
-	promote func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.SelfAugmentPromoteResult, error)
+	promote func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.PromoteResult, error)
 }
 
 func selfWorkflowRootForTest() string {

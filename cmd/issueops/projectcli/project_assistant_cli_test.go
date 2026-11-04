@@ -39,7 +39,7 @@ func TestRunProjectCommitSuggest_printsNoChangesJSON_whenJSONFlagIsSet(t *testin
 	})
 
 	// Then
-	var result commitsuggest.CommitSuggestResult
+	var result commitsuggest.Result
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode commit-suggest json: %v\n%s", err, out)
 	}
@@ -73,7 +73,7 @@ func TestRunProjectLintDiagnose_printsSuccessJSON_whenJSONFlagIsSet(t *testing.T
 	})
 
 	// Then
-	var result lintdiagnose.LintDiagnoseResult
+	var result lintdiagnose.Result
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode lint-diagnose json: %v\n%s", err, out)
 	}

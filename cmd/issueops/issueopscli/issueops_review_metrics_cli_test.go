@@ -14,16 +14,16 @@ import (
 func TestCLIIssueOpsReviewMetricsReadsRoundsAndRejectsAmbiguousScope(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIGitRepoForRemoteVerifyTest(t)
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{
 		Repo:   repo,
 		Branch: "77-review-metrics",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.DevilsAdvocateReview = &issueopscontract.IssueOpsDevilsAdvocateReview{
+	record.DevilsAdvocateReview = &issueopscontract.DevilsAdvocateReview{
 		Verdict: "pass", RecordedAt: "2026-09-08T00:10:00Z",
-		History: []issueopscontract.IssueOpsDevilsAdvocateRound{
+		History: []issueopscontract.DevilsAdvocateRound{
 			{Verdict: "revise", RecordedAt: "2026-09-08T00:00:00Z"},
 		},
 	}
@@ -34,7 +34,7 @@ func TestCLIIssueOpsReviewMetricsReadsRoundsAndRejectsAmbiguousScope(t *testing.
 	single := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"review-metrics", "--id", record.ID, "--json"})
 	})
-	var byID issueopscontract.IssueOpsReviewMetricsResult
+	var byID issueopscontract.ReviewMetricsResult
 	if err := json.Unmarshal([]byte(single), &byID); err != nil {
 		t.Fatalf("review-metrics --id should return JSON: %v\n%s", err, single)
 	}
@@ -51,7 +51,7 @@ func TestCLIIssueOpsReviewMetricsReadsRoundsAndRejectsAmbiguousScope(t *testing.
 	byRepo := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"review-metrics", "--repo", repo, "--json"})
 	})
-	var repoResult issueopscontract.IssueOpsReviewMetricsResult
+	var repoResult issueopscontract.ReviewMetricsResult
 	if err := json.Unmarshal([]byte(byRepo), &repoResult); err != nil {
 		t.Fatalf("review-metrics --repo should return JSON: %v\n%s", err, byRepo)
 	}

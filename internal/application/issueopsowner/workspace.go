@@ -7,13 +7,13 @@ import (
 	model "issueops/internal/contract/issueops"
 	prep "issueops/internal/contract/issueopspreparation"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 // ContextFiles는 workspace 해석과 봉인 아티팩트 materialize가 쓰는 파일 관측이다.
 type ContextFiles interface {
 	SamePath(string, string) bool
-	Materialize(model.IssueOpsRecord) (map[string]string, error)
+	Materialize(model.Record) (map[string]string, error)
 }
 
 type Service struct {
@@ -48,23 +48,23 @@ func (s Service) MaterializeDirect(snapshot prep.Snapshot, receipt prep.Workspac
 	return err
 }
 
-func OwnerArtifactDir(record model.IssueOpsRecord) string {
-	if dir := remote.IssueArtifactDir(record.IssueURL); dir != "" {
+func OwnerArtifactDir(record model.Record) string {
+	if dir := issueopsremote.IssueArtifactDir(record.IssueURL); dir != "" {
 		return dir
 	}
 	if record.BranchPrepare != nil {
-		return remote.IssueArtifactDir(record.BranchPrepare.IssueURL)
+		return issueopsremote.IssueArtifactDir(record.BranchPrepare.IssueURL)
 	}
 	return ""
 }
 
-func executionPreparationCoreRecord(snapshot prep.Snapshot) (model.IssueOpsRecord, error) {
+func executionPreparationCoreRecord(snapshot prep.Snapshot) (model.Record, error) {
 	if len(snapshot.RecordRaw) == 0 {
-		return model.IssueOpsRecord{}, fmt.Errorf("preparation raw record snapshot is required")
+		return model.Record{}, fmt.Errorf("preparation raw record snapshot is required")
 	}
-	var record model.IssueOpsRecord
+	var record model.Record
 	if err := json.Unmarshal(snapshot.RecordRaw, &record); err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	return record, nil
 }

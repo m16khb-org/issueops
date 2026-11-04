@@ -43,7 +43,7 @@ func TestSummarySeparatesMeasuredDurationsFromReusedEvidence(t *testing.T) {
 	if !reflect.DeepEqual(summary.StepLabels, []string{"mixed", "reuse-only", "zero", "failed"}) {
 		t.Fatalf("labels = %v", summary.StepLabels)
 	}
-	wantSlow := []contract.SelfAugmentSlowStep{
+	wantSlow := []contract.SlowStep{
 		{Iteration: 1, Seed: 10, Label: "failed", DurationMS: 149},
 		{Iteration: 1, Seed: 10, Label: "mixed", DurationMS: 137},
 		{Iteration: 1, Seed: 10, Label: "zero"},
@@ -92,7 +92,7 @@ func TestSummarySeparatesMeasuredDurationsFromReusedEvidence(t *testing.T) {
 
 func TestSummarySnapshotKeepsV1AndReadsOlderContractDurationEvidence(t *testing.T) {
 	// Given
-	var older contract.SelfAugmentStateSnapshot
+	var older contract.StateSnapshot
 	if err := json.Unmarshal([]byte(`{"schema_version":1,"kind":"self_verification_summary","summary":{
 		"contract":{"name":"self_verification_summary","version":6,"hash":"older"},
 		"step_duration_stats":[{"label":"go test","count":2,"p95_duration_ms":137}]
@@ -102,7 +102,7 @@ func TestSummarySnapshotKeepsV1AndReadsOlderContractDurationEvidence(t *testing.
 
 	// When
 	err := ValidateSummarySnapshot("older", older)
-	current := NewSelfVerificationSummarySnapshot(contract.SelfAugmentResult{}, time.Time{})
+	current := NewSelfVerificationSummarySnapshot(contract.Result{}, time.Time{})
 
 	// Then: no inference of old reuse or migration of the envelope.
 	if err != nil || current.SchemaVersion != 1 {

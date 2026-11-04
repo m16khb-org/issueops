@@ -41,13 +41,13 @@ func Add(fs *flag.FlagSet) Flags {
 
 // Actor returns the declared actor without process ancestry; pair it with
 // Observer when the core observes ancestry itself.
-func (f Flags) Actor() issueopscontract.IssueOpsActor {
-	return issueopscontract.IssueOpsActor{Host: *f.host, SessionID: *f.sessionID, AgentID: *f.agentID, CWD: *f.cwd}
+func (f Flags) Actor() issueopscontract.Actor {
+	return issueopscontract.Actor{Host: *f.host, SessionID: *f.sessionID, AgentID: *f.agentID, CWD: *f.cwd}
 }
 
 // ActorWithAncestry returns the declared actor carrying the observed ancestry
 // after Filter. An observation error leaves the ancestry empty (fail closed).
-func (f Flags) ActorWithAncestry(ancestry []issueopscontract.NativeProcessReceipt) issueopscontract.IssueOpsActor {
+func (f Flags) ActorWithAncestry(ancestry []issueopscontract.NativeProcessReceipt) issueopscontract.Actor {
 	actor := f.Actor()
 	actor.NativeProcessAncestry = f.Filter(ancestry)
 	return actor

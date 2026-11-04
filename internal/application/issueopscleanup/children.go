@@ -9,27 +9,27 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
 type LockedRecords interface {
 	WithinLock(context.Context, string, func(context.Context) error) error
-	Load(string) (model.IssueOpsRecord, error)
-	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Load(string) (model.Record, error)
+	Save(context.Context, model.Record) (model.Record, error)
 }
 
 type ChildrenCloser struct {
 	Records      LockedRecords
 	Provider     func(string) (port.IssueProvider, error)
-	VerifyMerged func(model.IssueOpsRemoteArtifactVerification) error
+	VerifyMerged func(model.RemoteArtifactVerification) error
 	Now          func() time.Time
 }
 
-func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm bool) (model.IssueOpsCloseChildrenResult, error) {
-	result := model.IssueOpsCloseChildrenResult{OK: false, ID: id}
-	req := model.IssueOpsCloseChildrenRequest{MergeEvidenceRequested: requested, Confirm: confirm}
-	var observed model.IssueOpsRecord
+func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm bool) (model.CloseChildrenResult, error) {
+	result := model.CloseChildrenResult{OK: false, ID: id}
+	req := model.CloseChildrenRequest{MergeEvidenceRequested: requested, Confirm: confirm}
+	var observed model.Record
 	if requested {
 		var err error
 		observed, err = s.observeMergeEvidence(id, &req)
@@ -79,12 +79,12 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 }
 
 // observeMergeEvidence는 잠금 전에 레코드를 읽고 머지 검증 결과를 req.Merged에 기록한다.
-func (s ChildrenCloser) observeMergeEvidence(id string, req *model.IssueOpsCloseChildrenRequest) (model.IssueOpsRecord, error) {
+func (s ChildrenCloser) observeMergeEvidence(id string, req *model.CloseChildrenRequest) (model.Record, error) {
 	observed, err := s.Records.Load(id)
 	if err != nil {
 		return observed, err
 	}
-	observed.IssueLinks = append([]model.IssueOpsIssueLink(nil), observed.IssueLinks...)
+	observed.IssueLinks = append([]model.IssueLink(nil), observed.IssueLinks...)
 	if observed.RemoteArtifact != nil {
 		artifact := *observed.RemoteArtifact
 		observed.RemoteArtifact = &artifact
@@ -93,7 +93,7 @@ func (s ChildrenCloser) observeMergeEvidence(id string, req *model.IssueOpsClose
 	return observed, nil
 }
 
-func childLinkIndices(record model.IssueOpsRecord) []int {
+func childLinkIndices(record model.Record) []int {
 	indices := make([]int, 0)
 	for index, link := range record.IssueLinks {
 		if link.Type == "child" {
@@ -104,7 +104,7 @@ func childLinkIndices(record model.IssueOpsRecord) []int {
 }
 
 // collectChildOutcomes는 결과를 result에 누적하고 변경된 링크 인덱스와 첫 오류를 돌려준다.
-func collectChildOutcomes(result *model.IssueOpsCloseChildrenResult, outcomes []closeChildOutcome, indices []int) ([]int, error) {
+func collectChildOutcomes(result *model.CloseChildrenResult, outcomes []closeChildOutcome, indices []int) ([]int, error) {
 	var changed []int
 	var firstErr error
 	for index, outcome := range outcomes {
@@ -123,12 +123,12 @@ func collectChildOutcomes(result *model.IssueOpsCloseChildrenResult, outcomes []
 }
 
 type closeChildOutcome struct {
-	result  model.IssueOpsCloseChildResult
+	result  model.CloseChildResult
 	changed bool
 	err     error
 }
 
-func (s ChildrenCloser) closeConcurrently(record model.IssueOpsRecord, indices []int, req model.IssueOpsCloseChildrenRequest) []closeChildOutcome {
+func (s ChildrenCloser) closeConcurrently(record model.Record, indices []int, req model.CloseChildrenRequest) []closeChildOutcome {
 	outcomes := make([]closeChildOutcome, len(indices))
 	limit := make(chan struct{}, 4)
 	var workers sync.WaitGroup
@@ -146,7 +146,7 @@ func (s ChildrenCloser) closeConcurrently(record model.IssueOpsRecord, indices [
 	return outcomes
 }
 
-func (s ChildrenCloser) evidenceBasis(record model.IssueOpsRecord, req model.IssueOpsCloseChildrenRequest) (string, error) {
+func (s ChildrenCloser) evidenceBasis(record model.Record, req model.CloseChildrenRequest) (string, error) {
 	basis, err := domain.ChildCleanupEvidenceBasis(record, req.Merged)
 	if err != nil || basis != "" {
 		return basis, err
@@ -166,8 +166,8 @@ func (s ChildrenCloser) evidenceBasis(record model.IssueOpsRecord, req model.Iss
 	return domain.ChildCleanupAlreadyClosed, nil
 }
 
-func (s ChildrenCloser) observeChildState(record model.IssueOpsRecord, link model.IssueOpsIssueLink) (string, error) {
-	providerName := remote.CleanupChildProvider(link.Provider, link.URL, record.IssueURL)
+func (s ChildrenCloser) observeChildState(record model.Record, link model.IssueLink) (string, error) {
+	providerName := issueopsremote.CleanupChildProvider(link.Provider, link.URL, record.IssueURL)
 	if providerName == "" {
 		return "", fmt.Errorf("cannot determine provider for child %s", link.URL)
 	}
@@ -182,17 +182,17 @@ func (s ChildrenCloser) observeChildState(record model.IssueOpsRecord, link mode
 	return strings.TrimSpace(result.State), nil
 }
 
-func (s ChildrenCloser) closeChild(record model.IssueOpsRecord, link model.IssueOpsIssueLink, req model.IssueOpsCloseChildrenRequest) (model.IssueOpsCloseChildResult, bool, error) {
-	providerName := remote.CleanupChildProvider(link.Provider, link.URL, record.IssueURL)
+func (s ChildrenCloser) closeChild(record model.Record, link model.IssueLink, req model.CloseChildrenRequest) (model.CloseChildResult, bool, error) {
+	providerName := issueopsremote.CleanupChildProvider(link.Provider, link.URL, record.IssueURL)
 	if providerName == "" {
-		return model.IssueOpsCloseChildResult{URL: link.URL, Error: "cannot determine provider"}, false, fmt.Errorf("cannot determine provider for child %s", link.URL)
+		return model.CloseChildResult{URL: link.URL, Error: "cannot determine provider"}, false, fmt.Errorf("cannot determine provider for child %s", link.URL)
 	}
 	prov, err := s.Provider(providerName)
 	if err != nil {
-		return model.IssueOpsCloseChildResult{URL: link.URL, Provider: providerName, Error: err.Error()}, false, err
+		return model.CloseChildResult{URL: link.URL, Provider: providerName, Error: err.Error()}, false, err
 	}
 	providerResult, err := prov.CloseChild(port.IssueProviderCloseChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: link.URL, Confirm: req.Confirm})
-	result := model.IssueOpsCloseChildResult{
+	result := model.CloseChildResult{
 		URL: firstChildValue(providerResult.ChildURL, link.URL), Provider: firstChildValue(providerResult.Provider, providerName),
 		Closed: providerResult.Closed, AlreadyClosed: providerResult.AlreadyClosed, HierarchyVerified: providerResult.HierarchyVerified,
 		State: providerResult.State, Preview: providerResult.Preview,

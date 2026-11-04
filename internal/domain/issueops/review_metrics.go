@@ -11,8 +11,8 @@ import (
 // 전용이며 record를 바꾸지 않는다. 파싱할 수 없는 시각은 그 항목만 건너뛰고
 // warning으로 남긴다 — 지표 하나가 깨졌다고 사이클 전체를 버리면 측정 자체가
 // 불가능해진다.
-func ReviewMetricsForRecord(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReviewMetricsCycle, []string) {
-	cycle := issueopscontract.IssueOpsReviewMetricsCycle{
+func ReviewMetricsForRecord(record issueopscontract.Record) (issueopscontract.ReviewMetricsCycle, []string) {
+	cycle := issueopscontract.ReviewMetricsCycle{
 		ID:           record.ID,
 		Phase:        string(record.Phase),
 		RegressCount: len(record.RegressEvents),
@@ -42,11 +42,11 @@ func ReviewMetricsForRecord(record issueopscontract.IssueOpsRecord) (issueopscon
 
 // CycleOutcomeForRecord는 cleanup이 record를 지우기 직전에 남길 지표 요약을
 // 만든다. 파싱하지 못한 시각은 ReviewMetricsForRecord처럼 그 항목만 빠진다.
-func CycleOutcomeForRecord(record issueopscontract.IssueOpsRecord, outcome, retainedAt string) issueopscontract.IssueOpsCycleOutcome {
+func CycleOutcomeForRecord(record issueopscontract.Record, outcome, retainedAt string) issueopscontract.CycleOutcome {
 	metrics, _ := ReviewMetricsForRecord(record)
 	metrics.Outcome = outcome
-	return issueopscontract.IssueOpsCycleOutcome{
-		SchemaVersion: issueopscontract.IssueOpsCycleOutcomeSchemaVersion,
+	return issueopscontract.CycleOutcome{
+		SchemaVersion: issueopscontract.CycleOutcomeSchemaVersion,
 		ID:            record.ID,
 		Repo:          record.Repo,
 		Outcome:       outcome,
@@ -80,14 +80,14 @@ func reviewRoundGaps(id string, stamps []string) ([]float64, []string) {
 }
 
 // stageDurations는 완료된 phase의 체류 시간을 초로 돌려준다. 순회 순서는
-// IssueOpsPhases 고정 순서다(map 순서는 비결정적이라 warning 순서가 흔들린다).
-func stageDurations(record issueopscontract.IssueOpsRecord) (map[string]float64, []string) {
+// Phases 고정 순서다(map 순서는 비결정적이라 warning 순서가 흔들린다).
+func stageDurations(record issueopscontract.Record) (map[string]float64, []string) {
 	if len(record.PhaseLedger) == 0 {
 		return nil, nil
 	}
 	durations := map[string]float64{}
 	var warnings []string
-	for _, phase := range issueopscontract.IssueOpsPhases {
+	for _, phase := range issueopscontract.Phases {
 		entry, ok := record.PhaseLedger[phase]
 		if !ok || entry.EnteredAt == "" || entry.CompletedAt == "" {
 			continue
@@ -107,8 +107,8 @@ func stageDurations(record issueopscontract.IssueOpsRecord) (map[string]float64,
 }
 
 // AggregateReviewMetrics는 사이클 목록을 가로지르는 요약을 만든다.
-func AggregateReviewMetrics(cycles []issueopscontract.IssueOpsReviewMetricsCycle) issueopscontract.IssueOpsReviewMetricsAggregate {
-	aggregate := issueopscontract.IssueOpsReviewMetricsAggregate{Cycles: len(cycles)}
+func AggregateReviewMetrics(cycles []issueopscontract.ReviewMetricsCycle) issueopscontract.ReviewMetricsAggregate {
+	aggregate := issueopscontract.ReviewMetricsAggregate{Cycles: len(cycles)}
 	totalRounds, totalVerdicts, revise, stop := 0, 0, 0, 0
 	for _, cycle := range cycles {
 		if cycle.DevilsAdvocateRounds > 0 {

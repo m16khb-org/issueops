@@ -4,7 +4,7 @@
 // 직렬화하는 쪽은 그 구현을 알 필요가 없다.
 package docs
 
-type DocsIndexResult struct {
+type IndexResult struct {
 	OK           bool           `json:"ok"`
 	Version      string         `json:"version"`
 	IssueOpsRoot string         `json:"issueops_root"`

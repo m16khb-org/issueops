@@ -7,9 +7,9 @@ import (
 )
 
 type ReplacementRecords interface {
-	Load(string) (model.IssueOpsRecord, error)
+	Load(string) (model.Record, error)
 	WithinLock(context.Context, string, func(context.Context) error) error
-	Persist(context.Context, model.IssueOpsRecord, *model.NativeActor) (model.IssueOpsRecord, error)
+	Persist(context.Context, model.Record, *model.NativeActor) (model.Record, error)
 }
 type ReplacementWorkspace interface {
 	WorkspaceSnapshot(model.Workspace) (string, error)
@@ -22,9 +22,9 @@ type ReplacementProcessSnapshot interface {
 	HasAncestor(int, map[int]bool) bool
 }
 type ReplacementArtifacts interface {
-	Cleanup(model.IssueOpsRecord) error
+	Cleanup(model.Record) error
 	WorkspaceAbsent(string) bool
-	CreateToken(model.IssueOpsRecord) (string, string, error)
+	CreateToken(model.Record) (string, string, error)
 }
 
 type ReplacementInvocation struct {

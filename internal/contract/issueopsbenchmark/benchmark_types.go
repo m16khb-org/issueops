@@ -1,6 +1,6 @@
 package issueopsbenchmark
 
-type IssueOpsBenchmarkArtifact struct {
+type Artifact struct {
 	ProblemSummary         string `json:"problem_summary,omitempty"`
 	IssueDraft             string `json:"issue_draft,omitempty"`
 	Plan                   string `json:"plan,omitempty"`
@@ -27,7 +27,7 @@ type IssueOpsBenchmarkArtifact struct {
 	RoutingTrace []SkillRouting `json:"routing_trace,omitempty"`
 }
 
-type IssueOpsBenchmarkFixture struct {
+type Fixture struct {
 	ID                      string         `json:"id"`
 	Title                   string         `json:"title"`
 	UserPrompt              string         `json:"user_prompt"`

@@ -7,7 +7,7 @@ import (
 )
 
 func TestCandidatesIncludeQualitySpecsWithoutChangingOrder(t *testing.T) {
-	candidates := Candidates(contract.SelfAugmentRepoSignals{})
+	candidates := Candidates(contract.RepoSignals{})
 	found := false
 	for _, candidate := range candidates {
 		if candidate.ID == "quality-signal-harvester" {

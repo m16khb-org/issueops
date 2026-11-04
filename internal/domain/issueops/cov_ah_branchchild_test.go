@@ -14,11 +14,11 @@ import (
 
 func TestCovBranchChildSelectUmbrellaCycle(t *testing.T) {
 	child := "https://github.com/Org/Repo/issues/2"
-	link := []model.IssueOpsIssueLink{{Type: "child", URL: " " + child + " "}}
-	done := model.IssueOpsRecord{ID: "done", Phase: model.IssueOpsPhaseDone, IssueLinks: link}
-	related := model.IssueOpsRecord{ID: "related", IssueLinks: []model.IssueOpsIssueLink{{Type: "related", URL: child}}}
-	other := model.IssueOpsRecord{ID: "other", IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: child + "0"}}}
-	hit := model.IssueOpsRecord{ID: "hit", Phase: model.IssueOpsPhaseImplement, IssueLinks: link}
+	link := []model.IssueLink{{Type: "child", URL: " " + child + " "}}
+	done := model.Record{ID: "done", Phase: model.PhaseDone, IssueLinks: link}
+	related := model.Record{ID: "related", IssueLinks: []model.IssueLink{{Type: "related", URL: child}}}
+	other := model.Record{ID: "other", IssueLinks: []model.IssueLink{{Type: "child", URL: child + "0"}}}
+	hit := model.Record{ID: "hit", Phase: model.PhaseImplement, IssueLinks: link}
 	matches := []CyclePathMatch{
 		{Record: hit, Repository: false},
 		{Record: done, Repository: true},
@@ -39,14 +39,14 @@ func TestCovBranchChildSelectUmbrellaCycle(t *testing.T) {
 }
 
 func TestCovBranchChildAwaitBranchLinkGates(t *testing.T) {
-	good := model.IssueOpsRecord{BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: "u", Branch: "1-a", BaseSHA: "abc"}}
+	good := model.Record{BranchPrepare: &model.BranchPrepare{Provider: "github", IssueURL: "u", Branch: "1-a", BaseSHA: "abc"}}
 	if got := AwaitBranchLinkGates(good, true); len(got) != 0 {
 		t.Fatalf("good = %v", got)
 	}
-	if got := AwaitBranchLinkGates(model.IssueOpsRecord{}, false); !slices.Equal(got, []string{"linked_branch_observation_unavailable", "branch_prepare_missing"}) {
+	if got := AwaitBranchLinkGates(model.Record{}, false); !slices.Equal(got, []string{"linked_branch_observation_unavailable", "branch_prepare_missing"}) {
 		t.Fatalf("missing prepare = %v", got)
 	}
-	bad := model.IssueOpsRecord{BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: " ", Branch: " ", BaseSHA: " "}}
+	bad := model.Record{BranchPrepare: &model.BranchPrepare{Provider: "gitlab", IssueURL: " ", Branch: " ", BaseSHA: " "}}
 	want := []string{"branch_await_link_is_github_only", "issue_url_missing", "branch_missing", "sealed_base_missing"}
 	if got := AwaitBranchLinkGates(bad, true); !slices.Equal(got, want) {
 		t.Fatalf("bad = %v", got)
@@ -113,8 +113,8 @@ func TestCovBranchChildVerdictValidation(t *testing.T) {
 	if err := ValidateChildValidationIDs("p", "c"); err != nil {
 		t.Fatal(err)
 	}
-	owned := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseImplement, Delegation: &model.IssueOpsDelegationContract{ParentCycleID: " p "}}
-	if err := ValidateChildForVerdict(model.IssueOpsRecord{ID: "c"}, "p", "dropped"); err == nil || err.Error() != "child_parent_mismatch: c" {
+	owned := model.Record{ID: "c", Phase: model.PhaseImplement, Delegation: &model.DelegationContract{ParentCycleID: " p "}}
+	if err := ValidateChildForVerdict(model.Record{ID: "c"}, "p", "dropped"); err == nil || err.Error() != "child_parent_mismatch: c" {
 		t.Fatalf("no delegation = %v", err)
 	}
 	if err := ValidateChildForVerdict(owned, "q", "dropped"); err == nil || err.Error() != "child_parent_mismatch: c" {
@@ -126,7 +126,7 @@ func TestCovBranchChildVerdictValidation(t *testing.T) {
 	if err := ValidateChildForVerdict(owned, "p", "dropped"); err != nil {
 		t.Fatalf("dropped unfinished child = %v", err)
 	}
-	owned.Phase = model.IssueOpsPhaseDone
+	owned.Phase = model.PhaseDone
 	if err := ValidateChildForVerdict(owned, "p", "accepted"); err != nil {
 		t.Fatalf("accepted done child = %v", err)
 	}
@@ -140,8 +140,8 @@ func TestCovBranchChildVerdictValidation(t *testing.T) {
 }
 
 func TestCovBranchChildApplyVerdict(t *testing.T) {
-	child := model.IssueOpsRecord{ID: "c1", Repo: "r", Branch: "2-c", Phase: model.IssueOpsPhaseDone}
-	parent := model.IssueOpsRecord{ID: "p", Repo: " r "}
+	child := model.Record{ID: "c1", Repo: "r", Branch: "2-c", Phase: model.PhaseDone}
+	parent := model.Record{ID: "p", Repo: " r "}
 	updated, ref, err := ApplyChildVerdict(parent, child, "accepted", "", []string{"ev"}, "t1")
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +153,7 @@ func TestCovBranchChildApplyVerdict(t *testing.T) {
 		t.Fatalf("parent mutated or not indexed: %d %d", len(updated.ChildCycles), len(parent.ChildCycles))
 	}
 
-	if _, _, err := ApplyChildVerdict(parent, model.IssueOpsRecord{ID: "c2", Repo: "other"}, "dropped", "long enough reason", nil, "t"); err == nil || err.Error() != "child_repo_mismatch: c2" {
+	if _, _, err := ApplyChildVerdict(parent, model.Record{ID: "c2", Repo: "other"}, "dropped", "long enough reason", nil, "t"); err == nil || err.Error() != "child_repo_mismatch: c2" {
 		t.Fatalf("repo mismatch = %v", err)
 	}
 
@@ -175,19 +175,19 @@ func TestCovBranchChildApplyVerdict(t *testing.T) {
 }
 
 func TestCovBranchChildStartPreconditions(t *testing.T) {
-	ok := model.IssueOpsRecord{
-		Branch: "1-parent", Phase: model.IssueOpsPhaseImplement,
+	ok := model.Record{
+		Branch: "1-parent", Phase: model.PhaseImplement,
 		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true},
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{Approved: true, Blockers: []string{" "}},
-		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{RecordedAt: "t", Verdict: "proceed"},
+		DevilsAdvocateReview: &model.DevilsAdvocateReview{RecordedAt: "t", Verdict: "proceed"},
 	}
-	req := model.IssueOpsChildStartRequest{Branch: "2-child"}
+	req := model.ChildStartRequest{Branch: "2-child"}
 	if got := ChildStartMissingPreconditions(ok, req); len(got) != 0 {
 		t.Fatalf("ok = %v", got)
 	}
-	bad := model.IssueOpsRecord{Branch: "1-parent", Delegation: &model.IssueOpsDelegationContract{}}
+	bad := model.Record{Branch: "1-parent", Delegation: &model.DelegationContract{}}
 	want := []string{"parent_phase_not_implement", "parent_architecture_review_unapproved", "parent_compatibility_unapproved", "parent_devils_advocate_missing", "delegation_depth_exceeded", "child_branch_equals_parent"}
-	if got := ChildStartMissingPreconditions(bad, model.IssueOpsChildStartRequest{Branch: " 1-parent "}); !slices.Equal(got, want) {
+	if got := ChildStartMissingPreconditions(bad, model.ChildStartRequest{Branch: " 1-parent "}); !slices.Equal(got, want) {
 		t.Fatalf("bad = %v", got)
 	}
 	blocked := ok
@@ -197,7 +197,7 @@ func TestCovBranchChildStartPreconditions(t *testing.T) {
 	}
 	for _, verdict := range []string{"stop", "revise"} {
 		stopped := ok
-		stopped.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{RecordedAt: "t", Verdict: verdict}
+		stopped.DevilsAdvocateReview = &model.DevilsAdvocateReview{RecordedAt: "t", Verdict: verdict}
 		if got := ChildStartMissingPreconditions(stopped, req); !slices.Equal(got, []string{"parent_devils_advocate_missing"}) {
 			t.Fatalf("%s = %v", verdict, got)
 		}
@@ -207,14 +207,14 @@ func TestCovBranchChildStartPreconditions(t *testing.T) {
 		}
 	}
 	unrecorded := ok
-	unrecorded.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{RecordedAt: " ", Verdict: "proceed"}
+	unrecorded.DevilsAdvocateReview = &model.DevilsAdvocateReview{RecordedAt: " ", Verdict: "proceed"}
 	if got := ChildStartMissingPreconditions(unrecorded, req); !slices.Equal(got, []string{"parent_devils_advocate_missing"}) {
 		t.Fatalf("unrecorded = %v", got)
 	}
 }
 
 func TestCovBranchChildPrepareChildStart(t *testing.T) {
-	full := model.IssueOpsChildStartRequest{ParentID: " p ", Branch: " 2-c ", Title: " T ", TaskScope: " scope ", ParentPlanPath: " plan.md ", ChildIssueURL: " u ", AcceptanceCriteria: []string{" ok "}}
+	full := model.ChildStartRequest{ParentID: " p ", Branch: " 2-c ", Title: " T ", TaskScope: " scope ", ParentPlanPath: " plan.md ", ChildIssueURL: " u ", AcceptanceCriteria: []string{" ok "}}
 	got, err := PrepareChildStart(full)
 	if err != nil {
 		t.Fatal(err)
@@ -223,13 +223,13 @@ func TestCovBranchChildPrepareChildStart(t *testing.T) {
 		t.Fatalf("not trimmed: %+v", got)
 	}
 	cases := []struct {
-		mutate func(*model.IssueOpsChildStartRequest)
+		mutate func(*model.ChildStartRequest)
 		want   string
 	}{
-		{func(r *model.IssueOpsChildStartRequest) { r.ParentID = " " }, "parent_id is required"},
-		{func(r *model.IssueOpsChildStartRequest) { r.Branch = " " }, "branch is required"},
-		{func(r *model.IssueOpsChildStartRequest) { r.TaskScope = " " }, "task_scope is required"},
-		{func(r *model.IssueOpsChildStartRequest) { r.AcceptanceCriteria = []string{" "} }, "acceptance_criteria requires at least one entry"},
+		{func(r *model.ChildStartRequest) { r.ParentID = " " }, "parent_id is required"},
+		{func(r *model.ChildStartRequest) { r.Branch = " " }, "branch is required"},
+		{func(r *model.ChildStartRequest) { r.TaskScope = " " }, "task_scope is required"},
+		{func(r *model.ChildStartRequest) { r.AcceptanceCriteria = []string{" "} }, "acceptance_criteria requires at least one entry"},
 	}
 	for _, tc := range cases {
 		req := full
@@ -241,36 +241,36 @@ func TestCovBranchChildPrepareChildStart(t *testing.T) {
 }
 
 func TestCovBranchChildValidateChildMutation(t *testing.T) {
-	if err := ValidateChildMutation(model.IssueOpsRecord{}); err != nil {
+	if err := ValidateChildMutation(model.Record{}); err != nil {
 		t.Fatal(err)
 	}
-	attempt := model.IssueOpsRecord{CleanupAttempt: &model.IssueOpsCleanupAttempt{Operation: "finish"}}
+	attempt := model.Record{CleanupAttempt: &model.CleanupAttempt{Operation: "finish"}}
 	if err := ValidateChildMutation(attempt); err == nil || err.Error() != "cleanup finish apply is in progress" {
 		t.Fatalf("attempt = %v", err)
 	}
-	applying := model.IssueOpsRecord{CleanupAbandonFailure: &model.IssueOpsCleanupAbandonFailure{Step: "applying"}}
+	applying := model.Record{CleanupAbandonFailure: &model.CleanupAbandonFailure{Step: "applying"}}
 	if err := ValidateChildMutation(applying); err == nil || err.Error() != "cleanup abandon apply is in progress" {
 		t.Fatalf("applying = %v", err)
 	}
-	failed := model.IssueOpsRecord{CleanupAbandonFailure: &model.IssueOpsCleanupAbandonFailure{Step: "verifying"}}
+	failed := model.Record{CleanupAbandonFailure: &model.CleanupAbandonFailure{Step: "verifying"}}
 	if err := ValidateChildMutation(failed); err != nil {
 		t.Fatalf("non-applying failure blocked: %v", err)
 	}
 }
 
 func TestCovBranchChildRegisterChildReference(t *testing.T) {
-	req := model.IssueOpsChildStartRequest{Title: " T ", ChildIssueURL: " u "}
+	req := model.ChildStartRequest{Title: " T ", ChildIssueURL: " u "}
 	old := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	child := model.IssueOpsRecord{ID: "c", Branch: "2-c", CreatedAt: old.Add(time.Hour).Format(time.RFC3339Nano)}
-	parent := model.IssueOpsRecord{ChildCycles: []model.IssueOpsChildCycleRef{{CycleID: "x"}}}
+	child := model.Record{ID: "c", Branch: "2-c", CreatedAt: old.Add(time.Hour).Format(time.RFC3339Nano)}
+	parent := model.Record{ChildCycles: []model.ChildCycleRef{{CycleID: "x"}}}
 
 	added, ref, changed := RegisterChildReference(parent, child, req, "now")
 	if !changed || ref.CycleID != "c" || ref.Title != "T" || ref.ChildIssueURL != "u" || ref.CreatedAt != "now" || len(added.ChildCycles) != 2 || len(parent.ChildCycles) != 1 {
 		t.Fatalf("append = %+v %+v %v", added.ChildCycles, ref, changed)
 	}
 
-	existing := model.IssueOpsChildCycleRef{CycleID: "c", Branch: "old", CreatedAt: old.Format(time.RFC3339Nano)}
-	parent.ChildCycles = []model.IssueOpsChildCycleRef{{CycleID: "x"}, existing}
+	existing := model.ChildCycleRef{CycleID: "c", Branch: "old", CreatedAt: old.Format(time.RFC3339Nano)}
+	parent.ChildCycles = []model.ChildCycleRef{{CycleID: "x"}, existing}
 	replaced, ref, changed := RegisterChildReference(parent, child, req, "now")
 	if !changed || ref.Branch != "2-c" || replaced.ChildCycles[1].Branch != "2-c" || parent.ChildCycles[1].Branch != "old" {
 		t.Fatalf("newer child must replace: %+v %v", replaced.ChildCycles, changed)
@@ -298,7 +298,7 @@ func covBranchChildExecution(generation uint64, root string) *model.Execution {
 }
 
 func TestCovBranchChildSealBindsExecutionAuthority(t *testing.T) {
-	record := model.IssueOpsRecord{IssueURL: childParentURL, Execution: covBranchChildExecution(4, "/w")}
+	record := model.Record{IssueURL: childParentURL, Execution: covBranchChildExecution(4, "/w")}
 	op, _, err := SealChildOperation(record, opA, "explicit", "github", "t", "b", dig("seal"), "t0", []string{"l"}, []string{"a"})
 	if err != nil {
 		t.Fatal(err)
@@ -328,7 +328,7 @@ func TestCovBranchChildSealBindsExecutionAuthority(t *testing.T) {
 }
 
 func TestCovBranchChildBeginOperationRejections(t *testing.T) {
-	record := model.IssueOpsRecord{IssueURL: childParentURL}
+	record := model.Record{IssueURL: childParentURL}
 	req := sealedChild(t, record, opA, dig("a"))
 
 	moved := record
@@ -349,7 +349,7 @@ func TestCovBranchChildBeginOperationRejections(t *testing.T) {
 	}
 
 	// 완료되지 않은 다른 작업이 있으면 새 작업을 시작할 수 없다.
-	other := sealedChild(t, model.IssueOpsRecord{IssueURL: childParentURL}, opB, dig("b"))
+	other := sealedChild(t, model.Record{IssueURL: childParentURL}, opB, dig("b"))
 	record.ChildCreateOperations = []model.ChildCreateOperation{other}
 	if _, _, started, err := BeginChildOperation(record, req, ""); err == nil || started || err.Error() != "unresolved child operation; reconcile before creating" {
 		t.Fatalf("unresolved sibling = %v %v", started, err)
@@ -364,7 +364,7 @@ func TestCovBranchChildBeginOperationRejections(t *testing.T) {
 }
 
 func TestCovBranchChildRecordOutcomeRejections(t *testing.T) {
-	record := model.IssueOpsRecord{IssueURL: childParentURL}
+	record := model.Record{IssueURL: childParentURL}
 	if _, err := RecordChildOutcome(record, opA, model.IssueCreateIntentCompleted, "", "", "t"); err == nil || err.Error() != "child operation not found" {
 		t.Fatalf("missing = %v", err)
 	}
@@ -400,35 +400,35 @@ func TestCovBranchChildRecordOutcomeRejections(t *testing.T) {
 func TestCovBranchChildStatusTerminalCleanupReceipt(t *testing.T) {
 	cases := []struct {
 		name string
-		ref  model.IssueOpsChildCycleRef
+		ref  model.ChildCycleRef
 		want bool
 	}{
-		{"unvalidated", model.IssueOpsChildCycleRef{ValidationVerdict: "accepted", ValidationEvidence: []string{"e"}}, false},
-		{"accepted with evidence", model.IssueOpsChildCycleRef{ValidatedAt: "t", ValidationVerdict: "accepted", ValidationEvidence: []string{"e"}}, true},
-		{"accepted without evidence", model.IssueOpsChildCycleRef{ValidatedAt: "t", ValidationVerdict: "accepted"}, false},
-		{"dropped long reason", model.IssueOpsChildCycleRef{ValidatedAt: "t", ValidationVerdict: "dropped", ValidationReason: "no longer needed"}, true},
-		{"dropped short reason", model.IssueOpsChildCycleRef{ValidatedAt: "t", ValidationVerdict: "dropped", ValidationReason: "nope"}, false},
-		{"rejected", model.IssueOpsChildCycleRef{ValidatedAt: "t", ValidationVerdict: "rejected", ValidationReason: "long enough reason", ValidationEvidence: []string{"e"}}, false},
+		{"unvalidated", model.ChildCycleRef{ValidationVerdict: "accepted", ValidationEvidence: []string{"e"}}, false},
+		{"accepted with evidence", model.ChildCycleRef{ValidatedAt: "t", ValidationVerdict: "accepted", ValidationEvidence: []string{"e"}}, true},
+		{"accepted without evidence", model.ChildCycleRef{ValidatedAt: "t", ValidationVerdict: "accepted"}, false},
+		{"dropped long reason", model.ChildCycleRef{ValidatedAt: "t", ValidationVerdict: "dropped", ValidationReason: "no longer needed"}, true},
+		{"dropped short reason", model.ChildCycleRef{ValidatedAt: "t", ValidationVerdict: "dropped", ValidationReason: "nope"}, false},
+		{"rejected", model.ChildCycleRef{ValidatedAt: "t", ValidationVerdict: "rejected", ValidationReason: "long enough reason", ValidationEvidence: []string{"e"}}, false},
 	}
 	for _, tc := range cases {
 		if got := issueOpsChildRefHasTerminalCleanupReceipt(tc.ref); got != tc.want {
 			t.Errorf("%s = %v, want %v", tc.name, got, tc.want)
 		}
 		// 영수증이 없는 child가 사라지면 orphan으로 보고된다.
-		status := BuildChildStatus(model.IssueOpsRecord{ID: "p", ChildCycles: []model.IssueOpsChildCycleRef{withCovCycleID(tc.ref)}}, nil)
+		status := BuildChildStatus(model.Record{ID: "p", ChildCycles: []model.ChildCycleRef{withCovCycleID(tc.ref)}}, nil)
 		if orphaned := len(status.Orphaned) == 1; orphaned == tc.want {
 			t.Errorf("%s: orphaned = %v with receipt %v", tc.name, status.Orphaned, tc.want)
 		}
 	}
 }
 
-func withCovCycleID(ref model.IssueOpsChildCycleRef) model.IssueOpsChildCycleRef {
+func withCovCycleID(ref model.ChildCycleRef) model.ChildCycleRef {
 	ref.CycleID = "c"
 	return ref
 }
 
 func TestCovBranchChildRetargetRequiresHolderRejectsInvalidExecution(t *testing.T) {
-	needs, err := RetargetRequiresHolder(model.IssueOpsRecord{Execution: &model.Execution{}})
+	needs, err := RetargetRequiresHolder(model.Record{Execution: &model.Execution{}})
 	if err == nil || needs || !strings.Contains(err.Error(), "invalid IssueOps execution v1 record") {
 		t.Fatalf("needs=%v err=%v", needs, err)
 	}
@@ -438,11 +438,11 @@ func TestCovBranchChildRetargetRequiresHolderRejectsInvalidExecution(t *testing.
 }
 
 func TestCovBranchChildAISlopCleanCompletionMissing(t *testing.T) {
-	full := model.IssueOpsRecord{AISlopCleanAt: "t", AISlopCleanHead: "h", AISlopCleanFingerprint: "f", AISlopCleanCategories: []string{"c"}, AISlopCleanVerification: []string{"v"}}
+	full := model.Record{AISlopCleanAt: "t", AISlopCleanHead: "h", AISlopCleanFingerprint: "f", AISlopCleanCategories: []string{"c"}, AISlopCleanVerification: []string{"v"}}
 	if got := AISlopCleanCompletionMissing(full); len(got) != 0 {
 		t.Fatalf("full = %v", got)
 	}
-	blank := model.IssueOpsRecord{AISlopCleanAt: " ", AISlopCleanHead: " ", AISlopCleanFingerprint: " ", AISlopCleanCategories: []string{" ", "a\x00b"}, AISlopCleanVerification: []string{""}}
+	blank := model.Record{AISlopCleanAt: " ", AISlopCleanHead: " ", AISlopCleanFingerprint: " ", AISlopCleanCategories: []string{" ", "a\x00b"}, AISlopCleanVerification: []string{""}}
 	want := []string{"ai_slop_clean_at", "ai_slop_clean_head", "ai_slop_clean_fingerprint", "cleanup_evidence", "verification_evidence"}
 	if got := AISlopCleanCompletionMissing(blank); !slices.Equal(got, want) {
 		t.Fatalf("blank = %v", got)
@@ -499,12 +499,12 @@ func TestCovBranchChildChangeTierSurfaces(t *testing.T) {
 }
 
 func TestCovBranchChildGrillReadinessMissing(t *testing.T) {
-	trivial := model.IssueOpsRecord{Intent: &model.IssueOpsIntentContract{IntentClass: "Trivial"}}
+	trivial := model.Record{Intent: &model.IntentContract{IntentClass: "Trivial"}}
 	want := []string{"issue_url", "branch", "split_decision", "domain_review"}
 	if got := GrillReadinessMissing(trivial); !slices.Equal(got, want) {
 		t.Fatalf("trivial = %v", got)
 	}
-	nontrivial := model.IssueOpsRecord{IssueURL: "u", Branch: "1-a", Intent: &model.IssueOpsIntentContract{IntentClass: "feature"}, Decisions: []model.IssueOpsDecision{{Kind: "Scope"}}, DomainReview: &model.IssueOpsDomainReview{ReviewedAt: "t"}}
+	nontrivial := model.Record{IssueURL: "u", Branch: "1-a", Intent: &model.IntentContract{IntentClass: "feature"}, Decisions: []model.Decision{{Kind: "Scope"}}, DomainReview: &model.DomainReview{ReviewedAt: "t"}}
 	got := GrillReadinessMissing(nontrivial)
 	if !slices.Equal(got, []string{"plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey"}) {
 		t.Fatalf("nontrivial = %v", got)

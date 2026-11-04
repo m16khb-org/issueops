@@ -20,9 +20,9 @@ func TestFinishAttemptBlocksGenericWriterEntrypoints(t *testing.T) {
 			for _, operation := range []string{"stale write", "span", "execution write", "parent pair write", "child pair write", "publication"} {
 				t.Run(operation, func(t *testing.T) {
 					root := filepath.Join(t.TempDir(), "state")
-					stale := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-fence", Phase: model.IssueOpsPhaseDone}
+					stale := model.Record{SchemaVersion: 1, ID: "io-finish-fence", Phase: model.PhaseDone}
 					armed := stale
-					armed.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+					armed.CleanupAttempt = &model.CleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 					_, raw, err := encodeIssueOpsRecord(armed)
 					if err != nil {
 						t.Fatal(err)
@@ -51,9 +51,9 @@ func TestFinishAttemptBlocksGenericWriterEntrypoints(t *testing.T) {
 					case "execution write":
 						_, err = persistExecutionTransition(context.Background(), root, stale, nil)
 					case "parent pair write":
-						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), stale, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-new-child", Phase: model.IssueOpsPhaseProblem})
+						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), stale, model.Record{SchemaVersion: 1, ID: "io-new-child", Phase: model.PhaseProblem})
 					case "child pair write":
-						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), model.IssueOpsRecord{SchemaVersion: 1, ID: "io-new-parent", Phase: model.IssueOpsPhaseProblem}, stale)
+						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), model.Record{SchemaVersion: 1, ID: "io-new-parent", Phase: model.PhaseProblem}, stale)
 					case "span":
 						err = withIssueOpsLock(context.Background(), root, armed.ID, callback)
 					}
@@ -93,7 +93,7 @@ func TestOrdinaryWritersCannotRestoreDrainedFinishAttempt(t *testing.T) {
 			for _, operation := range []string{"write", "execution", "parent pair", "child pair", "publication"} {
 				t.Run(operation, func(t *testing.T) {
 					root := filepath.Join(t.TempDir(), "state")
-					current := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-drained", Phase: model.IssueOpsPhaseDone}
+					current := model.Record{SchemaVersion: 1, ID: "io-drained", Phase: model.PhaseDone}
 					_, raw, err := encodeIssueOpsRecord(current)
 					if err != nil {
 						t.Fatal(err)
@@ -106,8 +106,8 @@ func TestOrdinaryWritersCannotRestoreDrainedFinishAttempt(t *testing.T) {
 						t.Fatal(err)
 					}
 					stale := current
-					stale.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
-					other := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-other", Phase: model.IssueOpsPhaseProblem}
+					stale.CleanupAttempt = &model.CleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+					other := model.Record{SchemaVersion: 1, ID: "io-other", Phase: model.PhaseProblem}
 					switch operation {
 					case "publication":
 						_, err = (RemotePublicationStore{StateRoot: root}).Persist(context.Background(), stale, publicationcontract.IntentMutation{OperationID: "pending-finish", Delete: true})

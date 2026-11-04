@@ -200,7 +200,7 @@ func TestSplitCSVContainsAndStateIssueHelpers(t *testing.T) {
 	if !ContainsString([]string{"a", "b"}, "b") || ContainsString([]string{"a"}, "z") {
 		t.Fatal("ContainsString mismatch")
 	}
-	issues := []statecontract.StateDoctorIssue{{Code: "bad_json"}}
+	issues := []statecontract.DoctorIssue{{Code: "bad_json"}}
 	if !StateDoctorHasIssueCode(issues, "bad_json") || StateDoctorHasIssueCode(issues, "missing") {
 		t.Fatal("StateDoctorHasIssueCode mismatch")
 	}

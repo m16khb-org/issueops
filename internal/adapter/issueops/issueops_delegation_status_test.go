@@ -14,7 +14,7 @@ func TestIssueOpsChildStatusAggregatesAndRepairs(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	first, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	first, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-child-status-a",
 		Title:              "status child a",
@@ -24,7 +24,7 @@ func TestIssueOpsChildStatusAggregatesAndRepairs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	second, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-child-status-b",
 		Title:              "status child b",
@@ -38,7 +38,7 @@ func TestIssueOpsChildStatusAggregatesAndRepairs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parentAfter.ChildCycles = []issueops.IssueOpsChildCycleRef{
+	parentAfter.ChildCycles = []issueops.ChildCycleRef{
 		first.ParentRef,
 		{CycleID: "io-deadbeefcafe", Branch: "999-orphan-child", Title: "orphan child", CreatedAt: "2026-07-07T00:00:00Z"},
 	}
@@ -52,7 +52,7 @@ func TestIssueOpsChildStatusAggregatesAndRepairs(t *testing.T) {
 		t.Fatalf("expected indexed, scanned, and orphaned child entries, got %#v", status.Children)
 	}
 	scanned, ok := childStatusEntryByID(status.Children, second.Child.ID)
-	if !ok || !scanned.Scanned || scanned.Indexed || scanned.Orphaned || scanned.Phase != issueops.IssueOpsPhaseProblem {
+	if !ok || !scanned.Scanned || scanned.Indexed || scanned.Orphaned || scanned.Phase != issueops.PhaseProblem {
 		t.Fatalf("missing-index child should be surfaced from child delegation pointer, got %#v", scanned)
 	}
 	orphan, ok := childStatusEntryByID(status.Children, "io-deadbeefcafe")
@@ -84,7 +84,7 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-child-accept",
 		Title:              "accept child",
@@ -98,7 +98,7 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 		t.Fatalf("accept should refuse non-done child, got %v", err)
 	}
 	child := started.Child
-	child.Phase = issueops.IssueOpsPhaseDone
+	child.Phase = issueops.PhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 	if _, err := acceptIssueOpsChildForTest(stateRoot, parent, child.ID, nil); err == nil || !strings.Contains(err.Error(), "validation_evidence") {
 		t.Fatalf("accept should require evidence, got %v", err)
@@ -130,7 +130,7 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	archived, ok := childStatusEntryByID(status.Children, child.ID)
-	if !ok || archived.Orphaned || archived.Phase != issueops.IssueOpsPhaseDone || len(status.Orphaned) != 0 {
+	if !ok || archived.Orphaned || archived.Phase != issueops.PhaseDone || len(status.Orphaned) != 0 {
 		t.Fatalf("accepted cleanup receipt must stay terminal without becoming orphaned, got %#v / %#v", archived, status.Orphaned)
 	}
 	if missing, notes := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
@@ -143,7 +143,7 @@ func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-cleaned-child-accept",
 		Title:              "cleaned child accept",
@@ -154,7 +154,7 @@ func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	child := started.Child
-	child.Phase = issueops.IssueOpsPhaseDone
+	child.Phase = issueops.PhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 	if err := deleteIssueOps(context.Background(), stateRoot, child.ID); err != nil {
 		t.Fatal(err)
@@ -172,7 +172,7 @@ func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	accepted, ok := childStatusEntryByID(status.Children, child.ID)
-	if !ok || accepted.Orphaned || accepted.Phase != issueops.IssueOpsPhaseDone {
+	if !ok || accepted.Orphaned || accepted.Phase != issueops.PhaseDone {
 		t.Fatalf("accepted cleaned child should stay terminal without orphaning: %#v", accepted)
 	}
 }
@@ -194,7 +194,7 @@ func TestRejectIssueOpsChildRecordsVerdictOnValidReason(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-child-reject",
 		Title:              "reject child",
@@ -221,7 +221,7 @@ func TestDropIssueOpsChildRecordsAuditTrail(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-child-drop",
 		Title:              "drop child",
@@ -248,7 +248,7 @@ func TestDropIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-cleaned-child-drop",
 		Title:              "cleaned child drop",
@@ -296,7 +296,7 @@ func TestDroppedCleanupReceiptWithShortReasonRemainsOrphaned(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-malformed-drop-receipt",
 		Title:              "malformed drop receipt",
@@ -335,11 +335,11 @@ func TestDroppedCleanupReceiptWithShortReasonRemainsOrphaned(t *testing.T) {
 	}
 }
 
-func childStatusEntryByID(entries []issueops.IssueOpsChildStatusEntry, childID string) (issueops.IssueOpsChildStatusEntry, bool) {
+func childStatusEntryByID(entries []issueops.ChildStatusEntry, childID string) (issueops.ChildStatusEntry, bool) {
 	for _, entry := range entries {
 		if entry.CycleID == childID {
 			return entry, true
 		}
 	}
-	return issueops.IssueOpsChildStatusEntry{}, false
+	return issueops.ChildStatusEntry{}, false
 }

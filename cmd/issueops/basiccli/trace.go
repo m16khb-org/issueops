@@ -71,8 +71,8 @@ func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 
 // readHandoffDeliveryObservation reads and strictly decodes one bounded
 // observation document from a file path or '-' for stdin.
-func readHandoffDeliveryObservation(input string) (issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	var observation issueopscontract.IssueOpsHandoffDeliveryObservation
+func readHandoffDeliveryObservation(input string) (issueopscontract.HandoffDeliveryObservation, error) {
+	var observation issueopscontract.HandoffDeliveryObservation
 	var reader io.Reader
 	if input == "-" {
 		reader = os.Stdin
@@ -115,7 +115,7 @@ func (command Command) runTraceAnalyze(args []string) error {
 	if *input == "" && positional != "" {
 		*input = positional
 	}
-	result, err := command.Trace.Analyze(tracecontract.TraceAnalyzeRequest{Input: *input, InputFormat: *inputFormat})
+	result, err := command.Trace.Analyze(tracecontract.AnalyzeRequest{Input: *input, InputFormat: *inputFormat})
 	if err != nil {
 		if *jsonOut {
 			return jsonout.PrintResultError(os.Stdout, result, err)

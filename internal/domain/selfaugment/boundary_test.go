@@ -10,24 +10,24 @@ import (
 )
 
 func TestCandidateScoreCombinesAllWeightedTerms(t *testing.T) {
-	got := CandidateScore(contract.SelfAugmentCandidate{Impact: 10, Feasibility: 20, Novelty: 30, Risk: 40})
+	got := CandidateScore(contract.Candidate{Impact: 10, Feasibility: 20, Novelty: 30, Risk: 40})
 	// 3.8 + 6.0 + 6.0 + 7.2
 	if math.Abs(got-23) > 1e-9 {
 		t.Fatalf("score=%v want 23", got)
 	}
-	if got := CandidateScore(contract.SelfAugmentCandidate{Feasibility: 100, Risk: 100}); math.Abs(got-30) > 1e-9 {
+	if got := CandidateScore(contract.Candidate{Feasibility: 100, Risk: 100}); math.Abs(got-30) > 1e-9 {
 		t.Fatalf("feasibility weight 0.30 expected 30, got %v", got)
 	}
-	if got := CandidateScore(contract.SelfAugmentCandidate{Novelty: 100, Risk: 100}); math.Abs(got-20) > 1e-9 {
+	if got := CandidateScore(contract.Candidate{Novelty: 100, Risk: 100}); math.Abs(got-20) > 1e-9 {
 		t.Fatalf("novelty weight 0.20 expected 20, got %v", got)
 	}
 }
 
 func TestCompareSnapshotsReportsStepDeltasAndWarnings(t *testing.T) {
-	baseline := contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 100, Summary: contract.SelfAugmentSummary{
+	baseline := contract.StateSnapshot{OK: true, ElapsedMS: 100, Summary: contract.Summary{
 		TotalSteps: 10, FailedSteps: 1, FailureCause: "cause-a", StepLabels: []string{"a"},
 	}}
-	candidate := contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 100, Summary: contract.SelfAugmentSummary{
+	candidate := contract.StateSnapshot{OK: true, ElapsedMS: 100, Summary: contract.Summary{
 		TotalSteps: 7, FailedSteps: 4, FailureCause: "cause-b", StepLabels: []string{"a"},
 	}}
 	result := CompareSnapshots("b", "c", 10, baseline, candidate, "/d")
@@ -71,8 +71,8 @@ func TestCompareSnapshotsReportsStepDeltasAndWarnings(t *testing.T) {
 
 func TestCompareSnapshotsElapsedBaselineAndThresholdBoundaries(t *testing.T) {
 	zero := CompareSnapshots("b", "c", 10,
-		contract.SelfAugmentStateSnapshot{OK: true},
-		contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 50}, "/d")
+		contract.StateSnapshot{OK: true},
+		contract.StateSnapshot{OK: true, ElapsedMS: 50}, "/d")
 	if !slices.Contains(zero.Warnings, "baseline_elapsed_zero") || zero.ElapsedDeltaPct != 0 || zero.ElapsedDeltaMS != 50 {
 		t.Fatalf("zero baseline: %+v", zero)
 	}
@@ -81,22 +81,22 @@ func TestCompareSnapshotsElapsedBaselineAndThresholdBoundaries(t *testing.T) {
 	}
 
 	atLimit := CompareSnapshots("b", "c", 50,
-		contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 100},
-		contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 150}, "/d")
+		contract.StateSnapshot{OK: true, ElapsedMS: 100},
+		contract.StateSnapshot{OK: true, ElapsedMS: 150}, "/d")
 	if atLimit.ElapsedDeltaPct != 50 || atLimit.Regressed {
 		t.Fatalf("increase equal to the limit is allowed: %+v", atLimit)
 	}
 	over := CompareSnapshots("b", "c", 49.99,
-		contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 100},
-		contract.SelfAugmentStateSnapshot{OK: true, ElapsedMS: 150}, "/d")
+		contract.StateSnapshot{OK: true, ElapsedMS: 100},
+		contract.StateSnapshot{OK: true, ElapsedMS: 150}, "/d")
 	if !slices.Contains(over.Regressions, "elapsed_ms_increased_by_50.00_pct") {
 		t.Fatalf("regressions=%v", over.Regressions)
 	}
 }
 
 func TestSlowStepRegressionThresholdsAreExact(t *testing.T) {
-	base := []contract.SelfAugmentSlowStep{{Label: "z", DurationMS: 0}, {Label: "s", DurationMS: 100}}
-	cand := []contract.SelfAugmentSlowStep{{Label: "z", DurationMS: 10}, {Label: "s", DurationMS: 150}}
+	base := []contract.SlowStep{{Label: "z", DurationMS: 0}, {Label: "s", DurationMS: 100}}
+	cand := []contract.SlowStep{{Label: "z", DurationMS: 10}, {Label: "s", DurationMS: 150}}
 	if got := CompareSlowestStepRegressions(base, cand, 50); len(got) != 0 {
 		t.Fatalf("increase equal to limit must pass and zero baseline is skipped: %+v", got)
 	}
@@ -107,13 +107,13 @@ func TestSlowStepRegressionThresholdsAreExact(t *testing.T) {
 }
 
 func TestStepBudgetRegressionThresholdsAreExact(t *testing.T) {
-	stat := func(label string, p95 int64) contract.SelfAugmentStepDurationStat {
-		return contract.SelfAugmentStepDurationStat{Label: label, P95DurationMS: p95}
+	stat := func(label string, p95 int64) contract.StepDurationStat {
+		return contract.StepDurationStat{Label: label, P95DurationMS: p95}
 	}
 	// delta of exactly the floor (25ms) regresses; one ms less is ignored.
 	got := CompareStepBudgetRegressions(
-		[]contract.SelfAugmentStepDurationStat{stat("floor", 100), stat("below", 100), stat("pct", 100)},
-		[]contract.SelfAugmentStepDurationStat{stat("floor", 100+stepBudgetMinRegressionMS), stat("below", 100+stepBudgetMinRegressionMS-1), stat("pct", 150)}, 10)
+		[]contract.StepDurationStat{stat("floor", 100), stat("below", 100), stat("pct", 100)},
+		[]contract.StepDurationStat{stat("floor", 100+stepBudgetMinRegressionMS), stat("below", 100+stepBudgetMinRegressionMS-1), stat("pct", 150)}, 10)
 	if len(got) != 2 || got[0].Label != "pct" || got[1].Label != "floor" {
 		t.Fatalf("got=%+v", got)
 	}
@@ -123,8 +123,8 @@ func TestStepBudgetRegressionThresholdsAreExact(t *testing.T) {
 
 	// increase equal to the percentage limit is allowed.
 	atLimit := CompareStepBudgetRegressions(
-		[]contract.SelfAugmentStepDurationStat{stat("a", 100)},
-		[]contract.SelfAugmentStepDurationStat{stat("a", 150)}, 50)
+		[]contract.StepDurationStat{stat("a", 100)},
+		[]contract.StepDurationStat{stat("a", 150)}, 50)
 	if len(atLimit) != 0 {
 		t.Fatalf("atLimit=%+v", atLimit)
 	}
@@ -141,11 +141,11 @@ func TestPlanHistoryRetentionWithinBudgetHasNoPruneRecommendation(t *testing.T) 
 }
 
 func TestPrepareLessonDefaultsAndPreservesExplicitSourceAndSeverity(t *testing.T) {
-	defaults, err := PrepareLesson(contract.SelfAugmentLessonRequest{Lesson: "l", NextAction: "n"}, "/r", "cand")
+	defaults, err := PrepareLesson(contract.LessonRequest{Lesson: "l", NextAction: "n"}, "/r", "cand")
 	if err != nil || defaults.Source != "self-augment" || defaults.Severity != "info" {
 		t.Fatalf("defaults=%+v err=%v", defaults, err)
 	}
-	explicit, err := PrepareLesson(contract.SelfAugmentLessonRequest{Lesson: "l", NextAction: "n", Source: " dogfood ", Severity: " high "}, "/r", "cand")
+	explicit, err := PrepareLesson(contract.LessonRequest{Lesson: "l", NextAction: "n", Source: " dogfood ", Severity: " high "}, "/r", "cand")
 	if err != nil || explicit.Source != "dogfood" || explicit.Severity != "high" {
 		t.Fatalf("explicit=%+v err=%v", explicit, err)
 	}
@@ -180,8 +180,8 @@ func TestSummarizeStepsOrdersSlowestTiesByIterationThenLabel(t *testing.T) {
 
 func TestCompareSnapshotsZeroElapsedOnBothSidesDoesNotWarn(t *testing.T) {
 	result := CompareSnapshots("b", "c", 10,
-		contract.SelfAugmentStateSnapshot{OK: true},
-		contract.SelfAugmentStateSnapshot{OK: true}, "/d")
+		contract.StateSnapshot{OK: true},
+		contract.StateSnapshot{OK: true}, "/d")
 	if slices.Contains(result.Warnings, "baseline_elapsed_zero") {
 		t.Fatalf("warnings=%v", result.Warnings)
 	}

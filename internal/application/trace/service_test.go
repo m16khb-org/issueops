@@ -39,7 +39,7 @@ func (f *fakeEffects) Decode([]byte, string) tracedomain.Input {
 
 func TestAnalyzeRejectsMissingInputBeforeEffects(t *testing.T) {
 	f := &fakeEffects{}
-	result, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: " "})
+	result, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: " "})
 	if err == nil || result.OK || f.loaded || f.analyzed {
 		t.Fatalf("result=%+v effects=%+v err=%v", result, f, err)
 	}
@@ -47,7 +47,7 @@ func TestAnalyzeRejectsMissingInputBeforeEffects(t *testing.T) {
 
 func TestAnalyzePreservesSourceAndCount(t *testing.T) {
 	f := &fakeEffects{}
-	result, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: " key "})
+	result, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: " key "})
 	if err != nil || !result.OK || result.Input != "key" || result.InputSource != "state" || result.FindingCount != 1 || !f.analyzed {
 		t.Fatalf("result=%+v effects=%+v err=%v", result, f, err)
 	}
@@ -62,7 +62,7 @@ func TestAnalyzeReportsCompletenessIndependentlyOfExecution(t *testing.T) {
 		}
 		f := &fakeEffects{facts: &facts}
 		// When
-		result, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "key"})
+		result, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: "key"})
 		// Then
 		if err != nil || !result.OK || result.Complete == incomplete || result.FindingCount != 1 {
 			t.Errorf("result=%+v err=%v", result, err)
@@ -75,17 +75,17 @@ func TestAnalyzeReportsCompletenessIndependentlyOfExecution(t *testing.T) {
 
 func TestAnalyzeDefaultsAndValidatesInputFormat(t *testing.T) {
 	f := &fakeEffects{}
-	if _, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "key"}); err != nil || f.loadFormat != tracecontract.InputFormatIssueOps {
+	if _, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: "key"}); err != nil || f.loadFormat != tracecontract.InputFormatIssueOps {
 		t.Errorf("default format = %q err=%v", f.loadFormat, err)
 	}
 	for _, format := range []string{tracecontract.InputFormatClaudeJSON, tracecontract.InputFormatCodexExec, tracecontract.InputFormatOmoJSON, tracecontract.InputFormatOmpJSON, tracecontract.InputFormatOpencodeJSON} {
 		f := &fakeEffects{}
-		if _, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "key", InputFormat: " " + format + " "}); err != nil || f.loadFormat != format {
+		if _, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: "key", InputFormat: " " + format + " "}); err != nil || f.loadFormat != format {
 			t.Errorf("format %q forwarded as %q err=%v", format, f.loadFormat, err)
 		}
 	}
 	f = &fakeEffects{}
-	result, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "key", InputFormat: "jsonl-ish"})
+	result, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: "key", InputFormat: "jsonl-ish"})
 	if err == nil || result.OK || result.Complete || f.loaded || len(result.Warnings) != 1 || result.Warnings[0] != "unsupported_input_format" {
 		t.Fatalf("unsupported format: result=%+v effects=%+v err=%v", result, f, err)
 	}
@@ -96,14 +96,14 @@ func TestAnalyzeCarriesUsageAndTruncation(t *testing.T) {
 	report := &tracecontract.UsageReport{Coverage: tracecontract.UsageCoverageComplete, Warnings: []string{}, Samples: []tracecontract.UsageSample{{Host: "omo", InputTokens: &one}}}
 	facts := tracedomain.Input{Usage: report}
 	f := &fakeEffects{facts: &facts}
-	result, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "x.jsonl", InputFormat: tracecontract.InputFormatOmoJSON})
+	result, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: "x.jsonl", InputFormat: tracecontract.InputFormatOmoJSON})
 	if err != nil || !result.OK || !result.Complete || result.Usage != report || len(result.Warnings) != 0 {
 		t.Fatalf("usage passthrough: result=%+v err=%v", result, err)
 	}
 
 	facts = tracedomain.Input{Usage: &tracecontract.UsageReport{Coverage: tracecontract.UsageCoverageComplete, Warnings: []string{}, Samples: []tracecontract.UsageSample{{Host: "omo", InputTokens: &one}}}}
 	f = &fakeEffects{facts: &facts, truncated: true}
-	result, err = (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "x.jsonl", InputFormat: tracecontract.InputFormatOmoJSON})
+	result, err = (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: "x.jsonl", InputFormat: tracecontract.InputFormatOmoJSON})
 	if err != nil || !result.OK || result.Complete || result.Usage.Coverage != tracecontract.UsageCoveragePartial {
 		t.Fatalf("truncation: result=%+v err=%v", result, err)
 	}
@@ -118,7 +118,7 @@ func TestAnalyzeCarriesUsageAndTruncation(t *testing.T) {
 	}
 
 	onlyTruncatedFragment := &fakeEffects{body: " ", truncated: true, facts: &tracedomain.Input{Usage: &tracecontract.UsageReport{Coverage: tracecontract.UsageCoverageUnknown, Warnings: []string{}, Samples: []tracecontract.UsageSample{}}}}
-	result, err = (Service{Effects: onlyTruncatedFragment}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "x.jsonl", InputFormat: tracecontract.InputFormatOmoJSON})
+	result, err = (Service{Effects: onlyTruncatedFragment}).Analyze(tracecontract.AnalyzeRequest{Input: "x.jsonl", InputFormat: tracecontract.InputFormatOmoJSON})
 	if err != nil || result.Complete || onlyTruncatedFragment.decodeCalls != 1 {
 		t.Errorf("truncated empty body must report incompleteness, not an empty-input error: result=%+v err=%v", result, err)
 	}
@@ -129,7 +129,7 @@ func TestAnalyzeReportsReadFailureWithoutDecodingPartialBody(t *testing.T) {
 	readErr := errors.New("fixture read failure")
 	f := &fakeEffects{loadErr: readErr}
 	// When
-	result, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "key"})
+	result, err := (Service{Effects: f}).Analyze(tracecontract.AnalyzeRequest{Input: "key"})
 	// Then
 	if !errors.Is(err, readErr) || result.OK || result.Complete || !f.loaded || f.analyzed {
 		t.Fatalf("result=%+v effects=%+v err=%v", result, f, err)

@@ -188,13 +188,13 @@ func TestGitLabReadIssueSnapshotRejectsBadInputsAndResponses(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
 		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
-		if _, err := NewProvider().ReadIssueSnapshot(ctx, executionissue.ExecutionIssueSnapshotRequest{Repo: t.TempDir(), URL: url}); !errors.Is(err, context.Canceled) {
+		if _, err := NewProvider().ReadIssueSnapshot(ctx, executionissue.SnapshotRequest{Repo: t.TempDir(), URL: url}); !errors.Is(err, context.Canceled) {
 			t.Fatalf("error = %v", err)
 		}
 	})
 	t.Run("non issue URL", func(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
-		if _, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.ExecutionIssueSnapshotRequest{Repo: t.TempDir(), URL: "https://gitlab.example.com/acme/repo"}); err == nil {
+		if _, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.SnapshotRequest{Repo: t.TempDir(), URL: "https://gitlab.example.com/acme/repo"}); err == nil {
 			t.Fatal("a URL without an issue marker must be rejected")
 		}
 	})
@@ -207,7 +207,7 @@ func TestGitLabReadIssueSnapshotRejectsBadInputsAndResponses(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			repo := installGlab(t, tt.body)
-			_, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.ExecutionIssueSnapshotRequest{Repo: repo, URL: url})
+			_, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.SnapshotRequest{Repo: repo, URL: url})
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}

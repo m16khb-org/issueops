@@ -16,13 +16,13 @@ import (
 )
 
 func newDoctorService() app.Service {
-	stateDir := statestore.StateDir()
+	stateDir := statestore.Dir()
 	lifecycle := newProjectLifecycleService()
 	loops := newLoopReader()
 	gateways := adapter.Gateways{Probe: adapter.ProbeGatewayHTTP, CountFDs: adapter.CountGatewayFDsViaLsof}
 	return app.Service{Effects: app.Effects{
 		NormalizeRoot: newRepoRootResolver("."), StateDir: func() string { return stateDir },
-		StateDoctor:       func() (statecontract.StateDoctorResult, error) { return statestore.Doctor(stateDir) },
+		StateDoctor:       func() (statecontract.DoctorResult, error) { return statestore.Doctor(stateDir) },
 		ValidateLifecycle: lifecycle.Resolve,
 		ProjectDocs:       adapter.ObserveProjectDocs, RuntimeState: adapter.ObserveRuntimeState,
 		LoopContracts: func(root string) domain.LoopObservation {

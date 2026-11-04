@@ -8,9 +8,9 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ChildStartMissingPreconditions(parent model.IssueOpsRecord, req model.IssueOpsChildStartRequest) []string {
+func ChildStartMissingPreconditions(parent model.Record, req model.ChildStartRequest) []string {
 	var missing []string
-	if parent.Phase != model.IssueOpsPhaseImplement {
+	if parent.Phase != model.PhaseImplement {
 		missing = append(missing, "parent_phase_not_implement")
 	}
 	if parent.ArchitectureReview == nil || !parent.ArchitectureReview.Approved {
@@ -31,11 +31,11 @@ func ChildStartMissingPreconditions(parent model.IssueOpsRecord, req model.Issue
 	return missing
 }
 
-func parentCompatibilityUnapproved(parent model.IssueOpsRecord) bool {
+func parentCompatibilityUnapproved(parent model.Record) bool {
 	return parent.CompatibilityReview == nil || !parent.CompatibilityReview.Approved || len(cleanDelegationValues(parent.CompatibilityReview.Blockers)) > 0
 }
 
-func parentDevilsAdvocateMissing(parent model.IssueOpsRecord) bool {
+func parentDevilsAdvocateMissing(parent model.Record) bool {
 	return parent.DevilsAdvocateReview == nil || strings.TrimSpace(parent.DevilsAdvocateReview.RecordedAt) == "" || ((parent.DevilsAdvocateReview.Verdict == "stop" || parent.DevilsAdvocateReview.Verdict == "revise") && !parent.DevilsAdvocateReview.Waived)
 }
 
@@ -43,7 +43,7 @@ func parentDevilsAdvocateMissing(parent model.IssueOpsRecord) bool {
 // plan and architecture were not reviewed, so the digest gates do not apply.
 const ParentReviewPattern = "delegated-parent-review"
 
-func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) model.IssueOpsRecord {
+func BuildDelegatedProfile(parent, child model.Record, req model.ChildStartRequest, now string) model.Record {
 	taskScope := strings.TrimSpace(req.TaskScope)
 	acceptance := cleanDelegationValues(req.AcceptanceCriteria)
 	parentPlanPath := strings.TrimSpace(req.ParentPlanPath)
@@ -55,7 +55,7 @@ func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOp
 		childIssueURL = strings.TrimSpace(parent.IssueURL)
 	}
 
-	child.Delegation = &model.IssueOpsDelegationContract{
+	child.Delegation = &model.DelegationContract{
 		ParentCycleID:      parent.ID,
 		TaskScope:          taskScope,
 		AcceptanceCriteria: acceptance,
@@ -67,14 +67,14 @@ func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOp
 	if parent.Intent != nil && strings.TrimSpace(parent.Intent.RawRequest) != "" {
 		rawRequest = strings.TrimSpace(parent.Intent.RawRequest) + "\n\nDelegated task: " + taskScope
 	}
-	child.Intent = &model.IssueOpsIntentContract{
+	child.Intent = &model.IntentContract{
 		RawRequest:        rawRequest,
 		InterpretedIntent: taskScope,
 		SuccessCriteria:   acceptance,
 		IntentClass:       "delegated-child",
 		RecordedAt:        now,
 	}
-	child.DomainReview = &model.IssueOpsDomainReview{
+	child.DomainReview = &model.DomainReview{
 		ModelFit:   "delegated: inherits parent " + parent.ID + " domain review",
 		ReviewedAt: now,
 	}
@@ -83,15 +83,15 @@ func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOp
 		child.DomainReview.Risks = append([]string{}, parent.DomainReview.Risks...)
 		child.DomainReview.OpenUncertainties = append([]string{}, parent.DomainReview.OpenUncertainties...)
 	}
-	waived := model.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "delegated:" + parent.ID}
-	child.PlanPrep = &model.IssueOpsPlanPrep{
+	waived := model.PlanPrepItem{Status: "waived", WaiveReason: "delegated:" + parent.ID}
+	child.PlanPrep = &model.PlanPrep{
 		PriorDecisions: waived,
 		RelatedIssues:  waived,
 		WebResearch:    waived,
 		CodebaseSurvey: waived,
 		RecordedAt:     now,
 	}
-	child.Decisions = []model.IssueOpsDecision{{
+	child.Decisions = []model.Decision{{
 		Title:     "delegated child of " + parent.ID,
 		Body:      taskScope,
 		Kind:      "scope",
@@ -117,8 +117,8 @@ func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOp
 	return child
 }
 
-func NewChildReference(child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) model.IssueOpsChildCycleRef {
-	return model.IssueOpsChildCycleRef{
+func NewChildReference(child model.Record, req model.ChildStartRequest, now string) model.ChildCycleRef {
+	return model.ChildCycleRef{
 		CycleID:       child.ID,
 		Branch:        child.Branch,
 		Title:         strings.TrimSpace(req.Title),
@@ -138,7 +138,7 @@ func cleanDelegationValues(values []string) []string {
 	return out
 }
 
-func PrepareChildStart(req model.IssueOpsChildStartRequest) (model.IssueOpsChildStartRequest, error) {
+func PrepareChildStart(req model.ChildStartRequest) (model.ChildStartRequest, error) {
 	req.ParentID = strings.TrimSpace(req.ParentID)
 	if req.ParentID == "" {
 		return req, fmt.Errorf("parent_id is required (--parent: the parent cycle's io-… id)")
@@ -160,7 +160,7 @@ func PrepareChildStart(req model.IssueOpsChildStartRequest) (model.IssueOpsChild
 	return req, nil
 }
 
-func ValidateChildMutation(child model.IssueOpsRecord) error {
+func ValidateChildMutation(child model.Record) error {
 	if err := RequireNoCleanupAttempt(child.CleanupAttempt); err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func ValidateChildMutation(child model.IssueOpsRecord) error {
 	return nil
 }
 
-func RegisterChildReference(parent, child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) (model.IssueOpsRecord, model.IssueOpsChildCycleRef, bool) {
+func RegisterChildReference(parent, child model.Record, req model.ChildStartRequest, now string) (model.Record, model.ChildCycleRef, bool) {
 	ref := NewChildReference(child, req, now)
 	for i, existing := range parent.ChildCycles {
 		if existing.CycleID != ref.CycleID {
@@ -179,12 +179,12 @@ func RegisterChildReference(parent, child model.IssueOpsRecord, req model.IssueO
 		childTime, childErr := time.Parse(time.RFC3339Nano, strings.TrimSpace(child.CreatedAt))
 		refTime, refErr := time.Parse(time.RFC3339Nano, strings.TrimSpace(existing.CreatedAt))
 		if childErr == nil && refErr == nil && childTime.After(refTime) {
-			parent.ChildCycles = append([]model.IssueOpsChildCycleRef(nil), parent.ChildCycles...)
+			parent.ChildCycles = append([]model.ChildCycleRef(nil), parent.ChildCycles...)
 			parent.ChildCycles[i] = ref
 			return parent, ref, true
 		}
 		return parent, existing, false
 	}
-	parent.ChildCycles = append(append([]model.IssueOpsChildCycleRef(nil), parent.ChildCycles...), ref)
+	parent.ChildCycles = append(append([]model.ChildCycleRef(nil), parent.ChildCycles...), ref)
 	return parent, ref, true
 }

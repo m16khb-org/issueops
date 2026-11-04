@@ -5,12 +5,12 @@
 package commitsuggest
 
 // CommitSuggestRequest는 commit message 제안을 구성한다.
-type CommitSuggestRequest struct {
+type Request struct {
 	RepoRoot string `json:"repo_root"`
 	Staged   bool   `json:"staged"`
 }
 
-type CommitSuggestResult struct {
+type Result struct {
 	OK            bool   `json:"ok"`
 	Executed      bool   `json:"executed"`
 	RepoRoot      string `json:"repo_root"`

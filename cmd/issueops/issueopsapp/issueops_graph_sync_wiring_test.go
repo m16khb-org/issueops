@@ -29,7 +29,7 @@ func TestGraphSyncCompositionPreservesPreviewAndProviderContracts(t *testing.T) 
 			}
 			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 			t.Setenv("GRAPH_BODY_FILE", bodyFile)
-			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "72-graph"})
+			record, err := startIssueOpsFixture(root, model.StartRequest{Repo: t.TempDir(), Branch: "72-graph"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -40,7 +40,7 @@ func TestGraphSyncCompositionPreservesPreviewAndProviderContracts(t *testing.T) 
 				}
 			}
 			if mode != "preview" && mode != "missing-issue" && mode != "no-links" {
-				record.IssueLinks = []model.IssueOpsIssueLink{{Type: "depends-on", URL: "https://github.com/acme/repo/issues/73", Title: "Dependency", CreatedAt: "then"}}
+				record.IssueLinks = []model.IssueLink{{Type: "depends-on", URL: "https://github.com/acme/repo/issues/73", Title: "Dependency", CreatedAt: "then"}}
 			}
 			if record, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 				t.Fatal(err)

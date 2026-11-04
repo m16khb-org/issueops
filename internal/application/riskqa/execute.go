@@ -13,9 +13,9 @@ import (
 const AggregateOutputBudgetBytes = 8 * 1024
 
 type ExecuteDeps struct {
-	Plan       func(string) riskqacontract.RiskQATierPlan
+	Plan       func(string) riskqacontract.TierPlan
 	Run        func(string, string) selfverifycontract.StepResult
-	RenderPlan func(riskqacontract.RiskQATierPlan) string
+	RenderPlan func(riskqacontract.TierPlan) string
 	Now        func() time.Time
 }
 

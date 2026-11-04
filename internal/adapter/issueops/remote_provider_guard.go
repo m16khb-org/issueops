@@ -23,10 +23,10 @@ func CreateRemoteIssueContext(ctx context.Context, req port.IssueProviderCreateI
 
 // ReadRemoteIssueSnapshot은 provider가 snapshot 읽기를 지원할 때만 이슈 본문을
 // 읽는다. 모든 provider가 이 능력을 갖추지는 않으므로 타입 단언으로 확인한다.
-func ReadRemoteIssueSnapshot(ctx context.Context, prov port.IssueProvider, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+func ReadRemoteIssueSnapshot(ctx context.Context, prov port.IssueProvider, req executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 	reader, ok := prov.(port.ExecutionIssueSnapshotReader)
 	if !ok {
-		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("issue provider does not support issue snapshot reads")
+		return executionissue.Snapshot{}, fmt.Errorf("issue provider does not support issue snapshot reads")
 	}
 	return reader.ReadIssueSnapshot(ctx, req)
 }

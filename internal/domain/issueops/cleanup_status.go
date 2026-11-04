@@ -41,8 +41,8 @@ func cleanupStatusSortedValues(values []string) []string {
 	return slices.Compact(out)
 }
 
-func CleanupStatusNeedsMergeReadback(record model.IssueOpsRecord, requested bool) bool {
-	return requested && record.Phase == model.IssueOpsPhaseDone && len(RemoteArtifactMissing(record)) == 0
+func CleanupStatusNeedsMergeReadback(record model.Record, requested bool) bool {
+	return requested && record.Phase == model.PhaseDone && len(RemoteArtifactMissing(record)) == 0
 }
 
 func WithCleanupFinishEvidence(req model.CleanupFinishRequest, body, state string, artifact model.CleanupRemoteBranchArtifactHead) model.CleanupFinishRequest {
@@ -52,8 +52,8 @@ func WithCleanupFinishEvidence(req model.CleanupFinishRequest, body, state strin
 	return req
 }
 
-func CleanupStatusFromFinish(structural model.IssueOpsCleanupStatus, result model.CleanupFinishResult) model.IssueOpsCleanupStatus {
-	status := FinalizeCleanupStatus(model.IssueOpsCleanupStatus{
+func CleanupStatusFromFinish(structural model.CleanupStatus, result model.CleanupFinishResult) model.CleanupStatus {
+	status := FinalizeCleanupStatus(model.CleanupStatus{
 		OK: true, Ready: result.OK && len(result.Missing) == 0, ID: result.ID, Merged: true,
 		Missing:  append([]string(nil), result.Missing...),
 		Warnings: CleanupStatusWarnings(result), WorktreePath: result.WorktreePath, Branch: result.Branch,
@@ -70,7 +70,7 @@ func CleanupStatusFromFinish(structural model.IssueOpsCleanupStatus, result mode
 	return status
 }
 
-func RemoteArtifactMissing(record model.IssueOpsRecord) []string {
+func RemoteArtifactMissing(record model.Record) []string {
 	if record.RemoteArtifact == nil {
 		return []string{"remote_artifact"}
 	}
@@ -93,8 +93,8 @@ func RemoteArtifactMissing(record model.IssueOpsRecord) []string {
 	return cleanupStatusSortedValues(missing)
 }
 
-func BuildCleanupStatus(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusRequest, facts CleanupStatusObservation) model.IssueOpsCleanupStatus {
-	status := model.IssueOpsCleanupStatus{
+func BuildCleanupStatus(record model.Record, req model.CleanupStatusRequest, facts CleanupStatusObservation) model.CleanupStatus {
+	status := model.CleanupStatus{
 		OK:           true,
 		ID:           record.ID,
 		Merged:       req.Merged,
@@ -104,7 +104,7 @@ func BuildCleanupStatus(record model.IssueOpsRecord, req model.IssueOpsCleanupSt
 	if record.RemoteArtifact != nil {
 		status.RemoteArtifactURL = strings.TrimSpace(record.RemoteArtifact.URL)
 	}
-	if IssueOpsPhaseRank(record.Phase) < IssueOpsPhaseRank(model.IssueOpsPhasePR) {
+	if PhaseRank(record.Phase) < PhaseRank(model.PhasePR) {
 		status.Missing = append(status.Missing, "pr_phase")
 	}
 	status.Missing = append(status.Missing, RemoteArtifactMissing(record)...)
@@ -134,7 +134,7 @@ func BuildCleanupStatus(record model.IssueOpsRecord, req model.IssueOpsCleanupSt
 }
 
 // appendWorktreeStatusMissing는 `git status` 관측 결과를 missing/warnings에 반영한다.
-func appendWorktreeStatusMissing(status *model.IssueOpsCleanupStatus, facts CleanupStatusObservation) {
+func appendWorktreeStatusMissing(status *model.CleanupStatus, facts CleanupStatusObservation) {
 	if code, out, stderr := facts.StatusCode, facts.StatusOutput, facts.StatusError; code != 0 {
 		status.Missing = append(status.Missing, "worktree_git_status")
 		if strings.TrimSpace(stderr) != "" {
@@ -150,7 +150,7 @@ func appendWorktreeStatusMissing(status *model.IssueOpsCleanupStatus, facts Clea
 }
 
 // appendBranchMissing는 실제 체크아웃 브랜치가 비었거나 기록된 브랜치와 다른 경우를 missing에 반영한다.
-func appendBranchMissing(status *model.IssueOpsCleanupStatus, record model.IssueOpsRecord, actualBranch string) {
+func appendBranchMissing(status *model.CleanupStatus, record model.Record, actualBranch string) {
 	if actualBranch == "" {
 		status.Missing = append(status.Missing, "branch")
 	} else if strings.TrimSpace(record.Branch) != "" && actualBranch != strings.TrimSpace(record.Branch) {
@@ -159,7 +159,7 @@ func appendBranchMissing(status *model.IssueOpsCleanupStatus, record model.Issue
 }
 
 // appendRemoteBranchMissing는 원격 브랜치 점검 관측 결과를 missing/warnings에 반영한다.
-func appendRemoteBranchMissing(status *model.IssueOpsCleanupStatus, facts CleanupStatusObservation, actualBranch string) {
+func appendRemoteBranchMissing(status *model.CleanupStatus, facts CleanupStatusObservation, actualBranch string) {
 	remote := strings.TrimSpace(facts.Remote)
 	if remote == "" {
 		status.Missing = append(status.Missing, "remote_branch_check_unavailable")
@@ -185,7 +185,7 @@ func appendRemoteBranchMissing(status *model.IssueOpsCleanupStatus, facts Cleanu
 	}
 }
 
-func hasUnverifiedChildClose(record model.IssueOpsRecord) bool {
+func hasUnverifiedChildClose(record model.Record) bool {
 	for _, link := range record.IssueLinks {
 		if link.Type != "child" {
 			continue
@@ -200,7 +200,7 @@ func hasUnverifiedChildClose(record model.IssueOpsRecord) bool {
 // FinalizeCleanupStatus applies the cleanup status contract's stable sorting, readiness, and
 // three-choice presentation to status assembled by either structural inspection
 // or the cleanup finish readiness oracle.
-func FinalizeCleanupStatus(status model.IssueOpsCleanupStatus) model.IssueOpsCleanupStatus {
+func FinalizeCleanupStatus(status model.CleanupStatus) model.CleanupStatus {
 	status.Missing = cleanupStatusSortedValues(status.Missing)
 	status.Warnings = cleanupStatusSortedValues(status.Warnings)
 	status.Ready = len(status.Missing) == 0

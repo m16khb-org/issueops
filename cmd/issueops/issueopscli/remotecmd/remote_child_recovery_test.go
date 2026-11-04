@@ -17,7 +17,7 @@ import (
 	"issueops/internal/testsupport"
 )
 
-func childCLIRecoveryFixture(t *testing.T, provider string) (model.IssueOpsRecord, []string) {
+func childCLIRecoveryFixture(t *testing.T, provider string) (model.Record, []string) {
 	t.Helper()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecordWithoutChild(t)

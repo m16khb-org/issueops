@@ -6,7 +6,7 @@ import (
 	domain "issueops/internal/domain/qualitycatalog"
 )
 
-func CandidatesForPlan(plan []contract.SelfAugmentCandidate) []catalog.Candidate {
+func CandidatesForPlan(plan []contract.Candidate) []catalog.Candidate {
 	projected := make([]catalog.Candidate, len(plan))
 	for i, candidate := range plan {
 		projected[i] = catalog.Candidate{ID: candidate.ID, Status: candidate.Status, Score: candidate.Score}

@@ -7,6 +7,6 @@ import (
 )
 
 func newTraceService() traceapp.Service {
-	state := newStateService(statestore.StateDir())
+	state := newStateService(statestore.Dir())
 	return traceapp.Service{Effects: traceadapter.Source{ReadState: state.Read}}
 }

@@ -18,7 +18,7 @@ type Observer interface {
 }
 
 type OverrideSnapshot struct {
-	Values  *policycontract.PolicyOverrides
+	Values  *policycontract.Overrides
 	Warning string
 }
 

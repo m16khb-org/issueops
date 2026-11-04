@@ -12,7 +12,7 @@ type Request struct {
 	RepoRoot     string
 	WorktreePath string
 	Branch       string
-	Artifact     issueopscontract.IssueOpsRemoteArtifactVerification
+	Artifact     issueopscontract.RemoteArtifactVerification
 }
 type ApplyRequest struct {
 	Confirm     bool

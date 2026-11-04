@@ -15,7 +15,7 @@ import (
 
 func ObserveProjectDocs(root string) doctordomain.ProjectDocsObservation {
 	observation := doctordomain.ProjectDocsObservation{Directory: filepath.Join(root, projectdoc.ProjectDocsDir)}
-	for _, name := range projectdoc.ProjectDocNames() {
+	for _, name := range projectdoc.Names() {
 		if _, err := os.Stat(filepath.Join(observation.Directory, name)); errors.Is(err, fs.ErrNotExist) {
 			observation.Missing = append(observation.Missing, name)
 		}

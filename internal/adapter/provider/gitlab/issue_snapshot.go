@@ -12,13 +12,13 @@ import (
 	"issueops/internal/port"
 )
 
-func (Provider) ReadIssueSnapshot(ctx context.Context, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+func (Provider) ReadIssueSnapshot(ctx context.Context, req executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 	if err := ctx.Err(); err != nil {
-		return executionissue.ExecutionIssueSnapshot{}, err
+		return executionissue.Snapshot{}, err
 	}
 	hostname, projectPath, iid, _, err := splitGitLabIssueURL(req.URL)
 	if err != nil {
-		return executionissue.ExecutionIssueSnapshot{}, err
+		return executionissue.Snapshot{}, err
 	}
 	endpoint := "projects/" + url.PathEscape(projectPath) + "/issues/" + iid
 	args := []string{"api", endpoint}
@@ -27,7 +27,7 @@ func (Provider) ReadIssueSnapshot(ctx context.Context, req executionissue.Execut
 	}
 	out, err := providerutil.RunBoundedReadbackContext(ctx, req.Repo, "glab", args...)
 	if err != nil {
-		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("glab issue snapshot read failed: %w", err)
+		return executionissue.Snapshot{}, fmt.Errorf("glab issue snapshot read failed: %w", err)
 	}
 	var payload struct {
 		Description string `json:"description"`
@@ -35,13 +35,13 @@ func (Provider) ReadIssueSnapshot(ctx context.Context, req executionissue.Execut
 		State       string `json:"state"`
 	}
 	if err := json.Unmarshal(out, &payload); err != nil {
-		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("parse glab issue snapshot: %w", err)
+		return executionissue.Snapshot{}, fmt.Errorf("parse glab issue snapshot: %w", err)
 	}
 	issueURL := strings.TrimSpace(req.URL)
 	if !sameGitLabIssueSnapshotIdentity(issueURL, payload.WebURL) {
-		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("glab issue snapshot URL does not match the linked issue")
+		return executionissue.Snapshot{}, fmt.Errorf("glab issue snapshot URL does not match the linked issue")
 	}
-	return executionissue.ExecutionIssueSnapshot{URL: issueURL, Body: payload.Description, State: payload.State, Source: "glab_cli"}, nil
+	return executionissue.Snapshot{URL: issueURL, Body: payload.Description, State: payload.State, Source: "glab_cli"}, nil
 }
 
 func sameGitLabIssueSnapshotIdentity(left, right string) bool {

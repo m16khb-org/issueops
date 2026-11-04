@@ -119,7 +119,7 @@ func runProjectAppend(docs docsapp.Service, args []string) error {
 	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
-	result, err := docs.Append(projectdocscontract.ProjectDocsAppendRequest{
+	result, err := docs.Append(projectdocscontract.AppendRequest{
 		RepoRoot:     *repo,
 		Kind:         *kind,
 		Title:        *title,

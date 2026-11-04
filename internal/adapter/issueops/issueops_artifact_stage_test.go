@@ -16,13 +16,13 @@ func TestReadLinkedPlanIdentity(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		configure func(*testing.T, *issueopscontract.IssueOpsRecord)
+		configure func(*testing.T, *issueopscontract.Record)
 		wantError bool
 	}{
 		{name: "no durable plan path", wantError: true},
 		{
 			name: "plan is missing",
-			configure: func(t *testing.T, record *issueopscontract.IssueOpsRecord) {
+			configure: func(t *testing.T, record *issueopscontract.Record) {
 				record.WorktreePath = t.TempDir()
 				record.PlanPath = filepath.Join(record.WorktreePath, "missing.md")
 			},
@@ -30,7 +30,7 @@ func TestReadLinkedPlanIdentity(t *testing.T) {
 		},
 		{
 			name: "plan is a directory",
-			configure: func(t *testing.T, record *issueopscontract.IssueOpsRecord) {
+			configure: func(t *testing.T, record *issueopscontract.Record) {
 				record.WorktreePath = t.TempDir()
 				record.PlanPath = record.WorktreePath
 			},
@@ -38,7 +38,7 @@ func TestReadLinkedPlanIdentity(t *testing.T) {
 		},
 		{
 			name: "plan is outside worktree",
-			configure: func(t *testing.T, record *issueopscontract.IssueOpsRecord) {
+			configure: func(t *testing.T, record *issueopscontract.Record) {
 				record.WorktreePath = t.TempDir()
 				record.PlanPath = filepath.Join(t.TempDir(), "plan.md")
 				writePlanArtifactTestFile(t, record.PlanPath, "# Plan\n")
@@ -47,7 +47,7 @@ func TestReadLinkedPlanIdentity(t *testing.T) {
 		},
 		{
 			name: "plan is empty",
-			configure: func(t *testing.T, record *issueopscontract.IssueOpsRecord) {
+			configure: func(t *testing.T, record *issueopscontract.Record) {
 				record.WorktreePath = t.TempDir()
 				record.PlanPath = filepath.Join(record.WorktreePath, "empty.md")
 				writePlanArtifactTestFile(t, record.PlanPath, "")
@@ -56,7 +56,7 @@ func TestReadLinkedPlanIdentity(t *testing.T) {
 		},
 		{
 			name: "plan is a symlink",
-			configure: func(t *testing.T, record *issueopscontract.IssueOpsRecord) {
+			configure: func(t *testing.T, record *issueopscontract.Record) {
 				record.WorktreePath = t.TempDir()
 				target := filepath.Join(record.WorktreePath, "target.md")
 				writePlanArtifactTestFile(t, target, "# Plan\n")
@@ -69,7 +69,7 @@ func TestReadLinkedPlanIdentity(t *testing.T) {
 		},
 		{
 			name: "plan inside worktree",
-			configure: func(t *testing.T, record *issueopscontract.IssueOpsRecord) {
+			configure: func(t *testing.T, record *issueopscontract.Record) {
 				record.WorktreePath = t.TempDir()
 				record.PlanPath = filepath.Join(record.WorktreePath, "plan.md")
 				writePlanArtifactTestFile(t, record.PlanPath, "# Plan\n")
@@ -79,7 +79,7 @@ func TestReadLinkedPlanIdentity(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			var record issueopscontract.IssueOpsRecord
+			var record issueopscontract.Record
 			if test.configure != nil {
 				test.configure(t, &record)
 			}
@@ -116,7 +116,7 @@ func TestArtifactStagingIsOpenOnlyBeforeExecutionPrepare(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			record := issueopscontract.IssueOpsRecord{Execution: test.execution}
+			record := issueopscontract.Record{Execution: test.execution}
 			for _, artifact := range []string{"plan", "spec"} {
 				if got := issueopsartifactdomain.CanStage(record, artifact); got != test.want {
 					t.Fatalf("CanStage(%s)=%t want %t", artifact, got, test.want)

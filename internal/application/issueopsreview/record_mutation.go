@@ -5,8 +5,8 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func mutateReviewRecord(store reviewport.ReviewMutationStore, stateRoot, id string, prepare func() error, apply func(*model.IssueOpsRecord) error) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+func mutateReviewRecord(store reviewport.ReviewMutationStore, stateRoot, id string, prepare func() error, apply func(*model.Record) error) (model.Record, error) {
+	var result model.Record
 	err := store.WithLock(stateRoot, id, func() error {
 		current, err := store.Read(stateRoot, id)
 		if err != nil {
@@ -31,7 +31,7 @@ func mutateReviewRecord(store reviewport.ReviewMutationStore, stateRoot, id stri
 		return err
 	})
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	return result, nil
 }

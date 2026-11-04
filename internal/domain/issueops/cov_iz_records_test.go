@@ -26,14 +26,14 @@ func TestNormalizeMergeMethodDefaultsToSquashAndRejectsUnknownStrategies(t *test
 	}
 }
 
-func covIZDoneRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		Phase: model.IssueOpsPhaseDone,
+func covIZDoneRecord() model.Record {
+	return model.Record{
+		Phase: model.PhaseDone,
 		Execution: &model.Execution{
 			Lease:      model.WriteLease{Status: model.LeaseStatusReleased},
 			Completion: &model.ExecutionCompletion{FinalHead: " abc123 ", RemoteArtifactURL: "https://github.com/acme/repo/pull/9"},
 		},
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", URL: " https://github.com/acme/repo/pull/9 "},
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", URL: " https://github.com/acme/repo/pull/9 "},
 	}
 }
 
@@ -53,19 +53,19 @@ func TestResolveMergeTargetAdmitsOnlyCompletedReleasedCyclesWithMatchingArtifact
 
 	for _, tc := range []struct {
 		name   string
-		mutate func(*model.IssueOpsRecord)
+		mutate func(*model.Record)
 		want   string
 	}{
-		{"phase", func(r *model.IssueOpsRecord) { r.Phase = model.IssueOpsPhasePR }, "phase done"},
-		{"no execution", func(r *model.IssueOpsRecord) { r.Execution = nil }, "recorded execution completion"},
-		{"no completion", func(r *model.IssueOpsRecord) { r.Execution.Completion = nil }, "recorded execution completion"},
-		{"blank final head", func(r *model.IssueOpsRecord) { r.Execution.Completion.FinalHead = "  " }, "recorded execution completion"},
-		{"active lease", func(r *model.IssueOpsRecord) { r.Execution.Lease.Status = model.LeaseStatusActive }, "released execution lease"},
-		{"claimable lease", func(r *model.IssueOpsRecord) { r.Execution.Lease.Status = model.LeaseStatusClaimable }, "released execution lease"},
-		{"no artifact", func(r *model.IssueOpsRecord) { r.RemoteArtifact = nil }, "verified remote artifact"},
-		{"blank artifact url", func(r *model.IssueOpsRecord) { r.RemoteArtifact.URL = " " }, "verified remote artifact"},
-		{"blank artifact provider", func(r *model.IssueOpsRecord) { r.RemoteArtifact.Provider = "" }, "verified remote artifact"},
-		{"artifact mismatch", func(r *model.IssueOpsRecord) {
+		{"phase", func(r *model.Record) { r.Phase = model.PhasePR }, "phase done"},
+		{"no execution", func(r *model.Record) { r.Execution = nil }, "recorded execution completion"},
+		{"no completion", func(r *model.Record) { r.Execution.Completion = nil }, "recorded execution completion"},
+		{"blank final head", func(r *model.Record) { r.Execution.Completion.FinalHead = "  " }, "recorded execution completion"},
+		{"active lease", func(r *model.Record) { r.Execution.Lease.Status = model.LeaseStatusActive }, "released execution lease"},
+		{"claimable lease", func(r *model.Record) { r.Execution.Lease.Status = model.LeaseStatusClaimable }, "released execution lease"},
+		{"no artifact", func(r *model.Record) { r.RemoteArtifact = nil }, "verified remote artifact"},
+		{"blank artifact url", func(r *model.Record) { r.RemoteArtifact.URL = " " }, "verified remote artifact"},
+		{"blank artifact provider", func(r *model.Record) { r.RemoteArtifact.Provider = "" }, "verified remote artifact"},
+		{"artifact mismatch", func(r *model.Record) {
 			r.Execution.Completion.RemoteArtifactURL = "https://github.com/acme/repo/pull/10"
 		}, "does not match the verified remote artifact"},
 	} {
@@ -119,11 +119,11 @@ func TestMergeBlockersReportsEveryObservedReasonInOrder(t *testing.T) {
 }
 
 func TestRemoteCompletionPreconditionsNameTheMissingEvidence(t *testing.T) {
-	linked := model.IssueOpsRecord{IssueURL: "https://github.com/a/b/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "u"}}
+	linked := model.Record{IssueURL: "https://github.com/a/b/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{URL: "u"}}
 	if err := ValidateCompletionMerge(linked); err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateCompletionMerge(model.IssueOpsRecord{}); err == nil || !strings.Contains(err.Error(), "merge evidence") {
+	if err := ValidateCompletionMerge(model.Record{}); err == nil || !strings.Contains(err.Error(), "merge evidence") {
 		t.Fatalf("merge without artifact: %v", err)
 	}
 	if err := ValidateReflectCompletion(linked); err != nil {
@@ -149,7 +149,7 @@ func TestRemoteCompletionPreconditionsNameTheMissingEvidence(t *testing.T) {
 
 func covIZChildOperation() model.ChildCreateOperation {
 	return model.ChildCreateOperation{
-		IssueOpsIssueCreateIntent: model.IssueOpsIssueCreateIntent{
+		IssueCreateIntent: model.IssueCreateIntent{
 			Provider: "github", ProjectAuthority: "github.com/acme/repo", Status: model.IssueCreateIntentPending,
 		},
 		ParentURL: "https://github.com/acme/repo/issues/1",
@@ -158,7 +158,7 @@ func covIZChildOperation() model.ChildCreateOperation {
 
 func TestValidateRecordInvariantsChecksChildOperationsProjectsAndHolders(t *testing.T) {
 	validate := func(op model.ChildCreateOperation) error {
-		return ValidateRecordInvariants(model.IssueOpsRecord{ChildCreateOperations: []model.ChildCreateOperation{op}})
+		return ValidateRecordInvariants(model.Record{ChildCreateOperations: []model.ChildCreateOperation{op}})
 	}
 	if err := validate(covIZChildOperation()); err != nil {
 		t.Fatal(err)
@@ -197,42 +197,42 @@ func TestValidateRecordInvariantsChecksChildOperationsProjectsAndHolders(t *test
 }
 
 func TestValidateRecordInvariantsRejectsInvalidExecutionAndIntentStates(t *testing.T) {
-	if err := ValidateRecordInvariants(model.IssueOpsRecord{Execution: &model.Execution{}}); err == nil {
+	if err := ValidateRecordInvariants(model.Record{Execution: &model.Execution{}}); err == nil {
 		t.Fatal("empty execution accepted")
 	}
-	completedWithoutURL := &model.IssueOpsIssueCreateIntent{Status: model.IssueCreateIntentCompleted}
-	if err := ValidateRecordInvariants(model.IssueOpsRecord{IssueCreateIntent: completedWithoutURL}); err == nil || !strings.Contains(err.Error(), "canonical_url") {
+	completedWithoutURL := &model.IssueCreateIntent{Status: model.IssueCreateIntentCompleted}
+	if err := ValidateRecordInvariants(model.Record{IssueCreateIntent: completedWithoutURL}); err == nil || !strings.Contains(err.Error(), "canonical_url") {
 		t.Fatalf("completed intent without URL: %v", err)
 	}
-	if err := ValidateRecordInvariants(model.IssueOpsRecord{}); err != nil {
+	if err := ValidateRecordInvariants(model.Record{}); err != nil {
 		t.Fatalf("empty record rejected: %v", err)
 	}
 }
 
 func TestValidateRecordInvariantsNamesTheInvalidPlanPrepItem(t *testing.T) {
-	evidence := model.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"adr"}}
-	waived := model.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "n/a"}
-	valid := model.IssueOpsPlanPrep{PriorDecisions: evidence, RelatedIssues: waived, WebResearch: evidence, CodebaseSurvey: waived}
-	if err := ValidateRecordInvariants(model.IssueOpsRecord{PlanPrep: &valid}); err != nil {
+	evidence := model.PlanPrepItem{Status: "evidence", Evidence: []string{"adr"}}
+	waived := model.PlanPrepItem{Status: "waived", WaiveReason: "n/a"}
+	valid := model.PlanPrep{PriorDecisions: evidence, RelatedIssues: waived, WebResearch: evidence, CodebaseSurvey: waived}
+	if err := ValidateRecordInvariants(model.Record{PlanPrep: &valid}); err != nil {
 		t.Fatal(err)
 	}
-	for name, mutate := range map[string]func(*model.IssueOpsPlanPrep){
-		"prior_decisions": func(p *model.IssueOpsPlanPrep) { p.PriorDecisions = model.IssueOpsPlanPrepItem{Status: "evidence"} },
-		"related_issues": func(p *model.IssueOpsPlanPrep) {
-			p.RelatedIssues = model.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: " "}
+	for name, mutate := range map[string]func(*model.PlanPrep){
+		"prior_decisions": func(p *model.PlanPrep) { p.PriorDecisions = model.PlanPrepItem{Status: "evidence"} },
+		"related_issues": func(p *model.PlanPrep) {
+			p.RelatedIssues = model.PlanPrepItem{Status: "waived", WaiveReason: " "}
 		},
-		"web_research":    func(p *model.IssueOpsPlanPrep) { p.WebResearch = model.IssueOpsPlanPrepItem{Status: "skipped"} },
-		"codebase_survey": func(p *model.IssueOpsPlanPrep) { p.CodebaseSurvey = model.IssueOpsPlanPrepItem{} },
+		"web_research":    func(p *model.PlanPrep) { p.WebResearch = model.PlanPrepItem{Status: "skipped"} },
+		"codebase_survey": func(p *model.PlanPrep) { p.CodebaseSurvey = model.PlanPrepItem{} },
 	} {
 		prep := valid
 		mutate(&prep)
-		err := ValidateRecordInvariants(model.IssueOpsRecord{PlanPrep: &prep})
+		err := ValidateRecordInvariants(model.Record{PlanPrep: &prep})
 		if err == nil || !strings.Contains(err.Error(), "plan_prep "+name+" ") {
 			t.Fatalf("%s: %v", name, err)
 		}
 	}
-	if err := ValidateRecordInvariants(model.IssueOpsRecord{PlanPrep: &model.IssueOpsPlanPrep{
-		PriorDecisions: evidence, RelatedIssues: evidence, WebResearch: evidence, CodebaseSurvey: model.IssueOpsPlanPrepItem{Status: "skipped"},
+	if err := ValidateRecordInvariants(model.Record{PlanPrep: &model.PlanPrep{
+		PriorDecisions: evidence, RelatedIssues: evidence, WebResearch: evidence, CodebaseSurvey: model.PlanPrepItem{Status: "skipped"},
 	}}); err == nil || !strings.Contains(err.Error(), `status "skipped" is invalid`) {
 		t.Fatalf("unknown status: %v", err)
 	}
@@ -241,18 +241,18 @@ func TestValidateRecordInvariantsNamesTheInvalidPlanPrepItem(t *testing.T) {
 func TestResolveRecordProviderPrefersBranchThenArtifactThenURL(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		record model.IssueOpsRecord
+		record model.Record
 		want   string
 	}{
-		{"branch prepare wins", model.IssueOpsRecord{
-			BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "gitlab"}, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github"}, IssueURL: "https://github.com/a/b/issues/1",
+		{"branch prepare wins", model.Record{
+			BranchPrepare: &model.BranchPrepare{Provider: "gitlab"}, RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github"}, IssueURL: "https://github.com/a/b/issues/1",
 		}, "gitlab"},
-		{"artifact when branch provider empty", model.IssueOpsRecord{
-			BranchPrepare: &model.IssueOpsBranchPrepare{}, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "gitlab"}, IssueURL: "https://github.com/a/b/issues/1",
+		{"artifact when branch provider empty", model.Record{
+			BranchPrepare: &model.BranchPrepare{}, RemoteArtifact: &model.RemoteArtifactVerification{Provider: "gitlab"}, IssueURL: "https://github.com/a/b/issues/1",
 		}, "gitlab"},
-		{"github url", model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{}, IssueURL: "https://github.com/a/b/issues/1"}, "github"},
-		{"gitlab url", model.IssueOpsRecord{IssueURL: "https://gitlab.corp.example/a/b/-/issues/1"}, "gitlab"},
-		{"unknown host needs explicit provider", model.IssueOpsRecord{IssueURL: "https://code.corp.example/a/b/issues/1"}, ""},
+		{"github url", model.Record{RemoteArtifact: &model.RemoteArtifactVerification{}, IssueURL: "https://github.com/a/b/issues/1"}, "github"},
+		{"gitlab url", model.Record{IssueURL: "https://gitlab.corp.example/a/b/-/issues/1"}, "gitlab"},
+		{"unknown host needs explicit provider", model.Record{IssueURL: "https://code.corp.example/a/b/issues/1"}, ""},
 	} {
 		if got := ResolveRecordProvider(tc.record); got != tc.want {
 			t.Fatalf("%s: got %q want %q", tc.name, got, tc.want)
@@ -261,27 +261,27 @@ func TestResolveRecordProviderPrefersBranchThenArtifactThenURL(t *testing.T) {
 }
 
 func TestReviewReflectionStampAndRounds(t *testing.T) {
-	if err := ValidateReviewReflectionStamp(model.IssueOpsRecord{}); err == nil {
+	if err := ValidateReviewReflectionStamp(model.Record{}); err == nil {
 		t.Fatal("stamp without a review accepted")
 	}
-	if err := ValidateReviewReflectionStamp(model.IssueOpsRecord{DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{}}); err != nil {
+	if err := ValidateReviewReflectionStamp(model.Record{DevilsAdvocateReview: &model.DevilsAdvocateReview{}}); err != nil {
 		t.Fatal(err)
 	}
-	review := &model.IssueOpsDevilsAdvocateReview{
+	review := &model.DevilsAdvocateReview{
 		Verdict: "pass", Findings: nil,
-		History: []model.IssueOpsDevilsAdvocateRound{{Verdict: "revise", Findings: []string{"a", "b", "c"}}, {Verdict: "revise", Findings: []string{"d"}}},
+		History: []model.DevilsAdvocateRound{{Verdict: "revise", Findings: []string{"a", "b", "c"}}, {Verdict: "revise", Findings: []string{"d"}}},
 	}
 	want := []model.PlanReviewRound{{Verdict: "revise", Findings: 3}, {Verdict: "revise", Findings: 1}, {Verdict: "pass", Findings: 0}}
 	if got := PlanReviewRounds(review, 0); !slices.Equal(got, want) {
 		t.Fatalf("rounds=%+v want=%+v", got, want)
 	}
-	if got := PlanReviewRounds(&model.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"x"}}, 0); !slices.Equal(got, []model.PlanReviewRound{{Verdict: "stop", Findings: 1}}) {
+	if got := PlanReviewRounds(&model.DevilsAdvocateReview{Verdict: "stop", Findings: []string{"x"}}, 0); !slices.Equal(got, []model.PlanReviewRound{{Verdict: "stop", Findings: 1}}) {
 		t.Fatalf("single round=%+v", got)
 	}
 }
 
 func TestRequireSealedArtifactDirRejectsMissingDirectory(t *testing.T) {
-	for name, record := range map[string]model.IssueOpsRecord{
+	for name, record := range map[string]model.Record{
 		"no execution": {},
 		"blank dir":    {Execution: &model.Execution{Workspace: model.Workspace{ArtifactDir: "  "}}},
 	} {
@@ -289,23 +289,23 @@ func TestRequireSealedArtifactDirRejectsMissingDirectory(t *testing.T) {
 			t.Fatalf("%s: %v", name, err)
 		}
 	}
-	if err := RequireSealedArtifactDir(model.IssueOpsRecord{Execution: &model.Execution{Workspace: model.Workspace{ArtifactDir: ".issueops/x"}}}); err != nil {
+	if err := RequireSealedArtifactDir(model.Record{Execution: &model.Execution{Workspace: model.Workspace{ArtifactDir: ".issueops/x"}}}); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestStartCycleRequestAndRecordInitialState(t *testing.T) {
-	if err := ValidateNewCycleRequest(model.IssueOpsStartRequest{New: true, Branch: " feat/x "}); err == nil || !strings.Contains(err.Error(), "branchless") {
+	if err := ValidateNewCycleRequest(model.StartRequest{New: true, Branch: " feat/x "}); err == nil || !strings.Contains(err.Error(), "branchless") {
 		t.Fatalf("new cycle with branch: %v", err)
 	}
-	for _, req := range []model.IssueOpsStartRequest{{New: true}, {New: true, Branch: "  "}, {Branch: "feat/x"}, {}} {
+	for _, req := range []model.StartRequest{{New: true}, {New: true, Branch: "  "}, {Branch: "feat/x"}, {}} {
 		if err := ValidateNewCycleRequest(req); err != nil {
 			t.Fatalf("%+v rejected: %v", req, err)
 		}
 	}
 	record := NewCycleRecord("io-1", "/repo", "feat/x", "now")
-	if !record.OK || record.SchemaVersion != model.IssueOpsSchemaVersion || record.ID != "io-1" || record.Repo != "/repo" || record.Branch != "feat/x" ||
-		record.Phase != model.IssueOpsPhaseProblem || record.CreatedAt != "now" || record.UpdatedAt != "now" || record.Feedback == nil || len(record.Feedback) != 0 {
+	if !record.OK || record.SchemaVersion != model.SchemaVersion || record.ID != "io-1" || record.Repo != "/repo" || record.Branch != "feat/x" ||
+		record.Phase != model.PhaseProblem || record.CreatedAt != "now" || record.UpdatedAt != "now" || record.Feedback == nil || len(record.Feedback) != 0 {
 		t.Fatalf("record=%+v", record)
 	}
 	if record.Execution != nil || record.IssueURL != "" {
@@ -315,9 +315,9 @@ func TestStartCycleRequestAndRecordInitialState(t *testing.T) {
 
 func TestRenderTrackedPlanReviewListsEveryRoundAndMasksHarnessValues(t *testing.T) {
 	digest := strings.Repeat("ab", 32)
-	review := &model.IssueOpsDevilsAdvocateReview{
+	review := &model.DevilsAdvocateReview{
 		Verdict: "pass",
-		History: []model.IssueOpsDevilsAdvocateRound{
+		History: []model.DevilsAdvocateRound{
 			{Verdict: "revise", Findings: []string{" 해시 " + digest + " 불일치 ", "  ", "/Users/dev/work/plan.md 경로 노출"}},
 			{Verdict: "custom", Waived: true, WaiverRationale: " 사유 /home/ci/x "},
 		},
@@ -374,15 +374,15 @@ func TestPlanLinkValidationsExplainEachRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ready := model.IssueOpsRecord{IssueURL: "https://github.com/a/b/issues/1", Branch: "b", BranchPrepare: &model.IssueOpsBranchPrepare{LinkVerified: true}, WorktreePath: "/wt"}
+	ready := model.Record{IssueURL: "https://github.com/a/b/issues/1", Branch: "b", BranchPrepare: &model.BranchPrepare{LinkVerified: true}, WorktreePath: "/wt"}
 	if err := ValidatePlanLinkReadiness(ready, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateLinkBranchEvidence(model.IssueOpsRecord{}, "plan"); err == nil || !strings.Contains(err.Error(), "cannot link plan before branch evidence: missing issue_url, branch, branch_prepare") {
+	if err := ValidateLinkBranchEvidence(model.Record{}, "plan"); err == nil || !strings.Contains(err.Error(), "cannot link plan before branch evidence: missing issue_url, branch, branch_prepare") {
 		t.Fatalf("evidence: %v", err)
 	}
 	unverified := ready
-	unverified.BranchPrepare = &model.IssueOpsBranchPrepare{}
+	unverified.BranchPrepare = &model.BranchPrepare{}
 	if err := ValidatePlanLinkReadiness(unverified, nil); err == nil || !strings.Contains(err.Error(), "branch_link_verified") {
 		t.Fatalf("unverified link: %v", err)
 	}
@@ -428,7 +428,7 @@ func TestPlanLinkIsUnchangedOnlyAllowsIdempotentRelink(t *testing.T) {
 }
 
 func TestApplyPlanAndWorktreeLinkTouchOnlyTheirField(t *testing.T) {
-	original := model.IssueOpsRecord{PlanPath: "old", WorktreePath: "wt", UpdatedAt: "before"}
+	original := model.Record{PlanPath: "old", WorktreePath: "wt", UpdatedAt: "before"}
 	plan := ApplyPlanLink(original, "new-plan", "now")
 	if plan.PlanPath != "new-plan" || plan.WorktreePath != "wt" || plan.UpdatedAt != "now" {
 		t.Fatalf("plan=%+v", plan)
@@ -572,8 +572,8 @@ func TestValidateLinkedBranchCleanupApplyRequiresConfirmAndFreshFingerprint(t *t
 }
 
 func TestPlanPrepMissingReportsDecisionsAndRelatedIssuesIndependently(t *testing.T) {
-	ok := model.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "n/a"}
-	prep := &model.IssueOpsPlanPrep{PriorDecisions: model.IssueOpsPlanPrepItem{Status: "evidence"}, RelatedIssues: model.IssueOpsPlanPrepItem{}, WebResearch: ok, CodebaseSurvey: ok}
+	ok := model.PlanPrepItem{Status: "waived", WaiveReason: "n/a"}
+	prep := &model.PlanPrep{PriorDecisions: model.PlanPrepItem{Status: "evidence"}, RelatedIssues: model.PlanPrepItem{}, WebResearch: ok, CodebaseSurvey: ok}
 	if got := PlanPrepMissing(prep); !slices.Equal(got, []string{"plan_prep_decisions", "plan_prep_related_issues"}) {
 		t.Fatalf("missing=%v", got)
 	}
@@ -584,9 +584,9 @@ func TestPlanPrepMissingReportsDecisionsAndRelatedIssuesIndependently(t *testing
 }
 
 func TestTargetBranchMatchIgnoresBlankPreparedBase(t *testing.T) {
-	record := model.IssueOpsRecord{
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{TargetBranch: "anything"},
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: "  "},
+	record := model.Record{
+		RemoteArtifact: &model.RemoteArtifactVerification{TargetBranch: "anything"},
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: "  "},
 	}
 	if got := TargetBranchMatchMissing(record); len(got) != 0 {
 		t.Fatalf("blank base must not demand a match: %v", got)
@@ -598,12 +598,12 @@ func TestTargetBranchMatchIgnoresBlankPreparedBase(t *testing.T) {
 }
 
 func TestPhaseLedgerStampHandlesNilLedgerAndStaleOnlyNotes(t *testing.T) {
-	phase := model.IssueOpsPhasePlan
+	phase := model.PhasePlan
 	stale := MarkLedgerStale(nil, "stale: regression", phase)
 	if got := stale[phase]; got.Phase != phase || !slices.Equal(got.Notes, []string{"stale: regression"}) || got.CompletedAt != "" {
 		t.Fatalf("nil ledger stale entry=%+v", got)
 	}
-	stamped := StampForwardTransition(stale, phase, model.IssueOpsPhaseImplement, "now", []string{"plan.md"})
+	stamped := StampForwardTransition(stale, phase, model.PhaseImplement, "now", []string{"plan.md"})
 	if got := stamped[phase]; got.Notes != nil || got.CompletedAt != "now" || !slices.Equal(got.Artifacts, []string{"plan.md"}) {
 		t.Fatalf("stale-only notes must be cleared to nil: %+v", got)
 	}
@@ -638,7 +638,7 @@ func TestPlanReviewVerdictLabelKeepsUnknownVerdicts(t *testing.T) {
 
 // A regressed cycle keeps its earlier stop in the issue's plan-review line.
 func TestPlanReviewRoundsKeepsStopsBeforeARegress(t *testing.T) {
-	got := PlanReviewRounds(&model.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"a", "b"}}, 1)
+	got := PlanReviewRounds(&model.DevilsAdvocateReview{Verdict: "pass", Findings: []string{"a", "b"}}, 1)
 	want := []model.PlanReviewRound{{Verdict: "stop"}, {Verdict: "pass", Findings: 2}}
 	if !slices.Equal(got, want) {
 		t.Fatalf("rounds = %+v", got)

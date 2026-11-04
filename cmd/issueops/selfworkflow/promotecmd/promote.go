@@ -9,7 +9,7 @@ import (
 )
 
 type Deps struct {
-	Promote   func(fromKey, baselineKey string, confirm, allowFailedSource bool) (contract.SelfAugmentPromoteResult, error)
+	Promote   func(fromKey, baselineKey string, confirm, allowFailedSource bool) (contract.PromoteResult, error)
 	PrintJSON func(any) error
 }
 

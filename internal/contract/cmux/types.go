@@ -16,7 +16,7 @@ type PreflightResult struct {
 	Build      string
 	SocketPath string
 	WindowID   string
-	Endpoint   model.IssueOpsHandoffDeliveryEndpointIncarnation
+	Endpoint   model.HandoffDeliveryEndpointIncarnation
 }
 
 type CreateRequest struct {

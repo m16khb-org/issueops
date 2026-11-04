@@ -14,7 +14,7 @@ if [ "$*" != "issue view https://github.com/acme/repo/issues/69 --json url,body,
 printf '%s' '{"url":"https://github.com/acme/repo/issues/69","body":"AC-01"}'
 `)
 	t.Setenv("PATH", binDir+string(filepath.ListSeparator)+t.TempDir())
-	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.ExecutionIssueSnapshotRequest{
+	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.SnapshotRequest{
 		Repo: repo, URL: "https://github.com/acme/repo/issues/69",
 	})
 	if err != nil {

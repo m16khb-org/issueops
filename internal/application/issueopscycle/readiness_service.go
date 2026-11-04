@@ -16,10 +16,10 @@ type Readiness struct {
 	ClearGitObservations func()
 	Paths                port.ReadinessObservations
 	Git                  port.PRGitObservations
-	HasEvidence          func(model.IssueOpsRecord) bool
-	ObserveChanges       func(model.IssueOpsRecord, string) review.LocalChangeObservation
-	ChangedPaths         func(model.IssueOpsRecord) []string
-	ChildMissing         func(string, model.IssueOpsRecord) ([]string, []string)
+	HasEvidence          func(model.Record) bool
+	ObserveChanges       func(model.Record, string) review.LocalChangeObservation
+	ChangedPaths         func(model.Record) []string
+	ChildMissing         func(string, model.Record) ([]string, []string)
 }
 
 func (s Readiness) scoped() Readiness {
@@ -30,19 +30,19 @@ func (s Readiness) scoped() Readiness {
 	return s
 }
 
-func (s Readiness) Plan(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func (s Readiness) Plan(record model.Record) model.Readiness {
 	s.scoped()
 	return ReadinessFromMissing(record, domain.PlanReadinessMissing(record))
 }
-func (s Readiness) Compatibility(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func (s Readiness) Compatibility(record model.Record) model.Readiness {
 	s = s.scoped()
 	return ReadinessFromMissing(record, CompatibilityReadinessMissing(record, s.Paths))
 }
-func (s Readiness) Implementation(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func (s Readiness) Implementation(record model.Record) model.Readiness {
 	s = s.scoped()
 	return ReadinessFromMissing(record, ImplementationReadinessMissing(record, true, s.Paths))
 }
-func (s Readiness) AISlopClean(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func (s Readiness) AISlopClean(record model.Record) model.Readiness {
 	s = s.scoped()
 	ready := ReadinessFromMissing(record, ImplementationReadinessMissing(record, false, s.Paths))
 	missing := append([]string{}, ready.Missing...)
@@ -57,26 +57,26 @@ func (s Readiness) AISlopClean(record model.IssueOpsRecord) model.IssueOpsReadin
 // PR is the local PR readiness. Post-merge cleanup readiness is not part of
 // it: it can never be ready before the merge and costs a network ls-remote;
 // `issueops cleanup status` owns it.
-func (s Readiness) PR(record model.IssueOpsRecord) model.IssueOpsReadiness {
+func (s Readiness) PR(record model.Record) model.Readiness {
 	s = s.scoped()
 	missing := stringlist.UniqueSorted(LocalPRReadinessMissing(record, s.Paths))
-	return model.IssueOpsReadiness{OK: true, Ready: len(missing) == 0, Missing: missing, Warnings: domain.PRReadinessWarnings(record), IssueURL: record.IssueURL, PlanPath: record.PlanPath, WorktreePath: record.WorktreePath, Branch: record.Branch}
+	return model.Readiness{OK: true, Ready: len(missing) == 0, Missing: missing, Warnings: domain.PRReadinessWarnings(record), IssueURL: record.IssueURL, PlanPath: record.PlanPath, WorktreePath: record.WorktreePath, Branch: record.Branch}
 }
-func (s Readiness) Completion(record model.IssueOpsRecord, phase model.IssueOpsPhase) model.IssueOpsReadiness {
+func (s Readiness) Completion(record model.Record, phase model.Phase) model.Readiness {
 	s = s.scoped()
 	return PhaseCompletion(record, phase, port.PhaseCompletionReadiness{Compatibility: s.Compatibility, AISlopClean: s.AISlopClean, PR: s.PR, RemoteArtifactMissing: domain.RemoteArtifactMissing})
 }
 
 // ObserveLocalPR is the fetch-free, network-free PR readiness `next` reads.
-func (s Readiness) ObserveLocalPR(record model.IssueOpsRecord) (model.IssueOpsReadiness, review.LocalChangeObservation) {
+func (s Readiness) ObserveLocalPR(record model.Record) (model.Readiness, review.LocalChangeObservation) {
 	s = s.scoped()
 	return s.observePR(record, nil)
 }
-func (s Readiness) StrictPRWithState(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
+func (s Readiness) StrictPRWithState(root string, record model.Record) model.Readiness {
 	s = s.scoped()
 	return s.StrictPRWithFetch(root, record, s.Git.Fetch)
 }
-func (s Readiness) StrictPRWithFetch(root string, record model.IssueOpsRecord, fetch func(string) review.UpstreamFetch) model.IssueOpsReadiness {
+func (s Readiness) StrictPRWithFetch(root string, record model.Record, fetch func(string) review.UpstreamFetch) model.Readiness {
 	s = s.scoped()
 	ready, _ := s.observePR(record, fetch)
 	missing, warnings := s.ChildMissing(root, record)
@@ -87,7 +87,7 @@ func (s Readiness) StrictPRWithFetch(root string, record model.IssueOpsRecord, f
 }
 
 // PrefetchUpstream runs outside the lifecycle lock. Its result is valid only for the observed root.
-func (s Readiness) PrefetchUpstream(record model.IssueOpsRecord) func(string) review.UpstreamFetch {
+func (s Readiness) PrefetchUpstream(record model.Record) func(string) review.UpstreamFetch {
 	s = s.scoped()
 	root := s.Git.Root(record)
 	fetched := review.UpstreamFetch{Root: root, Failed: true, Stderr: "upstream was not fetched before this readiness check; retry the command"}
@@ -101,7 +101,7 @@ func (s Readiness) PrefetchUpstream(record model.IssueOpsRecord) func(string) re
 		return fetched
 	}
 }
-func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) review.UpstreamFetch) (model.IssueOpsReadiness, review.LocalChangeObservation) {
+func (s Readiness) observePR(record model.Record, fetch func(string) review.UpstreamFetch) (model.Readiness, review.LocalChangeObservation) {
 	syncUpstream := fetch != nil
 	ready := s.PR(record)
 	ready.Strict = syncUpstream
@@ -153,7 +153,7 @@ func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) rev
 
 // observeBase compares origin/<prepared base> with HEAD. A missing ref is a
 // fact only after a pruning fetch of origin; otherwise it is skipped.
-func (s Readiness) observeBase(record model.IssueOpsRecord, root string, originFetched bool, facts *domain.PRGitFacts) {
+func (s Readiness) observeBase(record model.Record, root string, originFetched bool, facts *domain.PRGitFacts) {
 	base := domain.PreparedBaseRef(record)
 	if base == "" {
 		return

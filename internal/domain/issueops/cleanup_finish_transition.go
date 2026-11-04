@@ -2,7 +2,7 @@ package issueops
 
 import model "issueops/internal/contract/issueops"
 
-func ApplyCleanupFinishFailure(record model.IssueOpsRecord, failure model.IssueOpsCleanupFinishFailure, drained bool) model.IssueOpsRecord {
+func ApplyCleanupFinishFailure(record model.Record, failure model.CleanupFinishFailure, drained bool) model.Record {
 	record.CleanupFinishFailure = &failure
 	record.UpdatedAt = failure.At
 	if drained {

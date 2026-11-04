@@ -12,7 +12,7 @@ type LocalChangeObserver struct{ Source port.LocalChangeSource }
 
 // Observe reads paths and contents twice, allowing one retry for a concurrent update.
 // An unstable or unreadable snapshot never carries a verified fingerprint.
-func (o LocalChangeObserver) Observe(record model.IssueOpsRecord, root string) contract.LocalChangeObservation {
+func (o LocalChangeObserver) Observe(record model.Record, root string) contract.LocalChangeObservation {
 	if strings.TrimSpace(root) == "" || o.Source.Fingerprint == nil {
 		return contract.LocalChangeObservation{}
 	}

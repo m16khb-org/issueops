@@ -81,7 +81,7 @@ func TestReadCandidate(t *testing.T) {
 }
 
 func TestReadJudgeMap(t *testing.T) {
-	fixtures := []contract.IssueOpsBenchmarkFixture{{ID: "fixture"}}
+	fixtures := []contract.Fixture{{ID: "fixture"}}
 	body := `{"source_run_id":"prior","provenance":"recorded","scores":{"fixture":` + validBenchmarkJudgeJSON + `}}`
 	got, err := Files{Stdin: strings.NewReader(body)}.ReadJudgeMap("", fixtures)
 	if err != nil {
@@ -97,7 +97,7 @@ func TestReadJudgeMap(t *testing.T) {
 }
 
 func TestReadJudgeMapRejectsMalformedInput(t *testing.T) {
-	fixtures := []contract.IssueOpsBenchmarkFixture{{ID: "fixture"}}
+	fixtures := []contract.Fixture{{ID: "fixture"}}
 	for name, tc := range map[string]struct{ body, want string }{
 		"unknown field":   {`{"scores":{},"extra":1}`, "parse judge map"},
 		"not json":        {`{`, "parse judge map"},
@@ -118,7 +118,7 @@ func TestReadJudgeMapRejectsMalformedInput(t *testing.T) {
 
 func TestStoreSaveThenReadRoundTripsAndValidatesID(t *testing.T) {
 	store := Store{Directory: t.TempDir()}
-	run := contract.IssueOpsBenchmarkRunResult{OK: true, ID: "run-1", FixtureCount: 2, AverageScore: 88.5}
+	run := contract.RunResult{OK: true, ID: "run-1", FixtureCount: 2, AverageScore: 88.5}
 	if err := store.Save(run); err != nil {
 		t.Fatal(err)
 	}

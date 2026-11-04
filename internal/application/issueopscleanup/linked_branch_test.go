@@ -12,15 +12,15 @@ import (
 )
 
 type linkedBranchTestRecords struct {
-	record model.IssueOpsRecord
-	saved  []model.IssueOpsRecord
+	record model.Record
+	saved  []model.Record
 }
 
 func (r *linkedBranchTestRecords) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
 	return fn(ctx)
 }
-func (r *linkedBranchTestRecords) Load(string) (model.IssueOpsRecord, error) { return r.record, nil }
-func (r *linkedBranchTestRecords) Save(_ context.Context, rec model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (r *linkedBranchTestRecords) Load(string) (model.Record, error) { return r.record, nil }
+func (r *linkedBranchTestRecords) Save(_ context.Context, rec model.Record) (model.Record, error) {
 	r.saved = append(r.saved, rec)
 	return rec, nil
 }
@@ -35,9 +35,9 @@ type linkedBranchFixture struct {
 
 func newLinkedBranchFixture() *linkedBranchFixture {
 	f := &linkedBranchFixture{}
-	f.records = &linkedBranchTestRecords{record: model.IssueOpsRecord{
+	f.records = &linkedBranchTestRecords{record: model.Record{
 		ID: "io-linked", Repo: "/repo",
-		BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/o/r/issues/1", Branch: "1-feature", BaseSHA: "base-sha"},
+		BranchPrepare: &model.BranchPrepare{Provider: "github", IssueURL: "https://github.com/o/r/issues/1", Branch: "1-feature", BaseSHA: "base-sha"},
 	}}
 	f.nodes = []linkedbranch.Node{{ID: "LB_orphan"}}
 	f.cleaner = LinkedBranchCleaner{

@@ -41,21 +41,21 @@ const (
 	replacementPR = "https://github.com/acme/repo/pull/3"
 )
 
-func mergedHeadFor(oid string) func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
-	return func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+func mergedHeadFor(oid string) func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+	return func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 		return model.CleanupRemoteBranchArtifactHead{HeadRefName: "123-work", HeadRefOID: oid}, nil
 	}
 }
 
-func unmergedArtifact(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+func unmergedArtifact(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 	return model.CleanupRemoteBranchArtifactHead{}, errors.New("pull request is not merged")
 }
 
-func branchPreviewRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.IssueOpsPhaseDone,
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: "main"},
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: originalPR},
+func branchPreviewRecord() model.Record {
+	return model.Record{
+		ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.PhaseDone,
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: "main"},
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: originalPR},
 	}
 }
 

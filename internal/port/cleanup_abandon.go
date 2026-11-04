@@ -10,9 +10,9 @@ import (
 // Its caller holds the shared execution lifetime through the external effects.
 type CleanupAbandonRecords interface {
 	Load(context.Context, string) (model.CleanupSnapshot, error)
-	ArmAbandon(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAttempt, model.IssueOpsCleanupAbandonFailure) (model.CleanupSnapshot, error)
+	ArmAbandon(context.Context, model.CleanupSnapshot, model.CleanupAttempt, model.CleanupAbandonFailure) (model.CleanupSnapshot, error)
 	Check(context.Context, model.CleanupSnapshot) error
-	FailAbandon(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAbandonFailure, bool) (model.CleanupSnapshot, error)
+	FailAbandon(context.Context, model.CleanupSnapshot, model.CleanupAbandonFailure, bool) (model.CleanupSnapshot, error)
 	// DeleteAbandoned removes the record and stores outcome in the same transaction.
-	DeleteAbandoned(context.Context, model.CleanupSnapshot, model.IssueOpsCycleOutcome) ([]string, error)
+	DeleteAbandoned(context.Context, model.CleanupSnapshot, model.CycleOutcome) ([]string, error)
 }

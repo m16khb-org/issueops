@@ -12,7 +12,7 @@ type DoctorRow struct {
 	Data []byte
 }
 
-func Doctor(dir string, entries []statedomain.DoctorEntry, rows []DoctorRow) statecontract.StateDoctorResult {
+func Doctor(dir string, entries []statedomain.DoctorEntry, rows []DoctorRow) statecontract.DoctorResult {
 	observations := make([]statedomain.DoctorRecord, 0, len(rows))
 	for _, row := range rows {
 		observation := statedomain.DoctorRecord{Key: row.Key, Path: row.Path}

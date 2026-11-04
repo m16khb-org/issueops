@@ -17,6 +17,6 @@ func newReviewReflectionService(root string, resolve func(string) (port.IssuePro
 	return application.NewReviewReflectionService(issueops.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()), func(name string) (application.ReviewReflectionProvider, error) { return resolve(name) }, observe, now)
 }
 
-func reflectReviewFindings(ctx context.Context, root, id, providerOverride string, confirm bool, actor model.IssueOpsActor, observe application.AncestryObserver) (model.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+func reflectReviewFindings(ctx context.Context, root, id, providerOverride string, confirm bool, actor model.Actor, observe application.AncestryObserver) (model.Record, port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return newReviewReflectionService(root, provider.Resolve, observe, time.Now).Reflect(ctx, id, providerOverride, confirm, actor)
 }

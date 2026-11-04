@@ -25,7 +25,7 @@ func (*revisionEffects) Now() time.Time { return time.Date(2000, 1, 1, 0, 0, 0, 
 
 func TestReviseReadsBeforeDecisionAndWritesOnlyConfirmedChanges(t *testing.T) {
 	fake := &revisionEffects{current: "# Existing\n", exists: true}
-	request := projectdocscontract.ProjectDocsReviseRequest{Content: "# New", Summary: "change", ExpectedSHA256: projectdocdomain.SHA256Hex(fake.current)}
+	request := projectdocscontract.ReviseRequest{Content: "# New", Summary: "change", ExpectedSHA256: projectdocdomain.SHA256Hex(fake.current)}
 	result, err := Revise(request, "/repo", ".issueops/TESTING.md", "/repo/.issueops/TESTING.md", fake)
 	if err != nil || !result.DryRun || result.Action != "update" || len(fake.writes) != 0 {
 		t.Fatalf("dry-run result=%+v writes=%v err=%v", result, fake.writes, err)

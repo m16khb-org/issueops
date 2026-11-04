@@ -357,19 +357,19 @@ func TestValidateEndpointRejectsEachIncompleteOrUnsafeField(t *testing.T) {
 	uid := int(base.OwnerUID)
 	tests := []struct {
 		name   string
-		mutate func(*issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation)
+		mutate func(*issueopscontract.HandoffDeliveryEndpointIncarnation)
 		want   string
 	}{
-		{name: "path differs", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.Path = "/other" }, want: "incomplete"},
-		{name: "kind", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.Kind = "file" }, want: "incomplete"},
-		{name: "zero inode", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.Inode = 0 }, want: "incomplete"},
-		{name: "non-positive ctime", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.CTimeNS = 0 }, want: "incomplete"},
-		{name: "zero parent inode", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.ParentInode = 0 }, want: "incomplete"},
-		{name: "mode too open", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.Mode = 0o660 }, want: "0600"},
-		{name: "mode too closed", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.Mode = 0o400 }, want: "0600"},
-		{name: "parent owned by stranger", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.ParentOwnerUID = 999 }, want: "parent owner"},
-		{name: "parent group-writable", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.ParentMode = 0o770 }, want: "parent permissions"},
-		{name: "parent world-writable", mutate: func(e *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) { e.ParentMode = 0o702 }, want: "parent permissions"},
+		{name: "path differs", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.Path = "/other" }, want: "incomplete"},
+		{name: "kind", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.Kind = "file" }, want: "incomplete"},
+		{name: "zero inode", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.Inode = 0 }, want: "incomplete"},
+		{name: "non-positive ctime", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.CTimeNS = 0 }, want: "incomplete"},
+		{name: "zero parent inode", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.ParentInode = 0 }, want: "incomplete"},
+		{name: "mode too open", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.Mode = 0o660 }, want: "0600"},
+		{name: "mode too closed", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.Mode = 0o400 }, want: "0600"},
+		{name: "parent owned by stranger", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.ParentOwnerUID = 999 }, want: "parent owner"},
+		{name: "parent group-writable", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.ParentMode = 0o770 }, want: "parent permissions"},
+		{name: "parent world-writable", mutate: func(e *issueopscontract.HandoffDeliveryEndpointIncarnation) { e.ParentMode = 0o702 }, want: "parent permissions"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

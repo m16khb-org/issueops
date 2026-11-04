@@ -17,7 +17,7 @@ const orphanHead = "0123456789abcdef0123456789abcdef01234567"
 func orphanRequest() contract.Request {
 	return contract.Request{
 		ID: "io-orphan", RepoRoot: "/repo", WorktreePath: "/wt/orphan", Branch: "12-orphan",
-		Artifact: issueopscontract.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://example.test/pr/1"},
+		Artifact: issueopscontract.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://example.test/pr/1"},
 	}
 }
 

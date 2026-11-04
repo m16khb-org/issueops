@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func writeSnapshotForTest(dir, key string, snapshot contract.SelfAugmentStateSnapshot) error {
+func writeSnapshotForTest(dir, key string, snapshot contract.StateSnapshot) error {
 	return (app.SnapshotStore{NormalizeKey: statepath.NormalizeKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}).Write(dir, key, snapshot)

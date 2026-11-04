@@ -98,12 +98,12 @@ func (reader LeaseWorkspaceSnapshot) gitOutput(root string, args ...string) (str
 	return strings.TrimSpace(stdout), nil
 }
 
-func claimTokenPath(record issueops.IssueOpsRecord) string {
+func claimTokenPath(record issueops.Record) string {
 	key := tokenSHA256(record.ID)[:16]
 	return filepath.Join(record.Execution.Workspace.Root, ".issueops", "state", "issueops-v1", key, fmt.Sprintf("lease-%d.token", record.Execution.Lease.Generation))
 }
 
-func createClaimToken(record issueops.IssueOpsRecord) (string, string, error) {
+func createClaimToken(record issueops.Record) (string, string, error) {
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
 		return "", "", err
@@ -140,7 +140,7 @@ func tokenSHA256(token string) string {
 // cleanupReplacementGeneration은 durable lease가 아직 권한을 부여하지 않은
 // target generation의 harness-owned 파일만 지운다. finalize는 revoking 세대,
 // reseed는 아직 persist되지 않은 다음 세대이므로 재시도 전에 회수해도 된다.
-func cleanupReplacementGeneration(record issueops.IssueOpsRecord) error {
+func cleanupReplacementGeneration(record issueops.Record) error {
 	if record.Execution == nil {
 		return fmt.Errorf("cannot clean replacement residue without an execution")
 	}

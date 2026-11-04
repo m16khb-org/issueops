@@ -7,7 +7,7 @@ import (
 	"fmt"
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 	"strings"
 )
@@ -15,7 +15,7 @@ import (
 type ChildReconcileCommand struct {
 	ID, OperationID string
 	Confirm         bool
-	Actor           model.IssueOpsActor
+	Actor           model.Actor
 }
 type ChildReconciler struct {
 	Records IssueRecordReader
@@ -23,14 +23,14 @@ type ChildReconciler struct {
 	Intents *ChildCreateIntents
 	// Settled proves that a pending child create whose caller died created
 	// nothing and can no longer create anything (nil: never release).
-	Settled func(context.Context, model.IssueOpsRecord, model.ChildCreateOperation) (bool, error)
+	Settled func(context.Context, model.Record, model.ChildCreateOperation) (bool, error)
 }
 
 // childRecoveryRun은 Reconcile 한 번 동안 고정되는 기록·작업·행위자·자식 URL이다.
 type childRecoveryRun struct {
-	record   model.IssueOpsRecord
+	record   model.Record
 	op       model.ChildCreateOperation
-	actor    model.IssueOpsActor
+	actor    model.Actor
 	childURL string
 	confirm  bool
 }
@@ -175,7 +175,7 @@ func (s ChildReconciler) recoveryFailure(ctx context.Context, run childRecoveryR
 	if !run.confirm {
 		return cause
 	}
-	return errors.Join(cause, s.Intents.RecoveryFailure(context.WithoutCancel(ctx), run.record, run.op, run.childURL, status, remote.IssueCreateFailure(cause), run.actor))
+	return errors.Join(cause, s.Intents.RecoveryFailure(context.WithoutCancel(ctx), run.record, run.op, run.childURL, status, issueopsremote.IssueCreateFailure(cause), run.actor))
 }
 
 // reauthorizeChildRecovery는 유일한 원격 쓰기 전에 기록을 다시 읽는다: 관찰만으로는 바뀐 holder에게 권한을 줄 수 없다.
@@ -216,7 +216,7 @@ func validateChildSnapshot(op model.ChildCreateOperation, snapshot port.ChildSna
 	if snapshot.URL == op.ParentURL {
 		return fmt.Errorf("child cannot be its own parent")
 	}
-	if err := remote.ValidateChildMatchesParent(op.ParentURL, snapshot.URL); err != nil {
+	if err := issueopsremote.ValidateChildMatchesParent(op.ParentURL, snapshot.URL); err != nil {
 		return err
 	}
 	if op.CanonicalURL != "" && op.CanonicalURL != snapshot.URL {
@@ -252,7 +252,7 @@ func containsChildValues(actual, want []string) bool {
 	}
 	return true
 }
-func sameChildRecoveryAuthority(before, after model.IssueOpsRecord) bool {
+func sameChildRecoveryAuthority(before, after model.Record) bool {
 	if before.IssueURL != after.IssueURL || before.Repo != after.Repo || before.Branch != after.Branch {
 		return false
 	}

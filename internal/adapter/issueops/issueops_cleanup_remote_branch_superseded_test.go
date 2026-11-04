@@ -49,7 +49,7 @@ func TestCleanupRemoteBranchAcceptsSupersedingArtifactForUnmergedOriginal(t *tes
 	stateRoot, record := remoteBranchTestRecord(t)
 	git := remoteBranchGit()
 	deps := remoteBranchDeps(git)
-	deps.VerifyMergedArtifact = func(issueops.IssueOpsRemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
+	deps.VerifyMergedArtifact = func(issueops.RemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
 		return issueops.CleanupRemoteBranchArtifactHead{}, errors.New("remote artifact is not verified merged")
 	}
 	deps.ObserveArtifact = func(url string) (issueopsdomain.ArtifactObservation, error) {

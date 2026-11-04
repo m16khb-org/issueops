@@ -15,15 +15,15 @@ func TestPlanVerificationScoreAndEvidenceShareOneRead(t *testing.T) {
 	previous := StateRead
 	t.Cleanup(func() { StateRead = previous })
 	reads := 0
-	StateRead = func(key string) (state.StateResult, error) {
+	StateRead = func(key string) (state.Result, error) {
 		reads++
 		content := currentSummaryFixture(t, true)
 		if reads > 1 {
 			content = currentSummaryFixture(t, false)
 		}
-		return state.StateResult{Record: state.RecordEnvelope{Content: content}}, nil
+		return state.Result{Record: state.RecordEnvelope{Content: content}}, nil
 	}
-	result := Plan(contract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}, t.TempDir(), "test")
+	result := Plan(contract.PlanRequest{Cycles: 1, TargetScore: 95}, t.TempDir(), "test")
 	if reads != 1 {
 		t.Errorf("summary reads=%d want=1", reads)
 	}
@@ -54,11 +54,11 @@ func TestVerificationGoalRequiresCurrentSummaryKindAndSchema(t *testing.T) {
 		{"current-fail", currentSummaryFixture(t, false), false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			StateRead = func(key string) (state.StateResult, error) {
+			StateRead = func(key string) (state.Result, error) {
 				if key != "self-verify-latest" {
 					t.Fatalf("unexpected key %q", key)
 				}
-				return state.StateResult{Record: state.RecordEnvelope{Content: tc.content}}, nil
+				return state.Result{Record: state.RecordEnvelope{Content: tc.content}}, nil
 			}
 			if got := selfVerificationPassed(); got != tc.passed {
 				t.Fatalf("verification evidence admission=%v want=%v", got, tc.passed)
@@ -69,7 +69,7 @@ func TestVerificationGoalRequiresCurrentSummaryKindAndSchema(t *testing.T) {
 
 func currentSummaryFixture(t *testing.T, ok bool) string {
 	t.Helper()
-	snapshot := contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.SelfAugmentSummary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}}
+	snapshot := contract.StateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.Summary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}}
 	augmentapp.NormalizeSnapshotFailureCause(&snapshot)
 	data, err := json.Marshal(snapshot)
 	if err != nil {

@@ -12,16 +12,16 @@ type Effects interface {
 
 type Service struct{ Effects Effects }
 
-func (service Service) Diagnose(req lintdiagnosecontract.LintDiagnoseRequest) (lintdiagnosecontract.LintDiagnoseResult, error) {
+func (service Service) Diagnose(req lintdiagnosecontract.Request) (lintdiagnosecontract.Result, error) {
 	root, err := service.Effects.NormalizeRoot(req.RepoRoot)
 	if err != nil {
-		return lintdiagnosecontract.LintDiagnoseResult{}, err
+		return lintdiagnosecontract.Result{}, err
 	}
 	if err := domain.ValidateCommand(req.CommandArgv); err != nil {
-		return lintdiagnosecontract.LintDiagnoseResult{}, err
+		return lintdiagnosecontract.Result{}, err
 	}
 	output, exitCode, failed := service.Effects.Run(root, req.CommandArgv)
-	result := lintdiagnosecontract.LintDiagnoseResult{
+	result := lintdiagnosecontract.Result{
 		OK: true, CommandArgv: req.CommandArgv, ExitCode: exitCode, Failed: failed,
 	}
 	if !failed {

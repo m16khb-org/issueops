@@ -45,15 +45,15 @@ func healthyAbandonEnv() *abandonPreviewEnv {
 	}
 }
 
-func localAbandonRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Branch: "feature", WorktreePath: "/wt"}
+func localAbandonRecord() model.Record {
+	return model.Record{ID: "cycle", Repo: "/repo", Branch: "feature", WorktreePath: "/wt"}
 }
 
 func abandonPreviewer(env *abandonPreviewEnv) AbandonPreviewer {
 	return AbandonPreviewer{
 		Environment: env,
-		ReadChild:   func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, errors.New("not found") },
-		Workspace: func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string) {
+		ReadChild:   func(string) (model.Record, error) { return model.Record{}, errors.New("not found") },
+		Workspace: func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string) {
 			return FinishWorkspaceObservation{}, nil
 		},
 	}
@@ -64,7 +64,7 @@ var abandonReason = model.CleanupAbandonRequest{Reason: "superseded by another a
 func TestAbandonPreviewerAcceptsHealthyLocalResidueAndCopiesObservations(t *testing.T) {
 	env := healthyAbandonEnv()
 	previewer := abandonPreviewer(env)
-	previewer.Workspace = func(_ context.Context, _ model.IssueOpsRecord, root string) (FinishWorkspaceObservation, []string) {
+	previewer.Workspace = func(_ context.Context, _ model.Record, root string) (FinishWorkspaceObservation, []string) {
 		if root != "/wt" {
 			t.Errorf("workspace observed %q", root)
 		}
@@ -93,7 +93,7 @@ func TestAbandonPreviewerAcceptsHealthyLocalResidueAndCopiesObservations(t *test
 
 func TestAbandonPreviewerSkipsObservationsOfAbsentResources(t *testing.T) {
 	env := healthyAbandonEnv()
-	record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo"}
+	record := model.Record{ID: "cycle", Repo: "/repo"}
 	inventory, result := abandonPreviewer(env).Plan(t.Context(), record, abandonReason, nil)
 	if env.branchOIDCalls != 0 || inventory.WorktreePresent || inventory.BranchOID != "" {
 		t.Fatalf("observed resources the record never named: %+v calls=%d", inventory, env.branchOIDCalls)
@@ -106,34 +106,34 @@ func TestAbandonPreviewerSkipsObservationsOfAbsentResources(t *testing.T) {
 func TestAbandonPreviewerReportsEachFailedObservationAsItsOwnGate(t *testing.T) {
 	cases := []struct {
 		name   string
-		mutate func(*abandonPreviewEnv, *model.IssueOpsRecord, *AbandonPreviewer)
+		mutate func(*abandonPreviewEnv, *model.Record, *AbandonPreviewer)
 		want   string
 	}{
-		{name: "linked path conflicts with execution root", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) { e.sameLinked = false }, want: "worktree_identity_conflict"},
-		{name: "directory unobservable", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) {
+		{name: "linked path conflicts with execution root", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) { e.sameLinked = false }, want: "worktree_identity_conflict"},
+		{name: "directory unobservable", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) {
 			e.directory, e.directoryErr = false, errors.New("EACCES")
 		}, want: "worktree_observable"},
-		{name: "worktree not canonical", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) { e.local.Canonical = false }, want: "worktree_canonical"},
-		{name: "worktree dirty", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) { e.local.Clean = false }, want: "worktree_clean"},
-		{name: "head unobservable", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) {
+		{name: "worktree not canonical", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) { e.local.Canonical = false }, want: "worktree_canonical"},
+		{name: "worktree dirty", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) { e.local.Clean = false }, want: "worktree_clean"},
+		{name: "head unobservable", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) {
 			e.local.HeadObservable = false
 		}, want: "worktree_head"},
-		{name: "worktree on another branch", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) { e.local.Branch = "other" }, want: "worktree_branch_match"},
-		{name: "worktree and branch heads differ", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) { e.branchOID = "h2" }, want: "local_branch_head"},
-		{name: "branch ref unreadable", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) {
+		{name: "worktree on another branch", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) { e.local.Branch = "other" }, want: "worktree_branch_match"},
+		{name: "worktree and branch heads differ", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) { e.branchOID = "h2" }, want: "local_branch_head"},
+		{name: "branch ref unreadable", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) {
 			e.branchOID, e.branchOIDErr = "", errors.New("git failed")
 		}, want: "local_branch_observable"},
-		{name: "registry unreadable", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) {
+		{name: "registry unreadable", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) {
 			e.checkoutErr = errors.New("worktree list failed")
 		}, want: "worktree_registry_observable"},
-		{name: "branch checked out elsewhere", mutate: func(e *abandonPreviewEnv, _ *model.IssueOpsRecord, _ *AbandonPreviewer) { e.checkoutPath = "/other" }, want: "branch_checked_out_elsewhere"},
-		{name: "workspace gate passthrough", mutate: func(_ *abandonPreviewEnv, _ *model.IssueOpsRecord, p *AbandonPreviewer) {
-			p.Workspace = func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string) {
+		{name: "branch checked out elsewhere", mutate: func(e *abandonPreviewEnv, _ *model.Record, _ *AbandonPreviewer) { e.checkoutPath = "/other" }, want: "branch_checked_out_elsewhere"},
+		{name: "workspace gate passthrough", mutate: func(_ *abandonPreviewEnv, _ *model.Record, p *AbandonPreviewer) {
+			p.Workspace = func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string) {
 				return FinishWorkspaceObservation{}, []string{"requester_occupies_worktree"}
 			}
 		}, want: "requester_occupies_worktree"},
-		{name: "failure receipt does not match the inventory", mutate: func(_ *abandonPreviewEnv, r *model.IssueOpsRecord, _ *AbandonPreviewer) {
-			r.CleanupAbandonFailure = &model.IssueOpsCleanupAbandonFailure{Step: "worktree_remove", WorktreePath: "/wt", InventorySHA256: "forged"}
+		{name: "failure receipt does not match the inventory", mutate: func(_ *abandonPreviewEnv, r *model.Record, _ *AbandonPreviewer) {
+			r.CleanupAbandonFailure = &model.CleanupAbandonFailure{Step: "worktree_remove", WorktreePath: "/wt", InventorySHA256: "forged"}
 		}, want: "cleanup_failure_inventory"},
 	}
 	for _, tc := range cases {
@@ -175,7 +175,7 @@ func TestAbandonPreviewerGatesOnLeaseChildrenAndArtifact(t *testing.T) {
 	})
 	t.Run("remote artifact needs unmerged evidence", func(t *testing.T) {
 		record := localAbandonRecord()
-		record.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{URL: "https://example.test/pull/1"}
+		record.RemoteArtifact = &model.RemoteArtifactVerification{URL: "https://example.test/pull/1"}
 		_, result := abandonPreviewer(healthyAbandonEnv()).Plan(t.Context(), record, abandonReason, nil)
 		if !slices.Contains(result.Missing, "remote_artifact_unmerged") {
 			t.Fatalf("missing=%v", result.Missing)
@@ -191,18 +191,18 @@ func TestAbandonPreviewerGatesOnLeaseChildrenAndArtifact(t *testing.T) {
 
 func TestAbandonPreviewerResolvesChildrenOnlyFromObservedDoneRecords(t *testing.T) {
 	record := localAbandonRecord()
-	record.ChildCycles = []model.IssueOpsChildCycleRef{{CycleID: " done "}, {CycleID: "open"}, {CycleID: "unreadable"}, {CycleID: "  "}}
+	record.ChildCycles = []model.ChildCycleRef{{CycleID: " done "}, {CycleID: "open"}, {CycleID: "unreadable"}, {CycleID: "  "}}
 	var read []string
 	previewer := abandonPreviewer(healthyAbandonEnv())
-	previewer.ReadChild = func(id string) (model.IssueOpsRecord, error) {
+	previewer.ReadChild = func(id string) (model.Record, error) {
 		read = append(read, id)
 		switch id {
 		case "done":
-			return model.IssueOpsRecord{ID: "done", Phase: model.IssueOpsPhaseDone}, nil
+			return model.Record{ID: "done", Phase: model.PhaseDone}, nil
 		case "open":
-			return model.IssueOpsRecord{ID: "open", Phase: model.IssueOpsPhaseImplement}, nil
+			return model.Record{ID: "open", Phase: model.PhaseImplement}, nil
 		}
-		return model.IssueOpsRecord{}, errors.New("missing")
+		return model.Record{}, errors.New("missing")
 	}
 	resolved := previewer.ResolvedChildren(record)
 	if !resolved["done"] || resolved["open"] || resolved["unreadable"] || !slices.Equal(read, []string{"done", "open", "unreadable"}) {
@@ -258,7 +258,7 @@ func TestAbandonPreviewerTrustsOnlyAuthenticallySealedFailureReceipts(t *testing
 	tampered.RecordSHA = hex64("c") // still well-formed, but no longer what the seal covers
 	for _, tc := range []struct {
 		name    string
-		failure model.IssueOpsCleanupAbandonFailure
+		failure model.CleanupAbandonFailure
 		trusted bool
 	}{
 		{"sealed receipt matching the live resources", sealed, true},

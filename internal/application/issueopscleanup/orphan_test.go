@@ -81,7 +81,7 @@ func orphanTestSnapshot() health.Snapshot {
 func orphanTestRequest() contract.Request {
 	return contract.Request{
 		ID: "io-orphan", RepoRoot: "/repo", WorktreePath: "/wt/orphan", Branch: "12-orphan",
-		Artifact: model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://example.test/pr/1"},
+		Artifact: model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://example.test/pr/1"},
 	}
 }
 
@@ -91,7 +91,7 @@ func orphanFixture() (OrphanCleaner, *orphanTestEnvironment, *[]string) {
 	return OrphanCleaner{
 		Environment:  env,
 		Collect:      func(context.Context, string) (health.Snapshot, error) { return orphanTestSnapshot(), nil },
-		VerifyMerged: func(context.Context, model.IssueOpsRemoteArtifactVerification) error { return nil },
+		VerifyMerged: func(context.Context, model.RemoteArtifactVerification) error { return nil },
 	}, env, &events
 }
 
@@ -102,7 +102,7 @@ func TestOrphanCleanerPreviewIsReadyOnlyWithProviderMergeEvidence(t *testing.T) 
 		t.Fatalf("preview=%+v err=%v", preview, err)
 	}
 
-	cleaner.VerifyMerged = func(context.Context, model.IssueOpsRemoteArtifactVerification) error { return errors.New("open") }
+	cleaner.VerifyMerged = func(context.Context, model.RemoteArtifactVerification) error { return errors.New("open") }
 	blocked, err := cleaner.Preview(context.Background(), orphanTestRequest())
 	if err != nil || blocked.Ready || blocked.Fingerprint != "" || len(blocked.Missing) == 0 {
 		t.Fatalf("unverified merge must block: %+v err=%v", blocked, err)
@@ -277,7 +277,7 @@ func TestOrphanCleanerPreviewReportsCancellationDuringMergeVerification(t *testi
 	cleaner, _, _ := orphanFixture()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	cleaner.VerifyMerged = func(context.Context, model.IssueOpsRemoteArtifactVerification) error {
+	cleaner.VerifyMerged = func(context.Context, model.RemoteArtifactVerification) error {
 		cancel()
 		return nil
 	}

@@ -11,13 +11,13 @@ import (
 
 func TestFeedbackUseCasesKeepAuthorityBeforeMutationAndOneWrite(t *testing.T) {
 	const at = "2026-09-25T00:00:00Z"
-	record := model.IssueOpsRecord{ID: "io-feedback", Phase: model.IssueOpsPhaseAISlopClean, AISlopCleanAt: at}
+	record := model.Record{ID: "io-feedback", Phase: model.PhaseAISlopClean, AISlopCleanAt: at}
 	reads, writes := 0, 0
 	store := reviewport.ReviewMutationStore{
 		WithLock:         func(_, _ string, fn func() error) error { return fn() },
-		Read:             func(_, _ string) (model.IssueOpsRecord, error) { reads++; return record, nil },
-		ValidateMutation: func(model.IssueOpsRecord) error { return nil },
-		Write: func(_ string, next model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read:             func(_, _ string) (model.Record, error) { reads++; return record, nil },
+		ValidateMutation: func(model.Record) error { return nil },
+		Write: func(_ string, next model.Record) (model.Record, error) {
 			writes++
 			record = next
 			return next, nil
@@ -28,7 +28,7 @@ func TestFeedbackUseCasesKeepAuthorityBeforeMutationAndOneWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if added.Phase != model.IssueOpsPhaseFeedback || len(added.Feedback) != 1 ||
+	if added.Phase != model.PhaseFeedback || len(added.Feedback) != 1 ||
 		added.Feedback[0].Classification != "contract_change" || reads != 2 || writes != 1 {
 		t.Fatalf("added feedback = %+v, reads=%d writes=%d", added, reads, writes)
 	}
@@ -57,12 +57,12 @@ func TestAddFeedbackRejectsAuthorityBeforeInputAndDoesNotWrite(t *testing.T) {
 	reads, writes := 0, 0
 	store := reviewport.ReviewMutationStore{
 		WithLock: func(_, _ string, fn func() error) error { return fn() },
-		Read: func(_, _ string) (model.IssueOpsRecord, error) {
+		Read: func(_, _ string) (model.Record, error) {
 			reads++
-			return model.IssueOpsRecord{ID: "io-feedback", Phase: model.IssueOpsPhaseImplement}, nil
+			return model.Record{ID: "io-feedback", Phase: model.PhaseImplement}, nil
 		},
-		ValidateMutation: func(model.IssueOpsRecord) error { return authorityErr },
-		Write:            func(_ string, next model.IssueOpsRecord) (model.IssueOpsRecord, error) { writes++; return next, nil },
+		ValidateMutation: func(model.Record) error { return authorityErr },
+		Write:            func(_ string, next model.Record) (model.Record, error) { writes++; return next, nil },
 		Now:              func() string { return "2026-09-25T00:00:00Z" },
 	}
 	_, err := AddFeedback(store, "state", "io-feedback", "", "", "unknown")

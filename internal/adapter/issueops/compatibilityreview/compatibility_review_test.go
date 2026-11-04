@@ -10,23 +10,23 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func reviewStore(readinessMissing []string) (reviewport.CompatibilityStore, *model.IssueOpsRecord) {
-	record := &model.IssueOpsRecord{
-		OK: true, ID: "io-c", Repo: "/repo", Branch: "12-c", Phase: model.IssueOpsPhasePlan,
+func reviewStore(readinessMissing []string) (reviewport.CompatibilityStore, *model.Record) {
+	record := &model.Record{
+		OK: true, ID: "io-c", Repo: "/repo", Branch: "12-c", Phase: model.PhasePlan,
 	}
 	return reviewport.CompatibilityStore{
-		Read: func(string, string) (model.IssueOpsRecord, error) { return *record, nil },
-		TouchWrite: func(_ string, rec model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) { return *record, nil },
+		TouchWrite: func(_ string, rec model.Record) (model.Record, error) {
 			*record = rec
 			return rec, nil
 		},
-		Ready: func(model.IssueOpsRecord) model.IssueOpsReadiness {
-			return model.IssueOpsReadiness{Ready: len(readinessMissing) == 0, Missing: readinessMissing}
+		Ready: func(model.Record) model.Readiness {
+			return model.Readiness{Ready: len(readinessMissing) == 0, Missing: readinessMissing}
 		},
-		PhaseRank: func(phase model.IssueOpsPhase) int {
-			order := map[model.IssueOpsPhase]int{
-				model.IssueOpsPhaseProblem: 1, model.IssueOpsPhaseGrill: 2, model.IssueOpsPhasePlan: 3,
-				model.IssueOpsPhaseCompatibilityReview: 4, model.IssueOpsPhaseImplement: 5,
+		PhaseRank: func(phase model.Phase) int {
+			order := map[model.Phase]int{
+				model.PhaseProblem: 1, model.PhaseGrill: 2, model.PhasePlan: 3,
+				model.PhaseCompatibilityReview: 4, model.PhaseImplement: 5,
 			}
 			return order[phase]
 		},
@@ -103,7 +103,7 @@ func TestRecordGatesAndPhaseAdvance(t *testing.T) {
 	if updated.CompatibilityReview == nil || !updated.CompatibilityReview.Approved {
 		t.Fatalf("review not recorded: %#v", updated)
 	}
-	if record.Phase != model.IssueOpsPhaseCompatibilityReview {
+	if record.Phase != model.PhaseCompatibilityReview {
 		t.Fatalf("phase must advance from plan: %v", record.Phase)
 	}
 	gated, gatedRecord := reviewStore([]string{"plan_path", "worktree_path"})
@@ -112,8 +112,8 @@ func TestRecordGatesAndPhaseAdvance(t *testing.T) {
 		t.Fatalf("unready record must list missing gates: %v", err)
 	}
 	// read 실패는 원본 에러로 전파된다.
-	failing := reviewport.CompatibilityStore{Read: func(string, string) (model.IssueOpsRecord, error) {
-		return model.IssueOpsRecord{}, errors.New("state unreadable")
+	failing := reviewport.CompatibilityStore{Read: func(string, string) (model.Record, error) {
+		return model.Record{}, errors.New("state unreadable")
 	}}
 	if _, err := Record(failing, "state", "io-x", req); err == nil || !strings.Contains(err.Error(), "state unreadable") {
 		t.Fatalf("read failure must propagate: %v", err)

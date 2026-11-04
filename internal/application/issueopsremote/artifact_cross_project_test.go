@@ -7,11 +7,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func crossProjectRecord(codeProjectKey string) model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		Phase:    model.IssueOpsPhasePR,
+func crossProjectRecord(codeProjectKey string) model.Record {
+	return model.Record{
+		Phase:    model.PhasePR,
 		IssueURL: "https://gitlab.example.com/planning/backlog/-/issues/42",
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		BranchPrepare: &model.BranchPrepare{
 			Provider:       "gitlab",
 			IssueURL:       "https://gitlab.example.com/planning/backlog/-/issues/42",
 			Branch:         "42-cross",
@@ -21,8 +21,8 @@ func crossProjectRecord(codeProjectKey string) model.IssueOpsRecord {
 	}
 }
 
-func verificationRequest(url string) model.IssueOpsRemoteArtifactVerificationRequest {
-	return model.IssueOpsRemoteArtifactVerificationRequest{
+func verificationRequest(url string) model.RemoteArtifactVerificationRequest {
+	return model.RemoteArtifactVerificationRequest{
 		Provider: "gitlab", Kind: "mr", URL: url,
 		Labels: []string{"bug"}, Assignees: []string{"someone"}, TargetBranch: "main",
 	}

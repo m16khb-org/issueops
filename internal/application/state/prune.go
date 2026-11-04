@@ -10,18 +10,18 @@ import (
 	stateport "issueops/internal/port/state"
 )
 
-func (service *Service) Prune(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error) {
+func (service *Service) Prune(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.PruneResult, error) {
 	return service.prune(ctx, "", maxAge, 0, confirm)
 }
 
-func (service *Service) PrunePrefix(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
+func (service *Service) PrunePrefix(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
 	if prefix == "" {
 		return service.newPruneResult(maxAge, confirm), fmt.Errorf("prefix is required")
 	}
 	return service.prune(ctx, prefix, maxAge, maxRecords, confirm)
 }
 
-func (service *Service) prune(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
+func (service *Service) prune(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
 	result := service.newPruneResult(maxAge, confirm)
 	if maxAge <= 0 {
 		return result, fmt.Errorf("max age must be positive: pass a Go duration such as 720h (CLI --max-age, MCP max_age)")
@@ -66,16 +66,16 @@ func (service *Service) prune(ctx context.Context, prefix string, maxAge time.Du
 	return result, err
 }
 
-func (service *Service) newPruneResult(maxAge time.Duration, confirm bool) statecontract.StatePruneResult {
-	return statecontract.StatePruneResult{
+func (service *Service) newPruneResult(maxAge time.Duration, confirm bool) statecontract.PruneResult {
+	return statecontract.PruneResult{
 		OK:          false,
 		StateDir:    service.stateDir(),
 		MaxAge:      maxAge.String(),
 		Confirm:     confirm,
 		DryRun:      !confirm,
 		DeletedKeys: []string{},
-		Pruned:      []statecontract.StateListEntry{},
+		Pruned:      []statecontract.ListEntry{},
 		KeptKeys:    []string{},
-		Kept:        []statecontract.StateListEntry{},
+		Kept:        []statecontract.ListEntry{},
 	}
 }

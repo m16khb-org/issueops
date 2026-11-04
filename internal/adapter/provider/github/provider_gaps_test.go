@@ -46,7 +46,7 @@ func TestReadIssueSnapshotRejectsBadRequestsAndReadbacks(t *testing.T) {
 				script = "#!/bin/sh\necho boom >&2\nexit 1\n"
 			}
 			repo := fakeGhRepo(t, script)
-			_, err := NewProvider().ReadIssueSnapshot(tc.ctx, executionissue.ExecutionIssueSnapshotRequest{Repo: repo, URL: tc.url})
+			_, err := NewProvider().ReadIssueSnapshot(tc.ctx, executionissue.SnapshotRequest{Repo: repo, URL: tc.url})
 			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 				t.Fatalf("err = %v, want contains %q", err, tc.wantErr)
 			}
@@ -58,7 +58,7 @@ func TestReadIssueSnapshotReturnsStateAndTrimsRequestURL(t *testing.T) {
 	repo := fakeGhRepo(t, `#!/bin/sh
 printf '%s' '{"url":"https://github.com/acme/repo/issues/69","body":"AC","state":"CLOSED"}'
 `)
-	got, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.ExecutionIssueSnapshotRequest{Repo: repo, URL: "  https://github.com/acme/repo/issues/69\n"})
+	got, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.SnapshotRequest{Repo: repo, URL: "  https://github.com/acme/repo/issues/69\n"})
 	if err != nil || got.State != "CLOSED" || got.URL != "https://github.com/acme/repo/issues/69" {
 		t.Fatalf("snapshot = %+v, err = %v", got, err)
 	}

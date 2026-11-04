@@ -8,13 +8,13 @@ import (
 
 type ReplacementRecords struct{ StateRoot string }
 
-func (s ReplacementRecords) Load(id string) (issueops.IssueOpsRecord, error) {
+func (s ReplacementRecords) Load(id string) (issueops.Record, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 func (s ReplacementRecords) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
 	return withIssueOpsLock(ctx, s.StateRoot, id, fn)
 }
-func (s ReplacementRecords) Persist(ctx context.Context, record issueops.IssueOpsRecord, previous *issueops.NativeActor) (issueops.IssueOpsRecord, error) {
+func (s ReplacementRecords) Persist(ctx context.Context, record issueops.Record, previous *issueops.NativeActor) (issueops.Record, error) {
 	return persistExecutionTransition(ctx, s.StateRoot, record, previous)
 }
 
@@ -64,11 +64,11 @@ func (s replacementProcessSnapshot) HasAncestor(pid int, owners map[int]bool) bo
 
 type ReplacementArtifacts struct{}
 
-func (s ReplacementArtifacts) Cleanup(record issueops.IssueOpsRecord) error {
+func (s ReplacementArtifacts) Cleanup(record issueops.Record) error {
 	return cleanupReplacementGeneration(record)
 }
 func (s ReplacementArtifacts) WorkspaceAbsent(root string) bool { return workspaceRootAbsent(root) }
-func (s ReplacementArtifacts) CreateToken(record issueops.IssueOpsRecord) (string, string, error) {
+func (s ReplacementArtifacts) CreateToken(record issueops.Record) (string, string, error) {
 	token, path, err := createClaimToken(record)
 	if err != nil {
 		return "", "", err

@@ -7,7 +7,7 @@ import (
 
 // Service binds execution dispatch and recovery to one set of observations.
 type Service struct {
-	ReadRecord func(string, string) (model.IssueOpsRecord, error)
+	ReadRecord func(string, string) (model.Record, error)
 	SamePath   func(string, string) bool
 	Verifier   authorityport.ActorVerifier
 }

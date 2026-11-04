@@ -8,7 +8,7 @@ import (
 	reportcontract "issueops/internal/contract/artifactreadability"
 	"issueops/internal/domain/artifactreadability"
 	artifacttemplate "issueops/internal/domain/artifacttemplate"
-	issueopsremote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 type TemplateBodyResolver struct{ readFile func(string) ([]byte, error) }
@@ -135,7 +135,7 @@ func (s TemplateBodyResolver) ScoreSummary(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var result issueopsremote.IssueOpsRemoteScoringResult
+	var result issueopsremote.ScoringResult
 	if err := json.Unmarshal(b, &result); err != nil {
 		return strings.TrimSpace(string(b)), nil
 	}

@@ -36,7 +36,7 @@ func TestServiceLoadsAndClassifiesWorkspaceOverridePerEvaluation(t *testing.T) {
 			}
 			loads++
 			if loads == 1 {
-				return OverrideSnapshot{Values: &policycontract.PolicyOverrides{AdditionalReadOnlyCommands: []string{"repo-tool"}}}
+				return OverrideSnapshot{Values: &policycontract.Overrides{AdditionalReadOnlyCommands: []string{"repo-tool"}}}
 			}
 			return OverrideSnapshot{Warning: "policy_override_parse_failed"}
 		}),

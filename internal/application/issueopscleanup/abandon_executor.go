@@ -17,9 +17,9 @@ type AbandonExecutor struct {
 	Records    port.CleanupAbandonRecords
 	Acquire    func(context.Context, string) (CleanupLifetime, error)
 	Provider   func(string) (port.IssueProvider, error)
-	Observe    func(context.Context, model.IssueOpsRecord, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonRequest, error)
-	Plan       func(context.Context, model.IssueOpsRecord, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult)
-	NewAttempt func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
+	Observe    func(context.Context, model.Record, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonRequest, error)
+	Plan       func(context.Context, model.Record, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult)
+	NewAttempt func(model.CleanupOperation) (model.CleanupAttempt, error)
 	Stop       func(context.Context, model.CleanupAbandonInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error)
 	Directory  func(string) (bool, error)
 	// PruneWorktreesParent removes the emptied `<repo>.worktrees` parent; optional.
@@ -35,7 +35,7 @@ type abandonRun struct {
 	finalizeCtx context.Context
 	req         model.CleanupAbandonRequest
 	snapshot    model.CleanupSnapshot
-	record      model.IssueOpsRecord
+	record      model.Record
 	provider    port.IssueProvider
 	inventory   model.CleanupAbandonInventory
 	fingerprint string
@@ -192,7 +192,7 @@ func (r *abandonRun) execute() (model.CleanupAbandonResult, error) {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}
 	var err error
-	outcome := domain.CycleOutcomeForRecord(r.snapshot.Record, model.IssueOpsCycleOutcomeAbandoned, r.s.Now().UTC().Format(time.RFC3339))
+	outcome := domain.CycleOutcomeForRecord(r.snapshot.Record, model.CycleOutcomeAbandoned, r.s.Now().UTC().Format(time.RFC3339))
 	r.result.IntentRowsDeleted, err = r.s.Records.DeleteAbandoned(r.finalizeCtx, r.snapshot, outcome)
 	if err != nil {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
@@ -261,15 +261,15 @@ func (r *abandonRun) deleteBranch() error {
 	return nil
 }
 
-func abandonFailure(record model.IssueOpsRecord, inventory model.CleanupAbandonInventory, fingerprint, step, message, now string) model.IssueOpsCleanupAbandonFailure {
-	failure := model.IssueOpsCleanupAbandonFailure{Step: step, Message: message, Fingerprint: fingerprint, RecordSHA: inventory.RecordSHA, WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch, WorktreeHead: inventory.WorktreeHead, BranchOID: inventory.BranchOID, At: now}
+func abandonFailure(record model.Record, inventory model.CleanupAbandonInventory, fingerprint, step, message, now string) model.CleanupAbandonFailure {
+	failure := model.CleanupAbandonFailure{Step: step, Message: message, Fingerprint: fingerprint, RecordSHA: inventory.RecordSHA, WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch, WorktreeHead: inventory.WorktreeHead, BranchOID: inventory.BranchOID, At: now}
 	failure.InventorySHA256 = CleanupAbandonFailureSeal(record, &failure)
 	return failure
 }
 
 // ObserveAbandonArtifact binds remote evidence to the record already loaded
 // under the execution lifetime. A caller-supplied boolean is not authority.
-func ObserveAbandonArtifact(ctx context.Context, record model.IssueOpsRecord, req model.CleanupAbandonRequest, provider port.IssueProvider) (model.CleanupAbandonRequest, error) {
+func ObserveAbandonArtifact(ctx context.Context, record model.Record, req model.CleanupAbandonRequest, provider port.IssueProvider) (model.CleanupAbandonRequest, error) {
 	req.ArtifactUnmerged = false
 	if record.RemoteArtifact == nil {
 		return req, nil

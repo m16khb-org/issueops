@@ -66,7 +66,7 @@ func (f Files) ReadCandidate(path string) (issueopscontract.IssueOpsAutoresearch
 	return candidate, nil
 }
 
-func (f Files) ReadJudgeMap(path string, fixtures []issueopscontract.IssueOpsBenchmarkFixture) (issueopscontract.IssueOpsJudgeMap, error) {
+func (f Files) ReadJudgeMap(path string, fixtures []issueopscontract.Fixture) (issueopscontract.IssueOpsJudgeMap, error) {
 	var raw []byte
 	var err error
 	if strings.TrimSpace(path) == "" {

@@ -80,17 +80,17 @@ func TestRunPrintsTextPlanAndSelectedCandidate(t *testing.T) {
 	var out bytes.Buffer
 	err := Run([]string{"--cycles", "2", "--target-score", "95"}, Deps{
 		Output: &out,
-		Plan: func(req augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult {
-			candidate := &augmentcontract.SelfAugmentCandidate{ID: "quality-next", Title: "Improve the next quality signal"}
-			return augmentcontract.SelfAugmentPlanResult{
+		Plan: func(req augmentcontract.PlanRequest) augmentcontract.PlanResult {
+			candidate := &augmentcontract.Candidate{ID: "quality-next", Title: "Improve the next quality signal"}
+			return augmentcontract.PlanResult{
 				OK:                  true,
 				KoreanName:          augmentcontract.SelfAugmentationKoreanName,
 				Cycles:              req.Cycles,
 				TargetScore:         req.TargetScore,
 				SelectedCandidate:   candidate,
-				Candidates:          []augmentcontract.SelfAugmentCandidate{*candidate},
+				Candidates:          []augmentcontract.Candidate{*candidate},
 				TerminationEligible: true,
-				Goals: []augmentcontract.SelfAugmentGoal{{
+				Goals: []augmentcontract.Goal{{
 					Name:        "quality",
 					KoreanName:  "품질",
 					Score:       100,
@@ -99,7 +99,7 @@ func TestRunPrintsTextPlanAndSelectedCandidate(t *testing.T) {
 				}},
 			}
 		},
-		SelectedCandidateID: func(candidate *augmentcontract.SelfAugmentCandidate) string {
+		SelectedCandidateID: func(candidate *augmentcontract.Candidate) string {
 			if candidate == nil {
 				return ""
 			}
@@ -146,8 +146,8 @@ func TestRunSavesPlanStateAsJSON(t *testing.T) {
 	var savedKey string
 	out := captureStdout(t, func() error {
 		return Run([]string{"--cycles", "1", "--target-score", "99", "--save-state", "--state-key", "augment-plan", "--json"}, Deps{
-			Plan: func(req augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult {
-				return augmentcontract.SelfAugmentPlanResult{
+			Plan: func(req augmentcontract.PlanRequest) augmentcontract.PlanResult {
+				return augmentcontract.PlanResult{
 					OK:          true,
 					LoopKind:    "self_augmentation",
 					KoreanName:  augmentcontract.SelfAugmentationKoreanName,
@@ -155,9 +155,9 @@ func TestRunSavesPlanStateAsJSON(t *testing.T) {
 					TargetScore: req.TargetScore,
 				}
 			},
-			SavePlan: func(result *augmentcontract.SelfAugmentPlanResult, key string) error {
+			SavePlan: func(result *augmentcontract.PlanResult, key string) error {
 				savedKey = key
-				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: true, Key: key}
+				result.StateCheckpoint = &augmentcontract.StateCheckpoint{OK: true, Key: key}
 				return nil
 			},
 			PrintJSON: printJSONForTest,
@@ -166,7 +166,7 @@ func TestRunSavesPlanStateAsJSON(t *testing.T) {
 	if savedKey != "augment-plan" {
 		t.Fatalf("expected save key augment-plan, got %q", savedKey)
 	}
-	var result augmentcontract.SelfAugmentPlanResult
+	var result augmentcontract.PlanResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode self-augment JSON: %v\n%s", err, out)
 	}

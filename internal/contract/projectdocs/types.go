@@ -4,7 +4,7 @@
 // 알 필요가 없다.
 package projectdocs
 
-type ProjectDocsReviseRequest struct {
+type ReviseRequest struct {
 	RepoRoot       string   `json:"repo_root"`
 	RelPath        string   `json:"rel_path"`
 	Content        string   `json:"content"`
@@ -14,7 +14,7 @@ type ProjectDocsReviseRequest struct {
 	Confirm        bool     `json:"confirm"`
 }
 
-type ProjectDocsReviseResult struct {
+type ReviseResult struct {
 	OK            bool     `json:"ok"`
 	Kind          string   `json:"kind"`
 	RepoRoot      string   `json:"repo_root"`
@@ -32,7 +32,7 @@ type ProjectDocsReviseResult struct {
 	Warnings      []string `json:"warnings,omitempty"`
 }
 
-type ProjectDocsAppendRequest struct {
+type AppendRequest struct {
 	RepoRoot     string   `json:"repo_root"`
 	Kind         string   `json:"kind"`
 	Title        string   `json:"title"`
@@ -46,7 +46,7 @@ type ProjectDocsAppendRequest struct {
 	Source       string   `json:"source,omitempty"`
 }
 
-type ProjectDocsAppendResult struct {
+type AppendResult struct {
 	OK            bool     `json:"ok"`
 	Kind          string   `json:"kind"`
 	RecordKind    string   `json:"record_kind"`
@@ -59,7 +59,7 @@ type ProjectDocsAppendResult struct {
 	Warnings      []string `json:"warnings,omitempty"`
 }
 
-type ProjectDocsReadResult struct {
+type ReadResult struct {
 	OK          bool     `json:"ok"`
 	Kind        string   `json:"kind"`
 	RepoRoot    string   `json:"repo_root"`
@@ -72,7 +72,7 @@ type ProjectDocsReadResult struct {
 	Warnings    []string `json:"warnings,omitempty"`
 }
 
-type ProjectDocsRouteResult struct {
+type RouteResult struct {
 	OK          bool                   `json:"ok"`
 	Kind        string                 `json:"kind"`
 	RepoRoot    string                 `json:"repo_root"`

@@ -8,5 +8,5 @@ import (
 // 어떻게 저장하는지 알지 않는다.
 var (
 	StateDir   func() string
-	StateWrite func(key, content string) (statecontract.StateResult, error)
+	StateWrite func(key, content string) (statecontract.Result, error)
 )

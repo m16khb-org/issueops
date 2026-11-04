@@ -13,7 +13,7 @@ import (
 
 func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 	t.Helper()
-	record, err := startIssueOpsFixture(issueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(issueOpsStateRoot(), issueopscontract.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,9 +22,9 @@ func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 		t.Fatal(err)
 	}
 	record.WorktreePath = worktree
-	record.Phase = issueopscontract.IssueOpsPhasePR
+	record.Phase = issueopscontract.PhasePR
 	record.IssueURL = "https://github.com/example/repo/issues/69"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: branch, BaseBranch: "main",
 		BaseSHA: strings.Repeat("a", 40), LinkVerified: true,
 	}

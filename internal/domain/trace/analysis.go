@@ -3,7 +3,7 @@ package trace
 import (
 	"fmt"
 	"issueops/internal/domain/policy"
-	classification "issueops/internal/domain/traceclassification"
+	"issueops/internal/domain/traceclassification"
 )
 
 func Analyze(input Input) Analysis {
@@ -50,7 +50,7 @@ func analyzeLines(lines []Document) ([]Finding, []string) {
 	findings := []Finding{}
 	findings = append(findings, docUpkeepFindings(events)...)
 	for _, step := range traceSortedIntKeys(failedSteps) {
-		findings = append(findings, Finding{FailureClass: "self_verify_progress_failure", RecurringPattern: fmt.Sprintf("%s failed %d time(s)", policy.RedactFreeform(step), failedSteps[step]), ProposedKnob: classification.ProposedKnobForStep(step), OverfitRisk: "medium: progress JSONL may capture one run; rerun before changing harness behavior", VerificationCommand: classification.DefaultVerificationCommand(step)})
+		findings = append(findings, Finding{FailureClass: "self_verify_progress_failure", RecurringPattern: fmt.Sprintf("%s failed %d time(s)", policy.RedactFreeform(step), failedSteps[step]), ProposedKnob: traceclassification.ProposedKnobForStep(step), OverfitRisk: "medium: progress JSONL may capture one run; rerun before changing harness behavior", VerificationCommand: traceclassification.DefaultVerificationCommand(step)})
 	}
 	return findings, types
 }

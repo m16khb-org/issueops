@@ -33,28 +33,28 @@ func (f *inputFiles) ReadSamples(p string) ([]contract.JudgeSample, error) {
 
 type mapRuns struct {
 	port.Runs
-	runs  map[string]contract.IssueOpsBenchmarkRunResult
+	runs  map[string]contract.RunResult
 	reads []string
 }
 
-func (m *mapRuns) Read(id string) (contract.IssueOpsBenchmarkRunResult, error) {
+func (m *mapRuns) Read(id string) (contract.RunResult, error) {
 	m.reads = append(m.reads, id)
 	r, ok := m.runs[id]
 	if !ok {
-		return contract.IssueOpsBenchmarkRunResult{}, errors.New("no run " + id)
+		return contract.RunResult{}, errors.New("no run " + id)
 	}
 	return r, nil
 }
 
 func TestCompareFailsOnUnreadableRunWithoutReadingCandidateFirst(t *testing.T) {
-	runs := &mapRuns{runs: map[string]contract.IssueOpsBenchmarkRunResult{"cand": {ID: "cand"}}}
+	runs := &mapRuns{runs: map[string]contract.RunResult{"cand": {ID: "cand"}}}
 	if _, err := (app.Service{Runs: runs}).Compare("missing", "cand"); err == nil || err.Error() != "no run missing" {
 		t.Fatalf("baseline error = %v", err)
 	}
 	if len(runs.reads) != 1 {
 		t.Fatalf("candidate must not be read after baseline failure: %v", runs.reads)
 	}
-	runs = &mapRuns{runs: map[string]contract.IssueOpsBenchmarkRunResult{"base": {ID: "base"}}}
+	runs = &mapRuns{runs: map[string]contract.RunResult{"base": {ID: "base"}}}
 	if _, err := (app.Service{Runs: runs}).Compare("base", "missing"); err == nil || err.Error() != "no run missing" {
 		t.Fatalf("candidate error = %v", err)
 	}
@@ -62,7 +62,7 @@ func TestCompareFailsOnUnreadableRunWithoutReadingCandidateFirst(t *testing.T) {
 
 func TestGateDiscardsCandidateTouchingPathsOutsideEditSurface(t *testing.T) {
 	files := &inputFiles{candidate: contract.IssueOpsAutoresearchCandidate{ID: "c1", EditSurface: []string{"internal/a/"}}}
-	runs := &mapRuns{runs: map[string]contract.IssueOpsBenchmarkRunResult{
+	runs := &mapRuns{runs: map[string]contract.RunResult{
 		"base": {ID: "base", AverageScore: 70, MinimumScore: 50},
 		"cand": {ID: "cand", AverageScore: 80, MinimumScore: 60},
 	}}
@@ -85,7 +85,7 @@ func TestGateStopsAtFirstInputError(t *testing.T) {
 	if _, err := (app.Service{Files: &inputFiles{err: sentinel}, Runs: runs}).Gate("c", "b", "n", nil); !errors.Is(err, sentinel) || len(runs.reads) != 0 {
 		t.Fatalf("err=%v reads=%v", err, runs.reads)
 	}
-	runs = &mapRuns{runs: map[string]contract.IssueOpsBenchmarkRunResult{"b": {ID: "b"}}}
+	runs = &mapRuns{runs: map[string]contract.RunResult{"b": {ID: "b"}}}
 	if _, err := (app.Service{Files: &inputFiles{}, Runs: runs}).Gate("c", "b", "n", nil); err == nil || err.Error() != "no run n" {
 		t.Fatalf("candidate run error = %v", err)
 	}

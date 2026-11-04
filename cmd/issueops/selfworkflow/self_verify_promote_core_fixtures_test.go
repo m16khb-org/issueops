@@ -6,9 +6,9 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func PromoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool) (contract.SelfAugmentPromoteResult, error) {
+func PromoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool) (contract.PromoteResult, error) {
 	return application.PromoteBaseline(fromKey, baselineKey, confirm, allowFailedSource, application.PromoteDeps{
-		StateDir:      statestore.StateDir,
+		StateDir:      statestore.Dir,
 		ReadSnapshot:  ReadSelfAugmentStateSnapshot,
 		WriteSnapshot: WriteSelfAugmentSnapshotRecord,
 		ReadState:     statestore.NewService().Read,

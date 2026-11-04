@@ -27,7 +27,7 @@ func TestReadinessFetchBoundariesRefreshBeforePostFetchFacts(t *testing.T) {
 				copy.ClearGitObservations = func() { events = append(events, "clear") }
 				return copy
 			}
-			record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
+			record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
 			want := []string{"observe", "clear", "fetch", "clear", "counts", "paths"}
 			switch mode {
 			case "internal":

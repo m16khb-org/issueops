@@ -32,20 +32,20 @@ func TestPromoteBaselineGatesBeforeWriteAndRequiresReadback(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var events []string
 			fault := errors.New("unavailable")
-			snapshot := contract.SelfAugmentStateSnapshot{OK: tc.ok, GeneratedAt: "source-time", Summary: contract.SelfAugmentSummary{TerminationEligible: tc.eligible}}
+			snapshot := contract.StateSnapshot{OK: tc.ok, GeneratedAt: "source-time", Summary: contract.Summary{TerminationEligible: tc.eligible}}
 			result, err := PromoteBaseline("source", "baseline", tc.confirm, tc.override, PromoteDeps{
 				StateDir: func() string { return "/state" },
-				ReadSnapshot: func(key string) (contract.SelfAugmentStateSnapshot, error) {
+				ReadSnapshot: func(key string) (contract.StateSnapshot, error) {
 					if key != "source" {
 						t.Fatalf("unexpected source %q", key)
 					}
 					events = append(events, "source")
 					if tc.failAt == "source" {
-						return contract.SelfAugmentStateSnapshot{}, fault
+						return contract.StateSnapshot{}, fault
 					}
 					return snapshot, nil
 				},
-				WriteSnapshot: func(dir, key string, got contract.SelfAugmentStateSnapshot) error {
+				WriteSnapshot: func(dir, key string, got contract.StateSnapshot) error {
 					if dir != "/state" || key != "baseline" || !reflect.DeepEqual(got, snapshot) {
 						t.Fatalf("unexpected write %q %q %+v", dir, key, got)
 					}
@@ -55,15 +55,15 @@ func TestPromoteBaselineGatesBeforeWriteAndRequiresReadback(t *testing.T) {
 					}
 					return nil
 				},
-				ReadState: func(key string) (state.StateResult, error) {
+				ReadState: func(key string) (state.Result, error) {
 					if key != "baseline" {
 						t.Fatalf("unexpected readback %q", key)
 					}
 					events = append(events, "readback")
 					if tc.failAt == "readback" {
-						return state.StateResult{}, fault
+						return state.Result{}, fault
 					}
-					return state.StateResult{Path: "/state/baseline", Record: state.RecordEnvelope{Bytes: 23}}, nil
+					return state.Result{Path: "/state/baseline", Record: state.RecordEnvelope{Bytes: 23}}, nil
 				},
 			})
 			if !reflect.DeepEqual(events, tc.wantEvents) || result.OK != tc.wantOK || result.Promoted != tc.wantPromoted || (err == nil) != tc.wantOK {
@@ -87,16 +87,16 @@ func TestSavePlanSnapshotAndFailureCheckpoints(t *testing.T) {
 		t.Run(failAt, func(t *testing.T) {
 			fault := errors.New("unavailable")
 			var written string
-			result := contract.SelfAugmentPlanResult{OK: true, Candidates: []contract.SelfAugmentCandidate{{ID: "first", Status: contract.CandidateStatusOpen}, {ID: "done", Status: contract.CandidateStatusSatisfied}, {ID: "last", Status: contract.CandidateStatusOpen}}}
+			result := contract.PlanResult{OK: true, Candidates: []contract.Candidate{{ID: "first", Status: contract.CandidateStatusOpen}, {ID: "done", Status: contract.CandidateStatusSatisfied}, {ID: "last", Status: contract.CandidateStatusOpen}}}
 			err := SavePlan(&result, "", SavePlanDeps{
 				Now: func() time.Time { return time.Date(2026, 1, 2, 3, 4, 5, 6, time.UTC) },
-				Encode: func(s contract.SelfAugmentPlanStateSnapshot) ([]byte, error) {
+				Encode: func(s contract.PlanStateSnapshot) ([]byte, error) {
 					if failAt == "encode" {
 						return nil, fault
 					}
 					return json.Marshal(s)
 				},
-				Write: func(key, content string) (state.StateResult, error) {
+				Write: func(key, content string) (state.Result, error) {
 					if failAt == "encode" {
 						t.Fatal("write after encoding failure")
 					}
@@ -104,10 +104,10 @@ func TestSavePlanSnapshotAndFailureCheckpoints(t *testing.T) {
 						t.Fatalf("key=%q", key)
 					}
 					if failAt == "write" {
-						return state.StateResult{}, fault
+						return state.Result{}, fault
 					}
 					written = content
-					return state.StateResult{StateDir: "/state", Path: "/state/plan", Record: state.RecordEnvelope{Key: key, Bytes: len(content)}}, nil
+					return state.Result{StateDir: "/state", Path: "/state/plan", Record: state.RecordEnvelope{Key: key, Bytes: len(content)}}, nil
 				},
 				StateDir: func() string { return "/state" },
 			})
@@ -120,7 +120,7 @@ func TestSavePlanSnapshotAndFailureCheckpoints(t *testing.T) {
 				}
 				return
 			}
-			var got contract.SelfAugmentPlanStateSnapshot
+			var got contract.PlanStateSnapshot
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -139,21 +139,21 @@ func TestSaveLessonStopsOnFailureAndPrunesOnlyAfterWrite(t *testing.T) {
 		t.Run(failAt, func(t *testing.T) {
 			fault := errors.New("unavailable")
 			var events []string
-			req := contract.SelfAugmentLessonRequest{CandidateID: "  free_slug  ", Lesson: " lesson ", NextAction: " next "}
+			req := contract.LessonRequest{CandidateID: "  free_slug  ", Lesson: " lesson ", NextAction: " next "}
 			if failAt == "validation" {
 				req.NextAction = " "
 			}
 			result, err := SaveLesson(req, SaveLessonDeps{
-				SelectCandidate: func() *contract.SelfAugmentCandidate { t.Fatal("explicit candidate must skip selection"); return nil },
+				SelectCandidate: func() *contract.Candidate { t.Fatal("explicit candidate must skip selection"); return nil },
 				Now:             func() time.Time { events = append(events, "clock"); return time.Date(2026, 1, 2, 3, 4, 5, 6, time.UTC) },
-				Encode: func(s contract.SelfAugmentLessonStateSnapshot) ([]byte, error) {
+				Encode: func(s contract.LessonStateSnapshot) ([]byte, error) {
 					events = append(events, "encode")
 					if failAt == "encode" {
 						return nil, fault
 					}
 					return json.Marshal(s)
 				},
-				Write: func(key, content string) (state.StateResult, error) {
+				Write: func(key, content string) (state.Result, error) {
 					events = append(events, "write")
 					if key != "self-augment-lesson-free-slug-20260102T030405Z-000000006" {
 						t.Fatalf("key=%s", key)
@@ -162,20 +162,20 @@ func TestSaveLessonStopsOnFailureAndPrunesOnlyAfterWrite(t *testing.T) {
 						t.Fatalf("content=%s", content)
 					}
 					if failAt == "write" {
-						return state.StateResult{}, fault
+						return state.Result{}, fault
 					}
-					return state.StateResult{Record: state.RecordEnvelope{Key: key, Bytes: len(content)}}, nil
+					return state.Result{Record: state.RecordEnvelope{Key: key, Bytes: len(content)}}, nil
 				},
 				StateDir: func() string { return "/state" },
-				Prune: func(prefix string, age time.Duration, max int, confirm bool) (state.StatePruneResult, error) {
+				Prune: func(prefix string, age time.Duration, max int, confirm bool) (state.PruneResult, error) {
 					events = append(events, "prune")
 					if prefix != "self-augment-lesson-" || age != 30*24*time.Hour || max != 10000 || !confirm {
 						t.Fatalf("prune=%s %v %d %v", prefix, age, max, confirm)
 					}
 					if failAt == "prune" {
-						return state.StatePruneResult{}, fault
+						return state.PruneResult{}, fault
 					}
-					return state.StatePruneResult{}, nil
+					return state.PruneResult{}, nil
 				},
 			})
 			want := map[string][]string{"validation": nil, "encode": {"clock", "encode"}, "write": {"clock", "encode", "write"}, "prune": {"clock", "encode", "write", "prune"}, "": {"clock", "encode", "write", "prune"}}[failAt]
@@ -200,17 +200,17 @@ func TestSaveLessonStopsOnFailureAndPrunesOnlyAfterWrite(t *testing.T) {
 
 func TestSaveLessonUsesSelectedCandidateWhenRequestOmitsOne(t *testing.T) {
 	var written string
-	result, err := SaveLesson(contract.SelfAugmentLessonRequest{CandidateID: "  ", Lesson: "lesson", NextAction: "next"}, SaveLessonDeps{
-		SelectCandidate: func() *contract.SelfAugmentCandidate { return &contract.SelfAugmentCandidate{ID: "selected_candidate"} },
+	result, err := SaveLesson(contract.LessonRequest{CandidateID: "  ", Lesson: "lesson", NextAction: "next"}, SaveLessonDeps{
+		SelectCandidate: func() *contract.Candidate { return &contract.Candidate{ID: "selected_candidate"} },
 		Now:             func() time.Time { return time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC) },
-		Encode:          func(s contract.SelfAugmentLessonStateSnapshot) ([]byte, error) { return json.Marshal(s) },
-		Write: func(key, content string) (state.StateResult, error) {
+		Encode:          func(s contract.LessonStateSnapshot) ([]byte, error) { return json.Marshal(s) },
+		Write: func(key, content string) (state.Result, error) {
 			written = content
-			return state.StateResult{Record: state.RecordEnvelope{Key: key}}, nil
+			return state.Result{Record: state.RecordEnvelope{Key: key}}, nil
 		},
 		StateDir: func() string { return "/state" },
-		Prune: func(string, time.Duration, int, bool) (state.StatePruneResult, error) {
-			return state.StatePruneResult{}, nil
+		Prune: func(string, time.Duration, int, bool) (state.PruneResult, error) {
+			return state.PruneResult{}, nil
 		},
 	})
 	if err != nil || !result.OK || result.CandidateID != "selected_candidate" || !strings.Contains(written, `"candidate_id":"selected_candidate"`) {

@@ -87,11 +87,11 @@ func TestRunWorkerRunExecutesReadOnlyCommandAsJSON(t *testing.T) {
 		})
 	})
 
-	var job workercontract.WorkerJob
+	var job workercontract.Job
 	if err := json.Unmarshal([]byte(out), &job); err != nil {
 		t.Fatalf("decode worker run JSON: %v\n%s", err, out)
 	}
-	if !job.OK || job.Status != workercontract.WorkerStatusSucceeded {
+	if !job.OK || job.Status != workercontract.StatusSucceeded {
 		t.Fatalf("expected succeeded worker job, got %#v", job)
 	}
 	if job.Result == nil || !job.Result.Policy.Allowed {
@@ -116,7 +116,7 @@ func TestRunWorkerRunRequiresReadOnlyAndSurfacesDeniedPolicy(t *testing.T) {
 		"--",
 		"sh", "-c", "true",
 	})
-	if _, ok := errors.AsType[policy.PolicyDeniedError](err); !ok {
+	if _, ok := errors.AsType[policy.DeniedError](err); !ok {
 		t.Fatalf("expected policy denied error, got %T %v", err, err)
 	}
 }
@@ -127,11 +127,11 @@ func TestRunWorkerLifecycleCommands(t *testing.T) {
 	enqueueOut := captureStatusVerifyStdout(t, func() error {
 		return runWorker([]string{"enqueue", "--kind", "docs-refresh", "--payload", "TOKEN=secret-value", "--json"})
 	})
-	var queued workercontract.WorkerJob
+	var queued workercontract.Job
 	if err := json.Unmarshal([]byte(enqueueOut), &queued); err != nil {
 		t.Fatalf("decode enqueue JSON: %v\n%s", err, enqueueOut)
 	}
-	if queued.ID == "" || queued.Status != workercontract.WorkerStatusQueued {
+	if queued.ID == "" || queued.Status != workercontract.StatusQueued {
 		t.Fatalf("expected queued worker job, got %#v", queued)
 	}
 	if strings.Contains(queued.Payload, "secret-value") {
@@ -141,18 +141,18 @@ func TestRunWorkerLifecycleCommands(t *testing.T) {
 	statusOut := captureStatusVerifyStdout(t, func() error {
 		return runWorker([]string{"status", "--id", queued.ID, "--json"})
 	})
-	var status workercontract.WorkerJob
+	var status workercontract.Job
 	if err := json.Unmarshal([]byte(statusOut), &status); err != nil {
 		t.Fatalf("decode status JSON: %v\n%s", err, statusOut)
 	}
-	if status.ID != queued.ID || status.Status != workercontract.WorkerStatusQueued {
+	if status.ID != queued.ID || status.Status != workercontract.StatusQueued {
 		t.Fatalf("expected queued status for %s, got %#v", queued.ID, status)
 	}
 
 	listOut := captureStatusVerifyStdout(t, func() error {
 		return runWorker([]string{"list", "--json"})
 	})
-	var listed workercontract.WorkerListResult
+	var listed workercontract.ListResult
 	if err := json.Unmarshal([]byte(listOut), &listed); err != nil {
 		t.Fatalf("decode list JSON: %v\n%s", err, listOut)
 	}
@@ -163,11 +163,11 @@ func TestRunWorkerLifecycleCommands(t *testing.T) {
 	cancelOut := captureStatusVerifyStdout(t, func() error {
 		return runWorker([]string{"cancel", "--id", queued.ID, "--json"})
 	})
-	var cancelled workercontract.WorkerJob
+	var cancelled workercontract.Job
 	if err := json.Unmarshal([]byte(cancelOut), &cancelled); err != nil {
 		t.Fatalf("decode cancel JSON: %v\n%s", err, cancelOut)
 	}
-	if cancelled.ID != queued.ID || cancelled.Status != workercontract.WorkerStatusCancelled {
+	if cancelled.ID != queued.ID || cancelled.Status != workercontract.StatusCancelled {
 		t.Fatalf("expected cancelled job %s, got %#v", queued.ID, cancelled)
 	}
 }
@@ -176,11 +176,11 @@ func TestRunWorkerCleanupStuckMarksDeadPIDJobsFailed(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_WORKER_DIR", dir)
 	now := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339Nano)
-	job := workercontract.WorkerJob{
+	job := workercontract.Job{
 		OK:           true,
 		ID:           "job-stuck-cli",
 		Kind:         "read-only",
-		Status:       workercontract.WorkerStatusRunning,
+		Status:       workercontract.StatusRunning,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 		StartedAt:    now,
@@ -204,11 +204,11 @@ func TestRunWorkerCleanupStuckMarksDeadPIDJobsFailed(t *testing.T) {
 	out := captureStatusVerifyStdout(t, func() error {
 		return runWorker([]string{"cleanup-stuck", "--json"})
 	})
-	var result workercontract.WorkerListResult
+	var result workercontract.ListResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode cleanup-stuck JSON: %v\n%s", err, out)
 	}
-	if len(result.Jobs) != 1 || result.Jobs[0].ID != job.ID || result.Jobs[0].Status != workercontract.WorkerStatusFailed {
+	if len(result.Jobs) != 1 || result.Jobs[0].ID != job.ID || result.Jobs[0].Status != workercontract.StatusFailed {
 		t.Fatalf("expected stuck job to be failed, got %#v", result.Jobs)
 	}
 }

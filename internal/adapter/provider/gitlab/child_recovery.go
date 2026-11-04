@@ -3,7 +3,7 @@ package gitlab
 import (
 	"context"
 	"fmt"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 	"strings"
 )
@@ -67,7 +67,7 @@ func (p Provider) FindChildCreateCandidates(ctx context.Context, req port.IssueP
 
 func readGitlabRecoveryItem(ctx context.Context, repo, parentURL, childURL string) (gitlabRecoveryItem, string, string, error) {
 	var zero gitlabRecoveryItem
-	if err := remote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
+	if err := issueopsremote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
 		return zero, "", "", err
 	}
 	host, project, _, err := parseGitLabIssueURL(parentURL)

@@ -9,7 +9,7 @@ type Service struct {
 	ScopedPaths func(root, baseRef string) ([]string, *riskqacontract.Scope)
 }
 
-func (service Service) PlanWithScope(root, baseRef string) riskqacontract.RiskQATierPlan {
+func (service Service) PlanWithScope(root, baseRef string) riskqacontract.TierPlan {
 	paths, scope := service.ScopedPaths(root, baseRef)
 	plan := riskqadomain.PlanFromPaths(paths)
 	plan.Scope = scope

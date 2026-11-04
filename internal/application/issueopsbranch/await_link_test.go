@@ -14,11 +14,11 @@ import (
 
 const awaitSealedBase = "aaaa111"
 
-func awaitRecord() issueopscontract.IssueOpsRecord {
-	return issueopscontract.IssueOpsRecord{
+func awaitRecord() issueopscontract.Record {
+	return issueopscontract.Record{
 		ID:   "io-await",
 		Repo: "example/repo",
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
+		BranchPrepare: &issueopscontract.BranchPrepare{
 			Provider: "github",
 			IssueURL: "https://github.com/example/repo/issues/7",
 			Branch:   "feature/await",
@@ -38,11 +38,11 @@ type awaitHarness struct {
 	awaiter  LinkAwaiter
 }
 
-func newAwaitHarness(record issueopscontract.IssueOpsRecord) *awaitHarness {
+func newAwaitHarness(record issueopscontract.Record) *awaitHarness {
 	h := &awaitHarness{now: time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC)}
 	h.remote = func() (string, error) { return awaitSealedBase, nil }
 	h.awaiter = LinkAwaiter{
-		Load:      func(string) (issueopscontract.IssueOpsRecord, error) { return record, nil },
+		Load:      func(string) (issueopscontract.Record, error) { return record, nil },
 		RemoteRef: func(context.Context, string, string) (string, error) { return h.remote() },
 		ObserveLinkedBranches: func(_ context.Context, _ string) (linkedbranch.Observation, error) {
 			i := len(h.observed)
@@ -76,8 +76,8 @@ func healthy() (linkedbranch.Observation, error) {
 
 func TestAwaitLinkLoadErrorReturnsNotOKWithRequestedID(t *testing.T) {
 	boom := errors.New("load failed")
-	awaiter := LinkAwaiter{Load: func(string) (issueopscontract.IssueOpsRecord, error) {
-		return issueopscontract.IssueOpsRecord{}, boom
+	awaiter := LinkAwaiter{Load: func(string) (issueopscontract.Record, error) {
+		return issueopscontract.Record{}, boom
 	}}
 	res, err := awaiter.Await(t.Context(), issueopscontract.AwaitBranchLinkRequest{ID: "io-x"})
 	if !errors.Is(err, boom) || res.OK || res.ID != "io-x" {
@@ -122,7 +122,7 @@ func TestAwaitLinkReportsMissingGatesWithoutObserving(t *testing.T) {
 }
 
 func TestAwaitLinkWithoutObserverFailsClosed(t *testing.T) {
-	awaiter := LinkAwaiter{Load: func(string) (issueopscontract.IssueOpsRecord, error) { return awaitRecord(), nil }}
+	awaiter := LinkAwaiter{Load: func(string) (issueopscontract.Record, error) { return awaitRecord(), nil }}
 	res, err := awaiter.Await(t.Context(), issueopscontract.AwaitBranchLinkRequest{ID: "io-await"})
 	if err == nil || res.OK || len(res.Missing) != 1 || res.Missing[0] != "linked_branch_observation_unavailable" {
 		t.Fatalf("res=%+v err=%v", res, err)

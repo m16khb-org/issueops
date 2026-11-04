@@ -9,7 +9,7 @@ import (
 )
 
 type Deps struct {
-	Save      func(contract.SelfAugmentLessonRequest) (contract.SelfAugmentLessonResult, error)
+	Save      func(contract.LessonRequest) (contract.LessonResult, error)
 	PrintJSON func(any) error
 }
 
@@ -25,7 +25,7 @@ func Run(args []string, deps Deps) error {
 	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
-	result, err := deps.Save(contract.SelfAugmentLessonRequest{
+	result, err := deps.Save(contract.LessonRequest{
 		CandidateID: *candidateID,
 		Lesson:      *lesson,
 		NextAction:  *nextAction,

@@ -1,10 +1,10 @@
 package guard
 
-type GuardBlockedError struct {
-	Findings []GuardFinding
+type BlockedError struct {
+	Findings []Finding
 }
 
-func (e GuardBlockedError) Error() string {
+func (e BlockedError) Error() string {
 	if len(e.Findings) == 0 {
 		return "guard check blocked"
 	}
@@ -12,6 +12,6 @@ func (e GuardBlockedError) Error() string {
 }
 
 func IsGuardBlocked(err error) bool {
-	_, ok := err.(GuardBlockedError) //nolint:errorlint // exit code 3 maps only a direct guard block; TestIsGuardBlockedMatchesDirectErrorOnly pins it
+	_, ok := err.(BlockedError) //nolint:errorlint // exit code 3 maps only a direct guard block; TestIsGuardBlockedMatchesDirectErrorOnly pins it
 	return ok
 }

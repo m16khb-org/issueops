@@ -89,7 +89,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	if code, _, stderr := preflight.GitCmd(repo, "worktree", "add", "-q", worktree, branch); code != 0 {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	if record, err = LinkIssueOpsIssue(stateRoot, record.ID, "https://github.com/example/repo/issues/2"); err != nil {
 		t.Fatal(err)
 	}
-	if record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     record.IssueURL,
 		Branch:       branch,
@@ -116,7 +116,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\n")
-	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree)); err != nil {
+	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.PhaseAISlopClean), issueOpsActorForTest(worktree)); err != nil {
 		t.Fatal(err)
 	}
 	if code, _, stderr := preflight.GitCmd(worktree, "add", "internal/demo.go", "plans/demo.md", ".issueops/issues"); code != 0 {
@@ -130,10 +130,10 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	}
 	recordIssueOpsProjectDocsReviewForTest(t, stateRoot, record.ID)
 	recordIssueOpsImplementationReviewForTest(t, stateRoot, record.ID)
-	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhasePR), issueOpsActorForTest(worktree)); err != nil {
+	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.PhasePR), issueOpsActorForTest(worktree)); err != nil {
 		t.Fatal(err)
 	}
-	if record, err = recordVerifiedArtifactForTest(stateRoot, record.ID, issueops.IssueOpsRemoteArtifactVerificationRequest{
+	if record, err = recordVerifiedArtifactForTest(stateRoot, record.ID, issueops.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/2",
@@ -144,7 +144,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	}
 
 	// 원격 브랜치를 지우지 않은 상태다. 그것이 유일한 차단 사유여야 한다.
-	status := IssueOpsCleanupStatusForRecord(record, issueops.IssueOpsCleanupStatusRequest{Merged: true})
+	status := IssueOpsCleanupStatusForRecord(record, issueops.CleanupStatusRequest{Merged: true})
 	if status.Ready {
 		t.Fatal("surviving remote branch must block cleanup status")
 	}

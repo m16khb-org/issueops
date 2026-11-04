@@ -2,7 +2,7 @@ package issueops
 
 import model "issueops/internal/contract/issueops"
 
-func PRReadinessWarnings(record model.IssueOpsRecord) []string {
+func PRReadinessWarnings(record model.Record) []string {
 	var warnings []string
 	if len(record.Decisions) == 0 {
 		warnings = append(warnings, "no_decision_records")

@@ -21,7 +21,7 @@ func ParseHistoryTimestamp(value string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func SortHistoryEntries(entries []contract.SelfAugmentHistoryEntry) {
+func SortHistoryEntries(entries []contract.HistoryEntry) {
 	sort.Slice(entries, func(i, j int) bool {
 		left, leftOK := ParseHistoryTimestamp(entries[i].GeneratedAt)
 		right, rightOK := ParseHistoryTimestamp(entries[j].GeneratedAt)

@@ -38,12 +38,12 @@ func TestValidatePassRequiresAFinding(t *testing.T) {
 	}
 }
 
-func bindingStore(t *testing.T, initial model.IssueOpsRecord, digest func(string, model.IssueOpsRecord) (string, error)) (*reviewport.DevilsAdvocateStore, *model.IssueOpsRecord) {
+func bindingStore(t *testing.T, initial model.Record, digest func(string, model.Record) (string, error)) (*reviewport.DevilsAdvocateStore, *model.Record) {
 	t.Helper()
 	current := initial
 	store := &reviewport.DevilsAdvocateStore{
-		Read: func(_, _ string) (model.IssueOpsRecord, error) { return current, nil },
-		TouchWrite: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(_, _ string) (model.Record, error) { return current, nil },
+		TouchWrite: func(_ string, r model.Record) (model.Record, error) {
 			current = r
 			return r, nil
 		},
@@ -54,7 +54,7 @@ func bindingStore(t *testing.T, initial model.IssueOpsRecord, digest func(string
 
 func TestRecordPropagatesPlanIdentityError(t *testing.T) {
 	boom := errors.New("durable plan is empty or unreadable")
-	store, _ := bindingStore(t, model.IssueOpsRecord{OK: true, ID: "io-1"}, func(string, model.IssueOpsRecord) (string, error) {
+	store, _ := bindingStore(t, model.Record{OK: true, ID: "io-1"}, func(string, model.Record) (string, error) {
 		return "", boom
 	})
 	_, err := Record(*store, "root", "io-1", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"f"}})
@@ -65,7 +65,7 @@ func TestRecordPropagatesPlanIdentityError(t *testing.T) {
 
 func TestRecordBindsPlanIdentityAndKeepsRounds(t *testing.T) {
 	digest := "d1"
-	store, current := bindingStore(t, model.IssueOpsRecord{OK: true, ID: "io-1", PlanPath: "plans/x.md"}, func(root string, _ model.IssueOpsRecord) (string, error) {
+	store, current := bindingStore(t, model.Record{OK: true, ID: "io-1", PlanPath: "plans/x.md"}, func(root string, _ model.Record) (string, error) {
 		if root != "root" {
 			t.Fatalf("state root must reach the resolver, got %q", root)
 		}

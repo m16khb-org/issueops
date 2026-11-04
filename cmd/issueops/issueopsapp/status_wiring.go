@@ -10,7 +10,7 @@ import (
 func newStatusService() statusapp.Service {
 	home, _ := os.UserHomeDir()
 	defaultTarget := pathutil.ResolveTarget("")
-	state := newStateService(statestore.StateDir())
+	state := newStateService(statestore.Dir())
 	return statusapp.Service{
 		Home: home, IssueOpsRoot: issueOpsRoot(), Version: version, Inspect: newHarnessInspector(),
 		Doctor: newDoctorService().Run,

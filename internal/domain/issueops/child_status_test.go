@@ -8,25 +8,25 @@ import (
 )
 
 func TestChildStatusDistinguishesArchivedReceiptsAndLiveReappearance(t *testing.T) {
-	parent := model.IssueOpsRecord{ID: "parent", Repo: "/repo", Phase: model.IssueOpsPhaseDone, ChildCycles: []model.IssueOpsChildCycleRef{
+	parent := model.Record{ID: "parent", Repo: "/repo", Phase: model.PhaseDone, ChildCycles: []model.ChildCycleRef{
 		{CycleID: "accepted", ValidationVerdict: "accepted", ValidatedAt: "time", ValidationEvidence: []string{"verified"}},
 		{CycleID: "dropped", ValidationVerdict: "dropped", ValidatedAt: "time", ValidationReason: "removed from scope"},
 		{CycleID: "missing-evidence", ValidationVerdict: "accepted", ValidatedAt: "time"},
 		{CycleID: "reappeared", ValidationVerdict: "accepted", ValidatedAt: "time", ValidationEvidence: []string{"old receipt"}},
 		{CycleID: "short-reason", ValidationVerdict: "dropped", ValidatedAt: "time", ValidationReason: "short"},
 	}}
-	records := []model.IssueOpsRecord{
-		{ID: "reappeared", Repo: "/repo", Phase: model.IssueOpsPhaseProblem, UpdatedAt: "updated", Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "parent"}},
-		{ID: "scanned", Repo: "/repo", Phase: model.IssueOpsPhaseProblem, CreatedAt: "created", Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "parent"}},
-		{ID: "other-repo", Repo: "/other", Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "parent"}},
-		{ID: "other-parent", Repo: "/repo", Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "other"}},
+	records := []model.Record{
+		{ID: "reappeared", Repo: "/repo", Phase: model.PhaseProblem, UpdatedAt: "updated", Delegation: &model.DelegationContract{ParentCycleID: "parent"}},
+		{ID: "scanned", Repo: "/repo", Phase: model.PhaseProblem, CreatedAt: "created", Delegation: &model.DelegationContract{ParentCycleID: "parent"}},
+		{ID: "other-repo", Repo: "/other", Delegation: &model.DelegationContract{ParentCycleID: "parent"}},
+		{ID: "other-parent", Repo: "/repo", Delegation: &model.DelegationContract{ParentCycleID: "other"}},
 	}
 	status := BuildChildStatus(parent, SelectChildren(parent, records))
 	if !reflect.DeepEqual(status.Orphaned, []string{"missing-evidence", "short-reason"}) {
 		t.Fatalf("orphans: %v", status.Orphaned)
 	}
 	var ids []string
-	entries := map[string]model.IssueOpsChildStatusEntry{}
+	entries := map[string]model.ChildStatusEntry{}
 	for _, entry := range status.Children {
 		ids = append(ids, entry.CycleID)
 		entries[entry.CycleID] = entry
@@ -34,10 +34,10 @@ func TestChildStatusDistinguishesArchivedReceiptsAndLiveReappearance(t *testing.
 	if !reflect.DeepEqual(ids, []string{"accepted", "dropped", "missing-evidence", "reappeared", "scanned", "short-reason"}) {
 		t.Fatalf("children: %v", ids)
 	}
-	if entries["accepted"].Phase != model.IssueOpsPhaseDone || entries["accepted"].Orphaned || entries["dropped"].Orphaned {
+	if entries["accepted"].Phase != model.PhaseDone || entries["accepted"].Orphaned || entries["dropped"].Orphaned {
 		t.Fatal("durable cleanup receipts lost")
 	}
-	if entry := entries["reappeared"]; entry.Phase != model.IssueOpsPhaseProblem || entry.ParentClosedState != "parent_closed" || !entry.Scanned || !entry.Indexed || entry.LastActiveAt != "updated" {
+	if entry := entries["reappeared"]; entry.Phase != model.PhaseProblem || entry.ParentClosedState != "parent_closed" || !entry.Scanned || !entry.Indexed || entry.LastActiveAt != "updated" {
 		t.Fatalf("reappeared: %+v", entry)
 	}
 	if entry := entries["scanned"]; entry.Indexed || !entry.Scanned || entry.LastActiveAt != "created" {
@@ -46,12 +46,12 @@ func TestChildStatusDistinguishesArchivedReceiptsAndLiveReappearance(t *testing.
 }
 
 func TestRepairChildIndexPreservesExistingReceiptsAndInput(t *testing.T) {
-	refs := make([]model.IssueOpsChildCycleRef, 1, 4)
-	refs[0] = model.IssueOpsChildCycleRef{CycleID: "old", Title: "keep", ValidationVerdict: "accepted"}
-	parent := model.IssueOpsRecord{ChildCycles: refs}
-	children := map[string]model.IssueOpsRecord{
+	refs := make([]model.ChildCycleRef, 1, 4)
+	refs[0] = model.ChildCycleRef{CycleID: "old", Title: "keep", ValidationVerdict: "accepted"}
+	parent := model.Record{ChildCycles: refs}
+	children := map[string]model.Record{
 		"old": {ID: "old", Branch: "overwritten"},
-		"b":   {ID: "b", Branch: "branch-b", CreatedAt: "created", Delegation: &model.IssueOpsDelegationContract{DelegatedAt: "delegated", ChildIssueURL: " url "}},
+		"b":   {ID: "b", Branch: "branch-b", CreatedAt: "created", Delegation: &model.DelegationContract{DelegatedAt: "delegated", ChildIssueURL: " url "}},
 		"a":   {ID: "a", Branch: "branch-a", CreatedAt: "created"},
 	}
 	updated, appended := RepairChildIndex(parent, children)
@@ -74,7 +74,7 @@ func TestRepairChildIndexPreservesExistingReceiptsAndInput(t *testing.T) {
 }
 
 func TestMalformedArchivedAcceptanceCannotSatisfyChildGates(t *testing.T) {
-	parent := model.IssueOpsRecord{ID: "parent", ChildCycles: []model.IssueOpsChildCycleRef{{CycleID: "child", ValidationVerdict: "accepted", ValidatedAt: "time"}}}
+	parent := model.Record{ID: "parent", ChildCycles: []model.ChildCycleRef{{CycleID: "child", ValidationVerdict: "accepted", ValidatedAt: "time"}}}
 	status := BuildChildStatus(parent, nil)
 	if !status.Children[0].Orphaned {
 		t.Fatal("missing evidence must remain orphaned")

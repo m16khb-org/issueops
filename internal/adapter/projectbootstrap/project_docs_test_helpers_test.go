@@ -57,7 +57,7 @@ func projectPlanContainsRel(files []projectdoccontract.ProjectDocsPlannedFile, r
 	return false
 }
 
-func routeContains(result projectdocs.ProjectDocsRouteResult, rel string) bool {
+func routeContains(result projectdocs.RouteResult, rel string) bool {
 	for _, doc := range result.Docs {
 		if doc.RelPath == rel {
 			return true

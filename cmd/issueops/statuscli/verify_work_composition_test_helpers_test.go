@@ -19,7 +19,7 @@ func BuildVerifyWork(repo string, all bool, argv []string) verifyworkcontract.Re
 	policy := policyadapter.NewEvaluator(nil)
 	service := verifyworkapp.Service{
 		ResolveTarget: defaultResolveTarget, GitStatus: verifyworkadapter.GitStatus,
-		Preflight: func(root string) preflightcontract.PreflightResult {
+		Preflight: func(root string) preflightcontract.Result {
 			return preflight.Check(root, defaultIssueOpsRoot())
 		},
 		Guard: guard.Check, RunCommand: policy.RunReadOnly, ProjectSignals: projectdocsadapter.AnalyzeProjectSignals,

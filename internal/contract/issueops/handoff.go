@@ -1,67 +1,67 @@
 package issueops
 
 const (
-	IssueOpsHandoffDeliverySchemaVersion = 1
+	HandoffDeliverySchemaVersion = 1
 
-	IssueOpsHandoffDeliveryStateNotObserved = "not_observed"
-	IssueOpsHandoffDeliveryStateObserved    = "observed"
+	HandoffDeliveryStateNotObserved = "not_observed"
+	HandoffDeliveryStateObserved    = "observed"
 
-	IssueOpsHandoffDeliveryLauncherDirect = "direct"
-	IssueOpsHandoffDeliveryLauncherHerdr  = "herdr"
-	IssueOpsHandoffDeliveryLauncherCmux   = "cmux"
+	HandoffDeliveryLauncherDirect = "direct"
+	HandoffDeliveryLauncherHerdr  = "herdr"
+	HandoffDeliveryLauncherCmux   = "cmux"
 
-	IssueOpsHandoffDeliveryEvidenceLauncherReceipt      = "launcher_receipt"
-	IssueOpsHandoffDeliveryEvidenceNativeReceipt        = "native_receipt"
-	IssueOpsHandoffDeliveryEvidenceIssueOpsClaim        = "issueops_claim"
-	IssueOpsHandoffDeliveryEvidenceLauncherAccepted     = "launcher_accepted"
-	IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost = "accepted_response_lost"
-	IssueOpsHandoffDeliveryEvidenceRawInput             = "raw_input"
-	IssueOpsHandoffDeliveryEvidenceHerdrWaitState       = "herdr_wait_state"
-	IssueOpsHandoffDeliveryEvidenceTimeout              = "timeout"
-	IssueOpsHandoffDeliveryEvidenceAgentPromptStalled   = "agent_prompt_stalled"
-	IssueOpsHandoffDeliveryEvidenceExternalCallStaged   = "external_call_staged"
+	HandoffDeliveryEvidenceLauncherReceipt      = "launcher_receipt"
+	HandoffDeliveryEvidenceNativeReceipt        = "native_receipt"
+	HandoffDeliveryEvidenceIssueOpsClaim        = "issueops_claim"
+	HandoffDeliveryEvidenceLauncherAccepted     = "launcher_accepted"
+	HandoffDeliveryEvidenceAcceptedResponseLost = "accepted_response_lost"
+	HandoffDeliveryEvidenceRawInput             = "raw_input"
+	HandoffDeliveryEvidenceHerdrWaitState       = "herdr_wait_state"
+	HandoffDeliveryEvidenceTimeout              = "timeout"
+	HandoffDeliveryEvidenceAgentPromptStalled   = "agent_prompt_stalled"
+	HandoffDeliveryEvidenceExternalCallStaged   = "external_call_staged"
 )
 
-type IssueOpsHandoffDeliveryObservation struct {
-	SchemaVersion      int                               `json:"schema_version"`
-	AttemptID          string                            `json:"attempt_id"`
-	LineageID          string                            `json:"lineage_id"`
-	LifecycleID        string                            `json:"lifecycle_id"`
-	PromptSHA256       string                            `json:"prompt_sha256"`
-	MaterialSHA256     string                            `json:"material_sha256"`
-	Request            IssueOpsHandoffDeliveryRequest    `json:"request"`
-	Launcher           IssueOpsHandoffDeliveryLauncher   `json:"launcher"`
-	Target             IssueOpsHandoffDeliveryTarget     `json:"target"`
-	ExpectedOwnerHost  string                            `json:"expected_owner_host,omitempty"`
-	OwnerActor         *NativeActor                      `json:"owner_actor,omitempty"`
-	SourceGeneration   uint64                            `json:"source_generation"`
-	CreatedAt          string                            `json:"created_at"`
-	UpdatedAt          string                            `json:"updated_at"`
-	Receipt            IssueOpsHandoffDeliveryReceipt    `json:"receipt"`
-	CallStaged         IssueOpsHandoffDeliveryState      `json:"call_staged"`
-	InputAccepted      IssueOpsHandoffDeliveryState      `json:"input_accepted"`
-	NativeTurnObserved IssueOpsHandoffDeliveryState      `json:"native_turn_observed"`
-	OwnerClaimed       IssueOpsHandoffDeliveryState      `json:"owner_claimed"`
-	Ambiguous          IssueOpsHandoffDeliveryState      `json:"ambiguous"`
-	OwnerClaim         IssueOpsHandoffDeliveryOwnerClaim `json:"owner_claim"`
-	Timing             *IssueOpsHandoffDeliveryTiming    `json:"timing,omitempty"`
+type HandoffDeliveryObservation struct {
+	SchemaVersion      int                       `json:"schema_version"`
+	AttemptID          string                    `json:"attempt_id"`
+	LineageID          string                    `json:"lineage_id"`
+	LifecycleID        string                    `json:"lifecycle_id"`
+	PromptSHA256       string                    `json:"prompt_sha256"`
+	MaterialSHA256     string                    `json:"material_sha256"`
+	Request            HandoffDeliveryRequest    `json:"request"`
+	Launcher           HandoffDeliveryLauncher   `json:"launcher"`
+	Target             HandoffDeliveryTarget     `json:"target"`
+	ExpectedOwnerHost  string                    `json:"expected_owner_host,omitempty"`
+	OwnerActor         *NativeActor              `json:"owner_actor,omitempty"`
+	SourceGeneration   uint64                    `json:"source_generation"`
+	CreatedAt          string                    `json:"created_at"`
+	UpdatedAt          string                    `json:"updated_at"`
+	Receipt            HandoffDeliveryReceipt    `json:"receipt"`
+	CallStaged         HandoffDeliveryState      `json:"call_staged"`
+	InputAccepted      HandoffDeliveryState      `json:"input_accepted"`
+	NativeTurnObserved HandoffDeliveryState      `json:"native_turn_observed"`
+	OwnerClaimed       HandoffDeliveryState      `json:"owner_claimed"`
+	Ambiguous          HandoffDeliveryState      `json:"ambiguous"`
+	OwnerClaim         HandoffDeliveryOwnerClaim `json:"owner_claim"`
+	Timing             *HandoffDeliveryTiming    `json:"timing,omitempty"`
 }
 
-type IssueOpsHandoffDeliveryRequest struct {
+type HandoffDeliveryRequest struct {
 	DurableID string `json:"durable_id"`
 }
 
-type IssueOpsHandoffDeliveryLauncher struct {
-	Name                string                                      `json:"name"`
-	Version             string                                      `json:"version"`
-	Path                string                                      `json:"path"`
-	RuntimeID           string                                      `json:"runtime_id,omitempty"`
-	MachineID           string                                      `json:"machine_id,omitempty"`
-	ServerID            string                                      `json:"server_id,omitempty"`
-	EndpointIncarnation *IssueOpsHandoffDeliveryEndpointIncarnation `json:"endpoint_incarnation,omitempty"`
+type HandoffDeliveryLauncher struct {
+	Name                string                              `json:"name"`
+	Version             string                              `json:"version"`
+	Path                string                              `json:"path"`
+	RuntimeID           string                              `json:"runtime_id,omitempty"`
+	MachineID           string                              `json:"machine_id,omitempty"`
+	ServerID            string                              `json:"server_id,omitempty"`
+	EndpointIncarnation *HandoffDeliveryEndpointIncarnation `json:"endpoint_incarnation,omitempty"`
 }
 
-type IssueOpsHandoffDeliveryEndpointIncarnation struct {
+type HandoffDeliveryEndpointIncarnation struct {
 	Path           string `json:"path"`
 	Kind           string `json:"kind"`
 	Device         uint64 `json:"device"`
@@ -78,7 +78,7 @@ type IssueOpsHandoffDeliveryEndpointIncarnation struct {
 	ParentMode     uint32 `json:"parent_mode"`
 }
 
-type IssueOpsHandoffDeliveryTarget struct {
+type HandoffDeliveryTarget struct {
 	TerminalID              string                `json:"terminal_id,omitempty"`
 	PaneID                  string                `json:"pane_id,omitempty"`
 	WindowID                string                `json:"window_id,omitempty"`
@@ -91,7 +91,7 @@ type IssueOpsHandoffDeliveryTarget struct {
 	Process                 *NativeProcessReceipt `json:"process,omitempty"`
 }
 
-type IssueOpsHandoffDeliveryTiming struct {
+type HandoffDeliveryTiming struct {
 	PreflightMS       uint64 `json:"preflight_ms,omitempty"`
 	WorkspaceCreateMS uint64 `json:"workspace_create_ms,omitempty"`
 	TargetResolveMS   uint64 `json:"target_resolve_ms,omitempty"`
@@ -99,25 +99,25 @@ type IssueOpsHandoffDeliveryTiming struct {
 	ReceiverReceiptMS uint64 `json:"receiver_receipt_ms,omitempty"`
 }
 
-type IssueOpsHandoffDeliveryReceipt struct {
+type HandoffDeliveryReceipt struct {
 	Location string `json:"location"`
 	Digest   string `json:"digest"`
 }
 
-type IssueOpsHandoffDeliveryState struct {
+type HandoffDeliveryState struct {
 	Status     string `json:"status"`
 	ObservedAt string `json:"observed_at,omitempty"`
 	Evidence   string `json:"evidence,omitempty"`
 }
 
-type IssueOpsHandoffDeliveryOwnerClaim struct {
+type HandoffDeliveryOwnerClaim struct {
 	Claimed    bool        `json:"claimed,omitempty"`
 	Generation uint64      `json:"generation,omitempty"`
 	Actor      NativeActor `json:"actor"`
 	ClaimedAt  string      `json:"claimed_at,omitempty"`
 }
 
-type IssueOpsHandoffDeliveryDecision struct {
+type HandoffDeliveryDecision struct {
 	Accepted      bool     `json:"accepted"`
 	RejectReasons []string `json:"reject_reasons,omitempty"`
 }

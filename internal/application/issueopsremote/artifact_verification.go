@@ -5,7 +5,7 @@ import (
 	"time"
 
 	model "issueops/internal/contract/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 type ArtifactVerificationStore interface {
@@ -14,7 +14,7 @@ type ArtifactVerificationStore interface {
 	WithinTransaction(context.Context, string, func(context.Context) error) error
 }
 
-type ArtifactLiveVerifier func(context.Context, model.IssueOpsRemoteArtifactVerificationRequest) error
+type ArtifactLiveVerifier func(context.Context, model.RemoteArtifactVerificationRequest) error
 
 type ArtifactVerificationService struct {
 	store     ArtifactVerificationStore
@@ -28,23 +28,23 @@ func NewArtifactVerificationService(store ArtifactVerificationStore, authority A
 	return &ArtifactVerificationService{store: store, authority: authority, verify: verify, observe: observe, now: now}
 }
 
-func (s *ArtifactVerificationService) Verify(ctx context.Context, id string, req model.IssueOpsRemoteArtifactVerificationRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func (s *ArtifactVerificationService) Verify(ctx context.Context, id string, req model.RemoteArtifactVerificationRequest, actor model.Actor) (model.Record, error) {
 	if _, err := s.Validate(ctx, id, req); err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	if err := s.verify(ctx, req); err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	ancestry, err := s.observe()
 	if err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	actor.NativeProcessAncestry = ancestry
 	return s.Record(ctx, id, req, actor)
 }
 
-func (s *ArtifactVerificationService) Validate(ctx context.Context, id string, req model.IssueOpsRemoteArtifactVerificationRequest) (model.IssueOpsRecord, error) {
-	var record model.IssueOpsRecord
+func (s *ArtifactVerificationService) Validate(ctx context.Context, id string, req model.RemoteArtifactVerificationRequest) (model.Record, error) {
+	var record model.Record
 	// Validation only reads, so it follows the caller's cancellation; Record
 	// is the durable write that outlives it.
 	err := s.store.WithinTransaction(ctx, id, func(ctx context.Context) error {
@@ -54,18 +54,18 @@ func (s *ArtifactVerificationService) Validate(ctx context.Context, id string, r
 			return err
 		}
 		if _, err = projectRemoteArtifact(record, req); err != nil {
-			record = model.IssueOpsRecord{}
+			record = model.Record{}
 		}
 		return err
 	})
 	return record, err
 }
 
-func (s *ArtifactVerificationService) Record(ctx context.Context, id string, req model.IssueOpsRemoteArtifactVerificationRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func (s *ArtifactVerificationService) Record(ctx context.Context, id string, req model.RemoteArtifactVerificationRequest, actor model.Actor) (model.Record, error) {
 	// Keep receipt persistence independent of cancellation after live verification,
 	// while keeping the request's caller authority values.
 	persist := context.WithoutCancel(ctx)
-	return s.store.Update(persist, id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	return s.store.Update(persist, id, func(record model.Record) (model.Record, error) {
 		if err := s.authority.Authorize(persist, record, actor); err != nil {
 			return record, err
 		}
@@ -80,14 +80,14 @@ func (s *ArtifactVerificationService) Record(ctx context.Context, id string, req
 	})
 }
 
-func projectRemoteArtifact(record model.IssueOpsRecord, req model.IssueOpsRemoteArtifactVerificationRequest) (model.IssueOpsRemoteArtifactVerification, error) {
-	authority := remote.ArtifactAuthority{Phase: string(record.Phase), IssueURL: record.IssueURL}
+func projectRemoteArtifact(record model.Record, req model.RemoteArtifactVerificationRequest) (model.RemoteArtifactVerification, error) {
+	authority := issueopsremote.ArtifactAuthority{Phase: string(record.Phase), IssueURL: record.IssueURL}
 	if record.BranchPrepare != nil {
 		authority.CodeProjectKey = record.BranchPrepare.CodeProjectKey
 	}
-	artifact, err := remote.ProjectArtifact(authority, remote.Artifact{Provider: req.Provider, Kind: req.Kind, URL: req.URL, Labels: req.Labels, Assignees: req.Assignees, TargetBranch: req.TargetBranch})
+	artifact, err := issueopsremote.ProjectArtifact(authority, issueopsremote.Artifact{Provider: req.Provider, Kind: req.Kind, URL: req.URL, Labels: req.Labels, Assignees: req.Assignees, TargetBranch: req.TargetBranch})
 	if err != nil {
-		return model.IssueOpsRemoteArtifactVerification{}, err
+		return model.RemoteArtifactVerification{}, err
 	}
-	return model.IssueOpsRemoteArtifactVerification{Provider: artifact.Provider, Kind: artifact.Kind, URL: artifact.URL, Labels: artifact.Labels, Assignees: artifact.Assignees, TargetBranch: artifact.TargetBranch}, nil
+	return model.RemoteArtifactVerification{Provider: artifact.Provider, Kind: artifact.Kind, URL: artifact.URL, Labels: artifact.Labels, Assignees: artifact.Assignees, TargetBranch: artifact.TargetBranch}, nil
 }

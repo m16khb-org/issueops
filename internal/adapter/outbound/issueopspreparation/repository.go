@@ -15,7 +15,7 @@ import (
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	issueopsdomain "issueops/internal/domain/issueops"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
@@ -52,7 +52,7 @@ func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparat
 	}
 	return preparationcontract.Snapshot{
 		Record: record, RecordRaw: append([]byte(nil), data...), ClaimTokenPath: currentClaimTokenPath(record),
-		ArtifactDir: remote.IssueArtifactDir(record.IssueURL),
+		ArtifactDir: issueopsremote.IssueArtifactDir(record.IssueURL),
 	}, nil
 }
 
@@ -93,7 +93,7 @@ func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit pre
 		if err != nil {
 			return err
 		}
-		commit.ArtifactDir = remote.IssueArtifactDir(current.Record.IssueURL)
+		commit.ArtifactDir = issueopsremote.IssueArtifactDir(current.Record.IssueURL)
 		record, projected, err := preparationapp.ApplyDirectCommit(current.Record, commit)
 		if err != nil {
 			return err

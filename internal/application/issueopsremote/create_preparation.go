@@ -7,7 +7,7 @@ import (
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
 	reviewcontract "issueops/internal/contract/issueopsreview"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/policy"
 	authorityport "issueops/internal/port/authority"
@@ -36,7 +36,7 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 		return contract.PreparedCreate{}, err
 	}
 	facts := createAuthorityFacts(record, command)
-	provider, kind, err := remote.ValidateCreateAuthority(facts)
+	provider, kind, err := issueopsremote.ValidateCreateAuthority(facts)
 	if err != nil {
 		return contract.PreparedCreate{}, err
 	}
@@ -47,7 +47,7 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 	}
 	authority := createBranchAuthority(record)
 	title, body := strings.TrimSpace(command.Title), strings.TrimSpace(command.Body)
-	prepared, err := remote.PrepareCreateRequest(authority, remote.CreateRequest{
+	prepared, err := issueopsremote.PrepareCreateRequest(authority, issueopsremote.CreateRequest{
 		Provider: provider, Head: command.Head, Base: command.Base, Title: title, Body: body, Labels: command.Labels, Assignees: command.Assignees,
 	}, policy.RedactFreeform(title) != title || policy.RedactFreeform(body) != body)
 	if err != nil {
@@ -56,7 +56,7 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 	root, head := record.Repo, ""
 	if command.Confirm {
 		head = s.observer.Head(ctx, record)
-		if err := remote.ValidateCreateHead(head); err != nil {
+		if err := issueopsremote.ValidateCreateHead(head); err != nil {
 			return contract.PreparedCreate{}, err
 		}
 		root = record.Execution.Workspace.Root
@@ -74,9 +74,9 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 }
 
 // createAuthorityFacts는 레코드와 명령에서 생성 권한 판단에 쓰는 사실을 모은다.
-func createAuthorityFacts(record model.IssueOpsRecord, command contract.CreateCommand) remote.CreateAuthority {
-	facts := remote.CreateAuthority{
-		Provider: command.Provider, PhasePR: record.Phase == model.IssueOpsPhasePR,
+func createAuthorityFacts(record model.Record, command contract.CreateCommand) issueopsremote.CreateAuthority {
+	facts := issueopsremote.CreateAuthority{
+		Provider: command.Provider, PhasePR: record.Phase == model.PhasePR,
 		Artifact: record.RemoteArtifact != nil, Confirm: command.Confirm,
 		Execution: record.Execution != nil, ExpectedGeneration: command.ExpectedGeneration,
 	}
@@ -87,7 +87,7 @@ func createAuthorityFacts(record model.IssueOpsRecord, command contract.CreateCo
 }
 
 // createEligibility는 준비된 생성 요청의 적격 조건을 기록한다.
-func createEligibility(record model.IssueOpsRecord, command contract.CreateCommand, facts remote.CreateAuthority, provider, kind string) contract.CreateEligibility {
+func createEligibility(record model.Record, command contract.CreateCommand, facts issueopsremote.CreateAuthority, provider, kind string) contract.CreateEligibility {
 	return contract.CreateEligibility{
 		Provider: provider, Kind: kind, Confirm: command.Confirm, PhasePR: facts.PhasePR, NoArtifact: !facts.Artifact,
 		ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive,
@@ -97,11 +97,11 @@ func createEligibility(record model.IssueOpsRecord, command contract.CreateComma
 }
 
 // authorizeConfirmedCreate는 확정 생성 전에 권한, 대기 상태, 구현 리뷰 증거를 순서대로 검증한다.
-func (s *CreatePreparation) authorizeConfirmedCreate(ctx context.Context, record model.IssueOpsRecord, command contract.CreateCommand) error {
+func (s *CreatePreparation) authorizeConfirmedCreate(ctx context.Context, record model.Record, command contract.CreateCommand) error {
 	if err := s.authority.Authorize(ctx, record, publicationMutationActor(command)); err != nil {
 		return err
 	}
-	if err := remote.ValidateCreatePending(record.Execution.Pending != nil); err != nil {
+	if err := issueopsremote.ValidateCreatePending(record.Execution.Pending != nil); err != nil {
 		return err
 	}
 	fingerprint := s.observer.Fingerprint(ctx, record)
@@ -110,12 +110,12 @@ func (s *CreatePreparation) authorizeConfirmedCreate(ctx context.Context, record
 		review = reviewcontract.ReviewGateEvidence{Present: true, Verdict: record.ImplementationReview.Verdict, ReviewedFingerprint: record.ImplementationReview.ReviewedFingerprint}
 	}
 	missing := reviewdomain.ImplementationReviewMissing(true, review, fingerprint)
-	return remote.ValidateCreateReview(record.ID, missing, fingerprint, review.ReviewedFingerprint != "")
+	return issueopsremote.ValidateCreateReview(record.ID, missing, fingerprint, review.ReviewedFingerprint != "")
 }
 
 // createBranchAuthority는 레코드의 브랜치 준비/실행 정보로 브랜치 권한 사실을 만든다.
-func createBranchAuthority(record model.IssueOpsRecord) remote.CreateBranchAuthority {
-	authority := remote.CreateBranchAuthority{Prepared: record.BranchPrepare != nil, IssueURL: record.IssueURL, WorkspaceBranch: strings.TrimSpace(record.Branch)}
+func createBranchAuthority(record model.Record) issueopsremote.CreateBranchAuthority {
+	authority := issueopsremote.CreateBranchAuthority{Prepared: record.BranchPrepare != nil, IssueURL: record.IssueURL, WorkspaceBranch: strings.TrimSpace(record.Branch)}
 	if record.BranchPrepare != nil {
 		authority.Provider = record.BranchPrepare.Provider
 		authority.BaseBranch = record.BranchPrepare.BaseBranch

@@ -5,7 +5,7 @@ import "slices"
 import "testing"
 
 func TestOptionalVCSProjectDocIsAllowedButNotRequired(t *testing.T) {
-	if containsProjectDocName(ProjectDocNames(), "VCS.md") {
+	if containsProjectDocName(Names(), "VCS.md") {
 		t.Fatal("VCS.md must not become a required project doc")
 	}
 	if !containsProjectDocName(AllowedProjectDocNames(), "VCS.md") {

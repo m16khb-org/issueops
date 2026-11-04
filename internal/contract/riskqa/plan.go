@@ -1,6 +1,6 @@
 package riskqa
 
-type RiskQATierPlan struct {
+type TierPlan struct {
 	Tier         string   `json:"tier"`
 	ChangedPaths []string `json:"changed_paths"`
 	Reasons      []string `json:"reasons"`

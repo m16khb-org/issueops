@@ -4,12 +4,12 @@
 // 알 필요가 없다.
 package lintdiagnose
 
-type LintDiagnoseRequest struct {
+type Request struct {
 	RepoRoot    string   `json:"repo_root"`
 	CommandArgv []string `json:"command_argv"`
 }
 
-type LintDiagnoseResult struct {
+type Result struct {
 	OK          bool     `json:"ok"`
 	CommandArgv []string `json:"command_argv"`
 	ExitCode    int      `json:"exit_code"`

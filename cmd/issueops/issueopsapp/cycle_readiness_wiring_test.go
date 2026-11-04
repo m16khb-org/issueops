@@ -21,7 +21,7 @@ func TestCycleReadinessKeepsCapturedGitCapabilities(t *testing.T) {
 	}
 	readiness := newCycleReadiness()
 	t.Chdir(t.TempDir())
-	_, changes := readiness.ObserveLocalPR(model.IssueOpsRecord{Repo: repo, WorktreePath: repo})
+	_, changes := readiness.ObserveLocalPR(model.Record{Repo: repo, WorktreePath: repo})
 	if !changes.Verified || changes.Fingerprint == "" {
 		t.Fatalf("captured readiness lost actual snapshot: %+v", changes)
 	}
@@ -32,7 +32,7 @@ func TestCycleReadinessSameInstanceMatchesUnsharedResultsAcrossGitChanges(t *tes
 	if err := os.Remove(filepath.Join(repo, ".env")); err != nil {
 		t.Fatal(err)
 	}
-	record := model.IssueOpsRecord{Repo: repo, WorktreePath: repo, Branch: preflight.GitOut(repo, "branch", "--show-current")}
+	record := model.Record{Repo: repo, WorktreePath: repo, Branch: preflight.GitOut(repo, "branch", "--show-current")}
 	readiness := newCycleReadiness()
 	baseline := readiness
 	baseline.NewObservationScope = nil
@@ -68,7 +68,7 @@ func TestCycleReadinessSharesGitObservationsPerOperation(t *testing.T) {
 	t.Setenv("READINESS_GIT_LOG", log)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	readiness := newCycleReadiness()
-	record := model.IssueOpsRecord{Repo: repo, WorktreePath: repo}
+	record := model.Record{Repo: repo, WorktreePath: repo}
 	for call := 1; call <= 2; call++ {
 		readiness.ObserveLocalPR(record)
 		data, err := os.ReadFile(log)

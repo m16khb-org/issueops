@@ -8,18 +8,18 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func remoteCleanupRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.IssueOpsPhaseDone,
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: "main"},
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}}
+func remoteCleanupRecord() model.Record {
+	return model.Record{ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.PhaseDone,
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: "main"},
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}}
 }
 
 func TestRemoteBranchCleanupCollectsAllAggregateGates(t *testing.T) {
 	record := remoteCleanupRecord()
 	record.Branch = "main"
-	record.Phase = model.IssueOpsPhasePR
+	record.Phase = model.PhasePR
 	record.Execution = &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusActive}}
-	record.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}}
+	record.IssueLinks = []model.IssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}}
 	record.RemoteArtifact = nil
 	_, got := BuildCleanupRemoteBranchPreview(record, model.CleanupRemoteBranchRequest{}, CleanupRemoteBranchTargets(record), CleanupRemoteBranchObservation{RemoteError: errors.New("transport")})
 	want := []string{"branch_name_revalidated", "branch_not_base", "phase_done", "lease_released", "child_tasks_closed", "remote_artifact_present", "remote_branch_readable"}

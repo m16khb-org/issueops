@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"encoding/json"
@@ -10,8 +10,8 @@ import (
 )
 
 // githubDefaultLabelCandidates는 gh label list의 기본 라벨 설명을 그대로 쓴다.
-func githubDefaultLabelCandidates() []IssueOpsRemoteLabelCandidate {
-	return []IssueOpsRemoteLabelCandidate{
+func githubDefaultLabelCandidates() []LabelCandidate {
+	return []LabelCandidate{
 		{Name: "bug", Description: "Something isn't working"},
 		{Name: "enhancement", Description: "New feature or request"},
 		{Name: "documentation", Description: "Improvements or additions to documentation"},
@@ -42,8 +42,8 @@ func TestScoreIssueOpsRemoteLabelQualityTable(t *testing.T) {
 		if tc.Issue >= 232 {
 			t.Fatalf("case #%d is outside the development set (numbers below 232)", tc.Issue)
 		}
-		res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
-			Issue:           IssueOpsRemoteArtifact{Title: tc.Title, Body: tc.Body},
+		res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
+			Issue:           ArtifactDraft{Title: tc.Title, Body: tc.Body},
 			LabelCandidates: githubDefaultLabelCandidates(),
 		})
 		if err != nil {
@@ -60,14 +60,14 @@ func TestScoreIssueOpsRemoteLabelQualityTable(t *testing.T) {
 }
 
 func TestScoreIssueOpsRemoteLabelWithoutKeywordRuleKeepsOverlapScore(t *testing.T) {
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
-		Issue:           IssueOpsRemoteArtifact{Title: "Further information is requested about login", Body: "오류가 재현되지 않는다 오류 결함 버그"},
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
+		Issue:           ArtifactDraft{Title: "Further information is requested about login", Body: "오류가 재현되지 않는다 오류 결함 버그"},
 		LabelCandidates: githubDefaultLabelCandidates(),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	var question *IssueOpsRemoteScoredItem
+	var question *ScoredItem
 	for i := range res.RejectedLabels {
 		if res.RejectedLabels[i].Name == "question" {
 			question = &res.RejectedLabels[i]
@@ -87,9 +87,9 @@ func TestScoreIssueOpsRemoteLabelWithoutKeywordRuleKeepsOverlapScore(t *testing.
 // QA: kind/feature, kind/bug scored 0 because keyword rules matched only the
 // bare default names; the type word after "/" or ":" now selects the rule.
 func TestScoreIssueOpsRemoteLabelResolvesPrefixedTypeLabels(t *testing.T) {
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
-		Issue: IssueOpsRemoteArtifact{Title: "calc에 절댓값 함수 absval(x) 추가", Body: "calc 패키지에 absval(x) 기능과 단위 테스트를 추가한다. 새로운 기능이다."},
-		LabelCandidates: []IssueOpsRemoteLabelCandidate{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
+		Issue: ArtifactDraft{Title: "calc에 절댓값 함수 absval(x) 추가", Body: "calc 패키지에 absval(x) 기능과 단위 테스트를 추가한다. 새로운 기능이다."},
+		LabelCandidates: []LabelCandidate{
 			{Name: "kind/feature", Description: "New capability"},
 			{Name: "type: bug", Description: "Defect fix"},
 			{Name: "area/calc", Description: "calc package"},
@@ -111,8 +111,8 @@ func TestScoreIssueOpsRemoteLabelResolvesPrefixedTypeLabels(t *testing.T) {
 // One matched type token is below the evidence floor, so the scorer abstains;
 // the rejection says so instead of reading like a failed score.
 func TestScoreIssueOpsRemoteLabelNamesAbstentionOnThinEvidence(t *testing.T) {
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
-		Issue:           IssueOpsRemoteArtifact{Title: "hello.sh에 --upper 옵션 추가", Body: "--upper 옵션을 주면 HELLO를 대문자로 출력한다."},
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
+		Issue:           ArtifactDraft{Title: "hello.sh에 --upper 옵션 추가", Body: "--upper 옵션을 주면 HELLO를 대문자로 출력한다."},
 		LabelCandidates: githubDefaultLabelCandidates(),
 	})
 	if err != nil {

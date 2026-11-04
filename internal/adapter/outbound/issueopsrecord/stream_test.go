@@ -16,9 +16,9 @@ func TestStoreScanEachPropagatesVisitorNotExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := Encode(issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-		ID:            "io-valid", Repo: "/repo", Phase: issueopscontract.IssueOpsPhaseProblem,
+	data, err := Encode(issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
+		ID:            "io-valid", Repo: "/repo", Phase: issueopscontract.PhaseProblem,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -27,7 +27,7 @@ func TestStoreScanEachPropagatesVisitorNotExist(t *testing.T) {
 		t.Fatal(err)
 	}
 	visited := 0
-	diagnostics, err := (Store{}).ScanEach(context.Background(), root, func(issueopscontract.IssueOpsRecord) error {
+	diagnostics, err := (Store{}).ScanEach(context.Background(), root, func(issueopscontract.Record) error {
 		visited++
 		return fs.ErrNotExist
 	})

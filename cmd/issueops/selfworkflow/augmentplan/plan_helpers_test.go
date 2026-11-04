@@ -14,6 +14,6 @@ var Repository port.PlanRepository
 func planner() app.Planner {
 	return app.Planner{Repository: Repository, DocsIndex: DocsIndex, ListSkillNames: install.ListSkillNames, StateList: StateList, StateRead: StateRead, Now: time.Now}
 }
-func Plan(req contract.SelfAugmentPlanRequest, root, version string) contract.SelfAugmentPlanResult {
+func Plan(req contract.PlanRequest, root, version string) contract.PlanResult {
 	return planner().Plan(req, root, version)
 }

@@ -14,7 +14,7 @@ func TestBuildStructuredPromptUsesGoodPromptExampleShape(t *testing.T) {
 		Rules:                 []string{"Do not infer unrelated issues."},
 		OutputContract:        []string{"Return JSON only."},
 		VerificationChecklist: []string{"Every finding cites evidence."},
-		Data:                  []PromptDataSection{{Title: "Diff", Content: "diff --git ..."}},
+		Data:                  []DataSection{{Title: "Diff", Content: "diff --git ..."}},
 	})
 	for _, heading := range StructuredPromptSectionHeadings {
 		if !strings.Contains(prompt, heading) {

@@ -72,7 +72,7 @@ type MCPDependencies struct {
 	ProjectDocs      docsapp.Service
 	State            StateDependencies
 	Resources        resources.Config
-	SelfVerify       func(verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error)
+	SelfVerify       func(verifyapp.LoopRequest) (augmentcontract.Result, error)
 	Catalog          mcpcontract.Catalog
 	SelfHistory      augmentapp.HistoryService
 	SelfState        SelfStateDependencies

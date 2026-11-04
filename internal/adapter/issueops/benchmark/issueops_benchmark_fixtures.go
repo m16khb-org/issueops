@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func (Files) LoadFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixture, error) {
+func (Files) LoadFixtures(dir string) ([]issueopscontract.Fixture, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return nil, fmt.Errorf("fixtures path is required")
@@ -20,7 +20,7 @@ func (Files) LoadFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixtu
 	if err != nil {
 		return nil, err
 	}
-	var fixtures []issueopscontract.IssueOpsBenchmarkFixture
+	var fixtures []issueopscontract.Fixture
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
@@ -30,7 +30,7 @@ func (Files) LoadFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixtu
 		if err != nil {
 			return nil, err
 		}
-		var fixture issueopscontract.IssueOpsBenchmarkFixture
+		var fixture issueopscontract.Fixture
 		if err := json.Unmarshal(b, &fixture); err != nil {
 			return nil, fmt.Errorf("parse fixture %s: %w", path, err)
 		}

@@ -16,11 +16,11 @@ import (
 
 func branchPreparerForTest(root string) branchapp.Preparer {
 	environment := core.BranchPreparationEnvironment{RunGit: preflightadapter.GitCmd}
-	return branchapp.Preparer{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), CleanParentPath: environment.CleanParentPath, ResolveBaseCommit: environment.ResolveBaseCommit, UmbrellaForChildIssue: (branchapp.ActiveCycleReader{Scan: func() ([]model.IssueOpsRecord, error) { return core.ScanReadableIssueOps(root) }, CleanPath: pathutil.CleanAbsPath}).UmbrellaForChildIssue, ObserveCodeProjectKey: environment.ObserveCodeProjectKey, Steps: branchinstructions.Steps, Now: time.Now}
+	return branchapp.Preparer{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), CleanParentPath: environment.CleanParentPath, ResolveBaseCommit: environment.ResolveBaseCommit, UmbrellaForChildIssue: (branchapp.ActiveCycleReader{Scan: func() ([]model.Record, error) { return core.ScanReadableIssueOps(root) }, CleanPath: pathutil.CleanAbsPath}).UmbrellaForChildIssue, ObserveCodeProjectKey: environment.ObserveCodeProjectKey, Steps: branchinstructions.Steps, Now: time.Now}
 }
-func prepareBranchWithActorForTest(root, id string, req model.IssueOpsBranchPrepareRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func prepareBranchWithActorForTest(root, id string, req model.BranchPrepareRequest, actor model.Actor) (model.Record, error) {
 	return branchPreparerForTest(root).Prepare(context.Background(), id, req, &actor)
 }
-func prepareBranchForTest(root, id string, req model.IssueOpsBranchPrepareRequest) (model.IssueOpsRecord, error) {
+func prepareBranchForTest(root, id string, req model.BranchPrepareRequest) (model.Record, error) {
 	return branchPreparerForTest(root).Prepare(context.Background(), id, req, nil)
 }

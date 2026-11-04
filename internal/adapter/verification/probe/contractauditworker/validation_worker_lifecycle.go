@@ -27,7 +27,7 @@ func ValidateWorkerLifecycleWithDeps(binary, root string, seed int64, deps Valid
 	if !enqueue.OK {
 		return enqueue
 	}
-	var job workercontract.WorkerJob
+	var job workercontract.Job
 	if err := json.Unmarshal([]byte(enqueue.Stdout), &job); err != nil {
 		return verifydomain.FailedStep("worker lifecycle smoke", err)
 	}
@@ -40,7 +40,7 @@ func ValidateWorkerLifecycleWithDeps(binary, root string, seed int64, deps Valid
 			errs = append(errs, step.Label+" failed")
 		}
 	}
-	if !job.NoShell || job.Status != workercontract.WorkerStatusQueued {
+	if !job.NoShell || job.Status != workercontract.StatusQueued {
 		errs = append(errs, "worker job is not queued no-shell")
 	}
 	durationMS := enqueue.DurationMS + status.DurationMS + cancel.DurationMS + list.DurationMS

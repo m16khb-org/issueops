@@ -24,7 +24,7 @@ func (p childCloseFunction) CloseChild(req port.IssueProviderCloseChildRequest) 
 
 type lockedChildCleanupRecords struct {
 	t       *testing.T
-	record  model.IssueOpsRecord
+	record  model.Record
 	locked  bool
 	saves   int
 	saveErr error
@@ -38,13 +38,13 @@ func (r *lockedChildCleanupRecords) WithinLock(ctx context.Context, id string, f
 	defer func() { r.locked = false }()
 	return fn(ctx)
 }
-func (r *lockedChildCleanupRecords) Load(id string) (model.IssueOpsRecord, error) {
+func (r *lockedChildCleanupRecords) Load(id string) (model.Record, error) {
 	if id != r.record.ID {
 		r.t.Fatal("unexpected cycle identity")
 	}
 	return r.record, nil
 }
-func (r *lockedChildCleanupRecords) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (r *lockedChildCleanupRecords) Save(_ context.Context, record model.Record) (model.Record, error) {
 	if !r.locked {
 		r.t.Fatal("save outside the cycle lock")
 	}
@@ -59,8 +59,8 @@ func (r *lockedChildCleanupRecords) Save(_ context.Context, record model.IssueOp
 func TestChildrenCloserDoesNotPersistPartialOrUnverifiedReceipts(t *testing.T) {
 	for _, failure := range []string{"provider", "hierarchy", "closed", "save"} {
 		t.Run(failure, func(t *testing.T) {
-			record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}, {Type: "child", URL: "https://github.com/acme/repo/issues/3"}}}
-			original := append([]model.IssueOpsIssueLink(nil), record.IssueLinks...)
+			record := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", IssueLinks: []model.IssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}, {Type: "child", URL: "https://github.com/acme/repo/issues/3"}}}
+			original := append([]model.IssueLink(nil), record.IssueLinks...)
 			records := &lockedChildCleanupRecords{t: t, record: record}
 			if failure == "save" {
 				records.saveErr = errors.New("save refused")
@@ -79,7 +79,7 @@ func TestChildrenCloserDoesNotPersistPartialOrUnverifiedReceipts(t *testing.T) {
 				}
 				return result, nil
 			}}
-			closer := app.ChildrenCloser{VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
+			closer := app.ChildrenCloser{VerifyMerged: func(model.RemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
 			result, err := closer.Close(context.Background(), record.ID, true, true)
 			if err == nil || len(result.Children) != 2 {
 				t.Fatalf("result=%+v err=%v", result, err)
@@ -103,9 +103,9 @@ func TestChildrenCloserDoesNotPersistPartialOrUnverifiedReceipts(t *testing.T) {
 }
 
 func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
-	record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1"}
+	record := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1"}
 	for _, suffix := range []string{"2", "3", "4", "5", "6"} {
-		record.IssueLinks = append(record.IssueLinks, model.IssueOpsIssueLink{Type: "child", URL: "https://github.com/acme/repo/issues/" + suffix})
+		record.IssueLinks = append(record.IssueLinks, model.IssueLink{Type: "child", URL: "https://github.com/acme/repo/issues/" + suffix})
 	}
 	records := &lockedChildCleanupRecords{t: t, record: record}
 	started := make(chan string, 5)
@@ -116,8 +116,8 @@ func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
 		<-release
 		return port.IssueProviderCloseChildResult{ChildURL: req.ChildURL, HierarchyVerified: true, Closed: true}, nil
 	}}
-	closer := app.ChildrenCloser{VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
-	done := make(chan model.IssueOpsCloseChildrenResult, 1)
+	closer := app.ChildrenCloser{VerifyMerged: func(model.RemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
+	done := make(chan model.CloseChildrenResult, 1)
 	errs := make(chan error, 1)
 	go func() {
 		result, err := closer.Close(context.Background(), record.ID, true, true)
@@ -162,9 +162,9 @@ func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
 }
 
 func TestChildrenCloserConfirmWithoutChildLinksPersistsNothing(t *testing.T) {
-	record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1"}
+	record := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1"}
 	records := &lockedChildCleanupRecords{t: t, record: record}
-	closer := app.ChildrenCloser{VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) {
+	closer := app.ChildrenCloser{VerifyMerged: func(model.RemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) {
 		t.Fatal("provider consulted without child links")
 		return nil, nil
 	}, Now: func() time.Time { return time.Unix(123, 0) }}

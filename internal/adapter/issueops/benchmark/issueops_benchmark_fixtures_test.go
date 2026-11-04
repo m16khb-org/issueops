@@ -7,7 +7,7 @@ import (
 )
 
 func TestScoreIssueOpsBenchmarkArtifactAcceptsKoreanSectionLabels(t *testing.T) {
-	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "korean-sections", CriticalFailures: []string{"works in source repo"}}
+	fixture := benchmark.Fixture{ID: "korean-sections", CriticalFailures: []string{"works in source repo"}}
 	artifact := completeBenchmarkArtifactForTest()
 	artifact.IssueDraft = "## 요약\n\n캐시 미적용으로 동일 입력에 외부 LLM을 반복 호출한다.\n\n## 배경\n\n현재 호출 로그.\n\n## 수용 기준\n\n동일 입력은 캐시 적중한다.\n\n## 범위\n\n캐시 저장과 wrapper 호출부만 바꾼다.\n\n## 검증\n\ngo test ./... -count=1\n\nGuideline: skills/issueops-create-issue/SKILL.md; skills/issueops-create-pr/SKILL.md\n"
 	artifact.PRDraft = "## 요약\n\n이슈의 캐시 요구사항을 충족한다.\nIssue: https://example.com/acme/issueops/issues/1\n\n## 변경 내용\n\n캐시 저장소 추가.\n\n## 확인한 것\n\ngo test ./... -count=1로 캐시 적중을 확인했다.\n\n## 리뷰 포인트\n\n캐시 키가 입력을 모두 반영하는지 봐 주세요.\n\nGuideline: skills/issueops-create-issue/SKILL.md; skills/issueops-create-pr/SKILL.md\n"
@@ -19,7 +19,7 @@ func TestScoreIssueOpsBenchmarkArtifactAcceptsKoreanSectionLabels(t *testing.T) 
 }
 
 func TestScoreIssueOpsBenchmarkArtifactRequiresCanonicalRemoteIssueSections(t *testing.T) {
-	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "canonical-issue", CriticalFailures: []string{"works in source repo"}}
+	fixture := benchmark.Fixture{ID: "canonical-issue", CriticalFailures: []string{"works in source repo"}}
 	artifact := completeBenchmarkArtifactForTest()
 	artifact.IssueDraft = strings.ReplaceAll(artifact.IssueDraft, "## 범위\n\ncore renderer, CLI, MCP schema를 갱신한다.\n\n", "")
 
@@ -33,7 +33,7 @@ func TestScoreIssueOpsBenchmarkArtifactRequiresCanonicalRemoteIssueSections(t *t
 }
 
 func TestScoreIssueOpsBenchmarkArtifactRequiresCanonicalPRSections(t *testing.T) {
-	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "canonical-pr", CriticalFailures: []string{"works in source repo"}}
+	fixture := benchmark.Fixture{ID: "canonical-pr", CriticalFailures: []string{"works in source repo"}}
 	artifact := completeBenchmarkArtifactForTest()
 	artifact.PRDraft = strings.ReplaceAll(artifact.PRDraft, "## 리뷰 포인트\n\n리뷰 포인트\n\n", "")
 
@@ -47,7 +47,7 @@ func TestScoreIssueOpsBenchmarkArtifactRequiresCanonicalPRSections(t *testing.T)
 }
 
 func TestScoreIssueOpsBenchmarkArtifactRequiresPRChangesAndVerifiedSections(t *testing.T) {
-	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "canonical-pr-changes-verified", CriticalFailures: []string{"works in source repo"}}
+	fixture := benchmark.Fixture{ID: "canonical-pr-changes-verified", CriticalFailures: []string{"works in source repo"}}
 	for _, tc := range []struct {
 		name   string
 		remove string
@@ -70,8 +70,8 @@ func TestScoreIssueOpsBenchmarkArtifactRequiresPRChangesAndVerifiedSections(t *t
 	}
 }
 
-func completeBenchmarkArtifactForTest() benchmark.IssueOpsBenchmarkArtifact {
-	return benchmark.IssueOpsBenchmarkArtifact{
+func completeBenchmarkArtifactForTest() benchmark.Artifact {
+	return benchmark.Artifact{
 		ProblemSummary:         "The request needs measurable IssueOps quality gates before prompt optimization.\n선택 라벨: enhancement(score 0.90), 거절 라벨: documentation(score 0.20), threshold 0.70, 수동 override 없음.\n",
 		IssueDraft:             "## 요약\n\n요약\n\n## 배경\n\n배경\n\n## 완료 기준\n\n완료 기준\n\n## 범위\n\ncore renderer, CLI, MCP schema를 갱신한다.\n\n## 검증\n\n검증\n\nGuideline: skills/issueops-create-issue/SKILL.md; skills/issueops-create-pr/SKILL.md\n",
 		Plan:                   "Run: go test ./... -count=1\n",

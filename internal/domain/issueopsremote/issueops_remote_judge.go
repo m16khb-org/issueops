@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"issueops/internal/domain/judgement"
 )
 
-func RenderIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (string, error) {
+func RenderIssueOpsRemoteLLMJudgePrompt(req LLMJudgeRequest) (string, error) {
 	prompt, err := buildIssueOpsRemoteLLMJudgePrompt(req.Request)
 	if err != nil {
 		return "", err
@@ -14,12 +14,12 @@ func RenderIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (stri
 	return prompt, nil
 }
 
-func RenderIssueOpsRemoteJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (IssueOpsRemoteJudgePromptResult, error) {
+func RenderIssueOpsRemoteJudgePrompt(req LLMJudgeRequest) (JudgePromptResult, error) {
 	prompt, err := RenderIssueOpsRemoteLLMJudgePrompt(req)
 	if err != nil {
-		return IssueOpsRemoteJudgePromptResult{}, err
+		return JudgePromptResult{}, err
 	}
-	return IssueOpsRemoteJudgePromptResult{
+	return JudgePromptResult{
 		OK:             true,
 		ExecutionClass: "background_join",
 		ReadOnly:       true,
@@ -28,30 +28,30 @@ func RenderIssueOpsRemoteJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (IssueOp
 	}, nil
 }
 
-func DecodeIssueOpsRemoteJudgeJSON(out []byte) (IssueOpsRemoteScoringResult, error) {
+func DecodeIssueOpsRemoteJudgeJSON(out []byte) (ScoringResult, error) {
 	result, err := decodeStrictIssueOpsRemoteScoringResult(out)
 	if err != nil {
-		return IssueOpsRemoteScoringResult{}, err
+		return ScoringResult{}, err
 	}
 	return normalizeIssueOpsRemoteScoringResult(result), nil
 }
 
-func decodeStrictIssueOpsRemoteScoringResult(out []byte) (IssueOpsRemoteScoringResult, error) {
-	var result IssueOpsRemoteScoringResult
+func decodeStrictIssueOpsRemoteScoringResult(out []byte) (ScoringResult, error) {
+	var result ScoringResult
 	if err := judgement.DecodeStructuredJSONObject("issueops remote host-agent scoring", out, &result); err != nil {
-		return IssueOpsRemoteScoringResult{}, err
+		return ScoringResult{}, err
 	}
 	if !result.OK {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring output not ok")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring output not ok")
 	}
 	if result.ExecutionClass != "background_join" {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring execution_class must be background_join")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring execution_class must be background_join")
 	}
 	if !result.ReadOnly {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring read_only must be true")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring read_only must be true")
 	}
 	if result.JoinBefore != "remote_artifact_write" {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring join_before must be remote_artifact_write")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring join_before must be remote_artifact_write")
 	}
 	return result, nil
 }

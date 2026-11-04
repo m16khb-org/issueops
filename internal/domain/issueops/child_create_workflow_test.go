@@ -15,21 +15,21 @@ const (
 )
 
 func TestValidateChildCreationReportsFirstMissingRequirement(t *testing.T) {
-	preparedUmbrella := model.IssueOpsRecord{
+	preparedUmbrella := model.Record{
 		ID: "u", IssueURL: childParentURL, Branch: "9-umbrella",
-		BranchPrepare: &model.IssueOpsBranchPrepare{Branch: "9-umbrella"},
+		BranchPrepare: &model.BranchPrepare{Branch: "9-umbrella"},
 	}
 	unbranched := preparedUmbrella
 	unbranched.Branch = ""
 	cases := []struct {
 		name      string
-		record    model.IssueOpsRecord
+		record    model.Record
 		title     string
 		labels    []string
 		assignees []string
 		want      string
 	}{
-		{"unlinked", model.IssueOpsRecord{IssueURL: " "}, "t", []string{"l"}, []string{"a"}, "cannot create child before linked parent issue"},
+		{"unlinked", model.Record{IssueURL: " "}, "t", []string{"l"}, []string{"a"}, "cannot create child before linked parent issue"},
 		{"umbrella gate", unbranched, "t", []string{"l"}, []string{"a"}, UmbrellaBranchGateReason(unbranched)},
 		{"title", preparedUmbrella, "  ", []string{"l"}, []string{"a"}, "child title is required"},
 		{"labels", preparedUmbrella, "t", nil, []string{"a"}, "at least one child label is required"},
@@ -80,7 +80,7 @@ func TestChildRequestDigestIgnoresOrderAndWhitespaceButNotContent(t *testing.T) 
 	}
 }
 
-func sealedChild(t *testing.T, record model.IssueOpsRecord, id, digest string) model.ChildCreateOperation {
+func sealedChild(t *testing.T, record model.Record, id, digest string) model.ChildCreateOperation {
 	t.Helper()
 	op, body, err := SealChildOperation(record, id, "explicit", "github", " Child ", " body ", digest, "t0", []string{"l"}, []string{"a"})
 	if err != nil {
@@ -93,7 +93,7 @@ func sealedChild(t *testing.T, record model.IssueOpsRecord, id, digest string) m
 }
 
 func TestSealChildOperationDerivesProjectAuthorityFromParent(t *testing.T) {
-	record := model.IssueOpsRecord{IssueURL: childParentURL}
+	record := model.Record{IssueURL: childParentURL}
 	op := sealedChild(t, record, opA, dig("d1"))
 	if op.ProjectAuthority != "github.com/org/repo" || op.Title != "Child" || op.Status != model.IssueCreateIntentPending ||
 		op.Attempt != 1 || op.ParentURL != childParentURL || op.Generation != 0 || op.Holder != nil {
@@ -103,7 +103,7 @@ func TestSealChildOperationDerivesProjectAuthorityFromParent(t *testing.T) {
 		err.Error() != "invalid gitlab child URL" {
 		t.Fatalf("provider/URL mismatch error = %v", err)
 	}
-	bad := model.IssueOpsRecord{IssueURL: "http://github.com/Org/Repo/issues/1"}
+	bad := model.Record{IssueURL: "http://github.com/Org/Repo/issues/1"}
 	if _, _, err := SealChildOperation(bad, opA, "explicit", "github", "t", "b", "d", "t0", nil, nil); err == nil ||
 		err.Error() != "invalid child project URL" {
 		t.Fatalf("non-https parent error = %v", err)
@@ -145,7 +145,7 @@ func TestChildProjectAuthorityRejectsMalformedIssueURLs(t *testing.T) {
 }
 
 func TestChildOperationLifecycleBeginRecordComplete(t *testing.T) {
-	record := model.IssueOpsRecord{IssueURL: childParentURL}
+	record := model.Record{IssueURL: childParentURL}
 	op := sealedChild(t, record, opA, dig("d1"))
 
 	record, begun, started, err := BeginChildOperation(record, op, opA)
@@ -225,7 +225,7 @@ func TestChildOperationLifecycleBeginRecordComplete(t *testing.T) {
 	}
 	// 이미 연결된 child 링크가 있으면 중복 링크를 만들지 않는다.
 	linked := record
-	linked.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: childURL}}
+	linked.IssueLinks = []model.IssueLink{{Type: "child", URL: childURL}}
 	deduped, err := CompleteChildOperation(linked, opA, childURL, "t4")
 	if err != nil {
 		t.Fatalf("complete with existing link: %v", err)
@@ -242,7 +242,7 @@ func TestChildOperationLifecycleBeginRecordComplete(t *testing.T) {
 }
 
 func TestBeginChildOperationRetriesNotInvokedOperation(t *testing.T) {
-	record := model.IssueOpsRecord{IssueURL: childParentURL}
+	record := model.Record{IssueURL: childParentURL}
 	op := sealedChild(t, record, opA, dig("d1"))
 	op.Status = model.IssueCreateIntentNotInvoked
 	op.Failure = "earlier"
@@ -269,7 +269,7 @@ func TestBeginChildOperationRetriesNotInvokedOperation(t *testing.T) {
 }
 
 func TestValidateChildOperationAuthorityTracksParentAndExecutionBinding(t *testing.T) {
-	record := model.IssueOpsRecord{IssueURL: childParentURL}
+	record := model.Record{IssueURL: childParentURL}
 	op := sealedChild(t, record, opA, dig("d1"))
 	if err := ValidateChildOperationAuthority(record, op); err != nil {
 		t.Fatalf("unbound op: %v", err)

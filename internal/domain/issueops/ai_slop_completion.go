@@ -6,7 +6,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func AISlopCleanCompletionMissing(record model.IssueOpsRecord) []string {
+func AISlopCleanCompletionMissing(record model.Record) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.AISlopCleanAt) == "" {
 		missing = append(missing, "ai_slop_clean_at")

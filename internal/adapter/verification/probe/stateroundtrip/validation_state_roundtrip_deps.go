@@ -24,8 +24,8 @@ type stateRoundtripValidationDeps struct {
 	mkdirTemp     func(string, string) (string, error)
 	removeAll     func(string) error
 	writeFile     func(string, []byte, os.FileMode) error
-	stateRead     func(string, string) (statecontract.StateResult, error)
-	writeSnapshot func(string, string, augmentcontract.SelfAugmentStateSnapshot) error
+	stateRead     func(string, string) (statecontract.Result, error)
+	writeSnapshot func(string, string, augmentcontract.StateSnapshot) error
 	run           stateRoundtripCommandRunner
 }
 

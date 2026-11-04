@@ -14,7 +14,7 @@ type AbandonRemoteObserver struct {
 	RemoteRef func(context.Context, string, string) (string, error)
 }
 
-func (s AbandonRemoteObserver) Observe(ctx context.Context, record model.IssueOpsRecord, req model.CleanupAbandonRequest, provider port.IssueProvider, inventory model.CleanupAbandonInventory) (model.CleanupAbandonInventory, domain.CleanupAbandonObservation) {
+func (s AbandonRemoteObserver) Observe(ctx context.Context, record model.Record, req model.CleanupAbandonRequest, provider port.IssueProvider, inventory model.CleanupAbandonInventory) (model.CleanupAbandonInventory, domain.CleanupAbandonObservation) {
 	plan := domain.PlanCleanupAbandonRemoteReads(record, req, inventory.Branch, provider != nil)
 	var facts domain.CleanupAbandonRemoteFacts
 	read := func(kind, url string) (string, error) {

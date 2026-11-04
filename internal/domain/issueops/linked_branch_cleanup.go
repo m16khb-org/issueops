@@ -9,7 +9,7 @@ import (
 
 // LinkedBranchCleanupGates는 관측 이전에 확정할 수 있는 전제만 본다. 외부
 // 호출을 하기 전에 막을 수 있는 것은 여기서 막는다.
-func LinkedBranchCleanupGates(record issueopscontract.IssueOpsRecord, canObserve, canDelete bool) []string {
+func LinkedBranchCleanupGates(record issueopscontract.Record, canObserve, canDelete bool) []string {
 	var missing []string
 	if !canObserve {
 		missing = append(missing, "linked_branch_observation_unavailable")

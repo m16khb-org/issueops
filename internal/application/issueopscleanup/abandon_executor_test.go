@@ -18,18 +18,18 @@ type abandonTestRecords struct {
 	events               *[]string
 	armErr, checkErr     error
 	deleteErr            error
-	armed                *model.IssueOpsCleanupAbandonFailure
-	failed               *model.IssueOpsCleanupAbandonFailure
+	armed                *model.CleanupAbandonFailure
+	failed               *model.CleanupAbandonFailure
 	failedDrained        bool
 	failContextCancelled bool
-	outcome              model.IssueOpsCycleOutcome
+	outcome              model.CycleOutcome
 }
 
 func (s *abandonTestRecords) Load(context.Context, string) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "load")
 	return s.snapshot, nil
 }
-func (s *abandonTestRecords) ArmAbandon(_ context.Context, snap model.CleanupSnapshot, _ model.IssueOpsCleanupAttempt, f model.IssueOpsCleanupAbandonFailure) (model.CleanupSnapshot, error) {
+func (s *abandonTestRecords) ArmAbandon(_ context.Context, snap model.CleanupSnapshot, _ model.CleanupAttempt, f model.CleanupAbandonFailure) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "arm")
 	s.armed = &f
 	return snap, s.armErr
@@ -38,13 +38,13 @@ func (s *abandonTestRecords) Check(context.Context, model.CleanupSnapshot) error
 	*s.events = append(*s.events, "check")
 	return s.checkErr
 }
-func (s *abandonTestRecords) FailAbandon(ctx context.Context, snap model.CleanupSnapshot, f model.IssueOpsCleanupAbandonFailure, drained bool) (model.CleanupSnapshot, error) {
+func (s *abandonTestRecords) FailAbandon(ctx context.Context, snap model.CleanupSnapshot, f model.CleanupAbandonFailure, drained bool) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "fail")
 	s.failed, s.failedDrained = &f, drained
 	s.failContextCancelled = ctx.Err() != nil
 	return snap, nil
 }
-func (s *abandonTestRecords) DeleteAbandoned(_ context.Context, _ model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) ([]string, error) {
+func (s *abandonTestRecords) DeleteAbandoned(_ context.Context, _ model.CleanupSnapshot, outcome model.CycleOutcome) ([]string, error) {
 	s.outcome = outcome
 	*s.events = append(*s.events, "delete")
 	return []string{"intent-1"}, s.deleteErr
@@ -89,7 +89,7 @@ func abandonExecutorFixture() *abandonTestFixture {
 	events := []string{}
 	f := &abandonTestFixture{events: &events, gitCode: map[string]int{}}
 	f.lease = &finishTestLease{events: &events}
-	f.records = &abandonTestRecords{events: &events, snapshot: model.CleanupSnapshot{Record: model.IssueOpsRecord{ID: "io-abandon", Repo: "/repo", BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "github"}}}}
+	f.records = &abandonTestRecords{events: &events, snapshot: model.CleanupSnapshot{Record: model.Record{ID: "io-abandon", Repo: "/repo", BranchPrepare: &model.BranchPrepare{Provider: "github"}}}}
 	f.inventory = &model.CleanupAbandonInventory{WorktreePresent: true, WorktreeRoot: "/worktree", Branch: "feature", BranchOID: "oid"}
 	f.result = &model.CleanupAbandonResult{OK: true, ID: "io-abandon", Reason: "no longer needed"}
 	f.provider = &abandonTestProvider{events: &events}
@@ -100,16 +100,16 @@ func abandonExecutorFixture() *abandonTestFixture {
 			return f.lease, nil
 		},
 		Provider: func(string) (port.IssueProvider, error) { return f.provider, nil },
-		Observe: func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupAbandonRequest, _ port.IssueProvider) (model.CleanupAbandonRequest, error) {
+		Observe: func(_ context.Context, _ model.Record, r model.CleanupAbandonRequest, _ port.IssueProvider) (model.CleanupAbandonRequest, error) {
 			events = append(events, "observe")
 			return r, nil
 		},
-		Plan: func(context.Context, model.IssueOpsRecord, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
+		Plan: func(context.Context, model.Record, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
 			events = append(events, "plan")
 			return *f.inventory, *f.result
 		},
-		NewAttempt: func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
-			return model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationAbandon, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
+		NewAttempt: func(model.CleanupOperation) (model.CleanupAttempt, error) {
+			return model.CleanupAttempt{Operation: model.CleanupOperationAbandon, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
 		},
 		Stop: func(context.Context, model.CleanupAbandonInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 			events = append(events, "stop")
@@ -213,7 +213,7 @@ func TestAbandonExecutorApplyOrdersEffectsDrainsBeforeDelete(t *testing.T) {
 	if f.records.armed == nil || f.records.armed.Step != model.CleanupFailureStepApplying || f.records.armed.Fingerprint != req.Fingerprint {
 		t.Fatalf("armed=%+v", f.records.armed)
 	}
-	if got := f.records.outcome; got.Outcome != model.IssueOpsCycleOutcomeAbandoned || got.ID != req.ID || got.RetainedAt != "2026-09-29T00:00:01Z" {
+	if got := f.records.outcome; got.Outcome != model.CycleOutcomeAbandoned || got.ID != req.ID || got.RetainedAt != "2026-09-29T00:00:01Z" {
 		t.Fatalf("retained outcome = %+v", got)
 	}
 }
@@ -297,7 +297,7 @@ func TestAbandonRunCancelledLocalRemovalKeepsApplyingSeal(t *testing.T) {
 
 func TestAbandonExecutorRemoteEffectsRunBeforeLocalAndAreReported(t *testing.T) {
 	f := abandonExecutorFixture()
-	f.records.snapshot.Record.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{Kind: "pr", URL: "https://example/pr/1"}
+	f.records.snapshot.Record.RemoteArtifact = &model.RemoteArtifactVerification{Kind: "pr", URL: "https://example/pr/1"}
 	f.inventory.RemoteBranchOID = "remote-oid"
 	f.provider.closePR = port.IssueProviderClosePullRequestResult{Closed: true, AlreadyClosed: true, State: "closed"}
 	f.provider.closeIssue = port.IssueProviderCloseIssueResult{Closed: true, State: "closed"}
@@ -369,7 +369,7 @@ func TestAbandonExecutorRemoteFailuresStopBeforeLocalEffects(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			f := abandonExecutorFixture()
-			f.records.snapshot.Record.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{Kind: "pr", URL: "u"}
+			f.records.snapshot.Record.RemoteArtifact = &model.RemoteArtifactVerification{Kind: "pr", URL: "u"}
 			f.provider.artifact = port.IssueProviderArtifactBody{State: "open"}
 			tc.setup(f)
 			preview := tc.req
@@ -409,10 +409,10 @@ func TestAbandonExecutorRequiresResolvableProviderForRemoteEvidence(t *testing.T
 }
 
 func TestAbandonExecutorResolvesProviderOnlyWhenRemoteEvidenceIsNeeded(t *testing.T) {
-	artifact := &model.IssueOpsRemoteArtifactVerification{Kind: "pr", URL: "u"}
+	artifact := &model.RemoteArtifactVerification{Kind: "pr", URL: "u"}
 	cases := []struct {
 		name      string
-		artifact  *model.IssueOpsRemoteArtifactVerification
+		artifact  *model.RemoteArtifactVerification
 		req       model.CleanupAbandonRequest
 		wantCalls int
 	}{
@@ -433,7 +433,7 @@ func TestAbandonExecutorResolvesProviderOnlyWhenRemoteEvidenceIsNeeded(t *testin
 				return f.provider, nil
 			}
 			var observed port.IssueProvider
-			f.executor.Observe = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupAbandonRequest, p port.IssueProvider) (model.CleanupAbandonRequest, error) {
+			f.executor.Observe = func(_ context.Context, _ model.Record, r model.CleanupAbandonRequest, p port.IssueProvider) (model.CleanupAbandonRequest, error) {
 				observed = p
 				return r, nil
 			}
@@ -523,7 +523,7 @@ func TestAbandonExecutorStopsWorkspaceOnlyWhenSomethingOccupiesIt(t *testing.T) 
 
 func TestAbandonExecutorRejectsCycleOwnedByAnotherCleanup(t *testing.T) {
 	f := abandonExecutorFixture()
-	f.records.snapshot.Record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationFinish}
+	f.records.snapshot.Record.CleanupAttempt = &model.CleanupAttempt{Operation: model.CleanupOperationFinish}
 	_, err := f.executor.Run(context.Background(), model.CleanupAbandonRequest{ID: "io-abandon"})
 	if err == nil || !strings.Contains(err.Error(), "resume cleanup finish") {
 		t.Fatalf("err=%v", err)
@@ -547,7 +547,7 @@ func TestObserveAbandonArtifactDerivesUnmergedFromLiveState(t *testing.T) {
 		t.Run(tc.kind+"/"+tc.state, func(t *testing.T) {
 			events := []string{}
 			p := &abandonTestProvider{events: &events, artifact: port.IssueProviderArtifactBody{State: tc.state}}
-			record := model.IssueOpsRecord{Repo: "/repo", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Kind: tc.kind, URL: "u"}}
+			record := model.Record{Repo: "/repo", RemoteArtifact: &model.RemoteArtifactVerification{Kind: tc.kind, URL: "u"}}
 			// a caller-supplied flag is never authority
 			req, err := ObserveAbandonArtifact(context.Background(), record, model.CleanupAbandonRequest{ArtifactUnmerged: !tc.wantUnmerged}, p)
 			if tc.wantErr != "" {
@@ -565,8 +565,8 @@ func TestObserveAbandonArtifactDerivesUnmergedFromLiveState(t *testing.T) {
 
 func TestObserveAbandonArtifactFailureModes(t *testing.T) {
 	events := []string{}
-	record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Kind: "pr", URL: "u"}}
-	req, err := ObserveAbandonArtifact(context.Background(), model.IssueOpsRecord{}, model.CleanupAbandonRequest{ArtifactUnmerged: true}, nil)
+	record := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{Kind: "pr", URL: "u"}}
+	req, err := ObserveAbandonArtifact(context.Background(), model.Record{}, model.CleanupAbandonRequest{ArtifactUnmerged: true}, nil)
 	if err != nil || req.ArtifactUnmerged {
 		t.Fatalf("no artifact must clear the flag: %+v %v", req, err)
 	}

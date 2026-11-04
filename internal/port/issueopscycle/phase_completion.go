@@ -3,8 +3,8 @@ package issueopscycle
 import model "issueops/internal/contract/issueops"
 
 type PhaseCompletionReadiness struct {
-	Compatibility         func(model.IssueOpsRecord) model.IssueOpsReadiness
-	AISlopClean           func(model.IssueOpsRecord) model.IssueOpsReadiness
-	PR                    func(model.IssueOpsRecord) model.IssueOpsReadiness
-	RemoteArtifactMissing func(model.IssueOpsRecord) []string
+	Compatibility         func(model.Record) model.Readiness
+	AISlopClean           func(model.Record) model.Readiness
+	PR                    func(model.Record) model.Readiness
+	RemoteArtifactMissing func(model.Record) []string
 }

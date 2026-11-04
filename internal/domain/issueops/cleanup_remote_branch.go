@@ -21,7 +21,7 @@ type CleanupRemoteBranchObservation struct {
 	TipSupersededBy        string
 }
 
-func CleanupRemoteBranchTargets(record model.IssueOpsRecord) model.CleanupRemoteBranchInventory {
+func CleanupRemoteBranchTargets(record model.Record) model.CleanupRemoteBranchInventory {
 	inventory := model.CleanupRemoteBranchInventory{ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch)}
 	if record.Execution != nil {
 		if branch := strings.TrimSpace(record.Execution.Workspace.Branch); branch != "" {
@@ -41,7 +41,7 @@ func CleanupRemoteBranchNeedsTipEvidence(facts CleanupRemoteBranchObservation) b
 		!(facts.MergeConfigured && facts.MergeError == nil && strings.TrimSpace(facts.Head.HeadRefOID) != "" && strings.EqualFold(strings.TrimSpace(facts.Head.HeadRefOID), facts.RemoteOID))
 }
 
-func BuildCleanupRemoteBranchPreview(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
+func BuildCleanupRemoteBranchPreview(record model.Record, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	result := model.CleanupRemoteBranchResult{OK: true, ID: record.ID, Preview: !req.Apply, Branch: inventory.Branch, Missing: []string{}}
 	missing := cleanupRemoteBranchRecordMissing([]string{}, record, inventory)
 	if hasUnclosedChildTask(record.IssueLinks) {
@@ -74,7 +74,7 @@ func BuildCleanupRemoteBranchPreview(record model.IssueOpsRecord, req model.Clea
 }
 
 // cleanupRemoteBranchRecordMissing checks branch name, base-branch collision, phase, and lease gates.
-func cleanupRemoteBranchRecordMissing(missing []string, record model.IssueOpsRecord, inventory model.CleanupRemoteBranchInventory) []string {
+func cleanupRemoteBranchRecordMissing(missing []string, record model.Record, inventory model.CleanupRemoteBranchInventory) []string {
 	if inventory.Branch == "" {
 		missing = append(missing, "branch_recorded")
 	} else if err := ValidateBranch(inventory.Branch); err != nil {
@@ -83,7 +83,7 @@ func cleanupRemoteBranchRecordMissing(missing []string, record model.IssueOpsRec
 	if inventory.Branch != "" && record.BranchPrepare != nil && inventory.Branch == strings.TrimSpace(record.BranchPrepare.BaseBranch) {
 		missing = append(missing, "branch_not_base")
 	}
-	if record.Phase != model.IssueOpsPhaseDone {
+	if record.Phase != model.PhaseDone {
 		missing = append(missing, "phase_done")
 	}
 	if record.Execution != nil && record.Execution.Lease.Status != model.LeaseStatusReleased {

@@ -11,7 +11,7 @@ import (
 )
 
 type Source struct {
-	ReadState func(string) (statecontract.StateResult, error)
+	ReadState func(string) (statecontract.Result, error)
 	Stdin     io.Reader
 }
 

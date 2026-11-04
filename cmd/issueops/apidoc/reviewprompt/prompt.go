@@ -6,13 +6,13 @@ import (
 )
 
 func Build(files []string, diff, extraPrompt, evidence string) string {
-	data := []prompt.PromptDataSection{
+	data := []prompt.DataSection{
 		{Title: "Additional Project-Specific Instructions", Content: strings.TrimSpace(extraPrompt)},
 		{Title: "Files Under Review", Content: bulletLines(files)},
 		{Title: "Diff Content Under Review", Content: diff},
 	}
 	if strings.TrimSpace(evidence) != "" {
-		data = append(data, prompt.PromptDataSection{Title: "Business Logic Error Contract Evidence", Content: strings.TrimSpace(evidence)})
+		data = append(data, prompt.DataSection{Title: "Business Logic Error Contract Evidence", Content: strings.TrimSpace(evidence)})
 	}
 	return prompt.BuildStructuredPrompt(prompt.StructuredPromptSpec{
 		Identity:  "You are a strict, framework-agnostic pre-commit reviewer for API documentation contract drift.",

@@ -12,7 +12,7 @@ import (
 )
 
 func stateDependencies() statecli.Dependencies {
-	return newStateDependencies(statestore.StateDir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
+	return newStateDependencies(statestore.Dir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
 }
 
 func newStateDependencies(dir, workerOverride string) statecli.Dependencies {
@@ -23,7 +23,7 @@ func newStateDependencies(dir, workerOverride string) statecli.Dependencies {
 	})
 	return statecli.Dependencies{
 		Write: service.Write, Read: service.Read, List: service.List, Prune: service.Prune,
-		Doctor:   func() (statecontract.StateDoctorResult, error) { return statestore.Doctor(dir) },
+		Doctor:   func() (statecontract.DoctorResult, error) { return statestore.Doctor(dir) },
 		Maintain: maintenance.Maintain,
 	}
 }

@@ -94,7 +94,7 @@ func TestRunSelfVerifyCompareJSONOutput(t *testing.T) {
 	out := captureStdout(t, func() error {
 		return RunSelfVerifyCompare([]string{"--baseline-key", "baseline-json", "--candidate-key", "candidate-json", "--json"}, historyCLIDepsForTest(printJSONForTest))
 	})
-	var result augmentcontract.SelfAugmentCompareResult
+	var result augmentcontract.CompareResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode compare JSON: %v\n%s", err, out)
 	}
@@ -105,7 +105,7 @@ func TestRunSelfVerifyCompareJSONOutput(t *testing.T) {
 
 func writeSelfVerifyCLISnapshotForTest(t *testing.T, dir, key string, elapsedMS int64, ok bool, totalSteps, passedSteps int, generatedAt string) {
 	t.Helper()
-	if err := writeSnapshotForTest(dir, key, augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, key, augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            ok,
@@ -114,7 +114,7 @@ func writeSelfVerifyCLISnapshotForTest(t *testing.T, dir, key string, elapsedMS 
 		ElapsedMS:     elapsedMS,
 		IssueOpsRoot:  filepath.Join(dir, "repo"),
 		GeneratedAt:   generatedAt,
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			TotalRuns:   10,
 			TotalSteps:  totalSteps,
 			PassedSteps: passedSteps,
@@ -142,7 +142,7 @@ func printJSONForTest(value any) error {
 
 func historyCLIDepsForTest(print func(any) error) CLIDeps {
 	service := historyService()
-	return CLIDeps{History: func(prefix string, limit int, retention augmentcontract.SelfAugmentHistoryRetentionOptions) (augmentcontract.SelfAugmentHistoryResult, error) {
+	return CLIDeps{History: func(prefix string, limit int, retention augmentcontract.HistoryRetentionOptions) (augmentcontract.HistoryResult, error) {
 		return service.History(context.Background(), prefix, limit, retention)
 	}, Compare: service.Compare, PrintJSON: print}
 }

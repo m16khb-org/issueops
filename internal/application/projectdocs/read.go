@@ -12,14 +12,14 @@ type ReadEffects interface {
 	Now() time.Time
 }
 
-func Read(root, rel, path string, effects ReadEffects) (projectdocscontract.ProjectDocsReadResult, error) {
-	result := projectdocscontract.ProjectDocsReadResult{
+func Read(root, rel, path string, effects ReadEffects) (projectdocscontract.ReadResult, error) {
+	result := projectdocscontract.ReadResult{
 		OK: true, Kind: "project_docs_read", RepoRoot: root, RelPath: rel, Path: path,
 		GeneratedAt: effects.Now().UTC().Format(time.RFC3339),
 	}
 	content, exists, err := effects.Read(path)
 	if err != nil {
-		return projectdocscontract.ProjectDocsReadResult{}, err
+		return projectdocscontract.ReadResult{}, err
 	}
 	if !exists {
 		result.Warnings = []string{"document_missing: run project_docs_bootstrap_plan or issueops project bootstrap first"}

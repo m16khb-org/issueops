@@ -2,12 +2,12 @@ package issueops
 
 import issueopscontract "issueops/internal/contract/issueops"
 
-func KnownIssueOpsPhase(phase issueopscontract.IssueOpsPhase) bool {
-	return IssueOpsPhaseRank(phase) != 0
+func KnownIssueOpsPhase(phase issueopscontract.Phase) bool {
+	return PhaseRank(phase) != 0
 }
 
-func IssueOpsPhaseRank(phase issueopscontract.IssueOpsPhase) int {
-	for index, known := range issueopscontract.IssueOpsPhases {
+func PhaseRank(phase issueopscontract.Phase) int {
+	for index, known := range issueopscontract.Phases {
 		if phase == known {
 			return index + 1
 		}

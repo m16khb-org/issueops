@@ -22,6 +22,6 @@ import (
 //
 // Fixtures without ExpectedRouting are handled as N/A by the scorer and never
 // reach this check.
-func issueOpsSkillRoutingFidelityComplete(fixture benchmark.IssueOpsBenchmarkFixture, artifact benchmark.IssueOpsBenchmarkArtifact) bool {
+func issueOpsSkillRoutingFidelityComplete(fixture benchmark.Fixture, artifact benchmark.Artifact) bool {
 	return issueopsroutingdomain.Score(fixture.ExpectedRouting, artifact.RoutingTrace).OK
 }

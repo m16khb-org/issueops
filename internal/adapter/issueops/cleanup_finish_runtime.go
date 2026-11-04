@@ -30,7 +30,7 @@ func (r CleanupFinishRuntime) Git(ctx context.Context, dir string, args ...strin
 	}
 	return defaultExecutionSyncBaseGit(ctx, dir, args...)
 }
-func (r CleanupFinishRuntime) Workspace(ctx context.Context, record model.IssueOpsRecord, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
+func (r CleanupFinishRuntime) Workspace(ctx context.Context, record model.Record, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
 	return NewCleanupWorkspaceCleaner(r.Processes).Observe(root, record.Repo)
 }
 func (r CleanupFinishRuntime) Stop(ctx context.Context, inventory model.CleanupFinishInventory, processes []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {

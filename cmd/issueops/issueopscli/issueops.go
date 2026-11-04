@@ -165,7 +165,7 @@ func issueOpsRemoteDepsWithPublication(publication remotecmd.PublicationHandlers
 		PrintError:        printIssueOpsErrorJSON,
 		VerifyLive:        verification.Verify,
 		VerifyLiveContext: verification.VerifyContext,
-		VerifyMerged: func(a issueopscontract.IssueOpsRemoteArtifactVerification) error {
+		VerifyMerged: func(a issueopscontract.RemoteArtifactVerification) error {
 			return verification.Merged(context.Background(), a)
 		},
 		Publication: publication,

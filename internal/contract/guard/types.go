@@ -4,24 +4,24 @@
 // 알 필요가 없다.
 package guard
 
-type GuardCheckRequest struct {
+type CheckRequest struct {
 	RepoRoot string   `json:"repo_root"`
 	Staged   bool     `json:"staged"`
 	All      bool     `json:"all"`
 	Files    []string `json:"files,omitempty"`
 }
 
-type GuardCheckResult struct {
-	OK           bool           `json:"ok"`
-	RepoRoot     string         `json:"repo_root"`
-	Mode         string         `json:"mode"`
-	CheckedFiles []string       `json:"checked_files"`
-	Findings     []GuardFinding `json:"findings"`
-	Summary      GuardSummary   `json:"summary"`
-	Warnings     []string       `json:"warnings,omitempty"`
+type CheckResult struct {
+	OK           bool      `json:"ok"`
+	RepoRoot     string    `json:"repo_root"`
+	Mode         string    `json:"mode"`
+	CheckedFiles []string  `json:"checked_files"`
+	Findings     []Finding `json:"findings"`
+	Summary      Summary   `json:"summary"`
+	Warnings     []string  `json:"warnings,omitempty"`
 }
 
-type GuardFinding struct {
+type Finding struct {
 	Severity    string   `json:"severity"`
 	Rule        string   `json:"rule"`
 	File        string   `json:"file,omitempty"`
@@ -31,7 +31,7 @@ type GuardFinding struct {
 	Suggestions []string `json:"suggestions,omitempty"`
 }
 
-type GuardSummary struct {
+type Summary struct {
 	Block  int `json:"block"`
 	Warn   int `json:"warn"`
 	Review int `json:"review"`

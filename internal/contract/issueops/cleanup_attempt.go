@@ -15,15 +15,15 @@ const (
 	CleanupOperationRemoteBranch CleanupOperation = "remote-branch"
 )
 
-// IssueOpsCleanupAttempt binds one cleanup operation to its execution owner.
+// CleanupAttempt binds one cleanup operation to its execution owner.
 // It remains present until that execution has drained its child processes.
-type IssueOpsCleanupAttempt struct {
+type CleanupAttempt struct {
 	Operation CleanupOperation `json:"operation"`
 	Token     string           `json:"token"`
 	StartedAt string           `json:"started_at"`
 }
 
-func ValidateCleanupAttempt(attempt *IssueOpsCleanupAttempt) error {
+func ValidateCleanupAttempt(attempt *CleanupAttempt) error {
 	if attempt == nil {
 		return nil
 	}

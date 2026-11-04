@@ -38,7 +38,7 @@ func (planner Planner) SevereLessonCountsAt(now time.Time) (map[string]int, []st
 		if err != nil {
 			continue
 		}
-		var snapshot contract.SelfAugmentLessonStateSnapshot
+		var snapshot contract.LessonStateSnapshot
 		if err := json.Unmarshal([]byte(record.Record.Content), &snapshot); err != nil {
 			continue
 		}

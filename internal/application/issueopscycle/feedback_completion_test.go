@@ -8,7 +8,7 @@ import (
 )
 
 func TestFeedbackCompletionMissingMapsPersistedFeedback(t *testing.T) {
-	record := model.IssueOpsRecord{Feedback: []model.IssueOpsFeedbackItem{
+	record := model.Record{Feedback: []model.FeedbackItem{
 		{Classification: "contract_change", Resolution: "fixed"},
 		{Classification: "question", Resolution: ""},
 	}}

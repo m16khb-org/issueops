@@ -28,7 +28,7 @@ const (
 
 // trackedMaterialsDir is the worktree-relative .issueops/issues/<n>/ folder,
 // or "" when the cycle has no linked issue number.
-func trackedMaterialsDir(record issueops.IssueOpsRecord) string {
+func trackedMaterialsDir(record issueops.Record) string {
 	dir := ownerapp.OwnerArtifactDir(record)
 	if dir == "" {
 		return ""
@@ -40,8 +40,8 @@ func trackedMaterialsDir(record issueops.IssueOpsRecord) string {
 // and record. Copies are derived: identical content is left alone, different
 // content is overwritten. Failures are reported as warnings; the caller's
 // phase transition does not depend on them.
-func (s TrackedMaterials) Write(record issueops.IssueOpsRecord) issueops.IssueOpsTrackedMaterials {
-	var out issueops.IssueOpsTrackedMaterials
+func (s TrackedMaterials) Write(record issueops.Record) issueops.TrackedMaterials {
+	var out issueops.TrackedMaterials
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.Root) == "" {
 		return out
 	}
@@ -80,7 +80,7 @@ type trackedMaterial struct {
 	content []byte
 }
 
-func (s TrackedMaterials) contents(record issueops.IssueOpsRecord, root string) []trackedMaterial {
+func (s TrackedMaterials) contents(record issueops.Record, root string) []trackedMaterial {
 	var materials []trackedMaterial
 	if planPath, ok := s.planSource(record, root); ok {
 		if content, err := s.Files.ReadFile(planPath); err == nil {
@@ -110,7 +110,7 @@ func (s TrackedMaterials) contents(record issueops.IssueOpsRecord, root string) 
 
 // readSealed reads a sealed artifact only when the record names its sealed
 // directory; a record without one has no sealed files to copy.
-func (s TrackedMaterials) readSealed(sealed bool, record issueops.IssueOpsRecord, root, name string) ([]byte, error) {
+func (s TrackedMaterials) readSealed(sealed bool, record issueops.Record, root, name string) ([]byte, error) {
 	if !sealed {
 		return nil, domain.ErrSealedArtifactDirMissing
 	}
@@ -121,7 +121,7 @@ func (s TrackedMaterials) readSealed(sealed bool, record issueops.IssueOpsRecord
 // linked plan when it lives in the sealed artifact directory, or the sealed
 // plan when no plan is linked. A linked plan outside the sealed directory is
 // already a tracked file, so it is not copied over the tracked plan.md.
-func (s TrackedMaterials) planSource(record issueops.IssueOpsRecord, root string) (string, bool) {
+func (s TrackedMaterials) planSource(record issueops.Record, root string) (string, bool) {
 	if domain.RequireSealedArtifactDir(record) != nil {
 		return "", false
 	}
@@ -141,7 +141,7 @@ func (s TrackedMaterials) planSource(record issueops.IssueOpsRecord, root string
 // trackedMaterialsMissing reports a cycle whose sealed plan exists but whose
 // tracked plan copy does not: a cycle that entered implement before tracked
 // copies existed. It reads only the local worktree.
-func (s TrackedMaterials) Missing(record issueops.IssueOpsRecord) bool {
+func (s TrackedMaterials) Missing(record issueops.Record) bool {
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.Root) == "" {
 		return false
 	}
@@ -171,13 +171,13 @@ type MaterialFiles interface {
 	WriteFile(string, []byte, fs.FileMode) error
 	MkdirAll(string, fs.FileMode) error
 	Stat(string) (fs.FileInfo, error)
-	ArtifactPath(issueops.IssueOpsRecord, string, string) string
+	ArtifactPath(issueops.Record, string, string) string
 	// Ignored reports whether the repository at root ignores rel.
 	Ignored(root, rel string) bool
 }
 type TrackedMaterials struct{ Files MaterialFiles }
 
-func (s TrackedMaterials) Warning(record issueops.IssueOpsRecord) string {
+func (s TrackedMaterials) Warning(record issueops.Record) string {
 	if s.Missing(record) {
 		return TrackedMaterialsMissingWarning
 	}

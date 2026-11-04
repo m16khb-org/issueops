@@ -6,7 +6,7 @@ import (
 )
 
 // recordValidators runs in declaration order; the first error wins.
-var recordValidators = []func(*IssueOpsRecord) error{
+var recordValidators = []func(*Record) error{
 	validateRecordHeader,
 	validateRecordPhaseLedger,
 	validateRecordIntent,
@@ -25,7 +25,7 @@ var recordValidators = []func(*IssueOpsRecord) error{
 
 // ValidateRecord checks persisted field shapes; cross-field lifecycle rules
 // belong to domain/issueops.ValidateRecordInvariants.
-func ValidateRecord(record IssueOpsRecord) error {
+func ValidateRecord(record Record) error {
 	for _, validate := range recordValidators {
 		if err := validate(&record); err != nil {
 			return err
@@ -34,8 +34,8 @@ func ValidateRecord(record IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordHeader(record *IssueOpsRecord) error {
-	if record.SchemaVersion != IssueOpsSchemaVersion {
+func validateRecordHeader(record *Record) error {
+	if record.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("issueops record schema version is invalid")
 	}
 	if !knownRecordPhase(record.Phase) {
@@ -44,7 +44,7 @@ func validateRecordHeader(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordPhaseLedger(record *IssueOpsRecord) error {
+func validateRecordPhaseLedger(record *Record) error {
 	for phase, entry := range record.PhaseLedger {
 		if !knownRecordPhase(phase) || entry.Phase != phase {
 			return fmt.Errorf("issueops phase ledger identity is invalid")
@@ -53,7 +53,7 @@ func validateRecordPhaseLedger(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordIntent(record *IssueOpsRecord) error {
+func validateRecordIntent(record *Record) error {
 	if record.Intent == nil {
 		return nil
 	}
@@ -61,7 +61,7 @@ func validateRecordIntent(record *IssueOpsRecord) error {
 	return err
 }
 
-func validateRecordFeedback(record *IssueOpsRecord) error {
+func validateRecordFeedback(record *Record) error {
 	for _, feedback := range record.Feedback {
 		if !KnownFeedbackClassification(feedback.Classification) {
 			return fmt.Errorf("issueops feedback classification is invalid")
@@ -73,7 +73,7 @@ func validateRecordFeedback(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordRegressEvents(record *IssueOpsRecord) error {
+func validateRecordRegressEvents(record *Record) error {
 	for _, event := range record.RegressEvents {
 		if !knownRecordPhase(event.FromPhase) {
 			return fmt.Errorf("issueops regress event phase is invalid")
@@ -82,16 +82,16 @@ func validateRecordRegressEvents(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordRoutingTrace(record *IssueOpsRecord) error {
+func validateRecordRoutingTrace(record *Record) error {
 	for _, routing := range record.RoutingTrace {
-		if !knownRecordPhase(IssueOpsPhase(routing.Phase)) {
+		if !knownRecordPhase(Phase(routing.Phase)) {
 			return fmt.Errorf("issueops routing phase is invalid")
 		}
 	}
 	return nil
 }
 
-func validateRecordBranchPrepare(record *IssueOpsRecord) error {
+func validateRecordBranchPrepare(record *Record) error {
 	if record.BranchPrepare != nil &&
 		record.BranchPrepare.Provider != "github" &&
 		record.BranchPrepare.Provider != "gitlab" {
@@ -100,7 +100,7 @@ func validateRecordBranchPrepare(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordRemoteArtifact(record *IssueOpsRecord) error {
+func validateRecordRemoteArtifact(record *Record) error {
 	if record.RemoteArtifact != nil &&
 		!knownRemoteArtifactIdentity(record.RemoteArtifact.Provider, record.RemoteArtifact.Kind) {
 		return fmt.Errorf("issueops remote artifact identity is invalid")
@@ -108,7 +108,7 @@ func validateRecordRemoteArtifact(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordChildCycles(record *IssueOpsRecord) error {
+func validateRecordChildCycles(record *Record) error {
 	for _, child := range record.ChildCycles {
 		if !knownChildValidationVerdict(child.ValidationVerdict) {
 			return fmt.Errorf("issueops child validation verdict is invalid")
@@ -117,11 +117,11 @@ func validateRecordChildCycles(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordCleanupAttempt(record *IssueOpsRecord) error {
+func validateRecordCleanupAttempt(record *Record) error {
 	return ValidateCleanupAttempt(record.CleanupAttempt)
 }
 
-func validateRecordCleanupFinishFailure(record *IssueOpsRecord) error {
+func validateRecordCleanupFinishFailure(record *Record) error {
 	if record.CleanupFinishFailure != nil &&
 		!knownCleanupFinishFailureStep(record.CleanupFinishFailure.Step) {
 		return fmt.Errorf("issueops cleanup finish failure step is invalid")
@@ -129,7 +129,7 @@ func validateRecordCleanupFinishFailure(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordCleanupAbandonFailure(record *IssueOpsRecord) error {
+func validateRecordCleanupAbandonFailure(record *Record) error {
 	if record.CleanupAbandonFailure != nil &&
 		!knownCleanupAbandonFailureStep(record.CleanupAbandonFailure.Step) {
 		return fmt.Errorf("issueops cleanup abandon failure step is invalid")
@@ -137,11 +137,11 @@ func validateRecordCleanupAbandonFailure(record *IssueOpsRecord) error {
 	return nil
 }
 
-func validateRecordChildCreateOperations(record *IssueOpsRecord) error {
+func validateRecordChildCreateOperations(record *Record) error {
 	return ValidateChildCreateOperations(record.ChildCreateOperations)
 }
 
-func validateRecordIssueCreateIntent(record *IssueOpsRecord) error {
+func validateRecordIssueCreateIntent(record *Record) error {
 	if record.IssueCreateIntent == nil {
 		return nil
 	}
@@ -216,6 +216,6 @@ func knownCleanupAbandonFailureStep(step string) bool {
 	}
 }
 
-func knownRecordPhase(phase IssueOpsPhase) bool {
-	return slices.Contains(IssueOpsPhases, phase)
+func knownRecordPhase(phase Phase) bool {
+	return slices.Contains(Phases, phase)
 }

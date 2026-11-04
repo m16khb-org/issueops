@@ -8,21 +8,21 @@ import (
 )
 
 // StrictPRReadiness는 레코드 기반 strict readiness에 loop gate를 더한다.
-func StrictPRReadiness(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
+func StrictPRReadiness(record issueopscontract.Record) issueopscontract.Readiness {
 	readiness := testCycleReadiness()
-	readiness.ChildMissing = func(string, issueopscontract.IssueOpsRecord) ([]string, []string) { return nil, nil }
+	readiness.ChildMissing = func(string, issueopscontract.Record) ([]string, []string) { return nil, nil }
 	return WithLoopGate(readiness.StrictPRWithState("", record), record.Repo)
 }
 
 // StrictPRReadinessWithState는 state까지 읽는 strict readiness에 loop gate를 더한다.
-func StrictPRReadinessWithState(stateRoot string, record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
+func StrictPRReadinessWithState(stateRoot string, record issueopscontract.Record) issueopscontract.Readiness {
 	return WithLoopGate(testCycleReadiness().StrictPRWithState(stateRoot, record), record.Repo)
 }
 
 // AdvancePhase는 pr 단계 진입 전에 strict readiness를 강제한다.
-func AdvancePhase(stateRoot, id, to string) (issueopscontract.IssueOpsRecord, error) {
+func AdvancePhase(stateRoot, id, to string) (issueopscontract.Record, error) {
 	if err := guardPRPhase(stateRoot, id, to); err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false}, err
+		return issueopscontract.Record{OK: false}, err
 	}
 	return advancePhaseForTest(stateRoot, id, to)
 }
@@ -34,13 +34,13 @@ func AdvancePhase(stateRoot, id, to string) (issueopscontract.IssueOpsRecord, er
 func guardPRPhase(stateRoot, id, to string) error {
 	return cycleapp.GuardPRPhase(stateRoot, id, to, cycleport.PRPhaseGuard{
 		Read: issueops.ReadIssueOps,
-		Gate: func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
-			return WithLoopGate(issueopscontract.IssueOpsReadiness{Ready: true}, record.Repo)
+		Gate: func(record issueopscontract.Record) issueopscontract.Readiness {
+			return WithLoopGate(issueopscontract.Readiness{Ready: true}, record.Repo)
 		},
 	})
 }
 
 // WithLoopGate는 readiness에 repo의 loop run gate를 더한다.
-func WithLoopGate(ready issueopscontract.IssueOpsReadiness, repo string) issueopscontract.IssueOpsReadiness {
+func WithLoopGate(ready issueopscontract.Readiness, repo string) issueopscontract.Readiness {
 	return cycleapp.ApplyLoopGate(ready, repo, testLoopRepoGateMissing)
 }

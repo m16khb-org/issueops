@@ -7,13 +7,13 @@ import (
 	port "issueops/internal/port/issueopsreview"
 )
 
-func recordImplementationReviewForTest(root, id string, req model.IssueOpsImplementationReviewRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func recordImplementationReviewForTest(root, id string, req model.ImplementationReviewRequest, actor model.Actor) (model.Record, error) {
 	return app.RecordImplementationReview(core.NewEvidenceReviewStore(&actor, testChangeReader().ChangeFingerprint), root, id, req)
 }
-func recordSchemaEvidenceForTest(root, id string, req model.IssueOpsSchemaEvidenceRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func recordSchemaEvidenceForTest(root, id string, req model.SchemaEvidenceRequest, actor model.Actor) (model.Record, error) {
 	return app.RecordSchemaEvidence(core.NewEvidenceReviewStore(&actor, testChangeReader().ChangeFingerprint), root, id, req)
 }
-func recordProjectDocsReviewForTest(root, id string, req model.IssueOpsProjectDocsReviewRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func recordProjectDocsReviewForTest(root, id string, req model.ProjectDocsReviewRequest, actor model.Actor) (model.Record, error) {
 	return app.RecordProjectDocsReview(port.ProjectDocsReviewStore{
 		EvidenceReviewStore: core.NewEvidenceReviewStore(&actor, testChangeReader().ChangeFingerprint),
 		ChangedPaths:        testChangeReader().ChangedPaths, Root: core.ReviewDocumentPaths{}.Root,

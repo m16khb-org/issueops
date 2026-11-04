@@ -21,7 +21,7 @@ func newAuthorityService() *authorityapp.Service {
 	return authorityapp.New(
 		authorityoutbound.Repository{StateRoot: issueOpsStateRoot()},
 		issueopscore.NativeProcessInspector{},
-		authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()},
+		authorityoutbound.CredentialFiles{StateDir: statestore.Dir()},
 		time.Now,
 		authorityoutbound.ScopeResolver{},
 		rand.Reader,

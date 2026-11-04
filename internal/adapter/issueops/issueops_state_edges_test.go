@@ -28,10 +28,10 @@ func TestNormalizeIssueOpsIDRejectsUnsafeIDs(t *testing.T) {
 }
 
 func TestEncodeIssueOpsRecordRejectsInvalidRecords(t *testing.T) {
-	cases := map[string]issueops.IssueOpsRecord{
-		"bad id":         {ID: "nope", SchemaVersion: issueops.IssueOpsSchemaVersion, OK: true},
-		"wrong schema":   {ID: "io-abc", SchemaVersion: issueops.IssueOpsSchemaVersion + 1, OK: true},
-		"fails validate": {ID: "io-abc", SchemaVersion: issueops.IssueOpsSchemaVersion},
+	cases := map[string]issueops.Record{
+		"bad id":         {ID: "nope", SchemaVersion: issueops.SchemaVersion, OK: true},
+		"wrong schema":   {ID: "io-abc", SchemaVersion: issueops.SchemaVersion + 1, OK: true},
+		"fails validate": {ID: "io-abc", SchemaVersion: issueops.SchemaVersion},
 	}
 	for name, record := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -46,7 +46,7 @@ func TestEncodeIssueOpsRecordRejectsInvalidRecords(t *testing.T) {
 func TestVisitIssueOpsExistingMissingStoreVisitsNothing(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "absent")
 	visited := 0
-	if err := VisitIssueOpsExisting(root, func(string, issueops.IssueOpsRecord, error) { visited++ }); err != nil {
+	if err := VisitIssueOpsExisting(root, func(string, issueops.Record, error) { visited++ }); err != nil {
 		t.Fatal(err)
 	}
 	if visited != 0 {
@@ -71,7 +71,7 @@ func TestVisitIssueOpsExistingReportsInvalidRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := map[string]error{}
-	if err := VisitIssueOpsExisting(root, func(id string, record issueops.IssueOpsRecord, err error) {
+	if err := VisitIssueOpsExisting(root, func(id string, record issueops.Record, err error) {
 		if record.OK {
 			t.Errorf("row %s reported OK", id)
 		}

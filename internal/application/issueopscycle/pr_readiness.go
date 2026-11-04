@@ -10,7 +10,7 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func ImplementationReviewMissing(record model.IssueOpsRecord, currentFingerprint string) string {
+func ImplementationReviewMissing(record model.Record, currentFingerprint string) string {
 	evidence := reviewcontract.ReviewGateEvidence{}
 	if review := record.ImplementationReview; review != nil {
 		evidence = reviewcontract.ReviewGateEvidence{
@@ -20,7 +20,7 @@ func ImplementationReviewMissing(record model.IssueOpsRecord, currentFingerprint
 	return reviewdomain.ImplementationReviewMissing(record.Execution != nil, evidence, currentFingerprint)
 }
 
-func ProjectDocsReviewMissing(record model.IssueOpsRecord, currentFingerprint string) string {
+func ProjectDocsReviewMissing(record model.Record, currentFingerprint string) string {
 	evidence := reviewcontract.ReviewGateEvidence{}
 	if review := record.ProjectDocsReview; review != nil {
 		evidence = reviewcontract.ReviewGateEvidence{Present: true, ReviewedFingerprint: review.ReviewedFingerprint}
@@ -28,7 +28,7 @@ func ProjectDocsReviewMissing(record model.IssueOpsRecord, currentFingerprint st
 	return reviewdomain.ProjectDocsReviewMissing(evidence, currentFingerprint)
 }
 
-func LocalPRReadinessMissing(record model.IssueOpsRecord, observations cycleport.ReadinessObservations) []string {
+func LocalPRReadinessMissing(record model.Record, observations cycleport.ReadinessObservations) []string {
 	missing := BaseImplementationMissing(record)
 	if strings.TrimSpace(record.WorktreePath) == "" {
 		missing = append(missing, "worktree_path")

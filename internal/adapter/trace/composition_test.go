@@ -6,6 +6,6 @@ import (
 	tracecontract "issueops/internal/contract/trace"
 )
 
-func TraceAnalyze(req tracecontract.TraceAnalyzeRequest) (tracecontract.TraceAnalyzeResult, error) {
+func TraceAnalyze(req tracecontract.AnalyzeRequest) (tracecontract.AnalyzeResult, error) {
 	return (traceapp.Service{Effects: Source{ReadState: statestore.NewService().Read}}).Analyze(req)
 }

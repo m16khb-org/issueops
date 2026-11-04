@@ -9,7 +9,7 @@ import (
 	cycleapp "issueops/internal/application/issueopscycle"
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 type Preparer struct {
@@ -20,14 +20,14 @@ type Preparer struct {
 	// IsAncestor(repo, ancestor, descendant) guards a base change after the
 	// worktree exists (nil refuses such a change).
 	IsAncestor            func(string, string, string) (bool, error)
-	UmbrellaForChildIssue func(string, string) (model.IssueOpsRecord, bool)
+	UmbrellaForChildIssue func(string, string) (model.Record, bool)
 	ObserveCodeProjectKey func(string, string) (string, error)
-	Steps                 func(string, string, string, string, string, string) []model.IssueOpsBranchPrepareStep
+	Steps                 func(string, string, string, string, string, string) []model.BranchPrepareStep
 	Now                   func() time.Time
 }
 
-func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBranchPrepareRequest, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+func (s Preparer) Prepare(ctx context.Context, id string, req model.BranchPrepareRequest, actor *model.Actor) (model.Record, error) {
+	var result model.Record
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
@@ -62,7 +62,7 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 		if strings.TrimSpace(req.CodeProjectKey) == "" && s.ObserveCodeProjectKey != nil {
 			observed, observationErr = s.ObserveCodeProjectKey(record.Repo, req.Provider)
 		}
-		codeProject, err := remote.PreparationCodeProject(req.Provider, req.IssueURL, req.CodeProjectKey, observed, observationErr)
+		codeProject, err := issueopsremote.PreparationCodeProject(req.Provider, req.IssueURL, req.CodeProjectKey, observed, observationErr)
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 }
 
 // normalizeRequest trims/lowercases request fields, fills the issue URL from the record, and validates them.
-func (s Preparer) normalizeRequest(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) (model.IssueOpsBranchPrepareRequest, error) {
+func (s Preparer) normalizeRequest(record model.Record, req model.BranchPrepareRequest) (model.BranchPrepareRequest, error) {
 	var err error
 	req.Provider = strings.ToLower(strings.TrimSpace(req.Provider))
 	req.IssueURL = strings.TrimSpace(req.IssueURL)
@@ -85,7 +85,7 @@ func (s Preparer) normalizeRequest(record model.IssueOpsRecord, req model.IssueO
 	if err := domain.ValidateIssueURL(req.IssueURL); err != nil {
 		return req, err
 	}
-	req.Provider, err = remote.PreparationProvider(req.Provider, req.IssueURL)
+	req.Provider, err = issueopsremote.PreparationProvider(req.Provider, req.IssueURL)
 	if err != nil {
 		return req, err
 	}
@@ -101,14 +101,14 @@ func (s Preparer) normalizeRequest(record model.IssueOpsRecord, req model.IssueO
 			return req, err
 		}
 	}
-	if err := remote.ValidatePreparationIssueNumber(req.IssueURL, req.Branch); err != nil {
+	if err := issueopsremote.ValidatePreparationIssueNumber(req.IssueURL, req.Branch); err != nil {
 		return req, err
 	}
 	return req, nil
 }
 
 // validateUmbrella checks the branch names against the umbrella issue of a child issue, when one exists.
-func (s Preparer) validateUmbrella(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) error {
+func (s Preparer) validateUmbrella(record model.Record, req model.BranchPrepareRequest) error {
 	if s.UmbrellaForChildIssue == nil {
 		return nil
 	}
@@ -143,7 +143,7 @@ func (s Preparer) resolveBaseSHA(repo, baseSHA string) (string, error) {
 // commits of the old one (main -> a develop that diverged), sync-base would
 // merge the new base in and the PR would carry those foreign commits
 // (probed: m.txt from main showed up in the develop diff).
-func (s Preparer) guardBaseChange(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) error {
+func (s Preparer) guardBaseChange(record model.Record, req model.BranchPrepareRequest) error {
 	prior := record.BranchPrepare
 	if prior == nil || strings.TrimSpace(prior.BaseSHA) == "" || req.BaseSHA == "" || req.BaseSHA == prior.BaseSHA {
 		return nil

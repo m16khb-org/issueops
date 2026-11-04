@@ -23,12 +23,12 @@ func newPublicationCommand(root string, publish model.RemotePullRequestCreateHan
 	return application.NewPublicationCommandService(core.RemoteRecordStore{StateRoot: root}, application.NewTemplateBodyResolver(os.ReadFile), observe, func(ctx context.Context, actor model.NativeActor) (model.NativeActor, error) {
 		verified, err := issueOpsActorVerifier().Verify(ctx, actor)
 		return verified.Identity, err
-	}, invoke).WithIssueState(func(ctx context.Context, record model.IssueOpsRecord, name string) (string, error) {
+	}, invoke).WithIssueState(func(ctx context.Context, record model.Record, name string) (string, error) {
 		prov, err := provider.Resolve(name)
 		if err != nil {
 			return "", err
 		}
-		snapshot, err := core.ReadRemoteIssueSnapshot(ctx, prov, executionissue.ExecutionIssueSnapshotRequest{Repo: record.Repo, URL: record.IssueURL})
+		snapshot, err := core.ReadRemoteIssueSnapshot(ctx, prov, executionissue.SnapshotRequest{Repo: record.Repo, URL: record.IssueURL})
 		return snapshot.State, err
 	}).WithRepoTemplates(os.ReadFile)
 }
@@ -43,12 +43,12 @@ func newBodySyncCommand(root string, resolve func(string) (port.IssueProvider, e
 		if err != nil {
 			return nil, err
 		}
-		return func(ctx context.Context, id string, cmd contract.Command, actor model.IssueOpsActor) (model.IssueOpsRecord, contract.Result, error) {
+		return func(ctx context.Context, id string, cmd contract.Command, actor model.Actor) (model.Record, contract.Result, error) {
 			return syncIssueOpsRemoteArtifactBody(ctx, root, id, cmd, prov, actor)
 		}, nil
 	}, observe)
 }
 
-func syncRemoteBody(ctx context.Context, root string, input application.BodySyncInput, observe application.AncestryObserver) (model.IssueOpsRecord, contract.Result, error) {
+func syncRemoteBody(ctx context.Context, root string, input application.BodySyncInput, observe application.AncestryObserver) (model.Record, contract.Result, error) {
 	return newBodySyncCommand(root, provider.Resolve, observe).Sync(ctx, input)
 }

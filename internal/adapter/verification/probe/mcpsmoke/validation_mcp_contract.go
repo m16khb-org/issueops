@@ -23,14 +23,14 @@ func ValidateMCPSmokeContract(step *selfverify.StepResult) {
 			return
 		}
 	}
-	if !MCPSmokeHasExpectedMarkers(step.Stdout) {
+	if !HasExpectedMarkers(step.Stdout) {
 		step.OK = false
 		step.Error = "MCP smoke did not expose expected tool/resource"
 	}
 }
 
-func MCPSmokeHasExpectedMarkers(stdout string) bool {
-	for _, marker := range MCPSmokeExpectedMarkers() {
+func HasExpectedMarkers(stdout string) bool {
+	for _, marker := range ExpectedMarkers() {
 		if !strings.Contains(stdout, marker) {
 			return false
 		}
@@ -38,7 +38,7 @@ func MCPSmokeHasExpectedMarkers(stdout string) bool {
 	return true
 }
 
-func MCPSmokeExpectedMarkers() []string {
+func ExpectedMarkers() []string {
 	return []string{
 		"atomic_commit_preflight",
 		"docs_index",

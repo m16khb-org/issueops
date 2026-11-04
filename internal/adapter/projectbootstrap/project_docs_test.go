@@ -28,7 +28,7 @@ func TestBootstrapProjectDocsDryRunAndWrite(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, projectdocdomain.ProjectDocsDir)); !os.IsNotExist(err) {
 		t.Fatalf("dry-run created docs dir or unexpected stat error: %v", err)
 	}
-	wantBootstrapFiles := 1 + len(projectdocdomain.ProjectDocNames()) + len(projectdocdomain.DocFamilies()) + 1 // AGENTS + roots + module starters + manifest
+	wantBootstrapFiles := 1 + len(projectdocdomain.Names()) + len(projectdocdomain.DocFamilies()) + 1 // AGENTS + roots + module starters + manifest
 	if len(dry.Files) != wantBootstrapFiles {
 		t.Fatalf("planned files=%d want %d", len(dry.Files), wantBootstrapFiles)
 	}
@@ -71,7 +71,7 @@ func TestBootstrapProjectDocsDryRunAndWrite(t *testing.T) {
 	if !strings.Contains(agents, "# Existing Rules") || !strings.Contains(agents, projectdocdomain.AgentsStartMarker) || !strings.Contains(agents, ".issueops/TESTING.md") || !strings.Contains(agents, ".issueops/OPERATIONS.md") {
 		t.Fatalf("AGENTS.md marker block not merged correctly:\n%s", agents)
 	}
-	for _, name := range projectdocdomain.ProjectDocNames() {
+	for _, name := range projectdocdomain.Names() {
 		path := filepath.Join(root, projectdocdomain.ProjectDocsDir, name)
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected generated %s: %v", name, err)

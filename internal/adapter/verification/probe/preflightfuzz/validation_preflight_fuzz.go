@@ -58,7 +58,7 @@ func validatePreflightFuzzWithDeps(binary, root string, seed int64, deps preflig
 	if !step.OK {
 		return step
 	}
-	var preflight preflight.PreflightResult
+	var preflight preflight.Result
 	if err := json.Unmarshal([]byte(step.Stdout), &preflight); err != nil {
 		step.OK = false
 		step.Error = err.Error()

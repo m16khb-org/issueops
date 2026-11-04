@@ -26,19 +26,19 @@ func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testi
 			PID: 42, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",
 		},
 	}
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{
+	record := issueops.Record{Execution: &issueops.Execution{
 		Workspace: issueops.Workspace{
 			SourceRoot: source, Root: root, Branch: "69-redesign", BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-07-22T00:00:00Z",
 		},
 		Lease: issueops.WriteLease{Generation: 3, Status: issueops.LeaseStatusActive, Holder: &holder, ClaimedAt: "2026-07-22T00:00:01Z"},
 	}}
 
-	exact := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
+	exact := issueops.Actor{Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
 	if err := validateExecutionMutation(context.Background(), record, &exact, liveTestVerifier()); err != nil {
 		t.Fatalf("exact current holder rejected: %v", err)
 	}
 
-	for name, actor := range map[string]*issueops.IssueOpsActor{
+	for name, actor := range map[string]*issueops.Actor{
 		"missing":            nil,
 		"missing process":    {Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root},
 		"reused process":     {Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{{PID: 42, StartedAt: "2026-07-22T00:00:01Z", Executable: "/usr/bin/codex"}}},
@@ -57,17 +57,17 @@ func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testi
 func TestExecutionMutationAllowsPreExecutionPlanningButFencesNonActiveLease(t *testing.T) {
 	t.Parallel()
 
-	if err := validateExecutionMutation(context.Background(), issueops.IssueOpsRecord{}, nil, liveTestVerifier()); err != nil {
+	if err := validateExecutionMutation(context.Background(), issueops.Record{}, nil, liveTestVerifier()); err != nil {
 		t.Fatalf("pre-execution planning rejected: %v", err)
 	}
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{
+	record := issueops.Record{Execution: &issueops.Execution{
 		Workspace: issueops.Workspace{
 			SourceRoot: "/tmp/source", Root: "/tmp/source.worktrees/issue-69", Branch: "69-redesign", BaseHead: strings.Repeat("b", 40), LinkedAt: "2026-07-22T00:00:00Z",
 		},
 		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-07-22T00:00:01Z"},
 	}}
-	actor := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: record.Execution.Workspace.Root}
+	actor := issueops.Actor{Host: "codex", SessionID: "session-1", CWD: record.Execution.Workspace.Root}
 	if err := validateExecutionMutation(context.Background(), record, &actor, liveTestVerifier()); err == nil {
 		t.Fatal("released lease unexpectedly authorized a mutation")
 	}

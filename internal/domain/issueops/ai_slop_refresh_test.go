@@ -9,18 +9,18 @@ import (
 func TestShouldRefreshAISlopCleanOnlyForLaterPhaseWithStamp(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		phase model.IssueOpsPhase
+		phase model.Phase
 		stamp string
-		to    model.IssueOpsPhase
+		to    model.Phase
 		want  bool
 	}{
-		{name: "later phase", phase: model.IssueOpsPhaseFeedback, stamp: "2026-09-28T00:00:00Z", to: model.IssueOpsPhaseAISlopClean, want: true},
-		{name: "missing stamp", phase: model.IssueOpsPhaseFeedback, to: model.IssueOpsPhaseAISlopClean},
-		{name: "same phase", phase: model.IssueOpsPhaseAISlopClean, stamp: "2026-09-28T00:00:00Z", to: model.IssueOpsPhaseAISlopClean},
-		{name: "other destination", phase: model.IssueOpsPhaseFeedback, stamp: "2026-09-28T00:00:00Z", to: model.IssueOpsPhasePR},
+		{name: "later phase", phase: model.PhaseFeedback, stamp: "2026-09-28T00:00:00Z", to: model.PhaseAISlopClean, want: true},
+		{name: "missing stamp", phase: model.PhaseFeedback, to: model.PhaseAISlopClean},
+		{name: "same phase", phase: model.PhaseAISlopClean, stamp: "2026-09-28T00:00:00Z", to: model.PhaseAISlopClean},
+		{name: "other destination", phase: model.PhaseFeedback, stamp: "2026-09-28T00:00:00Z", to: model.PhasePR},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ShouldRefreshAISlopClean(model.IssueOpsRecord{Phase: tc.phase, AISlopCleanAt: tc.stamp}, tc.to)
+			got := ShouldRefreshAISlopClean(model.Record{Phase: tc.phase, AISlopCleanAt: tc.stamp}, tc.to)
 			if got != tc.want {
 				t.Fatalf("got %v, want %v", got, tc.want)
 			}

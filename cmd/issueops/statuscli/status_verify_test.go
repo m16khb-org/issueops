@@ -200,13 +200,13 @@ func TestRunStatusSelectsProductionSummaryWithoutChangingState(t *testing.T) {
 		{"self-verify-baseline", time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC), true},
 		{"custom-failed-run", time.Date(2026, 9, 30, 0, 0, 0, 123456789, time.UTC), false},
 	} {
-		result := selfcontract.SelfAugmentResult{OK: fixture.ok}
+		result := selfcontract.Result{OK: fixture.ok}
 		err := selfverifyapp.SaveSummary(&result, fixture.key, selfverifyapp.SaveSummaryDeps{
 			Now:    func() time.Time { return fixture.at },
-			Encode: func(snapshot selfcontract.SelfAugmentStateSnapshot) ([]byte, error) { return json.Marshal(snapshot) },
-			Write: func(key, content string) (statecontract.StateResult, error) {
+			Encode: func(snapshot selfcontract.StateSnapshot) ([]byte, error) { return json.Marshal(snapshot) },
+			Write: func(key, content string) (statecontract.Result, error) {
 				return statestore.NewService().Write(context.Background(), key, content)
-			}, StateDir: statestore.StateDir,
+			}, StateDir: statestore.Dir,
 		})
 		if err != nil {
 			t.Fatal(err)

@@ -6,6 +6,6 @@ import (
 	app "issueops/internal/application/selfverify"
 )
 
-func SummarizeSelfAugment(result augmentcontract.SelfAugmentResult) augmentcontract.SelfAugmentSummary {
+func SummarizeSelfAugment(result augmentcontract.Result) augmentcontract.Summary {
 	return app.SummarizeSelfVerification(result, defaultLoopTargetScoreExclusive)
 }

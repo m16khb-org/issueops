@@ -63,12 +63,12 @@ func (s *stateRoundtripStateSession) result(step selfverify.StepResult) validate
 }
 
 // recordMatches reports whether a state result carries the roundtrip record unchanged.
-func (s *stateRoundtripStateSession) recordMatches(result statecontract.StateResult) bool {
+func (s *stateRoundtripStateSession) recordMatches(result statecontract.Result) bool {
 	return result.OK && result.Record.Key == s.input.key && result.Record.Content == s.input.content && result.Record.Bytes == len([]byte(s.input.content))
 }
 
 func (s *stateRoundtripStateSession) validateWriteReadList() selfverify.StepResult {
-	writeResult, failed, ok := runStateJSON[statecontract.StateResult](s, "state write", s.input.binary, "state", "write", "--key", s.input.key, "--value", s.input.content, "--json")
+	writeResult, failed, ok := runStateJSON[statecontract.Result](s, "state write", s.input.binary, "state", "write", "--key", s.input.key, "--value", s.input.content, "--json")
 	if !ok {
 		return failed
 	}
@@ -76,7 +76,7 @@ func (s *stateRoundtripStateSession) validateWriteReadList() selfverify.StepResu
 		return s.fail("write result did not match expected record")
 	}
 
-	readResult, failed, ok := runStateJSON[statecontract.StateResult](s, "state read", s.input.binary, "state", "read", "--key", s.input.key, "--json")
+	readResult, failed, ok := runStateJSON[statecontract.Result](s, "state read", s.input.binary, "state", "read", "--key", s.input.key, "--json")
 	if !ok {
 		return failed
 	}
@@ -84,7 +84,7 @@ func (s *stateRoundtripStateSession) validateWriteReadList() selfverify.StepResu
 		return s.fail("read result did not match expected record")
 	}
 
-	listResult, failed, ok := runStateJSON[statecontract.StateListResult](s, "state list", s.input.binary, "state", "list", "--json")
+	listResult, failed, ok := runStateJSON[statecontract.ListResult](s, "state list", s.input.binary, "state", "list", "--json")
 	if !ok {
 		return failed
 	}

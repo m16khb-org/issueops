@@ -11,12 +11,12 @@ import (
 
 const FullRaceCommand = "go test -race ./... -count=1"
 
-func CoversFullGoTest(plan riskqacontract.RiskQATierPlan) bool {
+func CoversFullGoTest(plan riskqacontract.TierPlan) bool {
 	return (plan.Scope == nil || plan.Scope.Error == "") && slices.Contains(plan.Commands, FullRaceCommand)
 }
 
-func PlanFromPaths(paths []string) riskqacontract.RiskQATierPlan {
-	plan := riskqacontract.RiskQATierPlan{Tier: "standard", ChangedPaths: riskqacontract.NormalizePaths(paths), Reasons: []string{}, Commands: []string{}}
+func PlanFromPaths(paths []string) riskqacontract.TierPlan {
+	plan := riskqacontract.TierPlan{Tier: "standard", ChangedPaths: riskqacontract.NormalizePaths(paths), Reasons: []string{}, Commands: []string{}}
 	if len(plan.ChangedPaths) == 0 {
 		plan.Reasons = append(plan.Reasons, "working tree has no local changes")
 		return plan

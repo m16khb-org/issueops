@@ -14,7 +14,7 @@ import (
 // LinkAwaiter only observes the coordinator's sealed branch identity. It never
 // creates a remote branch or persists verification evidence.
 type LinkAwaiter struct {
-	Load                  func(string) (issueopscontract.IssueOpsRecord, error)
+	Load                  func(string) (issueopscontract.Record, error)
 	RemoteRef             func(context.Context, string, string) (string, error)
 	ObserveLinkedBranches func(context.Context, string) (linkedbranch.Observation, error)
 	Sleep                 func(context.Context, time.Duration) error
@@ -88,7 +88,7 @@ func (s LinkAwaiter) Await(ctx context.Context, req issueopscontract.AwaitBranch
 // observe는 issue 링크와 원격 ref를 같은 시점에 읽어 분류한다.
 // #306의 분류기를 그대로 쓴다 — "정상 링크"의 정의가 두 곳에서 갈리면 한쪽이
 // 통과시킨 상태를 다른 쪽이 거부하는 교착이 다시 생긴다.
-func (s LinkAwaiter) observe(ctx context.Context, record issueopscontract.IssueOpsRecord) (linkedbranch.State, linkedbranch.Node, string) {
+func (s LinkAwaiter) observe(ctx context.Context, record issueopscontract.Record) (linkedbranch.State, linkedbranch.Node, string) {
 	prepare := record.BranchPrepare
 	observation, err := s.ObserveLinkedBranches(ctx, prepare.IssueURL)
 	if err != nil {

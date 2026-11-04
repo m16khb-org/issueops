@@ -7,6 +7,6 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func ApplySelfVerifyLLMEval(result contract.SelfAugmentResult, opts selfverify.LLMEvalOptions) (contract.SelfAugmentResult, error) {
+func ApplySelfVerifyLLMEval(result contract.Result, opts selfverify.LLMEvalOptions) (contract.Result, error) {
 	return app.ApplyLLMEval(result, opts, app.LLMEvalDeps{BuildPrompt: BuildSelfVerifyLLMEvalPrompt, BoundError: BoundedLLMEvalError})
 }

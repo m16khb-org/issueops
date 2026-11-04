@@ -13,10 +13,10 @@ import (
 // Service binds each caller to its provider reader; no process-global callbacks.
 type Service struct{ Reader verificationport.Reader }
 
-func (s Service) Verify(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+func (s Service) Verify(req issueopscontract.RemoteArtifactVerificationRequest) error {
 	return s.VerifyContext(context.Background(), req)
 }
-func (s Service) VerifyContext(ctx context.Context, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+func (s Service) VerifyContext(ctx context.Context, req issueopscontract.RemoteArtifactVerificationRequest) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -35,18 +35,18 @@ func (s Service) VerifyContext(ctx context.Context, req issueopscontract.IssueOp
 	}
 	return rules.ValidateArtifact(req.URL, req.Labels, req.Assignees, artifact)
 }
-func (s Service) mergedArtifact(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) (model.Artifact, error) {
+func (s Service) mergedArtifact(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) (model.Artifact, error) {
 	target, err := rules.ArtifactTarget(artifact.Provider, artifact.Kind, artifact.URL, true)
 	if err != nil {
 		return model.Artifact{}, err
 	}
 	return s.Reader.Artifact(ctx, target)
 }
-func (s Service) Merged(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) error {
+func (s Service) Merged(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) error {
 	_, err := s.MergedHead(ctx, artifact)
 	return err
 }
-func (s Service) MergedHead(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+func (s Service) MergedHead(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 	live, err := s.mergedArtifact(ctx, artifact)
 	if err != nil {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{}, err
@@ -58,14 +58,14 @@ func (s Service) MergedHead(ctx context.Context, artifact issueopscontract.Issue
 }
 
 // A failed observation must not be interpreted as an unmerged artifact.
-func (s Service) ObserveMerged(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error) {
+func (s Service) ObserveMerged(artifact issueopscontract.RemoteArtifactVerification) (bool, error) {
 	live, err := s.mergedArtifact(context.Background(), artifact)
 	if err != nil {
 		return false, err
 	}
 	return live.Merged, nil
 }
-func (s Service) ObserveTarget(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (string, error) {
+func (s Service) ObserveTarget(artifact issueopscontract.RemoteArtifactVerification) (string, error) {
 	live, err := s.mergedArtifact(context.Background(), artifact)
 	if err != nil {
 		return "", err

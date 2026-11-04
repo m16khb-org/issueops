@@ -17,29 +17,29 @@ func TestIssueOpsIntentAndArchitectureGatePhaseProgression(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-intent-design"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "1-intent-design"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "intent_contract") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhasePlan)); err == nil || !strings.Contains(err.Error(), "intent_contract") {
 		t.Fatalf("plan phase should require intent contract, got %v", err)
 	}
 	record, err = LinkIssueOpsIssue(stateRoot, record.ID, "https://github.com/example/repo/issues/1")
 	if err != nil {
 		t.Fatalf("issue link should record remote issue before intent contract: %v", err)
 	}
-	if record.Phase != issueops.IssueOpsPhaseProblem {
+	if record.Phase != issueops.PhaseProblem {
 		t.Fatalf("issue link before intent should not enter plan phase: %+v", record)
 	}
-	if _, err := RecordIssueOpsIntent(stateRoot, record.ID, issueops.IssueOpsIntentRecordRequest{
+	if _, err := RecordIssueOpsIntent(stateRoot, record.ID, issueops.IntentRecordRequest{
 		RawRequest:        "IssueOps must understand intent before refactoring",
 		InterpretedIntent: "IssueOps must understand intent before refactoring",
 		SuccessCriteria:   []string{"intent is interpreted, not copied"},
 	}); err == nil || !strings.Contains(err.Error(), "interpreted_intent must differ from raw_request") {
 		t.Fatalf("intent interpretation should reject raw request copy, got %v", err)
 	}
-	if _, err := RecordIssueOpsIntent(stateRoot, record.ID, issueops.IssueOpsIntentRecordRequest{
+	if _, err := RecordIssueOpsIntent(stateRoot, record.ID, issueops.IntentRecordRequest{
 		RawRequest:        "IssueOps must understand intent before refactoring",
 		InterpretedIntent: "IssueOps must understand the intent before refactoring.",
 		SuccessCriteria:   []string{"intent is interpreted, not copied"},
@@ -55,7 +55,7 @@ func TestIssueOpsIntentAndArchitectureGatePhaseProgression(t *testing.T) {
 		t.Fatalf("architecture review before intent should be rejected, got %v", err)
 	}
 
-	record, err = RecordIssueOpsIntent(stateRoot, record.ID, issueops.IssueOpsIntentRecordRequest{
+	record, err = RecordIssueOpsIntent(stateRoot, record.ID, issueops.IntentRecordRequest{
 		RawRequest:        "IssueOps must understand intent before refactoring",
 		InterpretedIntent: "Persist intent evidence and block premature implementation",
 		SuccessCriteria:   []string{"plan cannot start without intent", "implementation cannot start without approved design"},
@@ -68,11 +68,11 @@ func TestIssueOpsIntentAndArchitectureGatePhaseProgression(t *testing.T) {
 	if record.Intent == nil || len(record.Intent.SuccessCriteria) != 2 {
 		t.Fatalf("intent contract should be persisted: %+v", record.Intent)
 	}
-	recordWithoutIssue, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "2-no-issue"})
+	recordWithoutIssue, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "2-no-issue"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordWithoutIssue, err = RecordIssueOpsIntent(stateRoot, recordWithoutIssue.ID, issueops.IssueOpsIntentRecordRequest{
+	recordWithoutIssue, err = RecordIssueOpsIntent(stateRoot, recordWithoutIssue.ID, issueops.IntentRecordRequest{
 		RawRequest:        "IssueOps must still require remote issue before planning",
 		InterpretedIntent: "Plan phase must prove the issue contract exists",
 		SuccessCriteria:   []string{"plan cannot start without issue_url"},
@@ -80,13 +80,13 @@ func TestIssueOpsIntentAndArchitectureGatePhaseProgression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, recordWithoutIssue.ID, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "issue_url") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, recordWithoutIssue.ID, string(issueops.PhasePlan)); err == nil || !strings.Contains(err.Error(), "issue_url") {
 		t.Fatalf("plan phase should require issue_url after intent, got %v", err)
 	}
 	recordIssueOpsGrillArtifactsForTest(t, stateRoot, record.ID)
 	setIssueOpsPlanPrepForTest(t, stateRoot, record.ID)
-	record, err = AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhasePlan))
-	if err != nil || record.Phase != issueops.IssueOpsPhasePlan {
+	record, err = AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhasePlan))
+	if err != nil || record.Phase != issueops.PhasePlan {
 		t.Fatalf("plan should be allowed after intent contract, got %+v err=%v", record, err)
 	}
 	if _, err := RecordIssueOpsArchitectureReview(stateRoot, record.ID, reviewcontract.ArchitectureReviewRequest{
@@ -141,7 +141,7 @@ func TestIssueOpsIntentAndArchitectureGatePhaseProgression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/example/repo/issues/1",
 		Branch:       "1-intent-design",
@@ -195,11 +195,11 @@ func TestIssueOpsIntentAndArchitectureGatePhaseProgression(t *testing.T) {
 		t.Fatal(err)
 	}
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md"))
-	if err != nil || record.Phase != issueops.IssueOpsPhasePlan {
+	if err != nil || record.Phase != issueops.PhasePlan {
 		t.Fatalf("approved design should allow plan attachment before tool prep, got %+v err=%v", record, err)
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
-	if record.Phase != issueops.IssueOpsPhaseImplement {
+	if record.Phase != issueops.PhaseImplement {
 		t.Fatalf("worktree tool prep should allow implementation entry, got %+v", record)
 	}
 }
@@ -209,7 +209,7 @@ func TestIssueOpsIntentAndArchitectureRedactSecretLikeFreeform(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-redaction"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "1-redaction"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestIssueOpsIntentAndArchitectureRedactSecretLikeFreeform(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = RecordIssueOpsIntent(stateRoot, record.ID, issueops.IssueOpsIntentRecordRequest{
+	record, err = RecordIssueOpsIntent(stateRoot, record.ID, issueops.IntentRecordRequest{
 		RawRequest:        "token=secret-value",
 		InterpretedIntent: "api_key=secret-value",
 		SuccessCriteria:   []string{"password=secret-value"},

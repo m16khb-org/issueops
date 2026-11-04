@@ -9,6 +9,6 @@ func stopCleanupWorkspaceProcesses(root string, preview []model.CleanupWorkspace
 	return (cleanupapp.WorkspaceProcessStopper{Processes: NewCleanupProcessController(deps)}).Stop(root, preview)
 }
 
-func cleanupWorkspaceGatesForRecord(record model.IssueOpsRecord, root string, processes CleanupProcessDeps) (cleanupapp.FinishWorkspaceObservation, []string) {
+func cleanupWorkspaceGatesForRecord(record model.Record, root string, processes CleanupProcessDeps) (cleanupapp.FinishWorkspaceObservation, []string) {
 	return NewCleanupWorkspaceCleaner(processes).Observe(root, record.Repo)
 }

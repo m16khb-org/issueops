@@ -8,7 +8,7 @@ import (
 )
 
 type ExecutionStatus struct {
-	ReadRecord func(string) (issueops.IssueOpsRecord, error)
+	ReadRecord func(string) (issueops.Record, error)
 }
 
 func (s ExecutionStatus) Read(id string) (issueops.ExecutionResult, error) {
@@ -25,7 +25,7 @@ func (s ExecutionStatus) Read(id string) (issueops.ExecutionResult, error) {
 	}
 	return result, nil
 }
-func WriterlessCommand(record issueops.IssueOpsRecord) string {
+func WriterlessCommand(record issueops.Record) string {
 	if record.Execution == nil {
 		return ""
 	}

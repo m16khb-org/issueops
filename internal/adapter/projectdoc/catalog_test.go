@@ -335,7 +335,7 @@ func TestScanProjectDocNamesMarksReadErrorAsTruncated(t *testing.T) {
 }
 
 func TestFormatProjectDocCatalogListsPathsWithDescriptions(t *testing.T) {
-	catalog := []projectdocdomain.ProjectDocCatalogEntry{
+	catalog := []projectdocdomain.CatalogEntry{
 		{RelPath: ".issueops/ADR.md", Title: "구현 계획", Description: "Structural decisions, rationale, and rejected alternatives."},
 		{RelPath: ".issueops/X.md", Title: "엑스", Description: ""},
 		{RelPath: ".issueops/BARE.md"},
@@ -375,7 +375,7 @@ func writeProjectDoc(t *testing.T, repo, name, content string) {
 	}
 }
 
-func discoverProjectDocEntries(repoRoot string) []projectdocdomain.ProjectDocCatalogEntry {
+func discoverProjectDocEntries(repoRoot string) []projectdocdomain.CatalogEntry {
 	entries, _, _ := DiscoverProjectDocsReport(repoRoot)
 	return entries
 }

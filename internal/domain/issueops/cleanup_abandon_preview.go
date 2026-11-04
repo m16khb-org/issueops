@@ -22,7 +22,7 @@ type CleanupAbandonObservation struct {
 	RemoteArtifactState, IssueState                                 string
 }
 
-func BuildCleanupAbandonPreview(record model.IssueOpsRecord, req model.CleanupAbandonRequest, inventory model.CleanupAbandonInventory, observed CleanupAbandonObservation) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
+func BuildCleanupAbandonPreview(record model.Record, req model.CleanupAbandonRequest, inventory model.CleanupAbandonInventory, observed CleanupAbandonObservation) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
 	b := &cleanupAbandonPreviewBuilder{record: &record, req: &req, inventory: inventory, observed: &observed}
 	b.result = model.CleanupAbandonResult{
 		OK: true, ID: record.ID, Preview: !req.Apply, Reason: strings.TrimSpace(req.Reason),
@@ -67,7 +67,7 @@ func abandonRemoteBranchDeletion(effects []string) string {
 // cleanupAbandonPreviewBuilder accumulates the missing-gate list in the order
 // the preview checks run; the order is part of the observable result.
 type cleanupAbandonPreviewBuilder struct {
-	record    *model.IssueOpsRecord
+	record    *model.Record
 	req       *model.CleanupAbandonRequest
 	inventory model.CleanupAbandonInventory
 	observed  *CleanupAbandonObservation

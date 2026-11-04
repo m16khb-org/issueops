@@ -15,7 +15,7 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 	for _, operation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(operation), func(t *testing.T) {
 			root := t.TempDir()
-			record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-abandon-store", Phase: model.IssueOpsPhaseDone})
+			record, err := writeIssueOps(context.Background(), root, model.Record{SchemaVersion: 1, ID: "io-abandon-store", Phase: model.PhaseDone})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -24,8 +24,8 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 			if err != nil {
 				t.Fatal(err)
 			}
-			attempt := model.IssueOpsCleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
-			failure := model.IssueOpsCleanupAbandonFailure{Step: model.CleanupFailureStepApplying, At: attempt.StartedAt}
+			attempt := model.CleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+			failure := model.CleanupAbandonFailure{Step: model.CleanupFailureStepApplying, At: attempt.StartedAt}
 			var armed model.CleanupSnapshot
 			if operation == model.CleanupOperationAbandon {
 				if _, err := store.Arm(ctx, before, attempt); err == nil {
@@ -79,7 +79,7 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 				if err != nil || retained.Record.CleanupAttempt == nil {
 					t.Fatalf("undrained attempt lost: %v", err)
 				}
-				released, err := store.FailAbandon(ctx, retained, model.IssueOpsCleanupAbandonFailure{Step: model.CleanupFailureStepRecordDelete, At: attempt.StartedAt}, true)
+				released, err := store.FailAbandon(ctx, retained, model.CleanupAbandonFailure{Step: model.CleanupFailureStepRecordDelete, At: attempt.StartedAt}, true)
 				if err != nil || released.Record.CleanupAttempt != nil {
 					t.Fatalf("drained attempt remained: %v", err)
 				}

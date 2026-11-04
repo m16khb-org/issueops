@@ -17,7 +17,7 @@ import (
 // 승인이 실행 뒤에도 stale로 오판되지 않는다.
 func TestReviewArchitectureSourceSealedDigestMatchesRecordedDigest(t *testing.T) {
 	root := t.TempDir()
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID: "io-arch",
 		Execution: &issueops.Execution{Workspace: issueops.Workspace{
 			Root: root, ArtifactDir: ".issueops/issues/1/artifact",

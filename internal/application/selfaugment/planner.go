@@ -13,14 +13,14 @@ import (
 
 type Planner struct {
 	Repository     port.PlanRepository
-	DocsIndex      func(string, string) docscontract.DocsIndexResult
+	DocsIndex      func(string, string) docscontract.IndexResult
 	ListSkillNames func(string) ([]string, error)
-	StateList      func() (statecontract.StateListResult, error)
-	StateRead      func(string) (statecontract.StateResult, error)
+	StateList      func() (statecontract.ListResult, error)
+	StateRead      func(string) (statecontract.Result, error)
 	Now            func() time.Time
 }
 
-func (planner Planner) Plan(req contract.SelfAugmentPlanRequest, root, version string) contract.SelfAugmentPlanResult {
+func (planner Planner) Plan(req contract.PlanRequest, root, version string) contract.PlanResult {
 	geniusPath, geniusText, err := planner.Repository.ReadGeniusThink(root)
 	warnings := []string{}
 	if err != nil {

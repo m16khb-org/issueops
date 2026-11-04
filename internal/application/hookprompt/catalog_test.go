@@ -52,9 +52,9 @@ func TestBuildProjectDocCatalogContext(t *testing.T) {
 	}
 }
 
-func omissionService(docs []projectdoc.ProjectDocCatalogEntry, omissions projectdoc.CatalogOmissions) app.CatalogService {
+func omissionService(docs []projectdoc.CatalogEntry, omissions projectdoc.CatalogOmissions) app.CatalogService {
 	return app.CatalogService{
-		DiscoverReport: func(string) ([]projectdoc.ProjectDocCatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats) {
+		DiscoverReport: func(string) ([]projectdoc.CatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats) {
 			return docs, omissions, projectdoc.CatalogStats{}
 		},
 		FormatCompact:         reader.FormatProjectDocCatalog,
@@ -65,7 +65,7 @@ func omissionService(docs []projectdoc.ProjectDocCatalogEntry, omissions project
 }
 
 func TestBuildReportsExactOmissionCounts(t *testing.T) {
-	docs := []projectdoc.ProjectDocCatalogEntry{{RelPath: ".issueops/ADR.md", Description: "Decisions."}}
+	docs := []projectdoc.CatalogEntry{{RelPath: ".issueops/ADR.md", Description: "Decisions."}}
 	omissions := projectdoc.CatalogOmissions{Oversize: 2, Unreadable: 1, OverCap: 3, HeaderTruncated: 4, ScanTruncated: true}
 
 	got := omissionService(docs, omissions).Build("repo")
@@ -108,18 +108,18 @@ func TestBuildWithOnlyOmissionsStaysNonInjectingButVisible(t *testing.T) {
 }
 
 func TestCatalogWithoutDocsSkipsRendering(t *testing.T) {
-	for _, docs := range [][]projectdoc.ProjectDocCatalogEntry{nil, {}} {
+	for _, docs := range [][]projectdoc.CatalogEntry{nil, {}} {
 		calls := 0
 		service := app.CatalogService{
-			DiscoverReport: func(repo string) ([]projectdoc.ProjectDocCatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats) {
+			DiscoverReport: func(repo string) ([]projectdoc.CatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats) {
 				if repo != "repo" {
 					t.Fatalf("repo=%q", repo)
 				}
 				calls++
 				return docs, projectdoc.CatalogOmissions{}, projectdoc.CatalogStats{}
 			},
-			FormatCompact:  func([]projectdoc.ProjectDocCatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
-			FormatUserView: func(string, []projectdoc.ProjectDocCatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
+			FormatCompact:  func([]projectdoc.CatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
+			FormatUserView: func(string, []projectdoc.CatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
 			RepoName:       func(string) string { t.Fatal("empty catalog named its repository"); return "" },
 		}
 		got := service.Build("repo")

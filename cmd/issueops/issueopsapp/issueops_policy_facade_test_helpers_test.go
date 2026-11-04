@@ -5,7 +5,7 @@ import (
 	policy "issueops/internal/contract/policy"
 )
 
-func verifyIssueOpsRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+func verifyIssueOpsRemoteArtifactLive(req issueopscontract.RemoteArtifactVerificationRequest) error {
 	return newRemoteVerifier().Verify(req)
 }
 

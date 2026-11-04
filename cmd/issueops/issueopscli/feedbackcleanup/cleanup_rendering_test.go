@@ -66,8 +66,8 @@ func (o *cleanupOutputs) deps() Deps {
 // GitHub-backed record and whose runners are replaced by configure.
 func stubbedCleanupCommand(configure func(*cleanupapp.Invocation, *CleanupDeps)) Command {
 	invocation := cleanupapp.Invocation{
-		Read: func(id string) (issueopscontract.IssueOpsRecord, error) {
-			return issueopscontract.IssueOpsRecord{ID: id, IssueURL: "https://github.com/acme/repo/issues/1"}, nil
+		Read: func(id string) (issueopscontract.Record, error) {
+			return issueopscontract.Record{ID: id, IssueURL: "https://github.com/acme/repo/issues/1"}, nil
 		},
 		Provider:                   func(string) (port.IssueProvider, error) { return nil, nil },
 		CurrentDirectory:           func() (string, error) { return "/cwd", nil },
@@ -84,34 +84,34 @@ func stubbedCleanupCommand(configure func(*cleanupapp.Invocation, *CleanupDeps))
 func TestRunCleanupSubcommandsRejectUnknownFlagsAndHonorHelpWithoutRunning(t *testing.T) {
 	ran := false
 	command := stubbedCleanupCommand(func(inv *cleanupapp.Invocation, ops *CleanupDeps) {
-		inv.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
+		inv.Read = func(string) (issueopscontract.Record, error) {
 			ran = true
-			return issueopscontract.IssueOpsRecord{}, nil
+			return issueopscontract.Record{}, nil
 		}
 		inv.RunAbandon = func(context.Context, issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
 			ran = true
 			return issueopscontract.CleanupAbandonResult{}, nil
 		}
-		ops.Status = func(context.Context, string, string, bool, Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
+		ops.Status = func(context.Context, string, string, bool, Deps) (issueopscontract.CleanupStatus, error) {
 			ran = true
-			return issueopscontract.IssueOpsCleanupStatus{}, nil
+			return issueopscontract.CleanupStatus{}, nil
 		}
-		ops.CloseIssueOpsChildren = func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+		ops.CloseIssueOpsChildren = func(string, string, issueopscontract.CloseChildrenRequest, Deps) (issueopscontract.CloseChildrenResult, error) {
 			ran = true
-			return issueopscontract.IssueOpsCloseChildrenResult{}, nil
+			return issueopscontract.CloseChildrenResult{}, nil
 		}
-		ops.AddIssueOpsFeedbackWithActor = func(string, string, string, string, string, issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		ops.AddIssueOpsFeedbackWithActor = func(string, string, string, string, string, issueopscontract.Actor) (issueopscontract.Record, error) {
 			ran = true
-			return issueopscontract.IssueOpsRecord{}, nil
+			return issueopscontract.Record{}, nil
 		}
-		ops.MarkIssueOpsContractFeedbackIssueUpdatedWithActor = func(string, string, issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		ops.MarkIssueOpsContractFeedbackIssueUpdatedWithActor = func(string, string, issueopscontract.Actor) (issueopscontract.Record, error) {
 			ran = true
-			return issueopscontract.IssueOpsRecord{}, nil
+			return issueopscontract.Record{}, nil
 		}
 	})
 	outputs := &cleanupOutputs{}
 	deps := outputs.deps()
-	deps.PrintResult = func(issueopscontract.IssueOpsRecord, bool, error) error { ran = true; return nil }
+	deps.PrintResult = func(issueopscontract.Record, bool, error) error { ran = true; return nil }
 	deps.OrphanPreview = func(context.Context, orphancontract.Request) (orphancontract.Result, error) {
 		ran = true
 		return orphancontract.Result{}, nil
@@ -164,7 +164,7 @@ func TestRunHelpRendersUsageForEveryEntryAlias(t *testing.T) {
 
 func TestRunFeedbackBindsFlagsToTheLocalActorWithObservedAncestry(t *testing.T) {
 	ancestry := []issueopscontract.NativeProcessReceipt{{PID: 7, StartedAt: "t", Executable: "codex"}}
-	var added, marked issueopscontract.IssueOpsActor
+	var added, marked issueopscontract.Actor
 	var addArgs []string
 	command := stubbedCleanupCommand(func(_ *cleanupapp.Invocation, ops *CleanupDeps) {
 		ops.ObserveNativeProcessAncestry = func(pid int) ([]issueopscontract.NativeProcessReceipt, error) {
@@ -173,18 +173,18 @@ func TestRunFeedbackBindsFlagsToTheLocalActorWithObservedAncestry(t *testing.T) 
 			}
 			return ancestry, errors.New("partial ancestry is tolerated")
 		}
-		ops.AddIssueOpsFeedbackWithActor = func(root, id, source, body, classification string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		ops.AddIssueOpsFeedbackWithActor = func(root, id, source, body, classification string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			addArgs = []string{root, id, source, body, classification}
 			added = actor
-			return issueopscontract.IssueOpsRecord{ID: id}, nil
+			return issueopscontract.Record{ID: id}, nil
 		}
-		ops.MarkIssueOpsContractFeedbackIssueUpdatedWithActor = func(_ string, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		ops.MarkIssueOpsContractFeedbackIssueUpdatedWithActor = func(_ string, id string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			marked = actor
-			return issueopscontract.IssueOpsRecord{ID: id}, nil
+			return issueopscontract.Record{ID: id}, nil
 		}
 	})
 	var printed []bool
-	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintResult: func(_ issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
+	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintResult: func(_ issueopscontract.Record, jsonOut bool, err error) error {
 		printed = append(printed, jsonOut)
 		return err
 	}}
@@ -194,8 +194,8 @@ func TestRunFeedbackBindsFlagsToTheLocalActorWithObservedAncestry(t *testing.T) 
 	if err := command.RunFeedback([]string{"mark-issue-updated", "--id", "io-1", "--host", "claude", "--session-id", "s2", "--cwd", "/work2"}, deps); err != nil {
 		t.Fatal(err)
 	}
-	wantAdded := issueopscontract.IssueOpsActor{Host: "codex", SessionID: "s1", AgentID: "a1", CWD: "/work", NativeProcessAncestry: ancestry}
-	wantMarked := issueopscontract.IssueOpsActor{Host: "claude", SessionID: "s2", CWD: "/work2", NativeProcessAncestry: ancestry}
+	wantAdded := issueopscontract.Actor{Host: "codex", SessionID: "s1", AgentID: "a1", CWD: "/work", NativeProcessAncestry: ancestry}
+	wantMarked := issueopscontract.Actor{Host: "claude", SessionID: "s2", CWD: "/work2", NativeProcessAncestry: ancestry}
 	if !reflect.DeepEqual(added, wantAdded) || !reflect.DeepEqual(marked, wantMarked) {
 		t.Fatalf("added=%+v marked=%+v", added, marked)
 	}
@@ -207,17 +207,17 @@ func TestRunFeedbackBindsFlagsToTheLocalActorWithObservedAncestry(t *testing.T) 
 func TestRunCleanupStatusRendersReadinessAndForwardsFlags(t *testing.T) {
 	var gotRoot, gotID string
 	var gotMerged bool
-	status := issueopscontract.IssueOpsCleanupStatus{}
+	status := issueopscontract.CleanupStatus{}
 	var statusErr error
 	command := stubbedCleanupCommand(func(_ *cleanupapp.Invocation, ops *CleanupDeps) {
-		ops.Status = func(_ context.Context, root, id string, merged bool, _ Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
+		ops.Status = func(_ context.Context, root, id string, merged bool, _ Deps) (issueopscontract.CleanupStatus, error) {
 			gotRoot, gotID, gotMerged = root, id, merged
 			return status, statusErr
 		}
 	})
 	outputs := &cleanupOutputs{}
 
-	status = issueopscontract.IssueOpsCleanupStatus{Ready: false, Missing: []string{"pr_phase", "merged"}, Choices: []string{"1) keep", "2) abandon"}}
+	status = issueopscontract.CleanupStatus{Ready: false, Missing: []string{"pr_phase", "merged"}, Choices: []string{"1) keep", "2) abandon"}}
 	out, err := captureCleanupStdout(t, func() error {
 		return command.RunCleanup([]string{"status", "--id", "io-9", "--merged"}, outputs.deps())
 	})
@@ -229,7 +229,7 @@ func TestRunCleanupStatusRendersReadinessAndForwardsFlags(t *testing.T) {
 		t.Fatalf("root=%q id=%q merged=%v json=%v", gotRoot, gotID, gotMerged, outputs.json)
 	}
 
-	status = issueopscontract.IssueOpsCleanupStatus{Ready: true}
+	status = issueopscontract.CleanupStatus{Ready: true}
 	out, err = captureCleanupStdout(t, func() error { return command.RunCleanup([]string{"status", "--id", "io-9"}, outputs.deps()) })
 	if err != nil || out != "ready: true\n" || gotMerged {
 		t.Fatalf("ready out=%q merged=%v err=%v", out, gotMerged, err)
@@ -251,16 +251,16 @@ func TestRunCleanupStatusRendersReadinessAndForwardsFlags(t *testing.T) {
 }
 
 func TestRunCleanupCloseChildrenRendersPreviewAndClosedChildren(t *testing.T) {
-	result := issueopscontract.IssueOpsCloseChildrenResult{
+	result := issueopscontract.CloseChildrenResult{
 		ClosedCount: 1,
-		Children: []issueopscontract.IssueOpsCloseChildResult{
+		Children: []issueopscontract.CloseChildResult{
 			{URL: "https://example.test/c/1", Preview: "would close https://example.test/c/1"},
 			{URL: "https://example.test/c/2", Closed: true, State: "closed"},
 		},
 	}
 	var runErr error
 	command := stubbedCleanupCommand(func(_ *cleanupapp.Invocation, ops *CleanupDeps) {
-		ops.CloseIssueOpsChildren = func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+		ops.CloseIssueOpsChildren = func(string, string, issueopscontract.CloseChildrenRequest, Deps) (issueopscontract.CloseChildrenResult, error) {
 			return result, runErr
 		}
 	})
@@ -504,29 +504,29 @@ func TestRunCleanupInvocationFailuresRenderOnlyTheOriginalCause(t *testing.T) {
 		want    string
 	}{
 		{"finish cannot read record", []string{"finish", "--id", "io-1", "--preview"}, func(inv *cleanupapp.Invocation) {
-			inv.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
-				return issueopscontract.IssueOpsRecord{}, readErr
+			inv.Read = func(string) (issueopscontract.Record, error) {
+				return issueopscontract.Record{}, readErr
 			}
 		}, "record store offline"},
 		{"finish cannot determine provider", []string{"finish", "--id", "io-1", "--preview"}, func(inv *cleanupapp.Invocation) {
-			inv.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
-				return issueopscontract.IssueOpsRecord{ID: id}, nil
+			inv.Read = func(id string) (issueopscontract.Record, error) {
+				return issueopscontract.Record{ID: id}, nil
 			}
 		}, "pass --provider"},
 		{"remote-branch without merge verification", []string{"remote-branch", "--id", "io-1", "--preview"}, func(inv *cleanupapp.Invocation) {
 			inv.MergeVerificationAvailable = false
 		}, "merge verification is not configured"},
 		{"linked-branch cannot read record", []string{"linked-branch", "--id", "io-1", "--preview"}, func(inv *cleanupapp.Invocation) {
-			inv.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
-				return issueopscontract.IssueOpsRecord{}, readErr
+			inv.Read = func(string) (issueopscontract.Record, error) {
+				return issueopscontract.Record{}, readErr
 			}
 		}, "record store offline"},
 		{"abandon cannot bind next command", []string{"abandon", "--id", "io-1", "--reason", "r", "--preview"}, func(inv *cleanupapp.Invocation) {
 			inv.RunAbandon = func(context.Context, issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
 				return issueopscontract.CleanupAbandonResult{NextCommand: "issueops cleanup abandon --apply"}, nil
 			}
-			inv.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
-				return issueopscontract.IssueOpsRecord{}, readErr
+			inv.Read = func(string) (issueopscontract.Record, error) {
+				return issueopscontract.Record{}, readErr
 			}
 		}, "record store offline"},
 	}

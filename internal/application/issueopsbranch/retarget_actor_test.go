@@ -11,14 +11,14 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-func retargetActorRecord(t *testing.T, status issueops.LeaseStatus, holder *issueops.NativeActor) (issueops.IssueOpsRecord, string) {
+func retargetActorRecord(t *testing.T, status issueops.LeaseStatus, holder *issueops.NativeActor) (issueops.Record, string) {
 	t.Helper()
 	source := t.TempDir()
 	root := filepath.Join(source+".worktrees", "2819-child")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	return issueops.IssueOpsRecord{Execution: &issueops.Execution{
+	return issueops.Record{Execution: &issueops.Execution{
 		Workspace: issueops.Workspace{
 			SourceRoot: source, Root: root, Branch: "2819-child", BaseHead: strings.Repeat("a", 40),
 			LinkedAt: "2026-08-28T00:00:00Z",
@@ -38,7 +38,7 @@ func TestRetargetMutationBindsToHolderOnlyWhileTheLeaseIsActive(t *testing.T) {
 		SessionProcess: &issueops.NativeProcessReceipt{PID: 42, StartedAt: "2026-08-28T00:00:00Z", Executable: "/usr/bin/codex"},
 	}
 	active, root := retargetActorRecord(t, issueops.LeaseStatusActive, &holder)
-	exact := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
+	exact := issueops.Actor{Host: "codex", SessionID: "session-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
 	if err := service.authorize(context.Background(), active, &exact); err != nil {
 		t.Fatalf("the active lease holder must be allowed to retarget: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestRetargetMutationBindsToHolderOnlyWhileTheLeaseIsActive(t *testing.T) {
 	if err := service.authorize(context.Background(), released, nil); err != nil {
 		t.Fatalf("a released cycle must stay retargetable at cleanup time: %v", err)
 	}
-	if err := service.authorize(context.Background(), issueops.IssueOpsRecord{}, nil); err != nil {
+	if err := service.authorize(context.Background(), issueops.Record{}, nil); err != nil {
 		t.Fatalf("a cycle without execution must stay retargetable: %v", err)
 	}
 }

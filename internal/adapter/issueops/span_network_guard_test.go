@@ -194,7 +194,7 @@ func requireGitCallsOutsideSpan(t *testing.T, log string, wantSubcommand string)
 func TestSpanLockStateDetectsAHeldSpan(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "997-probe"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "997-probe"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,14 +219,14 @@ func TestSpanLockStateDetectsAHeldSpan(t *testing.T) {
 func TestPRPhaseEntryFetchesUpstreamOutsideTheSpan(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "998-pr-entry"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "998-pr-entry"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	log := installSpanProbingGit(t, stateRoot, false)
 	// 이 레코드는 PR readiness를 채우지 않았으므로 전이는 거부된다. 확인할 것은
 	// 거부 여부가 아니라 fetch가 어디서 실행됐는가다.
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhasePR)); err == nil {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhasePR)); err == nil {
 		t.Fatal("an unprepared record must not enter the pr phase")
 	}
 	requireGitCallsOutsideSpan(t, log, "fetch")
@@ -245,10 +245,10 @@ func TestBranchRetargetObservesRemoteOutsideTheSpan(t *testing.T) {
 	log := installSpanProbingGit(t, stateRoot, false)
 
 	readbackState := ""
-	updated, err := retargetForTest(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
+	updated, err := retargetForTest(stateRoot, record.ID, issueops.BranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "child MR retargeted to the umbrella",
-	}, issueops.IssueOpsActor{}, branchapp.Retargeter{
-		TargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
+	}, issueops.Actor{}, branchapp.Retargeter{
+		TargetBranch: func(issueops.RemoteArtifactVerification) (string, error) {
 			readbackState = spanLockState(lockDB)
 			return "2803-umbrella", nil
 		},
@@ -274,10 +274,10 @@ func TestBranchRetargetRejectsAnArtifactThatChangedAfterObservation(t *testing.T
 		t.Fatalf("create the retarget branch on origin: %s", stderr)
 	}
 	record := retargetReadyRecord(t, stateRoot, repo)
-	_, err := retargetForTest(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
+	_, err := retargetForTest(stateRoot, record.ID, issueops.BranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "child MR retargeted to the umbrella",
-	}, issueops.IssueOpsActor{}, branchapp.Retargeter{
-		TargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
+	}, issueops.Actor{}, branchapp.Retargeter{
+		TargetBranch: func(issueops.RemoteArtifactVerification) (string, error) {
 			// 관측 도중 다른 쓰기가 artifact를 바꾼다.
 			changed, readErr := ReadIssueOps(stateRoot, record.ID)
 			if readErr != nil {
@@ -313,17 +313,17 @@ func TestEvidenceRecordersObserveTheChangeSetOutsideTheSpan(t *testing.T) {
 	}
 	log := installSpanProbingGit(t, stateRoot, true)
 
-	if _, err := RecordIssueOpsImplementationReviewWithActor(stateRoot, fixture.record.ID, issueops.IssueOpsImplementationReviewRequest{
+	if _, err := RecordIssueOpsImplementationReviewWithActor(stateRoot, fixture.record.ID, issueops.ImplementationReviewRequest{
 		Verdict: "pass", Findings: []string{"none"}, Evidence: []string{"go test ./..."},
 	}, holder); err != nil {
 		t.Fatalf("implementation review: %v", err)
 	}
-	if _, err := RecordIssueOpsSchemaEvidenceWithActor(stateRoot, fixture.record.ID, issueops.IssueOpsSchemaEvidenceRequest{
+	if _, err := RecordIssueOpsSchemaEvidenceWithActor(stateRoot, fixture.record.ID, issueops.SchemaEvidenceRequest{
 		Measurements: []string{"orders rows=1"}, Sources: []string{"psql"},
 	}, holder); err != nil {
 		t.Fatalf("schema evidence: %v", err)
 	}
-	if _, err := RecordIssueOpsProjectDocsReviewWithActor(stateRoot, fixture.record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReviewWithActor(stateRoot, fixture.record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"read AGENTS.md"},
 	}, holder); err != nil {
 		t.Fatalf("project docs review: %v", err)
@@ -331,19 +331,19 @@ func TestEvidenceRecordersObserveTheChangeSetOutsideTheSpan(t *testing.T) {
 	requireGitCallsOutsideSpan(t, log, "status")
 }
 
-func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOpsRecord {
+func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.Record {
 	t.Helper()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "2819-child"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "2819-child"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	baseSHA := strings.TrimSpace(GitOut(repo, "rev-parse", "HEAD"))
 	record.IssueURL = "https://github.com/example/issueops/issues/2819"
-	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueops.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: "2819-child",
 		BaseBranch: "main", BaseSHA: baseSHA, LinkVerified: true,
 	}
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/issueops/pull/2820",
 		Labels: []string{"enhancement"}, Assignees: []string{"maintainer"},
 		VerifiedAt: "2026-09-23T00:00:00Z", TargetBranch: "main",
@@ -355,7 +355,7 @@ func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOps
 	return written
 }
 
-func retargetForTest(root, id string, req issueops.IssueOpsBranchRetargetRequest, actor issueops.IssueOpsActor, service branchapp.Retargeter) (issueops.IssueOpsRecord, error) {
+func retargetForTest(root, id string, req issueops.BranchRetargetRequest, actor issueops.Actor, service branchapp.Retargeter) (issueops.Record, error) {
 	service.Records = CycleRecordStore{StateRoot: root}
 	service.Authority = cycleapp.NewMutationAuthority(samePath, liveTestVerifier())
 	service.OriginPresent = (BranchGit{Run: GitCmd}).OriginPresent

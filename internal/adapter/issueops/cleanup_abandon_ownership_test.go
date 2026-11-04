@@ -18,7 +18,7 @@ func TestAbandonRefusesForeignAttemptBeforeAnyObservation(t *testing.T) {
 	for _, operation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch} {
 		t.Run(string(operation), func(t *testing.T) {
 			root, record := remoteAbandonRecord(t)
-			record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+			record.CleanupAttempt = &model.CleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 			_, raw, err := encodeIssueOpsRecord(record)
 			if err != nil {
 				t.Fatal(err)
@@ -33,7 +33,7 @@ func TestAbandonRefusesForeignAttemptBeforeAnyObservation(t *testing.T) {
 			observations := 0
 			executor := abandonExecutorForTests(root, CleanupAbandonDeps{Git: func(string, ...string) (int, string) { observations++; return 0, "" }})
 			executor.Provider = func(string) (port.IssueProvider, error) { observations++; return nil, nil }
-			executor.Observe = func(context.Context, model.IssueOpsRecord, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonRequest, error) {
+			executor.Observe = func(context.Context, model.Record, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonRequest, error) {
 				observations++
 				return model.CleanupAbandonRequest{}, nil
 			}
@@ -63,12 +63,12 @@ func TestAbandonArtifactDriftCannotArmOldEvidence(t *testing.T) {
 	}
 	calls := 0
 	observer := executor.Observe
-	executor.Observe = func(ctx context.Context, r model.IssueOpsRecord, request model.CleanupAbandonRequest, p port.IssueProvider) (model.CleanupAbandonRequest, error) {
+	executor.Observe = func(ctx context.Context, r model.Record, request model.CleanupAbandonRequest, p port.IssueProvider) (model.CleanupAbandonRequest, error) {
 		if r.RemoteArtifact.URL != record.RemoteArtifact.URL {
 			t.Fatal("observer did not receive loaded artifact")
 		}
 		observed, err := observer(ctx, r, request, p)
-		mutateFinishRecord(t, root, record.ID, func(current *model.IssueOpsRecord) {
+		mutateFinishRecord(t, root, record.ID, func(current *model.Record) {
 			current.RemoteArtifact.URL = "https://github.com/acme/repo/pull/999"
 		})
 		return observed, err
@@ -90,7 +90,7 @@ func TestAbandonCancellationPreservesFailureAndReleasesDrainedOwner(t *testing.T
 	root, record := abandonTestRecord(t)
 	executor := abandonExecutorForTests(root, abandonDeps(&fakeAbandonGit{branchOID: "abc123"}))
 	// A record-backed absent workspace authorizes the branch-only target.
-	mutateFinishRecord(t, root, record.ID, func(r *model.IssueOpsRecord) {
+	mutateFinishRecord(t, root, record.ID, func(r *model.Record) {
 		r.WorktreePath = filepath.Join(t.TempDir(), "absent-abandon-cancellation")
 	})
 	preview, err := executor.Run(context.Background(), abandonRequest(record.ID, false, ""))

@@ -12,7 +12,7 @@ import (
 	"issueops/internal/port"
 )
 
-func (s CleanupRecordStore) ArmAbandon(ctx context.Context, expected model.CleanupSnapshot, attempt model.IssueOpsCleanupAttempt, failure model.IssueOpsCleanupAbandonFailure) (model.CleanupSnapshot, error) {
+func (s CleanupRecordStore) ArmAbandon(ctx context.Context, expected model.CleanupSnapshot, attempt model.CleanupAttempt, failure model.CleanupAbandonFailure) (model.CleanupSnapshot, error) {
 	record, err := cleanupSnapshotRecord(expected, false)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
@@ -27,14 +27,14 @@ func (s CleanupRecordStore) ArmAbandon(ctx context.Context, expected model.Clean
 	}
 	return saved, err
 }
-func (s CleanupRecordStore) FailAbandon(ctx context.Context, expected model.CleanupSnapshot, failure model.IssueOpsCleanupAbandonFailure, drained bool) (model.CleanupSnapshot, error) {
+func (s CleanupRecordStore) FailAbandon(ctx context.Context, expected model.CleanupSnapshot, failure model.CleanupAbandonFailure, drained bool) (model.CleanupSnapshot, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationAbandon)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
 	}
 	return s.save(ctx, expected, domain.ApplyCleanupAbandonFailure(record, failure, drained))
 }
-func (s CleanupRecordStore) DeleteAbandoned(ctx context.Context, expected model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) ([]string, error) {
+func (s CleanupRecordStore) DeleteAbandoned(ctx context.Context, expected model.CleanupSnapshot, outcome model.CycleOutcome) ([]string, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationAbandon)
 	if err != nil {
 		return nil, err

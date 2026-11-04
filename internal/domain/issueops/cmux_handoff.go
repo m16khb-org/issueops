@@ -9,25 +9,25 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func CmuxResult(request issueopscontract.ExecutionCmuxHandoffRequest, observation issueopscontract.IssueOpsHandoffDeliveryObservation, status, recovery string) issueopscontract.ExecutionCmuxHandoffResult {
+func CmuxResult(request issueopscontract.ExecutionCmuxHandoffRequest, observation issueopscontract.HandoffDeliveryObservation, status, recovery string) issueopscontract.ExecutionCmuxHandoffResult {
 	return issueopscontract.ExecutionCmuxHandoffResult{
-		OK: observation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved &&
-			observation.Ambiguous.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved,
+		OK: observation.InputAccepted.Status == issueopscontract.HandoffDeliveryStateObserved &&
+			observation.Ambiguous.Status != issueopscontract.HandoffDeliveryStateObserved,
 		ID: request.ID, Generation: request.Generation, Status: status,
 		Launcher: observation.Launcher, Target: observation.Target, Timing: observation.Timing,
-		InputAccepted:       observation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved,
-		NativeTurnObserved:  observation.NativeTurnObserved.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved,
-		OwnerClaimed:        observation.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved,
+		InputAccepted:       observation.InputAccepted.Status == issueopscontract.HandoffDeliveryStateObserved,
+		NativeTurnObserved:  observation.NativeTurnObserved.Status == issueopscontract.HandoffDeliveryStateObserved,
+		OwnerClaimed:        observation.OwnerClaimed.Status == issueopscontract.HandoffDeliveryStateObserved,
 		RecoveryArtifactDir: recovery, ObservationReceipt: observation.Receipt,
 	}
 }
 
-func CmuxObserved(at, evidence string) issueopscontract.IssueOpsHandoffDeliveryState {
-	return issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: at, Evidence: evidence}
+func CmuxObserved(at, evidence string) issueopscontract.HandoffDeliveryState {
+	return issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateObserved, ObservedAt: at, Evidence: evidence}
 }
 
-func CmuxNotObserved() issueopscontract.IssueOpsHandoffDeliveryState {
-	return issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved}
+func CmuxNotObserved() issueopscontract.HandoffDeliveryState {
+	return issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved}
 }
 
 func ValidCmuxDigest(value string) bool {
@@ -68,22 +68,22 @@ func CmuxCanonicalPromptPath(canonicalRoot, promptPath string, rootAliases ...st
 	return "", fmt.Errorf("cmux prompt file must be inside the canonical worktree")
 }
 
-func ValidateCmuxReleasedRecord(record issueopscontract.IssueOpsRecord, generation uint64) error {
+func ValidateCmuxReleasedRecord(record issueopscontract.Record, generation uint64) error {
 	if record.Execution == nil ||
 		record.Execution.Lease.Status != issueopscontract.LeaseStatusReleased || record.Execution.Lease.Generation != generation {
 		return fmt.Errorf("cmux handoff requires the exact released direct execution generation")
 	}
 	return nil
 }
-func ValidateCmuxAttempt(request issueopscontract.ExecutionCmuxHandoffRequest, observations []issueopscontract.IssueOpsHandoffDeliveryObservation) error {
+func ValidateCmuxAttempt(request issueopscontract.ExecutionCmuxHandoffRequest, observations []issueopscontract.HandoffDeliveryObservation) error {
 	_, lineageID := ManualCmuxHandoffIDs(request)
 	for _, observation := range observations {
 		if observation.LifecycleID == request.ID && observation.LineageID == lineageID {
 			return fmt.Errorf("cmux handoff attempt already exists; inspect the existing lineage and do not retry")
 		}
 		if observation.LifecycleID == request.ID && observation.SourceGeneration == request.Generation &&
-			observation.Launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherCmux &&
-			observation.CallStaged.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved {
+			observation.Launcher.Name == issueopscontract.HandoffDeliveryLauncherCmux &&
+			observation.CallStaged.Status == issueopscontract.HandoffDeliveryStateObserved {
 			return fmt.Errorf("cmux handoff generation already has a staged attempt; inspect the existing lineage and do not retry")
 		}
 	}

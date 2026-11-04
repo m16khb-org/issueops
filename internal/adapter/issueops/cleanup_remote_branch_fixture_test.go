@@ -11,7 +11,7 @@ import (
 
 type CleanupRemoteBranchDeps struct {
 	Git                  func(ctx context.Context, dir string, args ...string) (int, string)
-	VerifyMergedArtifact func(artifact issueops.IssueOpsRemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error)
+	VerifyMergedArtifact func(artifact issueops.RemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error)
 	// ObserveArtifact는 replacement 증거를 provider에서 읽는다. 주입되지 않으면
 	// 그 경로는 열리지 않는다 — 관측 없이 증거를 인정하지 않는다(#323).
 	ObserveArtifact func(url string) (issueopsdomain.ArtifactObservation, error)

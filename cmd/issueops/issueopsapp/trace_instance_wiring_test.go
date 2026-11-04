@@ -23,7 +23,7 @@ func TestTraceServicesKeepCapturedStateAndFilePriority(t *testing.T) {
 	ambient := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", ambient)
 	for i, step := range []string{"policy check", "worker probe"} {
-		result, err := services[i].Analyze(tracecontract.TraceAnalyzeRequest{Input: "trace-fixture"})
+		result, err := services[i].Analyze(tracecontract.AnalyzeRequest{Input: "trace-fixture"})
 		if err != nil || result.InputSource != "state" || len(result.Findings) != 1 || result.Findings[0].RecurringPattern != step {
 			t.Fatalf("state context lost: result=%+v error=%v", result, err)
 		}
@@ -32,7 +32,7 @@ func TestTraceServicesKeepCapturedStateAndFilePriority(t *testing.T) {
 	if err := os.WriteFile(file, []byte(`{"guard":{"findings":[{"rule":"file-first"}]}}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	result, err := services[0].Analyze(tracecontract.TraceAnalyzeRequest{Input: file})
+	result, err := services[0].Analyze(tracecontract.AnalyzeRequest{Input: file})
 	if err != nil || result.InputSource != "file" || result.Findings[0].FailureClass != "guard_file-first" {
 		t.Fatalf("file priority changed: result=%+v err=%v", result, err)
 	}

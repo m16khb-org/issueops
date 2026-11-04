@@ -4,7 +4,7 @@
 // 알 필요가 없다.
 package preflight
 
-type PreflightResult struct {
+type Result struct {
 	OK               bool           `json:"ok"`
 	Error            string         `json:"error,omitempty"`
 	Path             string         `json:"path,omitempty"`

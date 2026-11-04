@@ -7,7 +7,7 @@ import (
 )
 
 func TestCandidateSelectionPrioritizesOpenThenScoreAndID(t *testing.T) {
-	candidates := []contract.SelfAugmentCandidate{
+	candidates := []contract.Candidate{
 		{ID: "satisfied", Status: contract.CandidateStatusSatisfied, Score: 100},
 		{ID: "b", Status: contract.CandidateStatusOpen, Score: 80},
 		{ID: "a", Status: contract.CandidateStatusOpen, Score: 80},
@@ -24,8 +24,8 @@ func TestCandidateSelectionPrioritizesOpenThenScoreAndID(t *testing.T) {
 }
 
 func TestCandidateSatisfactionAndExclusiveGoal(t *testing.T) {
-	candidate := contract.SelfAugmentCandidate{ID: "agent-skill-executor", Status: contract.CandidateStatusOpen, Score: 95}
-	MarkSatisfiedCandidate(&candidate, contract.SelfAugmentRepoSignals{HasSelfAugmentSkill: true})
+	candidate := contract.Candidate{ID: "agent-skill-executor", Status: contract.CandidateStatusOpen, Score: 95}
+	MarkSatisfiedCandidate(&candidate, contract.RepoSignals{HasSelfAugmentSkill: true})
 	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("candidate=%+v", candidate)
 	}

@@ -14,16 +14,16 @@ type Effects interface {
 
 type Service struct{ Effects Effects }
 
-func (service Service) Suggest(req commitsuggestcontract.CommitSuggestRequest) (commitsuggestcontract.CommitSuggestResult, error) {
+func (service Service) Suggest(req commitsuggestcontract.Request) (commitsuggestcontract.Result, error) {
 	root, err := service.Effects.NormalizeRoot(req.RepoRoot)
 	if err != nil {
-		return commitsuggestcontract.CommitSuggestResult{}, err
+		return commitsuggestcontract.Result{}, err
 	}
 	diff, err := service.Effects.Diff(root, req.Staged)
 	if err != nil {
-		return commitsuggestcontract.CommitSuggestResult{}, fmt.Errorf("git diff failed: %w", err)
+		return commitsuggestcontract.Result{}, fmt.Errorf("git diff failed: %w", err)
 	}
-	result := commitsuggestcontract.CommitSuggestResult{OK: true, RepoRoot: root, Staged: req.Staged}
+	result := commitsuggestcontract.Result{OK: true, RepoRoot: root, Staged: req.Staged}
 	if !domain.NeedsSuggestion(diff) {
 		return result, nil
 	}

@@ -44,9 +44,9 @@ func seedFilteredInventory(tb testing.TB, count int) string {
 			repo = "/repo"
 		}
 		id := fmt.Sprintf("io-%05d", index)
-		data, err := issueopsrecord.Encode(issueopscontract.IssueOpsRecord{
-			SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-			ID:            id, Repo: repo, Phase: issueopscontract.IssueOpsPhaseProblem,
+		data, err := issueopsrecord.Encode(issueopscontract.Record{
+			SchemaVersion: issueopscontract.SchemaVersion,
+			ID:            id, Repo: repo, Phase: issueopscontract.PhaseProblem,
 		})
 		if err != nil {
 			tb.Fatal(err)
@@ -132,7 +132,7 @@ func TestStreamingInventoryHonorsCancellationDuringScan(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	visited := 0
-	diagnostics, err := (Repository{}).ScanEach(ctx, root, func(_ issueopscontract.IssueOpsRecord) error {
+	diagnostics, err := (Repository{}).ScanEach(ctx, root, func(_ issueopscontract.Record) error {
 		visited++
 		cancel()
 		return nil

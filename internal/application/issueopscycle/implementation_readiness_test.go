@@ -13,11 +13,11 @@ func TestImplementationReadinessMissingObservesPathsBeforeReview(t *testing.T) {
 	observations := cycleport.ReadinessObservations{
 		WorktreePathValid:    func(string) bool { calls = append(calls, "worktree"); return false },
 		PlanPathExists:       func(string, string) bool { calls = append(calls, "plan"); return false },
-		PlanInLinkedWorktree: func(model.IssueOpsRecord) bool { calls = append(calls, "inside"); return false },
+		PlanInLinkedWorktree: func(model.Record) bool { calls = append(calls, "inside"); return false },
 		WorkspaceMatches:     func(string, string) bool { calls = append(calls, "workspace"); return false },
-		LinkedPlanDigest:     func(model.IssueOpsRecord) (string, error) { calls = append(calls, "digest"); return "", nil },
+		LinkedPlanDigest:     func(model.Record) (string, error) { calls = append(calls, "digest"); return "", nil },
 	}
-	record := model.IssueOpsRecord{Repo: "source", WorktreePath: "tree", PlanPath: "plan.md"}
+	record := model.Record{Repo: "source", WorktreePath: "tree", PlanPath: "plan.md"}
 	missing := ImplementationReadinessMissing(record, true, observations)
 	wantCalls := []string{"worktree", "plan", "inside"}
 	if !reflect.DeepEqual(calls, wantCalls) {

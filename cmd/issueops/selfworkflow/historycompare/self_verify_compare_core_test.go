@@ -9,12 +9,12 @@ import (
 )
 
 func TestCompareSelfAugmentSummariesFromSnapshotsCoversWarningsAndGoalRegressions(t *testing.T) {
-	baseline := augmentcontract.SelfAugmentStateSnapshot{
+	baseline := augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "2000-01-01T00:00:00Z",
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			TotalSteps:          1,
 			PassedSteps:         1,
 			StepLabels:          []string{"go test"},
@@ -48,10 +48,10 @@ func TestCompareSelfAugmentSummariesFromSnapshotsCoversWarningsAndGoalRegression
 	}
 }
 func TestCompareSelfAugmentSummariesFromSnapshotsWarnsWhenFailureCauseChanges(t *testing.T) {
-	baseline := augmentcontract.SelfAugmentStateSnapshot{
+	baseline := augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			TotalSteps:   1,
 			FailedSteps:  1,
 			FailureCause: failurecause.Model,
@@ -78,10 +78,10 @@ func TestCompareSelfAugmentSummariesFromSnapshotsWarnsWhenFailureCauseChanges(t 
 }
 
 func TestCompareSelfAugmentSummariesFromSnapshotsSkipsCauseWarningWhenOnlyOneSummaryFailed(t *testing.T) {
-	baseline := augmentcontract.SelfAugmentStateSnapshot{
+	baseline := augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			TotalSteps:   1,
 			FailedSteps:  1,
 			FailureCause: failurecause.Model,

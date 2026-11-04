@@ -17,7 +17,7 @@ type WorkspaceLayout struct {
 	ExpectedParent string
 }
 
-func DeriveWorkspaceLayout(record model.IssueOpsRecord) (WorkspaceLayout, error) {
+func DeriveWorkspaceLayout(record model.Record) (WorkspaceLayout, error) {
 	if record.BranchPrepare == nil || strings.TrimSpace(record.BranchPrepare.BaseSHA) == "" {
 		return WorkspaceLayout{}, fmt.Errorf("verified branch preparation with base_sha is required")
 	}
@@ -39,7 +39,7 @@ func invalidWorktreeLeaf(leaf string) bool {
 }
 
 // deriveParentWorktree는 상위 worktree 경로와 canonical 기대 경로를 정한다. 상위가 없고 위임도 아니면 둘 다 비어 있다.
-func deriveParentWorktree(record model.IssueOpsRecord, parent string) (string, string, error) {
+func deriveParentWorktree(record model.Record, parent string) (string, string, error) {
 	delegated := record.Delegation != nil && strings.TrimSpace(record.Delegation.ParentCycleID) != ""
 	if parent == "" && !delegated {
 		return parent, "", nil

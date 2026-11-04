@@ -13,7 +13,7 @@ type CleanupAbandonRemoteReads struct {
 	ArtifactMissing, IssueMissing, BranchMissing string
 }
 
-func PlanCleanupAbandonRemoteReads(record model.IssueOpsRecord, req model.CleanupAbandonRequest, branch string, providerAvailable bool) CleanupAbandonRemoteReads {
+func PlanCleanupAbandonRemoteReads(record model.Record, req model.CleanupAbandonRequest, branch string, providerAvailable bool) CleanupAbandonRemoteReads {
 	var plan CleanupAbandonRemoteReads
 	if req.ClosePR {
 		switch {

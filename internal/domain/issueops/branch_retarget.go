@@ -11,7 +11,7 @@ import (
 
 var ErrRetargetObservationStale = errors.New("IssueOps record changed while the retarget was observed; retry the command")
 
-func RetargetRequiresHolder(record model.IssueOpsRecord) (bool, error) {
+func RetargetRequiresHolder(record model.Record) (bool, error) {
 	if record.Execution == nil {
 		return false, nil
 	}
@@ -31,7 +31,7 @@ func ValidateRetargetRequest(base, reason string) error {
 	return nil
 }
 
-func ValidateRetargetRecord(record model.IssueOpsRecord, base string) error {
+func ValidateRetargetRecord(record model.Record, base string) error {
 	if record.BranchPrepare == nil {
 		return fmt.Errorf("branch must be prepared before retarget")
 	}
@@ -44,7 +44,7 @@ func ValidateRetargetRecord(record model.IssueOpsRecord, base string) error {
 	return nil
 }
 
-func ValidateRetargetArtifact(observed *model.IssueOpsRemoteArtifactVerification, current model.IssueOpsRemoteArtifactVerification) error {
+func ValidateRetargetArtifact(observed *model.RemoteArtifactVerification, current model.RemoteArtifactVerification) error {
 	if observed == nil || !reflect.DeepEqual(*observed, current) {
 		return ErrRetargetObservationStale
 	}
@@ -72,10 +72,10 @@ func ValidateRetargetOrigin(repo, base, observedRepo, observedBase string, state
 }
 
 // ApplyBranchRetarget preserves the sealed fork point and the input snapshot.
-func ApplyBranchRetarget(record model.IssueOpsRecord, base, reason, observedAt, updatedAt string) model.IssueOpsRecord {
+func ApplyBranchRetarget(record model.Record, base, reason, observedAt, updatedAt string) model.Record {
 	prepare := *record.BranchPrepare
 	artifact := *record.RemoteArtifact
-	prepare.Retargets = append(append([]model.IssueOpsBranchRetarget(nil), prepare.Retargets...), model.IssueOpsBranchRetarget{
+	prepare.Retargets = append(append([]model.BranchRetarget(nil), prepare.Retargets...), model.BranchRetarget{
 		FromBase: strings.TrimSpace(prepare.BaseBranch), ToBase: base, Reason: reason,
 		ArtifactURL: strings.TrimSpace(artifact.URL), ObservedAt: observedAt,
 	})

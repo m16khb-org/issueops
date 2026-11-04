@@ -7,7 +7,7 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 type RemoteBranchEnvironment interface {
@@ -19,11 +19,11 @@ type RemoteBranchEnvironment interface {
 
 type RemoteBranchPreviewer struct {
 	Environment          RemoteBranchEnvironment
-	VerifyMergedArtifact func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
+	VerifyMergedArtifact func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
 	ObserveArtifact      func(string) (domain.ArtifactObservation, error)
 }
 
-func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
+func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	inventory := domain.CleanupRemoteBranchTargets(record)
 	facts := domain.CleanupRemoteBranchObservation{MergeConfigured: s.VerifyMergedArtifact != nil}
 	s.observeArtifactFacts(ctx, record, req, &facts)
@@ -47,7 +47,7 @@ func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.IssueOpsRe
 }
 
 // observeArtifactFacts records the merged-artifact, superseding and identity evidence for the record's remote artifact.
-func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, facts *domain.CleanupRemoteBranchObservation) {
+func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record model.Record, req model.CleanupRemoteBranchRequest, facts *domain.CleanupRemoteBranchObservation) {
 	artifact := record.RemoteArtifact
 	if artifact == nil {
 		return
@@ -61,18 +61,18 @@ func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record 
 			}
 		}
 	}
-	key, err := remote.CleanupBranchArtifactProject(artifact.URL, artifact.Provider, artifact.Kind)
+	key, err := issueopsremote.CleanupBranchArtifactProject(artifact.URL, artifact.Provider, artifact.Kind)
 	if err == nil {
 		var origin string
 		origin, err = s.Environment.OriginURL(ctx, record.Repo)
 		if err == nil {
-			err = remote.ValidateCleanupBranchOrigin(key, origin, artifact.Provider)
+			err = issueopsremote.ValidateCleanupBranchOrigin(key, origin, artifact.Provider)
 		}
 	}
 	facts.IdentityError = err
 }
 
-func (s RemoteBranchPreviewer) verifySuperseding(record model.IssueOpsRecord, candidate string) error {
+func (s RemoteBranchPreviewer) verifySuperseding(record model.Record, candidate string) error {
 	candidate = strings.TrimSpace(candidate)
 	if err := domain.ValidateCleanupSupersedeInput(record, candidate, s.ObserveArtifact != nil); err != nil {
 		return err

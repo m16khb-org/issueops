@@ -7,11 +7,11 @@ import (
 )
 
 func TestReviewReflectionRequiresFindingsBeforeLinkedIssue(t *testing.T) {
-	record := model.IssueOpsRecord{}
+	record := model.Record{}
 	if err := ValidateReviewReflection(record); err == nil || err.Error() != "no devil's-advocate findings to reflect" {
 		t.Fatalf("error=%v", err)
 	}
-	record.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{Findings: []string{"finding"}, IssueReflectedAt: "before"}
+	record.DevilsAdvocateReview = &model.DevilsAdvocateReview{Findings: []string{"finding"}, IssueReflectedAt: "before"}
 	if err := ValidateReviewReflection(record); err == nil || err.Error() != "cannot reflect findings before a linked issue" {
 		t.Fatalf("error=%v", err)
 	}
@@ -23,7 +23,7 @@ func TestReviewReflectionRequiresFindingsBeforeLinkedIssue(t *testing.T) {
 	if got.DevilsAdvocateReview.IssueReflectedAt != "after" || got.UpdatedAt != "after" || record.DevilsAdvocateReview.IssueReflectedAt != "before" {
 		t.Fatal("stamp mutated input or omitted timestamp")
 	}
-	if err := ValidateReviewReflectionStamp(model.IssueOpsRecord{}); err == nil {
+	if err := ValidateReviewReflectionStamp(model.Record{}); err == nil {
 		t.Fatal("missing review accepted for stamping")
 	}
 }

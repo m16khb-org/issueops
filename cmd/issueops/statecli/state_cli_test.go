@@ -112,7 +112,7 @@ func TestRunStatePruneAndDoctorTextBranches(t *testing.T) {
 	if !strings.Contains(doctorOut, "state doctor found 1 issues") || !strings.Contains(doctorOut, "error invalid_state") {
 		t.Fatalf("unexpected doctor text:\n%s", doctorOut)
 	}
-	doctor, err := statestore.Doctor(statestore.StateDir())
+	doctor, err := statestore.Doctor(statestore.Dir())
 	if err != nil {
 		t.Fatalf("state doctor: %v", err)
 	}
@@ -156,7 +156,7 @@ func captureStatusVerifyStdout(t *testing.T, fn func() error) string {
 	return testsupport.CaptureStdout(t, fn)
 }
 
-func stateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want string) bool {
+func stateDoctorHasIssueCode(issues []statecontract.DoctorIssue, want string) bool {
 	for _, issue := range issues {
 		if issue.Code == want {
 			return true

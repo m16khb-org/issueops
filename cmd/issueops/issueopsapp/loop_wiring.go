@@ -13,7 +13,7 @@ import (
 )
 
 func newLoopStore() adapter.Store {
-	return adapter.Store{Directory: filepath.Join(statestore.StateDir(), "loop"),
+	return adapter.Store{Directory: filepath.Join(statestore.Dir(), "loop"),
 		OpenDatabase: func(dir string) (adapter.StateDatabase, error) { return sqlstore.Open(dir) },
 		GetExisting:  sqlstore.GetExisting, GetAllExisting: sqlstore.GetAllExisting}
 }
@@ -30,7 +30,7 @@ func newScopedLoopService(cwd string) app.Service {
 	return service
 }
 func loopServiceWith(identity adapter.Identity) app.Service {
-	return app.Service{Store: newLoopStore(), Identity: identity, Clock: adapter.Clock{Time: time.Now}, SchemaVersion: adapter.LoopRunCurrentSchemaVersion}
+	return app.Service{Store: newLoopStore(), Identity: identity, Clock: adapter.Clock{Time: time.Now}, SchemaVersion: adapter.CurrentSchemaVersion}
 }
 func newLoopReader() app.Reader {
 	return app.Reader{Store: newLoopStore(), Identity: newLoopIdentity()}

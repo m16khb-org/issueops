@@ -22,7 +22,7 @@ func SummarizeDimensionScores(scores []contract.IssueOpsDimensionScore) (float64
 	return total / float64(counted), minimum
 }
 
-func SummarizeRunScores(scores []contract.IssueOpsBenchmarkScore) (float64, float64) {
+func SummarizeRunScores(scores []contract.Score) (float64, float64) {
 	if len(scores) == 0 {
 		return 0, 0
 	}

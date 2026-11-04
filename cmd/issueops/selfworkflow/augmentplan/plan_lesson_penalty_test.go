@@ -14,7 +14,7 @@ import (
 )
 
 func TestApplyLessonPenaltiesDemotesRepeatedSevereLessons(t *testing.T) {
-	candidates := []augmentcontract.SelfAugmentCandidate{
+	candidates := []augmentcontract.Candidate{
 		{ID: "repeat-fail", Status: augmentcontract.CandidateStatusOpen, Score: 80},
 		{ID: "single-fail", Status: augmentcontract.CandidateStatusOpen, Score: 70},
 		{ID: "already-done", Status: augmentcontract.CandidateStatusSatisfied, Score: 0},
@@ -57,7 +57,7 @@ func TestSevereLessonCountsCountsOnlySevereLessonSnapshots(t *testing.T) {
 
 	writeLesson := func(t *testing.T, key, candidateID, severity string) {
 		t.Helper()
-		snapshot := augmentcontract.SelfAugmentLessonStateSnapshot{
+		snapshot := augmentcontract.LessonStateSnapshot{
 			SchemaVersion: 1,
 			Kind:          augmentcontract.SelfAugmentationLessonKind,
 			LoopKind:      "self_augmentation",
@@ -110,7 +110,7 @@ func TestSevereLessonCountsIgnoresOldLessonsOutsideRecentWindow(t *testing.T) {
 
 	writeLesson := func(t *testing.T, key, candidateID, generatedAt string) {
 		t.Helper()
-		snapshot := augmentcontract.SelfAugmentLessonStateSnapshot{
+		snapshot := augmentcontract.LessonStateSnapshot{
 			SchemaVersion: 1,
 			Kind:          augmentcontract.SelfAugmentationLessonKind,
 			LoopKind:      "self_augmentation",
@@ -151,7 +151,7 @@ func TestSevereLessonCountsIgnoresOldLessonsOutsideRecentWindow(t *testing.T) {
 func TestPlanAppliesLessonPenaltyAndRotatesSelection(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
-	req := augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}
+	req := augmentcontract.PlanRequest{Cycles: 1, TargetScore: 95}
 
 	baseline := Plan(req, root, "test")
 	if baseline.SelectedCandidate == nil {
@@ -160,7 +160,7 @@ func TestPlanAppliesLessonPenaltyAndRotatesSelection(t *testing.T) {
 	topID := baseline.SelectedCandidate.ID
 
 	for i := range 4 {
-		snapshot := augmentcontract.SelfAugmentLessonStateSnapshot{
+		snapshot := augmentcontract.LessonStateSnapshot{
 			SchemaVersion: 1,
 			Kind:          augmentcontract.SelfAugmentationLessonKind,
 			LoopKind:      "self_augmentation",

@@ -25,7 +25,7 @@ func runGuardCheck(args []string) error {
 }
 
 func runQualityInspectWithDeps(args []string, deps qualityapp.InspectDeps) error {
-	cli := newQualityDependencies(issueOpsRoot(), statestore.StateDir())
+	cli := newQualityDependencies(issueOpsRoot(), statestore.Dir())
 	cli.Inspect = func(root string) qualitycontract.InspectResult { return inspectQualityForTest(root, deps) }
 	return qualitycli.RunInspect(args, cli)
 }

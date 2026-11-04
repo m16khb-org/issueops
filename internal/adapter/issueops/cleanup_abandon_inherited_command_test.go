@@ -25,7 +25,7 @@ func TestAbandonInheritedChildrenRetainExecutionOwnership(t *testing.T) {
 	for _, surface := range []string{"git", "provider"} {
 		t.Run(surface, func(t *testing.T) {
 			var root string
-			var record model.IssueOpsRecord
+			var record model.Record
 			var executor cleanupapp.AbandonExecutor
 			realGit, err := exec.LookPath("git")
 			if err != nil {

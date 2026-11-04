@@ -13,7 +13,7 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
-func Doctor(dir string) (statecontract.StateDoctorResult, error) {
+func Doctor(dir string) (statecontract.DoctorResult, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return failedDoctorResult(dir), err
@@ -43,13 +43,13 @@ func Doctor(dir string) (statecontract.StateDoctorResult, error) {
 	return stateapplication.Doctor(dir, entrySnapshots, rowSnapshots), nil
 }
 
-func failedDoctorResult(dir string) statecontract.StateDoctorResult {
-	return statecontract.StateDoctorResult{
+func failedDoctorResult(dir string) statecontract.DoctorResult {
+	return statecontract.DoctorResult{
 		OK:        false,
 		Healthy:   false,
 		StateDir:  dir,
 		ValidKeys: []string{},
-		Valid:     []statecontract.StateListEntry{},
-		Issues:    []statecontract.StateDoctorIssue{},
+		Valid:     []statecontract.ListEntry{},
+		Issues:    []statecontract.DoctorIssue{},
 	}
 }

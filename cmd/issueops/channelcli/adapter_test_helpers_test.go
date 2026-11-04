@@ -13,7 +13,7 @@ import (
 )
 
 func channelServiceForTest() app.Service {
-	return app.Service{Effects: adapter.Store{Root: filepath.Join(statestore.StateDir(), "channel"), Clock: time.Now, Sleep: issueopsadapter.SleepWithContext, WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (adapter.StateDatabase, error) { return sqlstore.Open(dir) }}}
+	return app.Service{Effects: adapter.Store{Root: filepath.Join(statestore.Dir(), "channel"), Clock: time.Now, Sleep: issueopsadapter.SleepWithContext, WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (adapter.StateDatabase, error) { return sqlstore.Open(dir) }}}
 }
 func adapterSend(req model.SendRequest) (model.SendResult, error) {
 	return channelServiceForTest().Send(req)

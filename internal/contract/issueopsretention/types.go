@@ -4,7 +4,7 @@ import issueopscontract "issueops/internal/contract/issueops"
 
 // domain/issueopsretention은 이 contract 패키지만 import할 수 있어서(domain은 같은
 // capability 계약만 import) 그 domain이 읽는 공용 IssueOps 어휘를 여기서 이 이름으로 둔다.
-type Record = issueopscontract.IssueOpsRecord
+type Record = issueopscontract.Record
 
 type UnreadableRecordDiagnostic struct {
 	ID   string `json:"id"`
@@ -35,6 +35,6 @@ type Result struct {
 
 const (
 	LeaseStatusReleased  = issueopscontract.LeaseStatusReleased
-	PhaseDone            = issueopscontract.IssueOpsPhaseDone
+	PhaseDone            = issueopscontract.PhaseDone
 	IssueCreateCompleted = issueopscontract.IssueCreateIntentCompleted
 )

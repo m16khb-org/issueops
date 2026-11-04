@@ -35,20 +35,20 @@ func NewService(dependencies Dependencies) *Service {
 	return &Service{dependencies: dependencies}
 }
 
-func (service *Service) Write(ctx context.Context, key, content string) (statecontract.StateResult, error) {
+func (service *Service) Write(ctx context.Context, key, content string) (statecontract.Result, error) {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
-		return statecontract.StateResult{OK: false, StateDir: service.stateDir()}, err
+		return statecontract.Result{OK: false, StateDir: service.stateDir()}, err
 	}
 	dir := service.stateDir()
 	if err := ctx.Err(); err != nil {
-		return statecontract.StateResult{OK: false, StateDir: dir}, err
+		return statecontract.Result{OK: false, StateDir: dir}, err
 	}
 	store, err := service.dependencies.OpenStore(dir)
 	if err != nil {
-		return statecontract.StateResult{OK: false, StateDir: dir}, err
+		return statecontract.Result{OK: false, StateDir: dir}, err
 	}
-	var result statecontract.StateResult
+	var result statecontract.Result
 	err = store.WithSpan(ctx, func(spanCtx context.Context) error {
 		record := statecontract.RecordEnvelope{
 			SchemaVersion: statecontract.SchemaVersion,
@@ -58,39 +58,39 @@ func (service *Service) Write(ctx context.Context, key, content string) (stateco
 			Bytes:         len([]byte(content)),
 		}
 		path, writeErr := service.writeRecord(spanCtx, store, dir, key, record)
-		result = statecontract.StateResult{OK: writeErr == nil, StateDir: dir, Path: path, Record: record}
+		result = statecontract.Result{OK: writeErr == nil, StateDir: dir, Path: path, Record: record}
 		return writeErr
 	})
 	if result.OK || result.StateDir != "" {
 		return result, err
 	}
-	return statecontract.StateResult{OK: false, StateDir: dir}, err
+	return statecontract.Result{OK: false, StateDir: dir}, err
 }
 
-func (service *Service) Read(key string) (statecontract.StateResult, error) {
+func (service *Service) Read(key string) (statecontract.Result, error) {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
-		return statecontract.StateResult{OK: false, StateDir: service.stateDir()}, err
+		return statecontract.Result{OK: false, StateDir: service.stateDir()}, err
 	}
 	return service.read(service.stateDir(), key)
 }
 
-func (service *Service) read(dir, key string) (statecontract.StateResult, error) {
+func (service *Service) read(dir, key string) (statecontract.Result, error) {
 	path := service.dependencies.StatePath(dir, key)
 	raw, ok, err := service.dependencies.ExistingRecords.GetExisting(dir, stateBucket, key)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return statecontract.StateResult{OK: false, StateDir: dir, Path: path}, err
+		return statecontract.Result{OK: false, StateDir: dir, Path: path}, err
 	}
 	// A missing store answers like a missing key; the store path stays in
 	// result.Path, not in the message the agent acts on.
 	if err != nil || !ok {
-		return statecontract.StateResult{OK: false, StateDir: dir, Path: path}, fmt.Errorf("state key %q not found; list keys with `issueops state list --json`: %w", key, fs.ErrNotExist)
+		return statecontract.Result{OK: false, StateDir: dir, Path: path}, fmt.Errorf("state key %q not found; list keys with `issueops state list --json`: %w", key, fs.ErrNotExist)
 	}
 	record, err := DecodeRecord(key, raw)
 	if err != nil {
-		return statecontract.StateResult{OK: false, StateDir: dir, Path: path}, err
+		return statecontract.Result{OK: false, StateDir: dir, Path: path}, err
 	}
-	return statecontract.StateResult{OK: true, StateDir: dir, Path: path, Record: record}, nil
+	return statecontract.Result{OK: true, StateDir: dir, Path: path, Record: record}, nil
 }
 
 func DecodeRecord(key string, data []byte) (statecontract.RecordEnvelope, error) {
@@ -110,17 +110,17 @@ func DecodeRecord(key string, data []byte) (statecontract.RecordEnvelope, error)
 	return record, nil
 }
 
-func (service *Service) List() (statecontract.StateListResult, error) {
+func (service *Service) List() (statecontract.ListResult, error) {
 	dir := service.stateDir()
 	store, err := service.dependencies.OpenStore(dir)
 	if err != nil {
-		return statecontract.StateListResult{OK: false, StateDir: dir}, err
+		return statecontract.ListResult{OK: false, StateDir: dir}, err
 	}
 	keys, err := store.List(stateBucket)
 	if err != nil {
-		return statecontract.StateListResult{OK: false, StateDir: dir}, err
+		return statecontract.ListResult{OK: false, StateDir: dir}, err
 	}
-	records := []statecontract.StateListEntry{}
+	records := []statecontract.ListEntry{}
 	for _, key := range keys {
 		if _, err := statepath.NormalizeKey(key); err != nil {
 			continue
@@ -129,7 +129,7 @@ func (service *Service) List() (statecontract.StateListResult, error) {
 		if err != nil {
 			continue
 		}
-		records = append(records, statecontract.StateListEntry{
+		records = append(records, statecontract.ListEntry{
 			Key:           result.Record.Key,
 			UpdatedAt:     result.Record.UpdatedAt,
 			Bytes:         result.Record.Bytes,
@@ -141,7 +141,7 @@ func (service *Service) List() (statecontract.StateListResult, error) {
 	for _, record := range records {
 		listKeys = append(listKeys, record.Key)
 	}
-	return statecontract.StateListResult{OK: true, StateDir: dir, Keys: listKeys, Records: records}, nil
+	return statecontract.ListResult{OK: true, StateDir: dir, Keys: listKeys, Records: records}, nil
 }
 
 func (service *Service) WriteRecord(ctx context.Context, dir, key string, record statecontract.RecordEnvelope) (string, error) {

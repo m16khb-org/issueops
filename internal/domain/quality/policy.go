@@ -206,7 +206,7 @@ func BoundedEvidence(evidence []string, limit int) []string {
 	return append([]string(nil), evidence[:limit]...)
 }
 
-func QualityStatuses(warnings []string, findings []contract.Finding) (string, string, string) {
+func Statuses(warnings []string, findings []contract.Finding) (string, string, string) {
 	if len(warnings) > 0 {
 		return contract.CollectionStatusError, contract.HealthStatusUnknown, contract.GateStatusBlock
 	}

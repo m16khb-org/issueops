@@ -83,7 +83,7 @@ func sortIssues(issues []doctorcontract.HarnessDoctorIssue) {
 	})
 }
 
-func (service Service) addStateStoreFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.StateDoctorResult, stateDoctorErr error) {
+func (service Service) addStateStoreFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.DoctorResult, stateDoctorErr error) {
 	if stateDoctorErr != nil {
 		AddIssue(result, "state_doctor_error", "error", "state doctor could not inspect the user-state store", service.Effects.StateDir(), &doctorcontract.HarnessDoctorFix{Description: "Check user-state directory permissions or set ISSUEOPS_STATE_DIR to a writable location."})
 		return
@@ -97,7 +97,7 @@ func (service Service) addStateStoreFindings(result *doctorcontract.HarnessDocto
 	}
 }
 
-func addOperationalFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.StateDoctorResult, stateDoctorErr error) {
+func addOperationalFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.DoctorResult, stateDoctorErr error) {
 	snapshot := cloneOperationalSnapshot(*req.OperationalSnapshot)
 	if stateDoctorErr == nil {
 		for _, issue := range stateDoctor.Issues {

@@ -171,7 +171,7 @@ func (g *fakeSyncBaseGit) callWith(verb string) []string {
 
 type syncBaseFixture struct {
 	stateRoot string
-	record    issueops.IssueOpsRecord
+	record    issueops.Record
 	worktree  string
 	branch    string
 	actor     issueops.NativeActor
@@ -243,7 +243,7 @@ func (f syncBaseFixture) run(t *testing.T, req issueops.ExecutionSyncBaseRequest
 	return VerifiedSyncExecutionBase(NativeActorVerifier())(context.Background(), f.stateRoot, req, issueops.ExecutionSyncBaseDeps{Git: f.git.run})
 }
 
-func (f syncBaseFixture) rewrite(t *testing.T, mutate func(*issueops.IssueOpsRecord)) {
+func (f syncBaseFixture) rewrite(t *testing.T, mutate func(*issueops.Record)) {
 	t.Helper()
 	record, err := ReadIssueOps(f.stateRoot, f.record.ID)
 	if err != nil {
@@ -260,7 +260,7 @@ func (f syncBaseFixture) sealResolution(t *testing.T, conflicts ...string) {
 	if len(conflicts) == 0 {
 		conflicts = []string{"internal/a.go"}
 	}
-	f.rewrite(t, func(record *issueops.IssueOpsRecord) {
+	f.rewrite(t, func(record *issueops.Record) {
 		record.Execution.SyncBaseResolution = &issueops.ExecutionSyncBaseResolution{
 			Generation: record.Execution.Lease.Generation, CompletionGeneration: record.Execution.Completion.Generation,
 			BaseOID: syncBaseBaseOID, Actor: f.actor, ConflictFiles: conflicts, StartedAt: "2026-08-04T00:00:00Z",
@@ -281,16 +281,16 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 		missing string
 	}{
 		{"completion", issueops.ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
-			f.rewrite(t, func(r *issueops.IssueOpsRecord) { r.Execution.Completion = nil })
+			f.rewrite(t, func(r *issueops.Record) { r.Execution.Completion = nil })
 		}, "completion_present"},
 		{"remote artifact", issueops.ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
-			f.rewrite(t, func(r *issueops.IssueOpsRecord) { r.RemoteArtifact = nil })
+			f.rewrite(t, func(r *issueops.Record) { r.RemoteArtifact = nil })
 		}, "remote_artifact_present"},
 		{"remote branch", issueops.ExecutionSyncBasePreview, func(_ *testing.T, f *syncBaseFixture) {
 			f.git.remoteRef = ""
 		}, "remote_branch_present"},
 		{"pending intent", issueops.ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
-			f.rewrite(t, func(r *issueops.IssueOpsRecord) {
+			f.rewrite(t, func(r *issueops.Record) {
 				r.Execution.Pending = &issueops.ExternalIntent{
 					OperationID: "op-1", Kind: "remote_pr_create", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
 				}
@@ -361,7 +361,7 @@ func TestExecutionSyncBasePreviewReportsConflictsAndIssuesFingerprint(t *testing
 	t.Parallel()
 
 	fixture := newReleasedSyncBaseFixture(t, "114-preview")
-	fixture.rewrite(t, func(r *issueops.IssueOpsRecord) {
+	fixture.rewrite(t, func(r *issueops.Record) {
 		r.Execution.Lease.Status = issueops.LeaseStatusReleased
 		r.Execution.Lease.Holder = nil
 		r.Execution.Lease.ReleasedAt = "2026-07-25T00:00:00Z"
@@ -759,25 +759,25 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 
 	tests := []struct {
 		name    string
-		mutate  func(*issueops.IssueOpsRecord)
+		mutate  func(*issueops.Record)
 		request func(*issueops.ExecutionSyncBaseRequest)
 		missing string
 	}{
 		{name: "missing completion generation", request: func(req *issueops.ExecutionSyncBaseRequest) { req.CompletionGeneration = 0 }, missing: "completion_generation_present"},
 		{name: "wrong completion generation", request: func(req *issueops.ExecutionSyncBaseRequest) { req.CompletionGeneration = 2 }, missing: "completion_generation_current"},
-		{name: "history only", mutate: func(record *issueops.IssueOpsRecord) {
+		{name: "history only", mutate: func(record *issueops.Record) {
 			record.Execution.Lease.Generation = 2
 			record.Execution.CompletionHistory = []issueops.ExecutionCompletionHistory{{
 				Generation: 1, Completion: *record.Execution.Completion, Reason: "prior reseed", ReopenedAt: "2026-07-26T00:00:00Z",
 			}}
 			record.Execution.Completion = nil
 		}, missing: "completion_present"},
-		{name: "claimable without current completion", mutate: func(record *issueops.IssueOpsRecord) {
+		{name: "claimable without current completion", mutate: func(record *issueops.Record) {
 			record.Execution.Lease.Status = issueops.LeaseStatusClaimable
 			record.Execution.Lease.ClaimTokenSHA256 = strings.Repeat("b", 64)
 			record.Execution.Completion = nil
 		}, missing: "released_completion_authority"},
-		{name: "pending intent", mutate: func(record *issueops.IssueOpsRecord) {
+		{name: "pending intent", mutate: func(record *issueops.Record) {
 			record.Execution.Pending = &issueops.ExternalIntent{OperationID: "op-1", Kind: "remote_pr_create", Marker: "m", StartedAt: "2026-07-25T00:00:00Z"}
 		}, missing: "pending_intent_absent"},
 	}
@@ -811,7 +811,7 @@ func TestExecutionSyncBaseBlockersKeepLocalDiagnosticsWithoutNetwork(t *testing.
 	for _, mode := range []string{issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply} {
 		t.Run(mode, func(t *testing.T) {
 			fixture := newReleasedSyncBaseFixture(t, "318-efficiency-blocked-"+mode)
-			fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
+			fixture.rewrite(t, func(record *issueops.Record) {
 				record.Execution.Pending = &issueops.ExternalIntent{
 					OperationID: "op-1", Kind: "remote_pr_create", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
 				}
@@ -865,7 +865,7 @@ func TestExecutionSyncBaseActiveHolderMismatchSkipsNetwork(t *testing.T) {
 	t.Parallel()
 
 	fixture := newReleasedSyncBaseFixture(t, "318-efficiency-foreign-holder")
-	fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
+	fixture.rewrite(t, func(record *issueops.Record) {
 		record.Execution.Lease.Status = issueops.LeaseStatusActive
 		holder := fixture.actor
 		holder.SessionID = "other-session"
@@ -909,7 +909,7 @@ func TestExecutionSyncBaseActiveHolderAuthorityRemainsSupported(t *testing.T) {
 	t.Parallel()
 
 	fixture := newReleasedSyncBaseFixture(t, "318-active-holder")
-	fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
+	fixture.rewrite(t, func(record *issueops.Record) {
 		record.Execution.Lease.Status = issueops.LeaseStatusActive
 		record.Execution.Lease.Holder = &fixture.actor
 		record.Execution.Lease.ClaimedAt = "2026-07-25T00:00:00Z"
@@ -1030,13 +1030,13 @@ func TestExecutionSyncBaseAcceptsASquashMergedParentOnlyAfterARetarget(t *testin
 
 	setup := func(t *testing.T, name string, retarget bool, mergedEarlier string) syncBaseFixture {
 		fixture := newReleasedSyncBaseFixture(t, name)
-		fixture.rewrite(t, func(r *issueops.IssueOpsRecord) {
+		fixture.rewrite(t, func(r *issueops.Record) {
 			if retarget {
 				url := ""
 				if r.RemoteArtifact != nil {
 					url = r.RemoteArtifact.URL
 				}
-				r.BranchPrepare.Retargets = []issueops.IssueOpsBranchRetarget{{FromBase: "parent", ToBase: r.BranchPrepare.BaseBranch, Reason: "parent squash-merged", ArtifactURL: url, ObservedAt: "2026-07-25T00:00:00Z"}}
+				r.BranchPrepare.Retargets = []issueops.BranchRetarget{{FromBase: "parent", ToBase: r.BranchPrepare.BaseBranch, Reason: "parent squash-merged", ArtifactURL: url, ObservedAt: "2026-07-25T00:00:00Z"}}
 			}
 			if mergedEarlier != "" {
 				r.Execution.SyncBaseEvents = []issueops.ExecutionSyncBaseEvent{{Mode: issueops.ExecutionSyncBaseEventApply, BaseBranch: "parent", BaseOID: mergedEarlier, MergeCommit: strings.Repeat("c", 40), Actor: "codex", At: "2026-07-25T00:00:00Z"}}

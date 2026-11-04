@@ -9,8 +9,8 @@ import (
 )
 
 func TestComposeObservedPRReadinessKeepsGitAndArtifactEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{AISlopCleanHead: "record-head", AISlopCleanFingerprint: "record-fingerprint"}
-	base := model.IssueOpsReadiness{Ready: false, Missing: []string{"prior"}}
+	record := model.Record{AISlopCleanHead: "record-head", AISlopCleanFingerprint: "record-fingerprint"}
+	base := model.Readiness{Ready: false, Missing: []string{"prior"}}
 	facts := ObservedPRReadinessFacts{
 		Git:         cycledomain.PRGitFacts{RootAvailable: false},
 		Artifact:    ObservedPRFacts{PlanInWorktree: true},
@@ -26,7 +26,7 @@ func TestComposeObservedPRReadinessKeepsGitAndArtifactEvidence(t *testing.T) {
 }
 
 func TestApplyChildPRGatePreservesWarningsAndSortsMissing(t *testing.T) {
-	ready := model.IssueOpsReadiness{Ready: true, Missing: []string{"z"}, Warnings: []string{"first"}}
+	ready := model.Readiness{Ready: true, Missing: []string{"z"}, Warnings: []string{"first"}}
 	got := ApplyChildPRGate(ready, []string{"a", "z"}, []string{"child"})
 	if got.Ready || !reflect.DeepEqual(got.Missing, []string{"a", "z"}) || !reflect.DeepEqual(got.Warnings, []string{"first", "child"}) {
 		t.Fatalf("child readiness=%+v", got)

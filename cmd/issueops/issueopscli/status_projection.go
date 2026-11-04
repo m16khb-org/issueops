@@ -18,7 +18,7 @@ import (
 // record, about 12 KB at the done phase. A requested field the record has not
 // recorded yet is listed under "absent"; an unknown name is refused with the
 // valid names, so a typo is not mistaken for an absent value.
-func statusProjection(record issueopscontract.IssueOpsRecord, fields []string) (map[string]any, error) {
+func statusProjection(record issueopscontract.Record, fields []string) (map[string]any, error) {
 	known := recordFieldNames()
 	data, err := json.Marshal(record)
 	if err != nil {
@@ -57,7 +57,7 @@ func statusProjection(record issueopscontract.IssueOpsRecord, fields []string) (
 }
 
 func recordFieldNames() []string {
-	recordType := reflect.TypeFor[issueopscontract.IssueOpsRecord]()
+	recordType := reflect.TypeFor[issueopscontract.Record]()
 	names := make([]string, 0, recordType.NumField())
 	for field := range recordType.Fields() {
 		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")

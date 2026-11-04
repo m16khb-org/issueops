@@ -25,12 +25,12 @@ type AbandonEnvironment interface {
 
 type AbandonPreviewer struct {
 	Environment AbandonEnvironment
-	ReadChild   func(string) (model.IssueOpsRecord, error)
-	Workspace   func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string)
+	ReadChild   func(string) (model.Record, error)
+	Workspace   func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string)
 	Remote      AbandonRemoteObserver
 }
 
-func (s AbandonPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, req model.CleanupAbandonRequest, provider port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
+func (s AbandonPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupAbandonRequest, provider port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
 	inventory := domain.CleanupAbandonTargets(record)
 	inventory.RecordSHA = CleanupAbandonRecordSHA(record)
 	observed := domain.CleanupAbandonObservation{ResolvedChildren: s.ResolvedChildren(record)}
@@ -76,8 +76,8 @@ func (s AbandonPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord,
 	return domain.BuildCleanupAbandonPreview(record, req, inventory, observed)
 }
 
-func (s AbandonPreviewer) ResolvedChildren(record model.IssueOpsRecord) map[string]bool {
-	children := []model.IssueOpsRecord{}
+func (s AbandonPreviewer) ResolvedChildren(record model.Record) map[string]bool {
+	children := []model.Record{}
 	for _, child := range record.ChildCycles {
 		id := strings.TrimSpace(child.CycleID)
 		if id == "" {

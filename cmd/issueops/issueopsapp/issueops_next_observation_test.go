@@ -9,22 +9,22 @@ import (
 )
 
 func TestNextLocalReadinessObservationReusesOnlyTheSameRecord(t *testing.T) {
-	recordA := issueopscontract.IssueOpsRecord{
+	recordA := issueopscontract.Record{
 		ID: "io-shared", Repo: "/repo-a", WorktreePath: "/repo-a.worktrees/feature", Branch: "feature",
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: "base-a"},
+		BranchPrepare: &issueopscontract.BranchPrepare{BaseBranch: "main", BaseSHA: "base-a"},
 	}
 	recordB := recordA
 	recordB.Repo = "/repo-b"
 	recordB.WorktreePath = "/repo-b.worktrees/feature"
 	observeCalls, fallbackCalls := 0, 0
 	observer := nextLocalReadinessObservation{
-		observe: func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {
+		observe: func(record issueopscontract.Record) (issueopscontract.Readiness, reviewcontract.LocalChangeObservation) {
 			observeCalls++
-			return issueopscontract.IssueOpsReadiness{OK: true, Ready: true}, reviewcontract.LocalChangeObservation{
+			return issueopscontract.Readiness{OK: true, Ready: true}, reviewcontract.LocalChangeObservation{
 				Paths: []string{"db/migrations/001.sql"}, Verified: true,
 			}
 		},
-		fallback: func(record issueopscontract.IssueOpsRecord) ([]string, bool) {
+		fallback: func(record issueopscontract.Record) ([]string, bool) {
 			fallbackCalls++
 			return []string{"fallback.go"}, true
 		},
@@ -51,15 +51,15 @@ func TestNextLocalReadinessObservationReusesOnlyTheSameRecord(t *testing.T) {
 }
 
 func TestNextLocalReadinessObservationDoesNotPromoteUnverifiedPaths(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{ID: "io-unverified", Repo: "/repo"}
+	record := issueopscontract.Record{ID: "io-unverified", Repo: "/repo"}
 	fallbackCalls := 0
 	observer := nextLocalReadinessObservation{
-		observe: func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {
-			return issueopscontract.IssueOpsReadiness{OK: true, Ready: false}, reviewcontract.LocalChangeObservation{
+		observe: func(issueopscontract.Record) (issueopscontract.Readiness, reviewcontract.LocalChangeObservation) {
+			return issueopscontract.Readiness{OK: true, Ready: false}, reviewcontract.LocalChangeObservation{
 				Paths: []string{"changing.go"}, Verified: false,
 			}
 		},
-		fallback: func(issueopscontract.IssueOpsRecord) ([]string, bool) {
+		fallback: func(issueopscontract.Record) ([]string, bool) {
 			fallbackCalls++
 			return []string{"fallback.go"}, true
 		},
@@ -77,11 +77,11 @@ func TestNextLocalReadinessObservationDoesNotPromoteUnverifiedPaths(t *testing.T
 }
 
 func TestNextLocalReadinessObservationFallsBackWithoutSameRequestEvidence(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{ID: "io-implement", Repo: "/repo"}
+	record := issueopscontract.Record{ID: "io-implement", Repo: "/repo"}
 	fallbackCalls := 0
 	observer := nextLocalReadinessObservation{
 		observe: newCycleReadiness().ObserveLocalPR,
-		fallback: func(issueopscontract.IssueOpsRecord) ([]string, bool) {
+		fallback: func(issueopscontract.Record) ([]string, bool) {
 			fallbackCalls++
 			return []string{"implementation.go"}, true
 		},

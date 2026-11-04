@@ -73,11 +73,11 @@ func TestPolicyStateMCPToolFailuresUseDocumentedErrorCodes(t *testing.T) {
 	root := t.TempDir()
 	boom := errors.New("backend failure")
 	state := publicStateForTest()
-	state.List = func() (statecontract.StateListResult, error) { return statecontract.StateListResult{}, boom }
-	state.Doctor = func() (statecontract.StateDoctorResult, error) { return statecontract.StateDoctorResult{}, boom }
-	state.Maintain = func() (statecontract.StateMaintainResult, error) { return statecontract.StateMaintainResult{}, boom }
-	state.Prune = func(context.Context, time.Duration, bool) (statecontract.StatePruneResult, error) {
-		return statecontract.StatePruneResult{}, boom
+	state.List = func() (statecontract.ListResult, error) { return statecontract.ListResult{}, boom }
+	state.Doctor = func() (statecontract.DoctorResult, error) { return statecontract.DoctorResult{}, boom }
+	state.Maintain = func() (statecontract.MaintainResult, error) { return statecontract.MaintainResult{}, boom }
+	state.Prune = func(context.Context, time.Duration, bool) (statecontract.PruneResult, error) {
+		return statecontract.PruneResult{}, boom
 	}
 	deps := MCPDependencies{
 		Policy: testPolicyService(),

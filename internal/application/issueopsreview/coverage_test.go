@@ -16,7 +16,7 @@ const covNow = "2026-10-01T00:00:00Z"
 
 // memStore is an in-memory record behind every store shape the review use cases take.
 type memStore struct {
-	rec         model.IssueOpsRecord
+	rec         model.Record
 	reads       int
 	writes      int
 	readErrAt   int // 1-based read number that fails; 0 = never
@@ -26,16 +26,16 @@ type memStore struct {
 	events      []string
 }
 
-func (m *memStore) read(_, _ string) (model.IssueOpsRecord, error) {
+func (m *memStore) read(_, _ string) (model.Record, error) {
 	m.reads++
 	m.events = append(m.events, "read")
 	if m.readErrAt == m.reads {
-		return model.IssueOpsRecord{ID: "partial"}, m.readErr
+		return model.Record{ID: "partial"}, m.readErr
 	}
 	return m.rec, nil
 }
 
-func (m *memStore) write(_ string, next model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (m *memStore) write(_ string, next model.Record) (model.Record, error) {
 	m.writes++
 	m.events = append(m.events, "write")
 	if m.writeErr != nil {
@@ -50,7 +50,7 @@ func (m *memStore) lock(_, _ string, fn func() error) error {
 	return fn()
 }
 
-func (m *memStore) validate(model.IssueOpsRecord) error {
+func (m *memStore) validate(model.Record) error {
 	m.events = append(m.events, "authority")
 	return m.validateErr
 }
@@ -61,7 +61,7 @@ func (m *memStore) mutation() reviewport.ReviewMutationStore {
 
 func (m *memStore) evidence() reviewport.EvidenceReviewStore {
 	return reviewport.EvidenceReviewStore{
-		Read: m.read, Fingerprint: func(model.IssueOpsRecord) string { return "fp" },
+		Read: m.read, Fingerprint: func(model.Record) string { return "fp" },
 		WithLock: m.lock, ValidateMutation: m.validate, Write: m.write, Now: func() string { return covNow },
 	}
 }
@@ -69,12 +69,12 @@ func (m *memStore) evidence() reviewport.EvidenceReviewStore {
 func (m *memStore) planning() PlanningRecorder {
 	return PlanningRecorder{
 		Store:                  m.mutation(),
-		PlanReadiness:          func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} },
-		CompatibilityReadiness: func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} },
-		PhaseRank:              issueopsdomain.IssueOpsPhaseRank,
-		PlanDigest:             func(string, model.IssueOpsRecord) (string, error) { return "plan-digest", nil },
-		ArchitectureDocument:   func(string, model.IssueOpsRecord) (string, error) { return validArchitectureDocument(), nil },
-		ActiveChildren:         func(string, model.IssueOpsRecord) ([]string, error) { return nil, nil },
+		PlanReadiness:          func(model.Record) model.Readiness { return model.Readiness{Ready: true} },
+		CompatibilityReadiness: func(model.Record) model.Readiness { return model.Readiness{Ready: true} },
+		PhaseRank:              issueopsdomain.PhaseRank,
+		PlanDigest:             func(string, model.Record) (string, error) { return "plan-digest", nil },
+		ArchitectureDocument:   func(string, model.Record) (string, error) { return validArchitectureDocument(), nil },
+		ActiveChildren:         func(string, model.Record) ([]string, error) { return nil, nil },
 	}
 }
 
@@ -96,7 +96,7 @@ type observerScript struct {
 
 func (s *observerScript) source() reviewport.LocalChangeSource {
 	return reviewport.LocalChangeSource{
-		BaseRef: func(r model.IssueOpsRecord, root string) string { return "base:" + r.ID + ":" + root },
+		BaseRef: func(r model.Record, root string) string { return "base:" + r.ID + ":" + root },
 		Paths: func(_, _ string) ([]string, bool) {
 			i := s.pathCalls
 			s.pathCalls++
@@ -119,11 +119,11 @@ func (s *observerScript) source() reviewport.LocalChangeSource {
 func TestLocalChangeObserverReturnsNothingWithoutRootOrFingerprinter(t *testing.T) {
 	s := &observerScript{paths: [][]string{{"a"}}}
 	src := s.source()
-	if got := (LocalChangeObserver{Source: src}).Observe(model.IssueOpsRecord{}, "  "); got.Verified || got.Paths != nil || s.pathCalls != 0 {
+	if got := (LocalChangeObserver{Source: src}).Observe(model.Record{}, "  "); got.Verified || got.Paths != nil || s.pathCalls != 0 {
 		t.Fatalf("blank root must not observe: %+v calls=%d", got, s.pathCalls)
 	}
 	src.Fingerprint = nil
-	if got := (LocalChangeObserver{Source: src}).Observe(model.IssueOpsRecord{}, "/repo"); got.Verified || got.Paths != nil || s.pathCalls != 0 {
+	if got := (LocalChangeObserver{Source: src}).Observe(model.Record{}, "/repo"); got.Verified || got.Paths != nil || s.pathCalls != 0 {
 		t.Fatalf("missing fingerprinter must not observe: %+v calls=%d", got, s.pathCalls)
 	}
 }
@@ -131,7 +131,7 @@ func TestLocalChangeObserverReturnsNothingWithoutRootOrFingerprinter(t *testing.
 func TestLocalChangeObserverVerifiesStableSnapshotAndDoesNotAliasSourcePaths(t *testing.T) {
 	source := []string{"a.go", "b.go"}
 	s := &observerScript{paths: [][]string{source, source}, fingerprints: []string{"fp", "fp"}}
-	got := (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{ID: "io-1"}, "/repo")
+	got := (LocalChangeObserver{Source: s.source()}).Observe(model.Record{ID: "io-1"}, "/repo")
 	if !got.Verified || got.Fingerprint != "fp" || !slices.Equal(got.Paths, source) || s.pathCalls != 2 || s.fpCalls != 2 {
 		t.Fatalf("stable snapshot: %+v paths=%d fps=%d", got, s.pathCalls, s.fpCalls)
 	}
@@ -146,7 +146,7 @@ func TestLocalChangeObserverRetriesOnceWhenSnapshotMovesBetweenReads(t *testing.
 		paths:        [][]string{{"a"}, {"a"}, {"a", "b"}, {"a", "b"}},
 		fingerprints: []string{"one", "two", "three", "three"},
 	}
-	got := (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got := (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if !got.Verified || got.Fingerprint != "three" || !slices.Equal(got.Paths, []string{"a", "b"}) {
 		t.Fatalf("second attempt must win: %+v", got)
 	}
@@ -157,7 +157,7 @@ func TestLocalChangeObserverNeverVerifiesTwoUnstableAttempts(t *testing.T) {
 		paths:        [][]string{{"a"}, {"a"}, {"b"}, {"c"}},
 		fingerprints: []string{"1", "2", "3", "4"},
 	}
-	got := (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got := (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if got.Verified || got.Fingerprint != "" || !slices.Equal(got.Paths, []string{"c"}) {
 		t.Fatalf("unstable snapshot must carry the last paths and no fingerprint: %+v", got)
 	}
@@ -171,7 +171,7 @@ func TestLocalChangeObserverTreatsDifferingPathsAsUnstableEvenWithSameFingerprin
 		paths:        [][]string{{"a"}, {"b"}, {"a"}, {"b"}},
 		fingerprints: []string{"x", "x", "x", "x"},
 	}
-	got := (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got := (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if got.Verified {
 		t.Fatalf("paths changed between reads but snapshot was verified: %+v", got)
 	}
@@ -180,13 +180,13 @@ func TestLocalChangeObserverTreatsDifferingPathsAsUnstableEvenWithSameFingerprin
 func TestLocalChangeObserverGivesUpWhenPathsUnreadable(t *testing.T) {
 	// first Paths read fails immediately: nothing to report, no fingerprint attempt
 	s := &observerScript{paths: [][]string{nil}}
-	got := (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got := (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if got.Verified || got.Paths != nil || s.fpCalls != 0 || s.pathCalls != 1 {
 		t.Fatalf("got=%+v fps=%d paths=%d", got, s.fpCalls, s.pathCalls)
 	}
 	// retry attempt cannot read paths: keeps the paths from the failed first attempt
 	s = &observerScript{paths: [][]string{{"a"}, {"b"}, nil}, fingerprints: []string{"1", "2"}}
-	got = (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got = (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if got.Verified || !slices.Equal(got.Paths, []string{"b"}) {
 		t.Fatalf("unreadable retry must keep last observed paths: %+v", got)
 	}
@@ -194,17 +194,17 @@ func TestLocalChangeObserverGivesUpWhenPathsUnreadable(t *testing.T) {
 
 func TestLocalChangeObserverRetriesWhenFingerprintFails(t *testing.T) {
 	s := &observerScript{paths: [][]string{{"a"}, {"a"}, {"a"}}, fingerprints: []string{"", "ok", "ok"}}
-	got := (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got := (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if !got.Verified || got.Fingerprint != "ok" || s.pathCalls != 3 {
 		t.Fatalf("failed fingerprint must trigger one retry: %+v paths=%d", got, s.pathCalls)
 	}
 	s = &observerScript{paths: [][]string{{"a"}, {"a"}, {"a"}, {"a"}}, fingerprints: []string{"ok", "", "ok", "ok"}}
-	got = (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got = (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if !got.Verified || got.Fingerprint != "ok" {
 		t.Fatalf("failed second fingerprint must trigger one retry: %+v", got)
 	}
 	s = &observerScript{paths: [][]string{{"a"}, nil, {"a"}, {"a"}}, fingerprints: []string{"ok", "ok", "ok"}}
-	got = (LocalChangeObserver{Source: s.source()}).Observe(model.IssueOpsRecord{}, "/repo")
+	got = (LocalChangeObserver{Source: s.source()}).Observe(model.Record{}, "/repo")
 	if !got.Verified || got.Fingerprint != "ok" || s.pathCalls != 4 || s.fpCalls != 3 {
 		t.Fatalf("unreadable second Paths read must trigger one retry: %+v paths=%d fps=%d", got, s.pathCalls, s.fpCalls)
 	}
@@ -214,7 +214,7 @@ func TestLocalChangeObserverRetriesWhenFingerprintFails(t *testing.T) {
 
 func TestRecordDevilsAdvocateValidatesBeforeReading(t *testing.T) {
 	reads := 0
-	store := reviewport.DevilsAdvocateStore{Read: func(string, string) (model.IssueOpsRecord, error) { reads++; return model.IssueOpsRecord{}, nil }}
+	store := reviewport.DevilsAdvocateStore{Read: func(string, string) (model.Record, error) { reads++; return model.Record{}, nil }}
 	_, err := RecordDevilsAdvocate(store, "s", "id", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "maybe", ReviewerContext: "inline"}, "now")
 	wantErr(t, err, "verdict must be pass, revise, or stop")
 	if reads != 0 {
@@ -225,16 +225,16 @@ func TestRecordDevilsAdvocateValidatesBeforeReading(t *testing.T) {
 func TestRecordDevilsAdvocatePropagatesReadFailureAndRequiresResolver(t *testing.T) {
 	boom := errors.New("read failed")
 	req := reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "inline", Findings: []string{"attacked rollback"}}
-	_, err := RecordDevilsAdvocate(reviewport.DevilsAdvocateStore{Read: func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, boom }}, "s", "id", req, "now")
+	_, err := RecordDevilsAdvocate(reviewport.DevilsAdvocateStore{Read: func(string, string) (model.Record, error) { return model.Record{}, boom }}, "s", "id", req, "now")
 	if !errors.Is(err, boom) {
 		t.Fatalf("err=%v", err)
 	}
 	writes := 0
 	store := reviewport.DevilsAdvocateStore{
-		Read: func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, nil },
-		TouchWrite: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) { return model.Record{}, nil },
+		TouchWrite: func(string, model.Record) (model.Record, error) {
 			writes++
-			return model.IssueOpsRecord{}, nil
+			return model.Record{}, nil
 		},
 	}
 	_, err = RecordDevilsAdvocate(store, "s", "id", req, "now")
@@ -245,14 +245,14 @@ func TestRecordDevilsAdvocatePropagatesReadFailureAndRequiresResolver(t *testing
 }
 
 func TestRecordDevilsAdvocateBindsDigestKeepsHistoryAndEnforcesReviseCap(t *testing.T) {
-	prior := &model.IssueOpsDevilsAdvocateReview{Verdict: "revise", Findings: []string{"gap"}, ReviewerContext: "inline", RecordedAt: "earlier"}
-	var written model.IssueOpsRecord
+	prior := &model.DevilsAdvocateReview{Verdict: "revise", Findings: []string{"gap"}, ReviewerContext: "inline", RecordedAt: "earlier"}
+	var written model.Record
 	store := reviewport.DevilsAdvocateStore{
-		Read: func(string, string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{ID: "io", DevilsAdvocateReview: prior}, nil
+		Read: func(string, string) (model.Record, error) {
+			return model.Record{ID: "io", DevilsAdvocateReview: prior}, nil
 		},
-		PlanDigest: func(string, model.IssueOpsRecord) (string, error) { return "digest-1", nil },
-		TouchWrite: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { written = r; return r, nil },
+		PlanDigest: func(string, model.Record) (string, error) { return "digest-1", nil },
+		TouchWrite: func(_ string, r model.Record) (model.Record, error) { written = r; return r, nil },
 	}
 	out, err := RecordDevilsAdvocate(store, "s", "io", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "PASS", ReviewerContext: "Subagent", Findings: []string{"attacked rollback"}}, "now")
 	if err != nil {
@@ -267,17 +267,17 @@ func TestRecordDevilsAdvocateBindsDigestKeepsHistoryAndEnforcesReviseCap(t *test
 	}
 
 	// the sixth unwaived revise is refused and nothing is written
-	capped := &model.IssueOpsDevilsAdvocateReview{Verdict: "revise", History: make([]reviewcontract.DevilsAdvocateRound, 4)}
+	capped := &model.DevilsAdvocateReview{Verdict: "revise", History: make([]reviewcontract.DevilsAdvocateRound, 4)}
 	for i := range capped.History {
 		capped.History[i] = reviewcontract.DevilsAdvocateRound{Verdict: "revise"}
 	}
 	writes := 0
-	store.Read = func(string, string) (model.IssueOpsRecord, error) {
-		return model.IssueOpsRecord{DevilsAdvocateReview: capped}, nil
+	store.Read = func(string, string) (model.Record, error) {
+		return model.Record{DevilsAdvocateReview: capped}, nil
 	}
-	store.TouchWrite = func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	store.TouchWrite = func(string, model.Record) (model.Record, error) {
 		writes++
-		return model.IssueOpsRecord{}, nil
+		return model.Record{}, nil
 	}
 	_, err = RecordDevilsAdvocate(store, "s", "io", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "inline", Findings: []string{"again"}}, "now")
 	wantErr(t, err, "revise round cap reached")
@@ -291,13 +291,13 @@ func TestRecordCompatibilityReviewRejectsInvalidRequestAndReadFailureBeforeWriti
 	reads := 0
 	boom := errors.New("read failed")
 	store := reviewport.CompatibilityStore{
-		Read: func(string, string) (model.IssueOpsRecord, error) { reads++; return model.IssueOpsRecord{}, boom },
-		TouchWrite: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) { reads++; return model.Record{}, boom },
+		TouchWrite: func(string, model.Record) (model.Record, error) {
 			writes++
-			return model.IssueOpsRecord{}, nil
+			return model.Record{}, nil
 		},
-		Ready:     func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} },
-		PhaseRank: issueopsdomain.IssueOpsPhaseRank,
+		Ready:     func(model.Record) model.Readiness { return model.Readiness{Ready: true} },
+		PhaseRank: issueopsdomain.PhaseRank,
 	}
 	_, err := RecordCompatibilityReview(store, "s", "id", reviewcontract.CompatibilityReviewRequest{}, "now")
 	wantErr(t, err, "backward_compatibility")
@@ -312,13 +312,13 @@ func TestRecordCompatibilityReviewRejectsInvalidRequestAndReadFailureBeforeWriti
 
 func TestRecordCompatibilityReviewNeverMovesPhaseBackward(t *testing.T) {
 	req := reviewcontract.CompatibilityReviewRequest{BackwardCompatibility: []string{"ok"}, SideEffects: []string{"none"}, Verification: []string{"tested"}, RollbackPlan: "revert"}
-	for _, phase := range []model.IssueOpsPhase{model.IssueOpsPhaseCompatibilityReview, model.IssueOpsPhaseImplement} {
-		var written model.IssueOpsRecord
+	for _, phase := range []model.Phase{model.PhaseCompatibilityReview, model.PhaseImplement} {
+		var written model.Record
 		store := reviewport.CompatibilityStore{
-			Read:       func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{Phase: phase}, nil },
-			TouchWrite: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { written = r; return r, nil },
-			Ready:      func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} },
-			PhaseRank:  issueopsdomain.IssueOpsPhaseRank,
+			Read:       func(string, string) (model.Record, error) { return model.Record{Phase: phase}, nil },
+			TouchWrite: func(_ string, r model.Record) (model.Record, error) { written = r; return r, nil },
+			Ready:      func(model.Record) model.Readiness { return model.Readiness{Ready: true} },
+			PhaseRank:  issueopsdomain.PhaseRank,
 		}
 		if _, err := RecordCompatibilityReview(store, "s", "id", req, covNow); err != nil {
 			t.Fatal(err)
@@ -332,10 +332,10 @@ func TestRecordCompatibilityReviewNeverMovesPhaseBackward(t *testing.T) {
 // ---- PlanningRecorder ----
 
 func TestPlanningRecorderPlanPrepStoresEvidenceAndWaiversWithClock(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePlan}}
-	evidence := model.IssueOpsPlanPrepItemRequest{Evidence: []string{" read ADR "}}
-	out, err := m.planning().PlanPrep("s", "io", model.IssueOpsPlanPrepRequest{
-		PriorDecisions: evidence, RelatedIssues: model.IssueOpsPlanPrepItemRequest{WaiveReason: "none exist"},
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhasePlan}}
+	evidence := model.PlanPrepItemRequest{Evidence: []string{" read ADR "}}
+	out, err := m.planning().PlanPrep("s", "io", model.PlanPrepRequest{
+		PriorDecisions: evidence, RelatedIssues: model.PlanPrepItemRequest{WaiveReason: "none exist"},
 		WebResearch: evidence, CodebaseSurvey: evidence,
 	})
 	if err != nil {
@@ -351,8 +351,8 @@ func TestPlanningRecorderPlanPrepStoresEvidenceAndWaiversWithClock(t *testing.T)
 }
 
 func TestPlanningRecorderPlanPrepRejectsIncompleteItemWithoutWrite(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io"}}
-	_, err := m.planning().PlanPrep("s", "io", model.IssueOpsPlanPrepRequest{})
+	m := &memStore{rec: model.Record{ID: "io"}}
+	_, err := m.planning().PlanPrep("s", "io", model.PlanPrepRequest{})
 	wantErr(t, err, "provide evidence or a waive reason")
 	if m.writes != 0 {
 		t.Fatal("invalid plan prep must not write")
@@ -360,7 +360,7 @@ func TestPlanningRecorderPlanPrepRejectsIncompleteItemWithoutWrite(t *testing.T)
 }
 
 func TestPlanningRecorderArchitectureExplainsMissingApprovalEvidence(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePlan}}
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhasePlan}}
 	req := reviewcontract.ArchitectureReviewRequest{
 		ProblemSummary: "p", ProposedArchitecture: "d", RefactorPlan: "r", Alternatives: []string{"a"}, Risks: []string{"x"},
 		Verification: []string{"unit tests pass"}, Approved: true, ReviewerContext: "inline",
@@ -378,7 +378,7 @@ func TestPlanningRecorderArchitectureExplainsMissingApprovalEvidence(t *testing.
 }
 
 func TestPlanningRecorderArchitecturePassesThroughOtherErrorsUnchanged(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io"}}
+	m := &memStore{rec: model.Record{ID: "io"}}
 	_, err := m.planning().Architecture("s", "io", reviewcontract.ArchitectureReviewRequest{})
 	if err == nil || err.Error() != "problem_summary is required (--problem-summary TEXT)" {
 		t.Fatalf("err=%v", err)
@@ -386,21 +386,21 @@ func TestPlanningRecorderArchitecturePassesThroughOtherErrorsUnchanged(t *testin
 }
 
 func TestRecordArchitectureReviewReadinessIgnoresOnlyPlanPrepGaps(t *testing.T) {
-	var written model.IssueOpsRecord
+	var written model.Record
 	missing := []string{"plan_prep_decisions"}
 	store := reviewport.ArchitectureReviewStore{
-		Read:          func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{ID: "io"}, nil },
-		PlanReadiness: func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Missing: missing} },
-		TouchWrite:    func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { written = r; return r, nil },
+		Read:          func(string, string) (model.Record, error) { return model.Record{ID: "io"}, nil },
+		PlanReadiness: func(model.Record) model.Readiness { return model.Readiness{Missing: missing} },
+		TouchWrite:    func(_ string, r model.Record) (model.Record, error) { written = r; return r, nil },
 		Now:           func() string { return covNow },
-		Document:      func(string, model.IssueOpsRecord) (string, error) { return validArchitectureDocument(), nil },
+		Document:      func(string, model.Record) (string, error) { return validArchitectureDocument(), nil },
 	}
 	req := reviewcontract.ArchitectureReviewRequest{ProblemSummary: "p", ProposedArchitecture: "d", Verification: []string{"checked"}, ReviewerContext: "subagent"}
 	if _, err := RecordArchitectureReview(store, "s", "io", req); err != nil || written.ArchitectureReview == nil {
 		t.Fatalf("plan_prep-only gaps must not block: %v", err)
 	}
 	missing = []string{"plan_prep_decisions", "intent"}
-	written = model.IssueOpsRecord{}
+	written = model.Record{}
 	_, err := RecordArchitectureReview(store, "s", "io", req)
 	wantErr(t, err, "before intent contract: missing intent")
 	if strings.Contains(err.Error(), "plan_prep") || written.ArchitectureReview != nil {
@@ -411,10 +411,10 @@ func TestRecordArchitectureReviewReadinessIgnoresOnlyPlanPrepGaps(t *testing.T) 
 func TestRecordArchitectureReviewPropagatesReadFailureAndApprovalGaps(t *testing.T) {
 	boom := errors.New("read failed")
 	store := reviewport.ArchitectureReviewStore{
-		Read: func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, boom },
-		TouchWrite: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) { return model.Record{}, boom },
+		TouchWrite: func(string, model.Record) (model.Record, error) {
 			t.Fatal("must not write")
-			return model.IssueOpsRecord{}, nil
+			return model.Record{}, nil
 		},
 		Now: func() string { return covNow },
 	}
@@ -422,30 +422,30 @@ func TestRecordArchitectureReviewPropagatesReadFailureAndApprovalGaps(t *testing
 	if _, err := RecordArchitectureReview(store, "s", "io", req); !errors.Is(err, boom) {
 		t.Fatalf("err=%v", err)
 	}
-	store.Read = func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, nil }
-	store.PlanReadiness = func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} }
+	store.Read = func(string, string) (model.Record, error) { return model.Record{}, nil }
+	store.PlanReadiness = func(model.Record) model.Readiness { return model.Readiness{Ready: true} }
 	req.Approved = true
 	_, err := RecordArchitectureReview(store, "s", "io", req)
 	wantErr(t, err, "approved architecture review requires refactor_plan")
 }
 
 func TestPlanningRecorderCompatibilityAdvancesPhaseAndStampsUpdate(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePlan}}
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhasePlan}}
 	out, err := m.planning().Compatibility("s", "io", reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: []string{"ok"}, SideEffects: []string{"none"}, Verification: []string{"tested"}, RollbackPlan: "revert",
 	})
-	if err != nil || out.Phase != model.IssueOpsPhaseCompatibilityReview || out.CompatibilityReview == nil || out.UpdatedAt != covNow || m.writes != 1 {
+	if err != nil || out.Phase != model.PhaseCompatibilityReview || out.CompatibilityReview == nil || out.UpdatedAt != covNow || m.writes != 1 {
 		t.Fatalf("compatibility: %+v err=%v", out, err)
 	}
 }
 
 func TestPlanningRecorderDevilsAdvocateRecordsDigestAndExplainsReviseCap(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io-cap"}}
+	m := &memStore{rec: model.Record{ID: "io-cap"}}
 	out, err := m.planning().DevilsAdvocate("s", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked"}})
 	if err != nil || out.DevilsAdvocateReview == nil || out.DevilsAdvocateReview.ReviewedPlanDigest != "plan-digest" || out.UpdatedAt != covNow {
 		t.Fatalf("review: %+v err=%v", out, err)
 	}
-	m = &memStore{rec: model.IssueOpsRecord{ID: "io-cap", DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{
+	m = &memStore{rec: model.Record{ID: "io-cap", DevilsAdvocateReview: &model.DevilsAdvocateReview{
 		Verdict: "revise", History: []reviewcontract.DevilsAdvocateRound{{Verdict: "revise"}, {Verdict: "revise"}, {Verdict: "revise"}, {Verdict: "revise"}},
 	}}}
 	_, err = m.planning().DevilsAdvocate("s", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "inline", Findings: []string{"again"}})
@@ -458,20 +458,20 @@ func TestPlanningRecorderDevilsAdvocateRecordsDigestAndExplainsReviseCap(t *test
 }
 
 func TestPlanningRecorderRegressTransitionsUnderLockAndSurfacesActiveChildren(t *testing.T) {
-	reflected := &model.IssueOpsDevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: "t"}
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePlan, DevilsAdvocateReview: reflected}}
+	reflected := &model.DevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: "t"}
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhasePlan, DevilsAdvocateReview: reflected}}
 	out, err := m.planning().Regress("s", "io", "  scope moved  ")
-	if err != nil || out.Phase != model.IssueOpsPhaseGrill || out.UpdatedAt != covNow || len(out.RegressEvents) != 1 || out.RegressEvents[0].Reason != "scope moved" || out.DevilsAdvocateReview != nil {
+	if err != nil || out.Phase != model.PhaseGrill || out.UpdatedAt != covNow || len(out.RegressEvents) != 1 || out.RegressEvents[0].Reason != "scope moved" || out.DevilsAdvocateReview != nil {
 		t.Fatalf("regress: %+v err=%v", out, err)
 	}
 
-	m = &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePlan, DevilsAdvocateReview: reflected}}
+	m = &memStore{rec: model.Record{ID: "io", Phase: model.PhasePlan, DevilsAdvocateReview: reflected}}
 	p := m.planning()
-	p.ActiveChildren = func(string, model.IssueOpsRecord) ([]string, error) { return []string{"io-child"}, nil }
+	p.ActiveChildren = func(string, model.Record) ([]string, error) { return []string{"io-child"}, nil }
 	_, err = p.Regress("s", "io", "scope moved")
 	wantErr(t, err, "children_active: io-child")
 	boom := errors.New("child lookup failed")
-	p.ActiveChildren = func(string, model.IssueOpsRecord) ([]string, error) { return nil, boom }
+	p.ActiveChildren = func(string, model.Record) ([]string, error) { return nil, boom }
 	if _, err = p.Regress("s", "io", "scope moved"); !errors.Is(err, boom) || m.writes != 0 {
 		t.Fatalf("err=%v writes=%d", err, m.writes)
 	}
@@ -494,7 +494,7 @@ func TestRegressRejectsBlankReasonBeforeReadingAndPropagatesStoreFailures(t *tes
 	reads := 0
 	boom := errors.New("read failed")
 	store := reviewport.RegressStore{
-		Read: func(string, string) (model.IssueOpsRecord, error) { reads++; return model.IssueOpsRecord{}, boom },
+		Read: func(string, string) (model.Record, error) { reads++; return model.Record{}, boom },
 	}
 	_, err := Regress(store, "s", "io", "   ")
 	wantErr(t, err, "regression reason is required")
@@ -508,24 +508,24 @@ func TestRegressRejectsBlankReasonBeforeReadingAndPropagatesStoreFailures(t *tes
 
 func TestRegressRefusesIneligiblePhaseAndVerdictWithoutChildLookup(t *testing.T) {
 	for name, tc := range map[string]struct {
-		rec  model.IssueOpsRecord
+		rec  model.Record
 		want string
 	}{
-		"wrong phase":     {model.IssueOpsRecord{Phase: model.IssueOpsPhaseImplement}, "only applies from plan or compatibility-review"},
-		"no review":       {model.IssueOpsRecord{Phase: model.IssueOpsPhasePlan}, "requires a recorded devil's-advocate stop verdict"},
-		"revise in place": {model.IssueOpsRecord{Phase: model.IssueOpsPhasePlan, DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "revise"}}, "must be resolved in place"},
-		"not reflected":   {model.IssueOpsRecord{Phase: model.IssueOpsPhasePlan, DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "stop"}}, "reflect the devil's-advocate findings"},
+		"wrong phase":     {model.Record{Phase: model.PhaseImplement}, "only applies from plan or compatibility-review"},
+		"no review":       {model.Record{Phase: model.PhasePlan}, "requires a recorded devil's-advocate stop verdict"},
+		"revise in place": {model.Record{Phase: model.PhasePlan, DevilsAdvocateReview: &model.DevilsAdvocateReview{Verdict: "revise"}}, "must be resolved in place"},
+		"not reflected":   {model.Record{Phase: model.PhasePlan, DevilsAdvocateReview: &model.DevilsAdvocateReview{Verdict: "stop"}}, "reflect the devil's-advocate findings"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			store := reviewport.RegressStore{
-				Read: func(string, string) (model.IssueOpsRecord, error) { return tc.rec, nil },
-				ActiveChildren: func(string, model.IssueOpsRecord) ([]string, error) {
+				Read: func(string, string) (model.Record, error) { return tc.rec, nil },
+				ActiveChildren: func(string, model.Record) ([]string, error) {
 					t.Fatal("child lookup must follow persisted checks")
 					return nil, nil
 				},
-				TouchWrite: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+				TouchWrite: func(string, model.Record) (model.Record, error) {
 					t.Fatal("must not write")
-					return model.IssueOpsRecord{}, nil
+					return model.Record{}, nil
 				},
 			}
 			_, err := Regress(store, "s", "io", "reason")
@@ -546,7 +546,7 @@ func TestAddFeedbackRejectsInvalidInputBeforeSecondReadAndWrite(t *testing.T) {
 		"unknown class": {"s", "b", "nonsense", `unknown issueops feedback classification "nonsense"`},
 	} {
 		t.Run(name, func(t *testing.T) {
-			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseFeedback}}
+			m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseFeedback}}
 			_, err := AddFeedback(m.mutation(), "s", "io", tc.source, tc.body, tc.class)
 			wantErr(t, err, tc.want)
 			if m.writes != 0 || m.reads != 1 {
@@ -557,7 +557,7 @@ func TestAddFeedbackRejectsInvalidInputBeforeSecondReadAndWrite(t *testing.T) {
 }
 
 func TestAddFeedbackRejectsDonePhaseAfterReread(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseDone}}
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseDone}}
 	_, err := AddFeedback(m.mutation(), "s", "io", "s", "b", "defect")
 	wantErr(t, err, "cannot add feedback after done phase")
 	if m.writes != 0 || m.reads != 2 {
@@ -566,18 +566,18 @@ func TestAddFeedbackRejectsDonePhaseAfterReread(t *testing.T) {
 }
 
 func TestAddFeedbackRecordsNormalizedItemAndMovesCleanedCycleToFeedbackPhase(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePR, AISlopCleanAt: "clean"}}
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhasePR, AISlopCleanAt: "clean"}}
 	out, err := AddFeedback(m.mutation(), "s", "io", " bot ", " fix it ", " DEFECT ")
 	if err != nil {
 		t.Fatal(err)
 	}
 	item := out.Feedback[0]
-	if item.Source != "bot" || item.Body != "fix it" || item.Classification != "defect" || item.CreatedAt != covNow || out.Phase != model.IssueOpsPhaseFeedback || out.UpdatedAt != covNow {
+	if item.Source != "bot" || item.Body != "fix it" || item.Classification != "defect" || item.CreatedAt != covNow || out.Phase != model.PhaseFeedback || out.UpdatedAt != covNow {
 		t.Fatalf("feedback = %+v phase=%s", item, out.Phase)
 	}
-	m = &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+	m = &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 	out, err = AddFeedback(m.mutation(), "s", "io", "bot", "note", " ")
-	if err != nil || out.Phase != model.IssueOpsPhaseImplement || out.Feedback[0].Classification != "" {
+	if err != nil || out.Phase != model.PhaseImplement || out.Feedback[0].Classification != "" {
 		t.Fatalf("uncleaned cycle keeps its phase and unclassified feedback is accepted: %s %v", out.Phase, err)
 	}
 }
@@ -594,7 +594,7 @@ func TestMutateReviewRecordFailuresReturnNotOKResultAndNeverWrite(t *testing.T) 
 		"write fails":        {func(m *memStore) { m.writeErr = boom }, "boom"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseFeedback}}
+			m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseFeedback}}
 			tc.setup(m)
 			out, err := AddFeedback(m.mutation(), "s", "io", "bot", "body", "defect")
 			wantErr(t, err, tc.want)
@@ -612,7 +612,7 @@ func TestMutateReviewRecordFailuresReturnNotOKResultAndNeverWrite(t *testing.T) 
 }
 
 func TestResolveFeedbackValidatesResolutionAndIndex(t *testing.T) {
-	seed := model.IssueOpsRecord{ID: "io", Feedback: []model.IssueOpsFeedbackItem{{Source: "a", Body: "b", Classification: "defect"}}}
+	seed := model.Record{ID: "io", Feedback: []model.FeedbackItem{{Source: "a", Body: "b", Classification: "defect"}}}
 	for name, tc := range map[string]struct {
 		index      int
 		resolution string
@@ -640,7 +640,7 @@ func TestResolveFeedbackValidatesResolutionAndIndex(t *testing.T) {
 }
 
 func TestMarkContractFeedbackIssueUpdatedStampsOnlyUnresolvedContractChanges(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Feedback: []model.IssueOpsFeedbackItem{
+	m := &memStore{rec: model.Record{ID: "io", Feedback: []model.FeedbackItem{
 		{Classification: "contract_change"},
 		{Classification: "contract_change", IssueUpdatedAt: "already"},
 		{Classification: "defect"},
@@ -665,28 +665,28 @@ func TestMarkContractFeedbackIssueUpdatedStampsOnlyUnresolvedContractChanges(t *
 func TestEvidenceRecordersRejectInvalidRequestsBeforeReadingState(t *testing.T) {
 	for name, call := range map[string]func(*memStore) error{
 		"implementation verdict": func(m *memStore) error {
-			_, err := RecordImplementationReview(m.evidence(), "s", "io", model.IssueOpsImplementationReviewRequest{Verdict: "ok", Findings: []string{"f"}, Evidence: []string{"e"}})
+			_, err := RecordImplementationReview(m.evidence(), "s", "io", model.ImplementationReviewRequest{Verdict: "ok", Findings: []string{"f"}, Evidence: []string{"e"}})
 			return err
 		},
 		"implementation evidence": func(m *memStore) error {
-			_, err := RecordImplementationReview(m.evidence(), "s", "io", model.IssueOpsImplementationReviewRequest{Verdict: "pass", Findings: []string{"  "}, Evidence: []string{"e"}})
+			_, err := RecordImplementationReview(m.evidence(), "s", "io", model.ImplementationReviewRequest{Verdict: "pass", Findings: []string{"  "}, Evidence: []string{"e"}})
 			return err
 		},
 		"schema without measurements": func(m *memStore) error {
-			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.IssueOpsSchemaEvidenceRequest{Sources: []string{"s"}})
+			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.SchemaEvidenceRequest{Sources: []string{"s"}})
 			return err
 		},
 		"schema without sources": func(m *memStore) error {
-			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.IssueOpsSchemaEvidenceRequest{Measurements: []string{"m"}})
+			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.SchemaEvidenceRequest{Measurements: []string{"m"}})
 			return err
 		},
 		"schema waiver without rationale": func(m *memStore) error {
-			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.IssueOpsSchemaEvidenceRequest{Waive: true, WaiverRationale: " "})
+			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.SchemaEvidenceRequest{Waive: true, WaiverRationale: " "})
 			return err
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+			m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 			if err := call(m); err == nil || m.reads != 0 || m.writes != 0 {
 				t.Fatalf("err=%v reads=%d writes=%d", err, m.reads, m.writes)
 			}
@@ -697,20 +697,20 @@ func TestEvidenceRecordersRejectInvalidRequestsBeforeReadingState(t *testing.T) 
 func TestEvidenceRecordersRejectBeforeImplementPhaseAndNeverWrite(t *testing.T) {
 	for name, call := range map[string]func(*memStore) error{
 		"implementation review": func(m *memStore) error {
-			_, err := RecordImplementationReview(m.evidence(), "s", "io", model.IssueOpsImplementationReviewRequest{Verdict: "pass", Findings: []string{"f"}, Evidence: []string{"e"}})
+			_, err := RecordImplementationReview(m.evidence(), "s", "io", model.ImplementationReviewRequest{Verdict: "pass", Findings: []string{"f"}, Evidence: []string{"e"}})
 			return err
 		},
 		"schema evidence": func(m *memStore) error {
-			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.IssueOpsSchemaEvidenceRequest{Waive: true, WaiverRationale: "no schema"})
+			_, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.SchemaEvidenceRequest{Waive: true, WaiverRationale: "no schema"})
 			return err
 		},
 		"project docs": func(m *memStore) error {
-			_, err := RecordProjectDocsReview(docsStore(m), "s", "io", model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"e"}})
+			_, err := RecordProjectDocsReview(docsStore(m), "s", "io", model.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"e"}})
 			return err
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePlan}}
+			m := &memStore{rec: model.Record{ID: "io", Phase: model.PhasePlan}}
 			err := call(m)
 			wantErr(t, err, "can only be recorded from the implement phase onward (current: plan)")
 			if m.writes != 0 {
@@ -722,16 +722,16 @@ func TestEvidenceRecordersRejectBeforeImplementPhaseAndNeverWrite(t *testing.T) 
 
 func TestEvidenceRecordersPropagateStoreFailuresAsNotOK(t *testing.T) {
 	boom := errors.New("boom")
-	type recorder func(*memStore) (model.IssueOpsRecord, error)
+	type recorder func(*memStore) (model.Record, error)
 	recorders := map[string]recorder{
-		"implementation review": func(m *memStore) (model.IssueOpsRecord, error) {
-			return RecordImplementationReview(m.evidence(), "s", "io", model.IssueOpsImplementationReviewRequest{Verdict: "pass", Findings: []string{"f"}, Evidence: []string{"e"}})
+		"implementation review": func(m *memStore) (model.Record, error) {
+			return RecordImplementationReview(m.evidence(), "s", "io", model.ImplementationReviewRequest{Verdict: "pass", Findings: []string{"f"}, Evidence: []string{"e"}})
 		},
-		"schema evidence": func(m *memStore) (model.IssueOpsRecord, error) {
-			return RecordSchemaEvidence(m.evidence(), "s", "io", model.IssueOpsSchemaEvidenceRequest{Measurements: []string{"m"}, Sources: []string{"s"}})
+		"schema evidence": func(m *memStore) (model.Record, error) {
+			return RecordSchemaEvidence(m.evidence(), "s", "io", model.SchemaEvidenceRequest{Measurements: []string{"m"}, Sources: []string{"s"}})
 		},
-		"project docs": func(m *memStore) (model.IssueOpsRecord, error) {
-			return RecordProjectDocsReview(docsStore(m), "s", "io", model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"e"}})
+		"project docs": func(m *memStore) (model.Record, error) {
+			return RecordProjectDocsReview(docsStore(m), "s", "io", model.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"e"}})
 		},
 	}
 	for name, rec := range recorders {
@@ -742,7 +742,7 @@ func TestEvidenceRecordersPropagateStoreFailuresAsNotOK(t *testing.T) {
 			"write":            func(m *memStore) { m.writeErr = boom },
 		} {
 			t.Run(name+"/"+failure, func(t *testing.T) {
-				m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+				m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 				setup(m)
 				out, err := rec(m)
 				if !errors.Is(err, boom) || out.OK || out.ID != "" {
@@ -757,8 +757,8 @@ func TestEvidenceRecordersPropagateStoreFailuresAsNotOK(t *testing.T) {
 }
 
 func TestRecordImplementationReviewCleansEvidenceAndRecordsReviewer(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseAISlopClean}}
-	out, err := RecordImplementationReview(m.evidence(), "s", "io", model.IssueOpsImplementationReviewRequest{
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseAISlopClean}}
+	out, err := RecordImplementationReview(m.evidence(), "s", "io", model.ImplementationReviewRequest{
 		Verdict: " Revise ", Findings: []string{" gap ", " "}, Evidence: []string{" go test "},
 		ReviewerHost: " Claude ", ReviewerModel: " opus ", ReviewerEffort: " high ",
 	})
@@ -773,13 +773,13 @@ func TestRecordImplementationReviewCleansEvidenceAndRecordsReviewer(t *testing.T
 }
 
 func TestRecordSchemaEvidenceRecordsMeasurementsAndWaivers(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
-	out, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.IssueOpsSchemaEvidenceRequest{Measurements: []string{" EXPLAIN ok "}, Sources: []string{" prod replica "}})
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
+	out, err := RecordSchemaEvidence(m.evidence(), "s", "io", model.SchemaEvidenceRequest{Measurements: []string{" EXPLAIN ok "}, Sources: []string{" prod replica "}})
 	e := out.SchemaEvidence
 	if err != nil || e == nil || e.Waived || !slices.Equal(e.Measurements, []string{"EXPLAIN ok"}) || !slices.Equal(e.Sources, []string{"prod replica"}) || e.ReviewedFingerprint != "fp" || out.UpdatedAt != covNow {
 		t.Fatalf("evidence=%+v err=%v", e, err)
 	}
-	out, err = RecordSchemaEvidence(m.evidence(), "s", "io", model.IssueOpsSchemaEvidenceRequest{Waive: true, WaiverRationale: " no schema change "})
+	out, err = RecordSchemaEvidence(m.evidence(), "s", "io", model.SchemaEvidenceRequest{Waive: true, WaiverRationale: " no schema change "})
 	e = out.SchemaEvidence
 	if err != nil || e == nil || !e.Waived || e.WaiverRationale != "no schema change" || len(e.Measurements) != 0 {
 		t.Fatalf("waived evidence=%+v err=%v", e, err)
@@ -787,29 +787,29 @@ func TestRecordSchemaEvidenceRecordsMeasurementsAndWaivers(t *testing.T) {
 }
 
 func TestEvidenceRecordersRejectWorktreeOrBaseChangeDuringObservation(t *testing.T) {
-	observed := model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement, WorktreePath: "/a", BranchPrepare: &model.IssueOpsBranchPrepare{BaseSHA: "1", BaseBranch: "main"}}
-	for name, mutate := range map[string]func(*model.IssueOpsRecord){
-		"base sha": func(r *model.IssueOpsRecord) {
-			r.BranchPrepare = &model.IssueOpsBranchPrepare{BaseSHA: "2", BaseBranch: "main"}
+	observed := model.Record{ID: "io", Phase: model.PhaseImplement, WorktreePath: "/a", BranchPrepare: &model.BranchPrepare{BaseSHA: "1", BaseBranch: "main"}}
+	for name, mutate := range map[string]func(*model.Record){
+		"base sha": func(r *model.Record) {
+			r.BranchPrepare = &model.BranchPrepare{BaseSHA: "2", BaseBranch: "main"}
 		},
-		"base branch": func(r *model.IssueOpsRecord) {
-			r.BranchPrepare = &model.IssueOpsBranchPrepare{BaseSHA: "1", BaseBranch: "dev"}
+		"base branch": func(r *model.Record) {
+			r.BranchPrepare = &model.BranchPrepare{BaseSHA: "1", BaseBranch: "dev"}
 		},
-		"base dropped": func(r *model.IssueOpsRecord) { r.BranchPrepare = nil },
+		"base dropped": func(r *model.Record) { r.BranchPrepare = nil },
 	} {
 		t.Run(name, func(t *testing.T) {
 			current := observed
 			mutate(&current)
 			m := &memStore{rec: observed}
 			store := m.evidence()
-			store.Read = func(string, string) (model.IssueOpsRecord, error) {
+			store.Read = func(string, string) (model.Record, error) {
 				m.reads++
 				if m.reads == 1 {
 					return observed, nil
 				}
 				return current, nil
 			}
-			_, err := RecordSchemaEvidence(store, "s", "io", model.IssueOpsSchemaEvidenceRequest{Waive: true, WaiverRationale: "r"})
+			_, err := RecordSchemaEvidence(store, "s", "io", model.SchemaEvidenceRequest{Waive: true, WaiverRationale: "r"})
 			wantErr(t, err, "changed its worktree or base while the change set was observed")
 			if m.writes != 0 {
 				t.Fatal("must not write")
@@ -819,8 +819,8 @@ func TestEvidenceRecordersRejectWorktreeOrBaseChangeDuringObservation(t *testing
 }
 
 func TestChangeObservationIdentityFallsBackToRepoAndIgnoresWhitespace(t *testing.T) {
-	a := model.IssueOpsRecord{Repo: "/repo"}
-	b := model.IssueOpsRecord{Repo: " /repo ", WorktreePath: " "}
+	a := model.Record{Repo: "/repo"}
+	b := model.Record{Repo: " /repo ", WorktreePath: " "}
 	if validateCurrentChangeObservation(a, b) != nil {
 		t.Fatal("repo root with padding must match")
 	}
@@ -835,8 +835,8 @@ func TestChangeObservationIdentityFallsBackToRepoAndIgnoresWhitespace(t *testing
 func docsStore(m *memStore) reviewport.ProjectDocsReviewStore {
 	return reviewport.ProjectDocsReviewStore{
 		EvidenceReviewStore: m.evidence(),
-		ChangedPaths:        func(model.IssueOpsRecord) []string { return []string{"docs/a.md", ".issueops/ADR.md"} },
-		Root:                func(model.IssueOpsRecord) string { return "/wt" },
+		ChangedPaths:        func(model.Record) []string { return []string{"docs/a.md", ".issueops/ADR.md"} },
+		Root:                func(model.Record) string { return "/wt" },
 		RelativePath: func(root, path string) string {
 			rel, ok := strings.CutPrefix(path, root+"/")
 			if !ok {
@@ -854,9 +854,9 @@ func docsStore(m *memStore) reviewport.ProjectDocsReviewStore {
 // no-change without a reviewed doc is refused while the worktree has project
 // docs and accepted (evidence only) in a worktree without any.
 func TestRecordProjectDocsReviewNoChangeWithoutReviewedDocsFollowsTheWorktree(t *testing.T) {
-	req := model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Evidence: []string{"repo has no project docs"}}
+	req := model.ProjectDocsReviewRequest{Verdict: "no-change", Evidence: []string{"repo has no project docs"}}
 	for _, present := range []bool{true, false} {
-		m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+		m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 		store := docsStore(m)
 		store.ProjectDocsPresent = func(string) bool { return present }
 		_, err := RecordProjectDocsReview(store, "s", "io", req)
@@ -876,26 +876,26 @@ func TestRecordProjectDocsReviewRefusalNamesTheNoProjectDocPath(t *testing.T) {
 		{"README.md", "record no-change without --reviewed-doc"},
 		{".issueops/issues/41/plan.md", "cycle material"},
 	} {
-		m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+		m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 		store := docsStore(m)
 		store.ProjectDocsPresent = func(string) bool { return false }
-		_, err := RecordProjectDocsReview(store, "s", "io", model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Evidence: []string{"e"}, ReviewedDocs: []string{tc.doc}})
+		_, err := RecordProjectDocsReview(store, "s", "io", model.ProjectDocsReviewRequest{Verdict: "no-change", Evidence: []string{"e"}, ReviewedDocs: []string{tc.doc}})
 		wantErr(t, err, tc.want)
 	}
 }
 
 func TestRecordProjectDocsReviewRejectsInvalidRequestBeforeReading(t *testing.T) {
 	for name, tc := range map[string]struct {
-		req  model.IssueOpsProjectDocsReviewRequest
+		req  model.ProjectDocsReviewRequest
 		want string
 	}{
-		"bad verdict":          {model.IssueOpsProjectDocsReviewRequest{Verdict: "done", Evidence: []string{"e"}}, "verdict must be updated|no-change"},
-		"no evidence":          {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}}, "requires at least one evidence entry"},
-		"updated without docs": {model.IssueOpsProjectDocsReviewRequest{Verdict: "updated", Evidence: []string{"e"}}, "requires at least one --doc"},
-		"no-change lists docs": {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Docs: []string{"a"}, Evidence: []string{"e"}}, "must not list updated docs"},
+		"bad verdict":          {model.ProjectDocsReviewRequest{Verdict: "done", Evidence: []string{"e"}}, "verdict must be updated|no-change"},
+		"no evidence":          {model.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}}, "requires at least one evidence entry"},
+		"updated without docs": {model.ProjectDocsReviewRequest{Verdict: "updated", Evidence: []string{"e"}}, "requires at least one --doc"},
+		"no-change lists docs": {model.ProjectDocsReviewRequest{Verdict: "no-change", Docs: []string{"a"}, Evidence: []string{"e"}}, "must not list updated docs"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+			m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 			_, err := RecordProjectDocsReview(docsStore(m), "s", "io", tc.req)
 			wantErr(t, err, tc.want)
 			if m.reads != 0 {
@@ -906,8 +906,8 @@ func TestRecordProjectDocsReviewRejectsInvalidRequestBeforeReading(t *testing.T)
 }
 
 func TestRecordProjectDocsReviewNormalizesUpdatedDocsAgainstChangeSet(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
-	out, err := RecordProjectDocsReview(docsStore(m), "s", "io", model.IssueOpsProjectDocsReviewRequest{
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
+	out, err := RecordProjectDocsReview(docsStore(m), "s", "io", model.ProjectDocsReviewRequest{
 		Verdict: "UPDATED", Docs: []string{"/wt/.issueops/ADR.md"}, Evidence: []string{" diff reviewed "}, ReviewedDocs: []string{"AGENTS.md"},
 	})
 	r := out.ProjectDocsReview
@@ -918,17 +918,17 @@ func TestRecordProjectDocsReviewNormalizesUpdatedDocsAgainstChangeSet(t *testing
 
 func TestRecordProjectDocsReviewDeferredPathErrors(t *testing.T) {
 	for name, tc := range map[string]struct {
-		req  model.IssueOpsProjectDocsReviewRequest
+		req  model.ProjectDocsReviewRequest
 		want string
 	}{
-		"updated doc outside worktree": {model.IssueOpsProjectDocsReviewRequest{Verdict: "updated", Docs: []string{"/elsewhere/x.md"}, Evidence: []string{"e"}}, "must be inside the worktree"},
-		"updated doc not changed":      {model.IssueOpsProjectDocsReviewRequest{Verdict: "updated", Docs: []string{"docs/other.md"}, Evidence: []string{"e"}}, "not in the current change set"},
-		"reviewed doc outside":         {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"/elsewhere/AGENTS.md"}, Evidence: []string{"e"}}, "reviewed path"},
-		"reviewed doc not project doc": {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"README.md"}, Evidence: []string{"e"}}, "is not a project doc"},
-		"reviewed doc missing":         {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{".issueops/MISSING.md"}, Evidence: []string{"e"}}, "does not exist as a file"},
+		"updated doc outside worktree": {model.ProjectDocsReviewRequest{Verdict: "updated", Docs: []string{"/elsewhere/x.md"}, Evidence: []string{"e"}}, "must be inside the worktree"},
+		"updated doc not changed":      {model.ProjectDocsReviewRequest{Verdict: "updated", Docs: []string{"docs/other.md"}, Evidence: []string{"e"}}, "not in the current change set"},
+		"reviewed doc outside":         {model.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"/elsewhere/AGENTS.md"}, Evidence: []string{"e"}}, "reviewed path"},
+		"reviewed doc not project doc": {model.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"README.md"}, Evidence: []string{"e"}}, "is not a project doc"},
+		"reviewed doc missing":         {model.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{".issueops/MISSING.md"}, Evidence: []string{"e"}}, "does not exist as a file"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+			m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 			_, err := RecordProjectDocsReview(docsStore(m), "s", "io", tc.req)
 			wantErr(t, err, tc.want)
 			if m.writes != 0 {
@@ -939,27 +939,27 @@ func TestRecordProjectDocsReviewDeferredPathErrors(t *testing.T) {
 }
 
 func TestRecordProjectDocsReviewCannotVerifyReviewedDocsWithoutRoot(t *testing.T) {
-	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+	m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 	store := docsStore(m)
-	store.Root = func(model.IssueOpsRecord) string { return "" }
-	_, err := RecordProjectDocsReview(store, "s", "io", model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"e"}})
+	store.Root = func(model.Record) string { return "" }
+	_, err := RecordProjectDocsReview(store, "s", "io", model.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"e"}})
 	wantErr(t, err, "cannot verify reviewed path AGENTS.md without a worktree or repo root")
 }
 
 func TestRecordProjectDocsReviewChangedObservationBeatsPathErrors(t *testing.T) {
-	observed := model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement, WorktreePath: "/a"}
+	observed := model.Record{ID: "io", Phase: model.PhaseImplement, WorktreePath: "/a"}
 	current := observed
 	current.WorktreePath = "/b"
 	m := &memStore{rec: observed}
 	store := docsStore(m)
-	store.Read = func(string, string) (model.IssueOpsRecord, error) {
+	store.Read = func(string, string) (model.Record, error) {
 		m.reads++
 		if m.reads == 1 {
 			return observed, nil
 		}
 		return current, nil
 	}
-	_, err := RecordProjectDocsReview(store, "s", "io", model.IssueOpsProjectDocsReviewRequest{Verdict: "updated", Docs: []string{"docs/other.md"}, Evidence: []string{"e"}})
+	_, err := RecordProjectDocsReview(store, "s", "io", model.ProjectDocsReviewRequest{Verdict: "updated", Docs: []string{"docs/other.md"}, Evidence: []string{"e"}})
 	wantErr(t, err, "changed its worktree or base")
 }
 
@@ -974,11 +974,11 @@ func TestRecordAISlopCleanEvidencePropagatesStoreFailures(t *testing.T) {
 		"write":       func(m *memStore) { m.writeErr = boom },
 	} {
 		t.Run(name, func(t *testing.T) {
-			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+			m := &memStore{rec: model.Record{ID: "io", Phase: model.PhaseImplement}}
 			setup(m)
-			store := reviewport.AISlopCleanStore{ReviewMutationStore: m.mutation(), Refresh: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+			store := reviewport.AISlopCleanStore{ReviewMutationStore: m.mutation(), Refresh: func(string, model.Record) (model.Record, error) {
 				t.Fatal("not a completed clean phase")
-				return model.IssueOpsRecord{}, nil
+				return model.Record{}, nil
 			}}
 			_, err := RecordAISlopCleanEvidence(store, "s", "io", []string{"dead code"}, []string{"go test"})
 			if !errors.Is(err, boom) {

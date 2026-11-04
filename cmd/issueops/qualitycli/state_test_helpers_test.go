@@ -19,7 +19,7 @@ func configureTestStateStore(t *testing.T) {
 	t.Helper()
 	deps := hostDeps
 	deps.StateRead = statestore.NewService().Read
-	deps.StateWrite = func(key, content string) (statecontract.StateResult, error) {
+	deps.StateWrite = func(key, content string) (statecontract.Result, error) {
 		return statestore.NewService().Write(context.Background(), key, content)
 	}
 	Configure(deps)

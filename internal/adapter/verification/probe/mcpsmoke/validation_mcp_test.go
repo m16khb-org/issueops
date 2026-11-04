@@ -14,11 +14,11 @@ import (
 )
 
 func TestMCPSmokeExpectedMarkers(t *testing.T) {
-	markers := MCPSmokeExpectedMarkers()
-	if len(markers) == 0 || !MCPSmokeHasExpectedMarkers(strings.Join(markers, "\n")) {
+	markers := ExpectedMarkers()
+	if len(markers) == 0 || !HasExpectedMarkers(strings.Join(markers, "\n")) {
 		t.Fatal("expected marker set to satisfy marker check")
 	}
-	if MCPSmokeHasExpectedMarkers("atomic_commit_preflight only") {
+	if HasExpectedMarkers("atomic_commit_preflight only") {
 		t.Fatal("partial marker output should fail")
 	}
 }
@@ -116,7 +116,7 @@ func TestDepsDefaultsAndSmallHelpers(t *testing.T) {
 }
 
 func validMCPSmokeStdout() string {
-	markers := strings.Join(MCPSmokeExpectedMarkers(), " ") + strings.Repeat("x", 800)
+	markers := strings.Join(ExpectedMarkers(), " ") + strings.Repeat("x", 800)
 	var b strings.Builder
 	for i := 1; i <= 11; i++ {
 		fmt.Fprintf(&b, `{"id":%d,"text":%q}`+"\n", i, markers)

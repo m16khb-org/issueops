@@ -44,37 +44,37 @@ func NormalizeKind(kind string) (string, error) {
 	return kind, nil
 }
 
-func NewQueued(kind, redactedPayload, id, dir, timestamp string) (workercontract.WorkerJob, error) {
+func NewQueued(kind, redactedPayload, id, dir, timestamp string) (workercontract.Job, error) {
 	var err error
 	kind, err = NormalizeKind(kind)
 	if err != nil {
-		return workercontract.WorkerJob{OK: false}, err
+		return workercontract.Job{OK: false}, err
 	}
-	return workercontract.WorkerJob{
-		OK: true, ID: id, Kind: kind, Status: workercontract.WorkerStatusQueued,
+	return workercontract.Job{
+		OK: true, ID: id, Kind: kind, Status: workercontract.StatusQueued,
 		Payload: redactedPayload, CreatedAt: timestamp, UpdatedAt: timestamp, WorkerDir: dir,
 		NoShell: true, SafetyNotice: "worker MVP records lifecycle state only; it never executes shell commands",
 	}, nil
 }
 
-func Cancel(job workercontract.WorkerJob, timestamp string) (workercontract.WorkerJob, error) {
-	if job.Status == workercontract.WorkerStatusCancelled {
+func Cancel(job workercontract.Job, timestamp string) (workercontract.Job, error) {
+	if job.Status == workercontract.StatusCancelled {
 		return job, nil
 	}
-	if job.Status != workercontract.WorkerStatusQueued {
+	if job.Status != workercontract.StatusQueued {
 		return job, fmt.Errorf("worker job %s cannot be cancelled from status %s", job.ID, job.Status)
 	}
-	job.Status = workercontract.WorkerStatusCancelled
+	job.Status = workercontract.StatusCancelled
 	job.UpdatedAt = timestamp
 	job.OK = true
 	return job, nil
 }
 
-func Start(job workercontract.WorkerJob, command []string, pid int, startedAt, updatedAt string) (workercontract.WorkerJob, error) {
-	if job.Status != workercontract.WorkerStatusQueued {
+func Start(job workercontract.Job, command []string, pid int, startedAt, updatedAt string) (workercontract.Job, error) {
+	if job.Status != workercontract.StatusQueued {
 		return job, fmt.Errorf("worker job %s cannot run from status %s", job.ID, job.Status)
 	}
-	job.Status = workercontract.WorkerStatusRunning
+	job.Status = workercontract.StatusRunning
 	job.StartedAt = startedAt
 	job.PID = pid
 	job.NoShell = true
@@ -84,22 +84,22 @@ func Start(job workercontract.WorkerJob, command []string, pid int, startedAt, u
 	return job, nil
 }
 
-func Finish(job workercontract.WorkerJob, ok bool, timestamp string) workercontract.WorkerJob {
+func Finish(job workercontract.Job, ok bool, timestamp string) workercontract.Job {
 	job.OK = ok
 	if ok {
-		job.Status = workercontract.WorkerStatusSucceeded
+		job.Status = workercontract.StatusSucceeded
 	} else {
-		job.Status = workercontract.WorkerStatusFailed
+		job.Status = workercontract.StatusFailed
 	}
 	job.UpdatedAt = timestamp
 	return job
 }
 
-func MarkStuck(job workercontract.WorkerJob, alive bool, timestamp string) (workercontract.WorkerJob, bool) {
-	if job.Status != workercontract.WorkerStatusRunning || alive {
+func MarkStuck(job workercontract.Job, alive bool, timestamp string) (workercontract.Job, bool) {
+	if job.Status != workercontract.StatusRunning || alive {
 		return job, false
 	}
-	job.Status = workercontract.WorkerStatusFailed
+	job.Status = workercontract.StatusFailed
 	job.UpdatedAt = timestamp
 	job.OK = false
 	job.Result = nil
@@ -107,19 +107,19 @@ func MarkStuck(job workercontract.WorkerJob, alive bool, timestamp string) (work
 	return job, true
 }
 
-func QueueStats(jobs []workercontract.WorkerJob) *workercontract.WorkerQueueStats {
-	stats := &workercontract.WorkerQueueStats{Total: len(jobs)}
+func QueueStats(jobs []workercontract.Job) *workercontract.QueueStats {
+	stats := &workercontract.QueueStats{Total: len(jobs)}
 	for _, job := range jobs {
 		switch job.Status {
-		case workercontract.WorkerStatusQueued:
+		case workercontract.StatusQueued:
 			stats.Queued++
-		case workercontract.WorkerStatusRunning:
+		case workercontract.StatusRunning:
 			stats.Running++
-		case workercontract.WorkerStatusSucceeded:
+		case workercontract.StatusSucceeded:
 			stats.Succeeded++
-		case workercontract.WorkerStatusFailed:
+		case workercontract.StatusFailed:
 			stats.Failed++
-		case workercontract.WorkerStatusCancelled:
+		case workercontract.StatusCancelled:
 			stats.Cancelled++
 		}
 	}

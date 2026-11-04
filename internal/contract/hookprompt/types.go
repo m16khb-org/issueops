@@ -12,10 +12,10 @@ import projectdoc "issueops/internal/domain/projectdoc"
 // --json prints this shape verbatim, which is what the Omo lifecycle
 // extension reads.
 type ProjectDocCatalogContext struct {
-	ShouldInject bool                                `json:"should_inject"`
-	ProjectDocs  []projectdoc.ProjectDocCatalogEntry `json:"project_docs,omitempty"`
-	Compact      string                              `json:"compact,omitempty"`
-	UserView     string                              `json:"user_view,omitempty"`
+	ShouldInject bool                      `json:"should_inject"`
+	ProjectDocs  []projectdoc.CatalogEntry `json:"project_docs,omitempty"`
+	Compact      string                    `json:"compact,omitempty"`
+	UserView     string                    `json:"user_view,omitempty"`
 	// Omitted is set only when discovery left documents out; it carries the exact counts.
 	Omitted *projectdoc.CatalogOmissions `json:"omitted,omitempty"`
 }

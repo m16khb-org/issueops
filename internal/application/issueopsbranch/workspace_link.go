@@ -29,8 +29,8 @@ type WorkspaceLinker struct {
 	Now       func() time.Time
 }
 
-func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model.Actor) (model.Record, error) {
+	var result model.Record
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
@@ -75,8 +75,8 @@ func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model
 	return result, err
 }
 
-func (s WorkspaceLinker) Worktree(ctx context.Context, id, path string, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+func (s WorkspaceLinker) Worktree(ctx context.Context, id, path string, actor *model.Actor) (model.Record, error) {
+	var result model.Record
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {

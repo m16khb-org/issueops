@@ -27,13 +27,13 @@ func TestValidateStateRoundtripWithDepsCoversSuccessAndSetupFailure(t *testing.T
 			writes = append(writes, path)
 			return nil
 		},
-		stateRead: func(_ string, key string) (statecontract.StateResult, error) {
+		stateRead: func(_ string, key string) (statecontract.Result, error) {
 			if strings.HasSuffix(key, "-promoted-baseline") {
-				return statecontract.StateResult{}, errors.New("missing")
+				return statecontract.Result{}, errors.New("missing")
 			}
-			return statecontract.StateResult{OK: true}, nil
+			return statecontract.Result{OK: true}, nil
 		},
-		writeSnapshot: func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return nil },
+		writeSnapshot: func(string, string, selfaugment.StateSnapshot) error { return nil },
 		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 			calls = append(calls, label+":"+strings.Join(command, " "))
 			return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, 123))
@@ -88,7 +88,7 @@ func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *
 	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		payload := validStateRoundtripPayload(t, label, 456)
 		if label == "state prune dry-run" {
-			payload = statecontract.StatePruneResult{OK: true, DryRun: true, DeletedKeys: []string{}, KeptKeys: []string{"self-verify-456"}}
+			payload = statecontract.PruneResult{OK: true, DryRun: true, DeletedKeys: []string{}, KeptKeys: []string{"self-verify-456"}}
 		}
 		return stateRoundtripStep(t, label, command, payload)
 	}
@@ -98,8 +98,8 @@ func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *
 	}
 
 	deps = stateRoundtripTestDeps(t, 456)
-	deps.stateRead = func(string, string) (statecontract.StateResult, error) {
-		return statecontract.StateResult{OK: true}, nil
+	deps.stateRead = func(string, string) (statecontract.Result, error) {
+		return statecontract.Result{OK: true}, nil
 	}
 	dryRunMutation := validateStateRoundtripWithTestDeps("bin", root, 456, deps)
 	if dryRunMutation.OK || !strings.Contains(dryRunMutation.Error, "promote dry-run wrote baseline unexpectedly") {
@@ -148,10 +148,10 @@ func stateRoundtripTestDeps(t *testing.T, seed int64) stateRoundtripValidationDe
 		mkdirTemp: func(_, _ string) (string, error) { return tempState, nil },
 		removeAll: func(string) error { return nil },
 		writeFile: func(string, []byte, os.FileMode) error { return nil },
-		stateRead: func(string, string) (statecontract.StateResult, error) {
-			return statecontract.StateResult{}, errors.New("missing")
+		stateRead: func(string, string) (statecontract.Result, error) {
+			return statecontract.Result{}, errors.New("missing")
 		},
-		writeSnapshot: func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return nil },
+		writeSnapshot: func(string, string, selfaugment.StateSnapshot) error { return nil },
 		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 			return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, seed))
 		},
@@ -178,39 +178,39 @@ func validStateRoundtripPayload(t *testing.T, label string, seed int64) any {
 	promotedKey := key + "-promoted-baseline"
 	switch label {
 	case "state write":
-		return statecontract.StateResult{OK: true, Path: "/tmp/" + key + ".json", Record: statecontract.RecordEnvelope{SchemaVersion: statecontract.SchemaVersion, Key: key, Content: content, UpdatedAt: updatedAt, Bytes: len([]byte(content))}}
+		return statecontract.Result{OK: true, Path: "/tmp/" + key + ".json", Record: statecontract.RecordEnvelope{SchemaVersion: statecontract.SchemaVersion, Key: key, Content: content, UpdatedAt: updatedAt, Bytes: len([]byte(content))}}
 	case "state read":
-		return statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{SchemaVersion: statecontract.SchemaVersion, Key: key, Content: content, UpdatedAt: updatedAt, Bytes: len([]byte(content))}}
+		return statecontract.Result{OK: true, Record: statecontract.RecordEnvelope{SchemaVersion: statecontract.SchemaVersion, Key: key, Content: content, UpdatedAt: updatedAt, Bytes: len([]byte(content))}}
 	case "state list":
-		return statecontract.StateListResult{OK: true, Keys: []string{key, oldKey}}
+		return statecontract.ListResult{OK: true, Keys: []string{key, oldKey}}
 	case "state old write":
-		return statecontract.StateResult{OK: true, Path: "/tmp/" + oldKey + ".json", Record: statecontract.RecordEnvelope{SchemaVersion: statecontract.SchemaVersion, Key: oldKey, Content: "old state", UpdatedAt: updatedAt, Bytes: len([]byte("old state"))}}
+		return statecontract.Result{OK: true, Path: "/tmp/" + oldKey + ".json", Record: statecontract.RecordEnvelope{SchemaVersion: statecontract.SchemaVersion, Key: oldKey, Content: "old state", UpdatedAt: updatedAt, Bytes: len([]byte("old state"))}}
 	case "state prune dry-run":
-		return statecontract.StatePruneResult{OK: true, DryRun: true, DeletedKeys: []string{oldKey}, KeptKeys: []string{key}}
+		return statecontract.PruneResult{OK: true, DryRun: true, DeletedKeys: []string{oldKey}, KeptKeys: []string{key}}
 	case "state prune confirm":
-		return statecontract.StatePruneResult{OK: true, Confirm: true, DeletedKeys: []string{oldKey}}
+		return statecontract.PruneResult{OK: true, Confirm: true, DeletedKeys: []string{oldKey}}
 	case "state list after prune":
-		return statecontract.StateListResult{OK: true, Keys: []string{key}}
+		return statecontract.ListResult{OK: true, Keys: []string{key}}
 	case "self verify compare ok":
-		return selfaugment.SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 100}
+		return selfaugment.CompareResult{OK: true, ElapsedDeltaMS: 100}
 	case "self verify compare regression":
-		return selfaugment.SelfAugmentCompareResult{OK: true, Regressed: true, Regressions: []string{"elapsed_ms_increased_by_10.00_pct"}}
+		return selfaugment.CompareResult{OK: true, Regressed: true, Regressions: []string{"elapsed_ms_increased_by_10.00_pct"}}
 	case "self verify promote dry-run":
-		return selfaugment.SelfAugmentPromoteResult{OK: true, DryRun: true}
+		return selfaugment.PromoteResult{OK: true, DryRun: true}
 	case "self verify promote confirm":
-		return selfaugment.SelfAugmentPromoteResult{OK: true, Promoted: true}
+		return selfaugment.PromoteResult{OK: true, Promoted: true}
 	case "self verify compare promoted":
-		return selfaugment.SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 0}
+		return selfaugment.CompareResult{OK: true, ElapsedDeltaMS: 0}
 	case "self verify history":
-		return selfaugment.SelfAugmentHistoryResult{OK: true, TotalMatches: 3, Entries: []selfaugment.SelfAugmentHistoryEntry{{Key: baseKey}, {Key: candidateKey}, {Key: promotedKey}}}
+		return selfaugment.HistoryResult{OK: true, TotalMatches: 3, Entries: []selfaugment.HistoryEntry{{Key: baseKey}, {Key: candidateKey}, {Key: promotedKey}}}
 	case "self verify history retention dry-run":
-		return selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{DryRun: true, Limit: 1, CandidateKeys: []string{baseKey}}}
+		return selfaugment.HistoryResult{OK: true, Retention: &selfaugment.HistoryRetention{DryRun: true, Limit: 1, CandidateKeys: []string{baseKey}}}
 	case "self verify history retention confirm":
-		return selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{Confirm: true, DeletedKeys: []string{baseKey}}}
+		return selfaugment.HistoryResult{OK: true, Retention: &selfaugment.HistoryRetention{Confirm: true, DeletedKeys: []string{baseKey}}}
 	case "self verify history after retention":
-		return selfaugment.SelfAugmentHistoryResult{OK: true, TotalMatches: 1}
+		return selfaugment.HistoryResult{OK: true, TotalMatches: 1}
 	case "state doctor":
-		return statecontract.StateDoctorResult{OK: true, Healthy: false, ValidKeys: []string{key}, Issues: []statecontract.StateDoctorIssue{{Code: "invalid_state"}}}
+		return statecontract.DoctorResult{OK: true, Healthy: false, ValidKeys: []string{key}, Issues: []statecontract.DoctorIssue{{Code: "invalid_state"}}}
 	default:
 		t.Fatalf("unexpected state roundtrip label %q", label)
 		return nil
@@ -226,7 +226,7 @@ func TestValidateStateRoundtripPruneConfirmAndResidueFailures(t *testing.T) {
 		payload := validStateRoundtripPayload(t, label, 789)
 		if label == "state prune confirm" {
 			// DryRun이 그대로 true로 오면 confirm 계약 위반이다.
-			payload = statecontract.StatePruneResult{OK: true, Confirm: true, DeletedKeys: []string{}}
+			payload = statecontract.PruneResult{OK: true, Confirm: true, DeletedKeys: []string{}}
 		}
 		return stateRoundtripStep(t, label, command, payload)
 	}
@@ -240,7 +240,7 @@ func TestValidateStateRoundtripPruneConfirmAndResidueFailures(t *testing.T) {
 		payload := validStateRoundtripPayload(t, label, 789)
 		if label == "state list after prune" {
 			// 삭제된 키가 여전히 목록에 남는다.
-			payload = statecontract.StateListResult{OK: true, Keys: []string{"self-verify-789", "self-verify-789-old"}}
+			payload = statecontract.ListResult{OK: true, Keys: []string{"self-verify-789", "self-verify-789-old"}}
 		}
 		return stateRoundtripStep(t, label, command, payload)
 	}

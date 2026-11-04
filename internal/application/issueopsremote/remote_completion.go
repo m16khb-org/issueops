@@ -17,7 +17,7 @@ type CompletionProvider interface {
 	CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error)
 }
 type CompletionProviderResolver func(string) (CompletionProvider, error)
-type MergeVerifier func(model.IssueOpsRemoteArtifactVerification) error
+type MergeVerifier func(model.RemoteArtifactVerification) error
 
 type RemoteCompletionService struct {
 	records   IssueRecordReader
@@ -59,36 +59,36 @@ func (s *RemoteCompletionService) prepare(ctx context.Context, id, providerOverr
 	return provider, nil
 }
 
-func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverride, resultBody string, confirm bool) (model.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
+func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverride, resultBody string, confirm bool) (model.Record, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
 	var result port.IssueProviderUpdateIssueBodySectionResult
 	var report reportcontract.Report
 	resultBody = strings.TrimSpace(resultBody)
 	if confirm && resultBody == "" {
-		return model.IssueOpsRecord{}, result, report, fmt.Errorf("--body-file is required with --confirm: write the progress report for human readers first")
+		return model.Record{}, result, report, fmt.Errorf("--body-file is required with --confirm: write the progress report for human readers first")
 	}
 	provider, err := s.prepare(ctx, id, providerOverride)
 	if err != nil {
-		return model.IssueOpsRecord{}, result, report, err
+		return model.Record{}, result, report, err
 	}
 	record, err := s.records.Read(ctx, id)
 	if err != nil {
 		return record, result, report, err
 	}
 	if err := domain.ValidateReflectCompletion(record); err != nil {
-		return model.IssueOpsRecord{}, result, report, err
+		return model.Record{}, result, report, err
 	}
 	report = artifactreadability.Check(artifactreadability.Input{Kind: artifactreadability.KindCompletion, Body: resultBody})
 	if s.materials.Missing(record) {
 		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "tracked_materials_missing", Message: TrackedMaterialsMissingWarning})
 	}
 	if confirm && !report.OK {
-		return model.IssueOpsRecord{}, result, report, artifactreadability.RefusalError(report)
+		return model.Record{}, result, report, artifactreadability.RefusalError(report)
 	}
 	completion := domain.ProjectRemoteCompletion(record)
 	completion.ResultBody = resultBody
 	result, err = provider.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: confirm})
 	if err != nil {
-		return model.IssueOpsRecord{}, result, report, idempotentRetryHint(err, confirm, "reflected")
+		return model.Record{}, result, report, idempotentRetryHint(err, confirm, "reflected")
 	}
 	if !confirm || !result.Updated {
 		return record, result, report, nil
@@ -97,18 +97,18 @@ func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverr
 	return record, result, report, err
 }
 
-func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverride string, confirm bool) (model.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
+func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverride string, confirm bool) (model.Record, port.IssueProviderCloseIssueResult, error) {
 	var result port.IssueProviderCloseIssueResult
 	provider, err := s.prepare(ctx, id, providerOverride)
 	if err != nil {
-		return model.IssueOpsRecord{}, result, err
+		return model.Record{}, result, err
 	}
 	record, err := s.records.Read(ctx, id)
 	if err != nil {
 		return record, result, err
 	}
 	if err := domain.ValidateCloseIssue(record); err != nil {
-		return model.IssueOpsRecord{}, result, err
+		return model.Record{}, result, err
 	}
 	// QA: a preview after the confirmed close still said closed:false and
 	// "would execute gh issue close"; the record already holds the receipt.
@@ -118,7 +118,7 @@ func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverrid
 	}
 	result, err = provider.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{Repo: record.Repo, IssueURL: record.IssueURL, Confirm: confirm})
 	if err != nil {
-		return model.IssueOpsRecord{}, result, idempotentRetryHint(err, confirm, "closed")
+		return model.Record{}, result, idempotentRetryHint(err, confirm, "closed")
 	}
 	if !confirm || !result.Closed {
 		return record, result, nil

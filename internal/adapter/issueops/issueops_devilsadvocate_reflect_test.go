@@ -26,7 +26,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{
 		Repo: repo, Branch: "2626-vertex-breaker-observability",
 	})
 	if err != nil {
@@ -34,7 +34,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	}
 	record.WorktreePath = worktree
 	record.IssueURL = "https://gitlab.example.com/group/repo/-/issues/2626"
-	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
+	record.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{
 		Verdict: "stop", Findings: []string{"breaker 상태 전이 관측 근거가 부족하다"},
 		ReviewerPattern: "devils-advocate-review", RecordedAt: "2026-07-29T00:00:00Z",
 	}
@@ -76,7 +76,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	}
 }
 
-func reflectReviewForTest(root, id string, confirm bool, provider port.IssueProvider, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+func reflectReviewForTest(root, id string, confirm bool, provider port.IssueProvider, actor issueops.Actor) (issueops.Record, port.IssueProviderUpdateIssueBodySectionResult, error) {
 	service := remoteapp.NewReviewReflectionService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, liveTestVerifier()), func(string) (remoteapp.ReviewReflectionProvider, error) { return provider, nil }, func() ([]issueops.NativeProcessReceipt, error) { return actor.NativeProcessAncestry, nil }, time.Now)
 	return service.Reflect(context.Background(), id, "", confirm, actor)
 }

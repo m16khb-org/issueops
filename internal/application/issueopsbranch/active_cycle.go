@@ -8,19 +8,19 @@ import (
 )
 
 type ActiveCycleReader struct {
-	Scan      func() ([]model.IssueOpsRecord, error)
+	Scan      func() ([]model.Record, error)
 	CleanPath func(string) string
 }
 
-func (r ActiveCycleReader) UmbrellaForChildIssue(repo, issueURL string) (model.IssueOpsRecord, bool) {
+func (r ActiveCycleReader) UmbrellaForChildIssue(repo, issueURL string) (model.Record, bool) {
 	issueURL = strings.TrimSpace(issueURL)
 	if issueURL == "" {
-		return model.IssueOpsRecord{}, false
+		return model.Record{}, false
 	}
 	return domain.SelectUmbrellaCycle(r.observe(repo, false), issueURL)
 }
 
-func (r ActiveCycleReader) ForWorkspace(workspace string) (model.IssueOpsRecord, bool) {
+func (r ActiveCycleReader) ForWorkspace(workspace string) (model.Record, bool) {
 	return domain.SelectWorkspaceCycle(r.observe(workspace, true))
 }
 

@@ -10,9 +10,9 @@ import (
 // ProjectEntry는 list CLI가 렌더하는 전부다. 레코드의 실행/원격/정리 상태가
 // 엔트리 필드로 정확히 투영되는지 잠근다.
 func TestProjectEntryProjectsExecutionAndRemoteState(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID: "io-proj", Repo: "/repo", Branch: "12-proj",
-		Phase: issueopscontract.IssueOpsPhaseImplement, UpdatedAt: "2026-08-21T00:00:00Z",
+		Phase: issueopscontract.PhaseImplement, UpdatedAt: "2026-08-21T00:00:00Z",
 		Execution: &issueopscontract.Execution{
 			Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/12-proj"},
 			Lease: issueopscontract.WriteLease{
@@ -21,7 +21,7 @@ func TestProjectEntryProjectsExecutionAndRemoteState(t *testing.T) {
 			Pending: &issueopscontract.ExternalIntent{Kind: "gh_run", StartedAt: "2026-08-21T01:00:00Z"},
 			Failure: &issueopscontract.ExecutionFailure{Code: "E_TEST", At: "2026-08-21T02:00:00Z"},
 		},
-		RemoteArtifact: &issueopscontract.IssueOpsRemoteArtifactVerification{
+		RemoteArtifact: &issueopscontract.RemoteArtifactVerification{
 			URL: "https://github.com/acme/repo/pull/12",
 		},
 	}
@@ -51,16 +51,16 @@ func TestProjectEntryProjectsExecutionAndRemoteState(t *testing.T) {
 }
 
 func TestProjectEntryProjectsHolderAndCompletionReflection(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
-		ID: "io-holder", Phase: issueopscontract.IssueOpsPhasePR,
+	record := issueopscontract.Record{
+		ID: "io-holder", Phase: issueopscontract.PhasePR,
 		Execution: &issueopscontract.Execution{
 			Lease: issueopscontract.WriteLease{
 				Status: issueopscontract.LeaseStatusActive,
 				Holder: &issueopscontract.NativeActor{Host: "omo", SessionID: "sess-1"},
 			},
 		},
-		RemoteArtifact:   &issueopscontract.IssueOpsRemoteArtifactVerification{URL: "u"},
-		RemoteCompletion: &issueopscontract.IssueOpsRemoteCompletion{ReflectedAt: "2026-08-21T03:00:00Z"},
+		RemoteArtifact:   &issueopscontract.RemoteArtifactVerification{URL: "u"},
+		RemoteCompletion: &issueopscontract.RemoteCompletion{ReflectedAt: "2026-08-21T03:00:00Z"},
 	}
 	entry := ProjectEntry(record)
 	if entry.HolderHost != "omo" || entry.HolderSession != "sess-1" {
@@ -77,12 +77,12 @@ func TestProjectEntryProjectsHolderAndCompletionReflection(t *testing.T) {
 }
 
 func TestProjectEntryProjectsCleanupFailuresAndIssueIntent(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
-		ID: "io-cleanup", Phase: issueopscontract.IssueOpsPhasePR,
-		CleanupFinishFailure: &issueopscontract.IssueOpsCleanupFinishFailure{
+	record := issueopscontract.Record{
+		ID: "io-cleanup", Phase: issueopscontract.PhasePR,
+		CleanupFinishFailure: &issueopscontract.CleanupFinishFailure{
 			Step: "close_issue", At: "t1",
 		},
-		IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{Status: "pending"},
+		IssueCreateIntent: &issueopscontract.IssueCreateIntent{Status: "pending"},
 	}
 	entry := ProjectEntry(record)
 	if entry.CleanupFailureStep != "close_issue" || entry.CleanupFailureAt != "t1" {
@@ -92,7 +92,7 @@ func TestProjectEntryProjectsCleanupFailuresAndIssueIntent(t *testing.T) {
 		t.Fatalf("issue create status projection wrong: %+v", entry)
 	}
 	record.CleanupFinishFailure = nil
-	record.CleanupAbandonFailure = &issueopscontract.IssueOpsCleanupAbandonFailure{
+	record.CleanupAbandonFailure = &issueopscontract.CleanupAbandonFailure{
 		Step: "branch_delete", At: "t2",
 	}
 	entry = ProjectEntry(record)

@@ -6,7 +6,7 @@ package worker
 
 import policycontract "issueops/internal/contract/policy"
 
-type WorkerJob struct {
+type Job struct {
 	OK           bool                             `json:"ok"`
 	ID           string                           `json:"id"`
 	Kind         string                           `json:"kind"`
@@ -23,10 +23,10 @@ type WorkerJob struct {
 	Result       *policycontract.CommandRunResult `json:"result,omitempty"`
 }
 
-// WorkerQueueStats is a status histogram over all worker jobs (A2/G6). Depth is
+// QueueStats is a status histogram over all worker jobs (A2/G6). Depth is
 // the saturation signal — only non-terminal work (queued+running) — so a backlog
 // is visible before jobs time out, unlike the raw per-status counts alone.
-type WorkerQueueStats struct {
+type QueueStats struct {
 	Queued    int `json:"queued"`
 	Running   int `json:"running"`
 	Succeeded int `json:"succeeded"`
@@ -36,20 +36,20 @@ type WorkerQueueStats struct {
 	Depth     int `json:"depth"`
 }
 
-type WorkerListResult struct {
-	OK        bool        `json:"ok"`
-	WorkerDir string      `json:"worker_dir"`
-	Jobs      []WorkerJob `json:"jobs"`
+type ListResult struct {
+	OK        bool   `json:"ok"`
+	WorkerDir string `json:"worker_dir"`
+	Jobs      []Job  `json:"jobs"`
 	// Queue is the saturation histogram; populated by ListWorkerJobs (the full
 	// listing) and left nil by DetectStuckWorkerJobs, whose Jobs is only the
 	// fixed subset and would make a histogram misleading.
-	Queue *WorkerQueueStats `json:"queue,omitempty"`
+	Queue *QueueStats `json:"queue,omitempty"`
 }
 
 const (
-	WorkerStatusQueued    = "queued"
-	WorkerStatusRunning   = "running"
-	WorkerStatusSucceeded = "succeeded"
-	WorkerStatusFailed    = "failed"
-	WorkerStatusCancelled = "cancelled"
+	StatusQueued    = "queued"
+	StatusRunning   = "running"
+	StatusSucceeded = "succeeded"
+	StatusFailed    = "failed"
+	StatusCancelled = "cancelled"
 )

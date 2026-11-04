@@ -112,7 +112,7 @@ func (store Store) ObserveSpans(ctx context.Context, operation string) context.C
 	if scope == "" {
 		scope = "issueops"
 	}
-	correlation, _ := ctx.Value(recordTraceContextKey{}).(tracecontract.TraceContext)
+	correlation, _ := ctx.Value(recordTraceContextKey{}).(tracecontract.Context)
 	return sqlstore.WithSpanObserver(ctx, func(observation sqlstore.SpanObservation) {
 		store.Observer.Observe(SpanObservation{
 			Operation:      scope + "." + operation,

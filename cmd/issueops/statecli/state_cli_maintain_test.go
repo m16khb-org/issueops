@@ -22,11 +22,11 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 	if _, err := statestore.NewService().Write(context.Background(), "maintain-smoke", "content"); err != nil {
 		t.Fatalf("seed state: %v", err)
 	}
-	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            (issueopscore.CycleStartIdentity{}).StableID("/repo/maintain", "1-maintain"),
 		Repo:          "/repo/maintain",
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	}); err != nil {
 		t.Fatalf("seed issueops: %v", err)
 	}
@@ -34,7 +34,7 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 	out := captureStatusVerifyStdout(t, func() error {
 		return Run(testDependencies(), []string{"maintain", "--json"})
 	})
-	var result statecontract.StateMaintainResult
+	var result statecontract.MaintainResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode maintain JSON: %v\n%s", err, out)
 	}

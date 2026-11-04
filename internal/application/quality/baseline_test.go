@@ -19,20 +19,20 @@ type memState struct {
 	wrote   int
 }
 
-func (m *memState) read(key string) (state.StateResult, error) {
+func (m *memState) read(key string) (state.Result, error) {
 	if m.readErr != nil {
-		return state.StateResult{}, m.readErr
+		return state.Result{}, m.readErr
 	}
 	content, ok := m.records[key]
 	if !ok {
-		return state.StateResult{}, fs.ErrNotExist
+		return state.Result{}, fs.ErrNotExist
 	}
-	return state.StateResult{OK: true, Record: state.RecordEnvelope{Content: content}}, nil
+	return state.Result{OK: true, Record: state.RecordEnvelope{Content: content}}, nil
 }
-func (m *memState) write(key, content string) (state.StateResult, error) {
+func (m *memState) write(key, content string) (state.Result, error) {
 	m.wrote++
 	m.records[key] = content
-	return state.StateResult{OK: true}, nil
+	return state.Result{OK: true}, nil
 }
 func (m *memState) store() SNRBaselineStore {
 	return SNRBaselineStore{
@@ -115,7 +115,7 @@ func TestSNRBaselineReadFailsClosed(t *testing.T) {
 	t.Run("rejects result without record", func(t *testing.T) {
 		empty := SNRBaselineStore{
 			CanonicalRepository: func(s string) (string, error) { return s, nil },
-			ReadState:           func(string) (state.StateResult, error) { return state.StateResult{}, nil },
+			ReadState:           func(string) (state.Result, error) { return state.Result{}, nil },
 		}
 		if _, present, err := empty.Read("/a"); err == nil || present {
 			t.Fatalf("no-record result accepted: present=%t err=%v", present, err)

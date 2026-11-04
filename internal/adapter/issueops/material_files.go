@@ -17,7 +17,7 @@ func (MaterialFiles) ReadFile(p string) ([]byte, error)                 { return
 func (MaterialFiles) WriteFile(p string, b []byte, m fs.FileMode) error { return os.WriteFile(p, b, m) }
 func (MaterialFiles) MkdirAll(p string, m fs.FileMode) error            { return os.MkdirAll(p, m) }
 func (MaterialFiles) Stat(p string) (fs.FileInfo, error)                { return os.Stat(p) }
-func (MaterialFiles) ArtifactPath(r model.IssueOpsRecord, root, name string) string {
+func (MaterialFiles) ArtifactPath(r model.Record, root, name string) string {
 	return sealedArtifactPath(r, root, name)
 }
 

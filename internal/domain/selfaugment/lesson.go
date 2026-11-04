@@ -33,7 +33,7 @@ func RecentLesson(generatedAt string, now time.Time) bool {
 	return now.Sub(t) <= recentLessonWindow
 }
 
-func ApplyLessonPenalties(candidates []contract.SelfAugmentCandidate, severeCounts map[string]int) []string {
+func ApplyLessonPenalties(candidates []contract.Candidate, severeCounts map[string]int) []string {
 	warnings := []string{}
 	for i := range candidates {
 		if candidates[i].Status != contract.CandidateStatusOpen {
@@ -56,6 +56,6 @@ func ApplyLessonPenalties(candidates []contract.SelfAugmentCandidate, severeCoun
 	return warnings
 }
 
-func LessonPenalizesCandidate(snapshot contract.SelfAugmentLessonStateSnapshot, now time.Time) bool {
+func LessonPenalizesCandidate(snapshot contract.LessonStateSnapshot, now time.Time) bool {
 	return snapshot.Kind == contract.SelfAugmentationLessonKind && snapshot.CandidateID != "" && SevereLessonSeverity(snapshot.Severity) && RecentLesson(snapshot.GeneratedAt, now)
 }

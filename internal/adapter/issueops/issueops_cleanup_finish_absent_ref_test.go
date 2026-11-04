@@ -145,7 +145,7 @@ func (g *realErrorFinishGit) run(_ string, args ...string) (int, string) {
 // merged·같은 프로젝트·명시적 supersede를 만족하면 정리할 수 있어야 한다.
 func TestCleanupFinishAcceptsAVerifiedSupersedingArtifact(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.BranchPrepare.BaseBranch = "439-all-handoffs-green"
 	})
 	git := &realErrorFinishGit{branchOID: ""}

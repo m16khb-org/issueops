@@ -19,11 +19,11 @@ func (s CycleRecordStore) WithinLock(ctx context.Context, id string, fn func(con
 	return withIssueOpsLock(ctx, s.StateRoot, id, fn)
 }
 
-func (s CycleRecordStore) Load(id string) (model.IssueOpsRecord, error) {
+func (s CycleRecordStore) Load(id string) (model.Record, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 
-func (s CycleRecordStore) Save(ctx context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s CycleRecordStore) Save(ctx context.Context, record model.Record) (model.Record, error) {
 	return writeIssueOps(ctx, s.StateRoot, record)
 }
 
@@ -57,7 +57,7 @@ func (s CycleRecordStore) RetiredIDs() (map[string]bool, error) {
 // unreadable record is not done (start then decides under the lock).
 func (s CycleRecordStore) Done(id string) bool {
 	record, err := ReadIssueOps(s.StateRoot, id)
-	return err == nil && record.Phase == model.IssueOpsPhaseDone
+	return err == nil && record.Phase == model.PhaseDone
 }
 
 type CycleStartIdentity struct {

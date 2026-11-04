@@ -11,23 +11,23 @@ import (
 
 type Store struct{ Directory string }
 
-func (s Store) Read(id string) (contract.IssueOpsBenchmarkRunResult, error) {
+func (s Store) Read(id string) (contract.RunResult, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return contract.IssueOpsBenchmarkRunResult{}, fmt.Errorf("benchmark id is required")
+		return contract.RunResult{}, fmt.Errorf("benchmark id is required")
 	}
 	b, err := os.ReadFile(filepath.Join(s.Directory, "issueops-benchmarks", id+".json"))
 	if err != nil {
-		return contract.IssueOpsBenchmarkRunResult{}, err
+		return contract.RunResult{}, err
 	}
-	var result contract.IssueOpsBenchmarkRunResult
+	var result contract.RunResult
 	if err := json.Unmarshal(b, &result); err != nil {
-		return contract.IssueOpsBenchmarkRunResult{}, err
+		return contract.RunResult{}, err
 	}
 	return result, nil
 }
 
-func (s Store) Save(result contract.IssueOpsBenchmarkRunResult) error {
+func (s Store) Save(result contract.RunResult) error {
 	dir := filepath.Join(s.Directory, "issueops-benchmarks")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

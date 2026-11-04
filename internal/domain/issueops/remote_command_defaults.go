@@ -7,7 +7,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ResolvePublicationDefaults(record model.IssueOpsRecord, req model.RemotePullRequestRequest) (model.RemotePullRequestRequest, error) {
+func ResolvePublicationDefaults(record model.Record, req model.RemotePullRequestRequest) (model.RemotePullRequestRequest, error) {
 	req.ID = record.ID
 	req.Provider = strings.TrimSpace(req.Provider)
 	if req.Provider == "" {
@@ -26,7 +26,7 @@ func ResolvePublicationDefaults(record model.IssueOpsRecord, req model.RemotePul
 	return req, nil
 }
 
-func ResolveBodySyncProvider(record model.IssueOpsRecord, override string) (string, error) {
+func ResolveBodySyncProvider(record model.Record, override string) (string, error) {
 	name := strings.TrimSpace(override)
 	if name == "" {
 		name = strings.TrimSpace(ResolveRecordProvider(record))

@@ -8,15 +8,15 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func codeProjectStore(t *testing.T, observed string, observeErr error) (Store, *model.IssueOpsRecord) {
+func codeProjectStore(t *testing.T, observed string, observeErr error) (Store, *model.Record) {
 	t.Helper()
-	stored := &model.IssueOpsRecord{
+	stored := &model.Record{
 		OK: true, ID: "io-cross", Repo: t.TempDir(),
 		IssueURL: "https://gitlab.example.com/planning/backlog/-/issues/42",
 	}
 	store := Store{
-		Read: func(string, string) (model.IssueOpsRecord, error) { return *stored, nil },
-		TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) { return *stored, nil },
+		TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 			*stored = record
 			return record, nil
 		},
@@ -27,8 +27,8 @@ func codeProjectStore(t *testing.T, observed string, observeErr error) (Store, *
 	return store, stored
 }
 
-func crossProjectRequest(codeProjectKey string) model.IssueOpsBranchPrepareRequest {
-	return model.IssueOpsBranchPrepareRequest{
+func crossProjectRequest(codeProjectKey string) model.BranchPrepareRequest {
+	return model.BranchPrepareRequest{
 		Provider:       "gitlab",
 		IssueURL:       "https://gitlab.example.com/planning/backlog/-/issues/42",
 		Branch:         "42-cross",

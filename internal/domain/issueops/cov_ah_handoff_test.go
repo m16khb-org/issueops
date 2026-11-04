@@ -9,19 +9,19 @@ import (
 	"issueops/internal/testsupport"
 )
 
-type covHandoffObservation = issueopscontract.IssueOpsHandoffDeliveryObservation
+type covHandoffObservation = issueopscontract.HandoffDeliveryObservation
 
 func covHandoffLong() string { return strings.Repeat("x", handoffDeliveryFieldLimit+1) }
 
-func covHandoffObserved(evidence string) issueopscontract.IssueOpsHandoffDeliveryState {
-	return deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, evidence)
+func covHandoffObserved(evidence string) issueopscontract.HandoffDeliveryState {
+	return deliveryState(issueopscontract.HandoffDeliveryStateObserved, evidence)
 }
 
 // covHandoffClaimedFixture returns a valid observation that carries an exact owner claim.
 func covHandoffClaimedFixture() covHandoffObservation {
 	observation := deliveryObservationFixture()
-	observation.OwnerClaimed = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
-	observation.OwnerClaim = issueopscontract.IssueOpsHandoffDeliveryOwnerClaim{
+	observation.OwnerClaimed = covHandoffObserved(issueopscontract.HandoffDeliveryEvidenceIssueOpsClaim)
+	observation.OwnerClaim = issueopscontract.HandoffDeliveryOwnerClaim{
 		Claimed: true, Generation: observation.SourceGeneration, Actor: *observation.OwnerActor, ClaimedAt: "2026-09-20T10:02:00Z",
 	}
 	return observation
@@ -68,26 +68,26 @@ func TestCovHandoffValidateRejectsMalformedObservation(t *testing.T) {
 		{"process pid not positive", deliveryObservationFixture, func(o *covHandoffObservation) { o.Target.Process.PID = 0 }, "process identity is invalid"},
 		{"oversized process executable", deliveryObservationFixture, func(o *covHandoffObservation) { o.Target.Process.Executable = covHandoffLong() }, "process identity is too large"},
 		{"timing beyond ten minutes", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: 10*60*1000 + 1}
+			o.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 10*60*1000 + 1}
 		}, "preflight_ms is out of bounds"},
 		{"unknown state status", deliveryObservationFixture, func(o *covHandoffObservation) { o.InputAccepted.Status = "maybe" }, "input_accepted state is invalid"},
 		{"observed state without evidence", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: "2026-09-20T10:01:00Z"}
+			o.InputAccepted = issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateObserved, ObservedAt: "2026-09-20T10:01:00Z"}
 		}, "input_accepted evidence is required"},
 		{"observed state timestamp unparsable", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: "soon", Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt}
+			o.InputAccepted = issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateObserved, ObservedAt: "soon", Evidence: issueopscontract.HandoffDeliveryEvidenceLauncherReceipt}
 		}, "input_accepted timestamp is invalid"},
 		{"observed state before creation", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: "2026-09-20T09:00:00Z", Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt}
+			o.InputAccepted = issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateObserved, ObservedAt: "2026-09-20T09:00:00Z", Evidence: issueopscontract.HandoffDeliveryEvidenceLauncherReceipt}
 		}, "input_accepted timestamp is not monotonic"},
 		{"call_staged with wrong evidence", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.CallStaged = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceTimeout)
+			o.CallStaged = covHandoffObserved(issueopscontract.HandoffDeliveryEvidenceTimeout)
 		}, "call_staged evidence is invalid"},
 		{"input_accepted with native evidence", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.InputAccepted = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt)
+			o.InputAccepted = covHandoffObserved(issueopscontract.HandoffDeliveryEvidenceNativeReceipt)
 		}, "input_accepted evidence is invalid"},
 		{"ambiguous with claim evidence", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.Ambiguous = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
+			o.Ambiguous = covHandoffObserved(issueopscontract.HandoffDeliveryEvidenceIssueOpsClaim)
 		}, "ambiguous evidence is invalid"},
 		{"oversized owner actor host", deliveryObservationFixture, func(o *covHandoffObservation) { o.OwnerActor.Host = covHandoffLong() }, "actor host is too large"},
 		{"oversized owner actor session", deliveryObservationFixture, func(o *covHandoffObservation) { o.OwnerActor.SessionID = covHandoffLong() }, "actor session_id is too large"},
@@ -100,7 +100,7 @@ func TestCovHandoffValidateRejectsMalformedObservation(t *testing.T) {
 		{"owner actor without session", deliveryObservationFixture, func(o *covHandoffObservation) { o.OwnerActor.SessionID = "" }, "native actor session_id is required"},
 		{"unknown expected owner host", deliveryObservationFixture, func(o *covHandoffObservation) { o.ExpectedOwnerHost = "vim" }, "expected owner host is invalid"},
 		{"no observed evidence at all", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, "")
+			o.Ambiguous = deliveryState(issueopscontract.HandoffDeliveryStateNotObserved, "")
 		}, "requires at least one observed evidence state"},
 		{"owner claim timestamp oversized", covHandoffClaimedFixture, func(o *covHandoffObservation) { o.OwnerClaim.ClaimedAt = covHandoffLong() }, "owner claim timestamp is too large"},
 		{"owner claim timestamp unparsable", covHandoffClaimedFixture, func(o *covHandoffObservation) { o.OwnerClaim.ClaimedAt = "later" }, "owner claim timestamp is invalid"},
@@ -147,7 +147,7 @@ func TestCovHandoffValidateCmuxLauncherAndTargetIdentity(t *testing.T) {
 		{"missing cwd", func(o *covHandoffObservation) { o.Target.CWD = " " }, "requires exact window and cwd identity"},
 		{"input receipt without surface", func(o *covHandoffObservation) {
 			o.Target.WorkspaceID = "workspace-1"
-			o.InputAccepted = deliveryStateAt(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput, "2026-09-20T10:00:01Z")
+			o.InputAccepted = deliveryStateAt(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceRawInput, "2026-09-20T10:00:01Z")
 		}, "input receipt requires exact workspace and surface identity"},
 	}
 	for _, test := range tests {
@@ -273,9 +273,9 @@ func TestCovHandoffMergeRejectsDriftOnlyDetectedByLaterObservation(t *testing.T)
 	})
 	t.Run("timing drift", func(t *testing.T) {
 		current := deliveryObservationFixture()
-		current.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{InputSendMS: 10}
+		current.Timing = &issueopscontract.HandoffDeliveryTiming{InputSendMS: 10}
 		next := deliveryObservationFixture()
-		next.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{InputSendMS: 11}
+		next.Timing = &issueopscontract.HandoffDeliveryTiming{InputSendMS: 11}
 		_, decision := MergeHandoffDeliveryObservation(current, next)
 		if decision.Accepted || decision.RejectReasons[0] != "delivery observation timing changed" {
 			t.Fatalf("decision=%+v", decision)
@@ -294,7 +294,7 @@ func TestCovHandoffMergeRejectsDriftOnlyDetectedByLaterObservation(t *testing.T)
 
 func TestCovHandoffMergeAdoptsMissingTargetTimingReceiptAndOwner(t *testing.T) {
 	current := deliveryObservationFixture()
-	current.Target = issueopscontract.IssueOpsHandoffDeliveryTarget{TerminalID: "term-1", PaneID: "pane-1"}
+	current.Target = issueopscontract.HandoffDeliveryTarget{TerminalID: "term-1", PaneID: "pane-1"}
 	current.OwnerActor = nil
 	current.Request.DurableID = ""
 	current.Timing = nil
@@ -303,8 +303,8 @@ func TestCovHandoffMergeAdoptsMissingTargetTimingReceiptAndOwner(t *testing.T) {
 	generation, baseline := uint64(3), uint64(11)
 	next.Target.PromptGeneration, next.Target.BaselineWorkingSequence = &generation, &baseline
 	next.Target.PaneID = "pane-rotated"
-	next.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: 5, InputSendMS: 7}
-	next.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/herdr/receipt-2.json", Digest: strings.Repeat("f", 64)}
+	next.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 5, InputSendMS: 7}
+	next.Receipt = issueopscontract.HandoffDeliveryReceipt{Location: "audit/herdr/receipt-2.json", Digest: strings.Repeat("f", 64)}
 	next.UpdatedAt = "2026-09-20T10:06:00Z"
 
 	merged, decision := MergeHandoffDeliveryObservation(current, next)
@@ -339,9 +339,9 @@ func TestCovHandoffMergeAdoptsMissingTargetTimingReceiptAndOwner(t *testing.T) {
 
 func TestCovHandoffMergeFillsOnlyZeroTimingFields(t *testing.T) {
 	current := deliveryObservationFixture()
-	current.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: 1}
+	current.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 1}
 	next := deliveryObservationFixture()
-	next.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: 1, WorkspaceCreateMS: 2, TargetResolveMS: 3, InputSendMS: 4, ReceiverReceiptMS: 5}
+	next.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 1, WorkspaceCreateMS: 2, TargetResolveMS: 3, InputSendMS: 4, ReceiverReceiptMS: 5}
 	merged, decision := MergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted {
 		t.Fatalf("decision=%+v", decision)
@@ -349,7 +349,7 @@ func TestCovHandoffMergeFillsOnlyZeroTimingFields(t *testing.T) {
 	if *merged.Timing != *next.Timing {
 		t.Fatalf("timing=%+v", *merged.Timing)
 	}
-	if *current.Timing != (issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: 1}) {
+	if *current.Timing != (issueopscontract.HandoffDeliveryTiming{PreflightMS: 1}) {
 		t.Fatalf("merge mutated the current timing: %+v", *current.Timing)
 	}
 	// A later observation without timing must keep the established timing.
@@ -363,7 +363,7 @@ func TestCovHandoffMergeCmuxRawInputCannotProveNativeTurn(t *testing.T) {
 	current := cmuxDeliveryObservationFixture()
 	next := cmuxDeliveryObservationFixture()
 	next.UpdatedAt = "2026-09-20T10:00:05Z"
-	next.NativeTurnObserved = deliveryStateAt(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt, "2026-09-20T10:00:03Z")
+	next.NativeTurnObserved = deliveryStateAt(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceNativeReceipt, "2026-09-20T10:00:03Z")
 	if _, decision := MergeHandoffDeliveryObservation(current, next); !decision.Accepted {
 		t.Fatalf("native receipt on cmux must merge: %+v", decision)
 	}
@@ -380,7 +380,7 @@ func TestCovHandoffMergeOwnerClaimRequiresMatchingActor(t *testing.T) {
 	}
 	next = covHandoffClaimedFixture()
 	merged, decision := MergeHandoffDeliveryObservation(current, next)
-	if !decision.Accepted || !merged.OwnerClaim.Claimed || merged.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
+	if !decision.Accepted || !merged.OwnerClaim.Claimed || merged.OwnerClaimed.Status != issueopscontract.HandoffDeliveryStateObserved {
 		t.Fatalf("exact claim rejected: %+v %+v", merged.OwnerClaim, decision)
 	}
 }
@@ -389,7 +389,7 @@ func TestCovHandoffManualOwnerClaimGenerationRule(t *testing.T) {
 	manual := cmuxDeliveryObservationFixture()
 	manual.AttemptID = handoffDeliveryManualLineagePrefix + manual.LifecycleID + ":7:cmux:abc"
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "s", SessionProcess: &issueopscontract.NativeProcessReceipt{PID: 5, StartedAt: "t", Executable: "/bin/codex"}}
-	good := issueopscontract.IssueOpsHandoffDeliveryOwnerClaim{Claimed: true, Generation: 8, Actor: actor, ClaimedAt: "2026-09-20T10:00:02Z"}
+	good := issueopscontract.HandoffDeliveryOwnerClaim{Claimed: true, Generation: 8, Actor: actor, ClaimedAt: "2026-09-20T10:00:02Z"}
 	manual.OwnerActor = &actor
 	if err := validateHandoffDeliveryOwnerClaim(manual, good); err != nil {
 		t.Fatalf("immediate reseed generation rejected: %v", err)
@@ -443,7 +443,7 @@ func covHandoffManualClaimFixture() (issueopscontract.ExecutionResult, covHandof
 	observation.Target.WorkspaceID, observation.Target.SurfaceID = "workspace-1", "surface-1"
 	process := &issueopscontract.NativeProcessReceipt{PID: 4242, StartedAt: "2026-09-20T10:00:00Z", Executable: "/usr/local/bin/codex"}
 	observation.Target.Process = process
-	observation.InputAccepted = deliveryStateAt(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput, "2026-09-20T10:00:02Z")
+	observation.InputAccepted = deliveryStateAt(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceRawInput, "2026-09-20T10:00:02Z")
 	observation.UpdatedAt = "2026-09-20T10:00:02Z"
 	observation.AttemptID = handoffDeliveryManualLineagePrefix + observation.LifecycleID + ":7:cmux:abc"
 	observation.LineageID = handoffDeliveryManualLineagePrefix + "generation:7:cmux:window:window-1"
@@ -464,14 +464,14 @@ func TestCovHandoffOwnerClaimManualLineage(t *testing.T) {
 			t.Fatalf("claimed=%+v err=%v", claimed, err)
 		}
 		if !claimed.OwnerClaim.Claimed || claimed.OwnerClaim.Generation != 8 || claimed.OwnerActor.SessionID != "session-9" ||
-			claimed.UpdatedAt != "2026-09-20T10:10:00Z" || claimed.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
+			claimed.UpdatedAt != "2026-09-20T10:10:00Z" || claimed.Launcher.Name != issueopscontract.HandoffDeliveryLauncherCmux {
 			t.Fatalf("claim=%+v", claimed)
 		}
 	})
 	t.Run("native turn evidence also counts as accepted", func(t *testing.T) {
 		result, observation := covHandoffManualClaimFixture()
-		observation.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, "")
-		observation.NativeTurnObserved = deliveryStateAt(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt, "2026-09-20T10:00:02Z")
+		observation.InputAccepted = deliveryState(issueopscontract.HandoffDeliveryStateNotObserved, "")
+		observation.NativeTurnObserved = deliveryStateAt(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceNativeReceipt, "2026-09-20T10:00:02Z")
 		claimed, err := OwnerClaimHandoffDeliveryObservation(result, []covHandoffObservation{observation})
 		if err != nil || claimed == nil {
 			t.Fatalf("claimed=%+v err=%v", claimed, err)
@@ -479,7 +479,7 @@ func TestCovHandoffOwnerClaimManualLineage(t *testing.T) {
 	})
 	t.Run("staged-only observation is not claimed", func(t *testing.T) {
 		result, observation := covHandoffManualClaimFixture()
-		observation.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, "")
+		observation.InputAccepted = deliveryState(issueopscontract.HandoffDeliveryStateNotObserved, "")
 		claimed, err := OwnerClaimHandoffDeliveryObservation(result, []covHandoffObservation{observation})
 		if claimed != nil || err != nil {
 			t.Fatalf("claimed=%+v err=%v", claimed, err)
@@ -626,17 +626,17 @@ func TestCovHandoffCmuxCanonicalPromptPath(t *testing.T) {
 }
 
 func TestCovHandoffCmuxReleasedRecordRejections(t *testing.T) {
-	released := func() issueopscontract.IssueOpsRecord {
-		return issueopscontract.IssueOpsRecord{Execution: &issueopscontract.Execution{
+	released := func() issueopscontract.Record {
+		return issueopscontract.Record{Execution: &issueopscontract.Execution{
 			Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusReleased, Generation: 3},
 		}}
 	}
-	for name, mutate := range map[string]func(*issueopscontract.IssueOpsRecord){
-		"no execution": func(r *issueopscontract.IssueOpsRecord) { r.Execution = nil },
-		"active lease": func(r *issueopscontract.IssueOpsRecord) {
+	for name, mutate := range map[string]func(*issueopscontract.Record){
+		"no execution": func(r *issueopscontract.Record) { r.Execution = nil },
+		"active lease": func(r *issueopscontract.Record) {
 			r.Execution.Lease.Status = issueopscontract.LeaseStatusActive
 		},
-		"other lease gen": func(r *issueopscontract.IssueOpsRecord) { r.Execution.Lease.Generation = 2 },
+		"other lease gen": func(r *issueopscontract.Record) { r.Execution.Lease.Generation = 2 },
 	} {
 		record := released()
 		mutate(&record)
@@ -649,10 +649,10 @@ func TestCovHandoffCmuxReleasedRecordRejections(t *testing.T) {
 
 func TestCovHandoffCmuxResultCopiesObservationFields(t *testing.T) {
 	observation := cmuxDeliveryObservationFixture()
-	observation.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{InputSendMS: 4}
-	observation.InputAccepted = CmuxObserved("2026-09-20T10:00:02Z", issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput)
-	observation.NativeTurnObserved = CmuxObserved("2026-09-20T10:00:03Z", issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt)
-	observation.OwnerClaimed = CmuxObserved("2026-09-20T10:00:04Z", issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
+	observation.Timing = &issueopscontract.HandoffDeliveryTiming{InputSendMS: 4}
+	observation.InputAccepted = CmuxObserved("2026-09-20T10:00:02Z", issueopscontract.HandoffDeliveryEvidenceRawInput)
+	observation.NativeTurnObserved = CmuxObserved("2026-09-20T10:00:03Z", issueopscontract.HandoffDeliveryEvidenceNativeReceipt)
+	observation.OwnerClaimed = CmuxObserved("2026-09-20T10:00:04Z", issueopscontract.HandoffDeliveryEvidenceIssueOpsClaim)
 	request := issueopscontract.ExecutionCmuxHandoffRequest{ID: "io-cmux", Generation: 7}
 	got := CmuxResult(request, observation, "delivered", "/tmp/recovery")
 	if !got.OK || got.ID != "io-cmux" || got.Generation != 7 || got.Status != "delivered" || got.RecoveryArtifactDir != "/tmp/recovery" ||
@@ -665,7 +665,7 @@ func TestCovHandoffCmuxResultCopiesObservationFields(t *testing.T) {
 	if staged.OK || staged.InputAccepted {
 		t.Fatalf("staged-only observation reported as accepted: %+v", staged)
 	}
-	if got := CmuxNotObserved(); got.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved || got.ObservedAt != "" || got.Evidence != "" {
+	if got := CmuxNotObserved(); got.Status != issueopscontract.HandoffDeliveryStateNotObserved || got.ObservedAt != "" || got.Evidence != "" {
 		t.Fatalf("CmuxNotObserved=%+v", got)
 	}
 }
@@ -702,9 +702,9 @@ func TestCovHandoffMergeRejectsPaneRotationWithoutTerminalAndBaselineDrift(t *te
 
 func TestCovHandoffMergeFillsZeroPreflightTimingAndAdoptsClaimOwner(t *testing.T) {
 	current := deliveryObservationFixture()
-	current.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{InputSendMS: 1}
+	current.Timing = &issueopscontract.HandoffDeliveryTiming{InputSendMS: 1}
 	next := deliveryObservationFixture()
-	next.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: 3, InputSendMS: 1}
+	next.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 3, InputSendMS: 1}
 	merged, decision := MergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted || merged.Timing.PreflightMS != 3 || merged.Timing.InputSendMS != 1 {
 		t.Fatalf("timing=%+v decision=%+v", merged.Timing, decision)

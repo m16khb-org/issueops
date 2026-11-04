@@ -23,7 +23,7 @@ func BenchmarkStoreSpanObserverOverhead(b *testing.B) {
 			id := "io-bench01"
 			stateRoot := seedObservedRecord(b, id)
 			store := Store{Scope: "bench", Observer: candidate.observer}
-			mutate := func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+			mutate := func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 				record.Branch = "bench"
 				return record, true, nil
 			}

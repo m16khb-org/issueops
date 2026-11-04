@@ -12,7 +12,7 @@ var ErrSealedArtifactDirMissing = errors.New("execution.workspace.artifact_dir i
 
 // RequireSealedArtifactDir는 레코드가 execution prepare가 고른 봉인 아티팩트
 // 디렉터리를 갖고 있는지 확인한다.
-func RequireSealedArtifactDir(record model.IssueOpsRecord) error {
+func RequireSealedArtifactDir(record model.Record) error {
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.ArtifactDir) == "" {
 		return ErrSealedArtifactDirMissing
 	}

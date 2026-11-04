@@ -9,21 +9,21 @@ import (
 )
 
 type RemotePublicationObserver struct {
-	CurrentFingerprint func(model.IssueOpsRecord) string
-	CurrentHead        func(model.IssueOpsRecord) string
+	CurrentFingerprint func(model.Record) string
+	CurrentHead        func(model.Record) string
 	StateRoot          string
 	Clock              func() time.Time
 	OperationIDFactory func() (string, error)
 }
 
-func (o RemotePublicationObserver) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
+func (o RemotePublicationObserver) Read(_ context.Context, id string) (model.Record, error) {
 	return ReadIssueOps(o.StateRoot, id)
 }
 
-func (o RemotePublicationObserver) Fingerprint(_ context.Context, record model.IssueOpsRecord) string {
+func (o RemotePublicationObserver) Fingerprint(_ context.Context, record model.Record) string {
 	return o.CurrentFingerprint(record)
 }
-func (o RemotePublicationObserver) Head(_ context.Context, record model.IssueOpsRecord) string {
+func (o RemotePublicationObserver) Head(_ context.Context, record model.Record) string {
 	return o.CurrentHead(record)
 }
 

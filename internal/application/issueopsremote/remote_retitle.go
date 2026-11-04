@@ -7,7 +7,7 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remotedomain "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/secretdetection"
 	"issueops/internal/port"
 )
@@ -47,7 +47,7 @@ func (s *RemoteRetitleService) Retitle(ctx context.Context, id, on, title string
 	if strings.ContainsAny(title, "\r\n") {
 		return result, fmt.Errorf("--title must be one line")
 	}
-	if err := remotedomain.ValidateProviderTitleLength(on, title); err != nil {
+	if err := issueopsremote.ValidateProviderTitleLength(on, title); err != nil {
 		return result, err
 	}
 	if match, found := secretdetection.Find(title); found {

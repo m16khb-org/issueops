@@ -19,11 +19,11 @@ func NewMutationAuthority(pathsMatch func(string, string) bool, verifier authori
 	return MutationAuthority{pathsMatch: pathsMatch, verifier: verifier}
 }
 
-func (a MutationAuthority) Authorize(ctx context.Context, record model.IssueOpsRecord, actor model.IssueOpsActor) error {
+func (a MutationAuthority) Authorize(ctx context.Context, record model.Record, actor model.Actor) error {
 	return a.Validate(ctx, record, &actor)
 }
 
-func (a MutationAuthority) Validate(ctx context.Context, record model.IssueOpsRecord, actor *model.IssueOpsActor) error {
+func (a MutationAuthority) Validate(ctx context.Context, record model.Record, actor *model.Actor) error {
 	if record.Execution != nil {
 		if err := domain.ValidateExecution(*record.Execution); err != nil {
 			return fmt.Errorf("invalid IssueOps execution v1 record: %w", err)
@@ -34,7 +34,7 @@ func (a MutationAuthority) Validate(ctx context.Context, record model.IssueOpsRe
 
 // AuthorizeHolder preserves the holder-only contract used by decision and routing.
 // Callers that require complete execution validation use MutationAuthority.
-func AuthorizeHolder(ctx context.Context, record model.IssueOpsRecord, actor *model.IssueOpsActor, pathsMatch func(string, string) bool, verifier authorityport.ActorVerifier) error {
+func AuthorizeHolder(ctx context.Context, record model.Record, actor *model.Actor, pathsMatch func(string, string) bool, verifier authorityport.ActorVerifier) error {
 	verified, err := verifyHolderCaller(ctx, record, actor, verifier)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func AuthorizeHolder(ctx context.Context, record model.IssueOpsRecord, actor *mo
 // verifyHolderCaller builds the native verification input from the caller's
 // observed ancestry and the holder's recorded session receipt. A bound
 // capability ignores that ancestry and proves the caller by its grant.
-func verifyHolderCaller(ctx context.Context, record model.IssueOpsRecord, actor *model.IssueOpsActor, verifier authorityport.ActorVerifier) (*model.VerifiedActor, error) {
+func verifyHolderCaller(ctx context.Context, record model.Record, actor *model.Actor, verifier authorityport.ActorVerifier) (*model.VerifiedActor, error) {
 	if record.Execution == nil || actor == nil || verifier == nil {
 		return nil, nil
 	}

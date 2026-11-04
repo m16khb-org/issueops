@@ -11,10 +11,10 @@ import (
 func newIssueOpsCleanupRuntime(root string) feedbackcleanup.Deps {
 	orphans := orphanCleaner(root)
 	return feedbackcleanup.Deps{
-		VerifyMerged: func(a model.IssueOpsRemoteArtifactVerification) error {
+		VerifyMerged: func(a model.RemoteArtifactVerification) error {
 			return newRemoteVerifier().Merged(context.Background(), a)
 		},
-		VerifyMergedHead: func(a model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+		VerifyMergedHead: func(a model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 			return newRemoteVerifier().MergedHead(context.Background(), a)
 		},
 		ObserveArtifactMerged: newRemoteVerifier().ObserveMerged,

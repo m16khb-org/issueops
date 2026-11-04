@@ -10,17 +10,17 @@ import (
 
 func TestRegressPersistsOneAuditedTransition(t *testing.T) {
 	const at = "2026-09-25T00:00:00Z"
-	record := model.IssueOpsRecord{
-		ID: "io-regress", Phase: model.IssueOpsPhasePlan,
-		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: at},
+	record := model.Record{
+		ID: "io-regress", Phase: model.PhasePlan,
+		DevilsAdvocateReview: &model.DevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: at},
 		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true},
 	}
 	writes := 0
 	store := reviewport.RegressStore{
-		Read:           func(_, _ string) (model.IssueOpsRecord, error) { return record, nil },
-		ActiveChildren: func(_ string, _ model.IssueOpsRecord) ([]string, error) { return nil, nil },
+		Read:           func(_, _ string) (model.Record, error) { return record, nil },
+		ActiveChildren: func(_ string, _ model.Record) ([]string, error) { return nil, nil },
 		Now:            func() string { return at },
-		TouchWrite: func(_ string, updated model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(_ string, updated model.Record) (model.Record, error) {
 			writes++
 			return updated, nil
 		},
@@ -29,7 +29,7 @@ func TestRegressPersistsOneAuditedTransition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if writes != 1 || out.Phase != model.IssueOpsPhaseGrill || len(out.RegressEvents) != 1 ||
+	if writes != 1 || out.Phase != model.PhaseGrill || len(out.RegressEvents) != 1 ||
 		len(out.Decisions) != 1 || out.DevilsAdvocateReview != nil || out.ArchitectureReview.Approved {
 		t.Fatalf("regression did not persist one complete transition: writes=%d record=%+v", writes, out)
 	}
@@ -40,16 +40,16 @@ func TestRegressPersistsOneAuditedTransition(t *testing.T) {
 
 func TestRegressRejectsActiveChildrenWithoutWriting(t *testing.T) {
 	const at = "2026-09-25T00:00:00Z"
-	record := model.IssueOpsRecord{
-		ID: "io-regress", Phase: model.IssueOpsPhasePlan,
-		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: at},
+	record := model.Record{
+		ID: "io-regress", Phase: model.PhasePlan,
+		DevilsAdvocateReview: &model.DevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: at},
 	}
 	writes := 0
 	store := reviewport.RegressStore{
-		Read:           func(_, _ string) (model.IssueOpsRecord, error) { return record, nil },
-		ActiveChildren: func(_ string, _ model.IssueOpsRecord) ([]string, error) { return []string{"io-child"}, nil },
+		Read:           func(_, _ string) (model.Record, error) { return record, nil },
+		ActiveChildren: func(_ string, _ model.Record) ([]string, error) { return []string{"io-child"}, nil },
 		Now:            func() string { return at },
-		TouchWrite: func(_ string, updated model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(_ string, updated model.Record) (model.Record, error) {
 			writes++
 			return updated, nil
 		},

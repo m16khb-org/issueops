@@ -59,7 +59,7 @@ func (f *memoryMaterialFiles) Stat(p string) (fs.FileInfo, error) {
 	}
 	return nil, fs.ErrNotExist
 }
-func (f *memoryMaterialFiles) ArtifactPath(record model.IssueOpsRecord, root, name string) string {
+func (f *memoryMaterialFiles) ArtifactPath(record model.Record, root, name string) string {
 	return path.Join(root, record.Execution.Workspace.ArtifactDir, name+".md")
 }
 
@@ -68,8 +68,8 @@ const (
 	trackedSealed = "/wt/.issueops/issues/7/artifact"
 )
 
-func trackedRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
+func trackedRecord() model.Record {
+	return model.Record{
 		IssueURL: "https://github.com/acme/app/issues/7",
 		Execution: &model.Execution{Workspace: model.Workspace{
 			Root: trackedRoot, ArtifactDir: ".issueops/issues/7/artifact",
@@ -105,7 +105,7 @@ func TestTrackedMaterialsWriteCopiesSealedFilesAndSkipsIdenticalContent(t *testi
 
 func TestTrackedMaterialsWriteNoopWithoutWorkspaceAndWarnsWithoutIssueNumber(t *testing.T) {
 	svc := TrackedMaterials{Files: newMemoryMaterialFiles()}
-	if got := svc.Write(model.IssueOpsRecord{}); len(got.Written)+len(got.Warnings) != 0 {
+	if got := svc.Write(model.Record{}); len(got.Written)+len(got.Warnings) != 0 {
 		t.Fatalf("no execution: %+v", got)
 	}
 	record := trackedRecord()
@@ -134,7 +134,7 @@ func TestTrackedMaterialsWriteRendersPlanReviewAndMasksLocalPaths(t *testing.T) 
 	files := newMemoryMaterialFiles()
 	files.files[trackedSealed+"/plan.md"] = []byte("see /wt/src/main.go\n")
 	record := trackedRecord()
-	record.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"  looks fine  "}}
+	record.DevilsAdvocateReview = &model.DevilsAdvocateReview{Verdict: "pass", Findings: []string{"  looks fine  "}}
 	got := TrackedMaterials{Files: files}.Write(record)
 	if len(got.Written) != 2 {
 		t.Fatalf("got=%+v", got)
@@ -197,7 +197,7 @@ func TestTrackedMaterialsMissingDetectsLegacyCycles(t *testing.T) {
 	if svc.Missing(record) || svc.Warning(record) != "" {
 		t.Fatal("tracked copy present must clear the warning")
 	}
-	if svc.Missing(model.IssueOpsRecord{}) {
+	if svc.Missing(model.Record{}) {
 		t.Fatal("record without workspace cannot be missing copies")
 	}
 }

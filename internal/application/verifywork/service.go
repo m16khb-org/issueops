@@ -12,8 +12,8 @@ import (
 type Service struct {
 	ResolveTarget  func(string) string
 	GitStatus      func(string) (string, error)
-	Preflight      func(string) preflightcontract.PreflightResult
-	Guard          func(guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult
+	Preflight      func(string) preflightcontract.Result
+	Guard          func(guardcontract.CheckRequest) guardcontract.CheckResult
 	RunCommand     func(policycontract.CommandPolicyRequest) policycontract.CommandRunResult
 	ProjectSignals func(string) projectdocdomain.ProjectSignals
 }
@@ -27,7 +27,7 @@ func (service Service) Run(repo string, all bool, argv []string) verifyworkcontr
 		facts.GitError = err.Error()
 	}
 	preflight := service.Preflight(root)
-	guard := service.Guard(guardcontract.GuardCheckRequest{RepoRoot: root, Staged: !all, All: all})
+	guard := service.Guard(guardcontract.CheckRequest{RepoRoot: root, Staged: !all, All: all})
 	var command *policycontract.CommandRunResult
 	if len(argv) > 0 {
 		result := service.RunCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: argv, Timeout: "30s"})

@@ -14,7 +14,7 @@ import (
 // intentArtifactRecord는 plan을 스테이징한 뒤 direct execution과 intent를 붙인
 // record를 돌려준다. materializeStagedArtifacts가 intent를 record에서 파생하는
 // 경로를 그대로 지난다.
-func intentArtifactRecord(t *testing.T, intent *issueopscontract.IssueOpsIntentContract) (string, issueopscontract.IssueOpsRecord, string) {
+func intentArtifactRecord(t *testing.T, intent *issueopscontract.IntentContract) (string, issueopscontract.Record, string) {
 	t.Helper()
 	stateRoot, record := executionPrepareRecord(t)
 	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte("# Owner plan\n")); err != nil {
@@ -30,8 +30,8 @@ func intentArtifactRecord(t *testing.T, intent *issueopscontract.IssueOpsIntentC
 	return stateRoot, record, worktree
 }
 
-func sampleIntentContract() *issueopscontract.IssueOpsIntentContract {
-	return &issueopscontract.IssueOpsIntentContract{
+func sampleIntentContract() *issueopscontract.IntentContract {
+	return &issueopscontract.IntentContract{
 		RawRequest:        "INTENT.md를 어느 시점에 어느 위치에 만들지 조사해줘",
 		InterpretedIntent: "record.intent를 봉인 artifact로 materialize한다",
 		SuccessCriteria:   []string{"prepare가 intent.md를 0600으로 쓴다"},

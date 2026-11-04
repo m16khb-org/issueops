@@ -1,7 +1,7 @@
 package issueops
 
 const (
-	IssueOpsSchemaVersion = 1
+	SchemaVersion = 1
 )
 
 type LeaseStatus string

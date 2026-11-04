@@ -18,7 +18,7 @@ type WorkBaseCommit struct {
 // carries: the sealed base it was cut from and every base tip a sync-base
 // merged into it. A new base tip must hold each of them before merging it is
 // safe.
-func BaseCommitsInWork(record model.IssueOpsRecord) []WorkBaseCommit {
+func BaseCommitsInWork(record model.Record) []WorkBaseCommit {
 	if record.BranchPrepare == nil {
 		return nil
 	}

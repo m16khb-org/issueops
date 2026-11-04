@@ -9,6 +9,6 @@ import (
 	"time"
 )
 
-func startIssueOpsFixture(stateRoot string, req contract.IssueOpsStartRequest) (contract.IssueOpsRecord, error) {
+func startIssueOpsFixture(stateRoot string, req contract.StartRequest) (contract.Record, error) {
 	return (app.Starter{Records: adapter.CycleRecordStore{StateRoot: stateRoot}, Retired: adapter.CycleRecordStore{StateRoot: stateRoot}, Identity: adapter.CycleStartIdentity{RunGit: branchpreflight.GitCmd}, Now: time.Now}).Start(context.Background(), req)
 }

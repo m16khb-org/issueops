@@ -43,7 +43,7 @@ func validateInspectWithDeps(binary, root string, run validationCommandRunner) v
 	if rejected, truncated := rejectTruncatedCapture(step); truncated {
 		return rejected
 	}
-	var info inspect.InspectInfo
+	var info inspect.Info
 	if err := json.Unmarshal([]byte(step.Stdout), &info); err != nil {
 		step.OK = false
 		step.Error = err.Error()
@@ -69,7 +69,7 @@ func validateDocsIndexWithDeps(binary, root string, run validationCommandRunner)
 	if rejected, truncated := rejectTruncatedCapture(step); truncated {
 		return rejected
 	}
-	var index docs.DocsIndexResult
+	var index docs.IndexResult
 	if err := json.Unmarshal([]byte(step.Stdout), &index); err != nil {
 		step.OK = false
 		step.Error = err.Error()

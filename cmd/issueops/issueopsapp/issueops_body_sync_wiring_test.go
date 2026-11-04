@@ -44,7 +44,7 @@ func TestBodySyncCompositionPersistsOnlyVerifiedReadback(t *testing.T) {
 	for _, scenario := range []string{"verified", "mismatched receipt", "not applied"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
-			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "412-body-sync"})
+			record, err := startIssueOpsFixture(root, model.StartRequest{Repo: t.TempDir(), Branch: "412-body-sync"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -70,7 +70,7 @@ func TestBodySyncCompositionPersistsOnlyVerifiedReadback(t *testing.T) {
 			}
 			_, result, err := syncIssueOpsRemoteArtifactBody(context.Background(), root, record.ID, contract.Command{
 				Kind: contract.KindIssue, ProposedBody: readableWiringIssueBody, ExpectedBodySHA256: hex.EncodeToString(digest[:]), Confirm: true, AcceptRemoteEdits: true,
-			}, provider, model.IssueOpsActor{})
+			}, provider, model.Actor{})
 			stored, readErr := issueops.ReadIssueOps(root, record.ID)
 			if readErr != nil {
 				t.Fatal(readErr)

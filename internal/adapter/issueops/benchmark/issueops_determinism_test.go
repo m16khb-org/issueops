@@ -16,7 +16,7 @@ import (
 
 // scorerOutputsEqual compares the order-sensitive persisted outputs of the
 // scorer (what CompareIssueOpsBenchmarkRuns and JSON persistence actually diff).
-func scorerOutputsEqual(a, b benchmark.IssueOpsBenchmarkScore) bool {
+func scorerOutputsEqual(a, b benchmark.Score) bool {
 	return reflect.DeepEqual(a.DimensionScores, b.DimensionScores) &&
 		reflect.DeepEqual(a.DeterministicFailures, b.DeterministicFailures) &&
 		reflect.DeepEqual(a.CriticalFailures, b.CriticalFailures)
@@ -26,7 +26,7 @@ func TestScorerDeterminismOrderedOutputsStable(t *testing.T) {
 	// A partially-FAILING artifact so the failure slices are non-empty and their
 	// ordering is actually exercised (an all-pass artifact would compare empty
 	// slices and prove little).
-	fixture := benchmark.IssueOpsBenchmarkFixture{
+	fixture := benchmark.Fixture{
 		ID:                 "determinism",
 		PioneerSkillTarget: "database-schema-architecture",
 		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}},
@@ -65,7 +65,7 @@ func TestScorerDeterminismOrderedOutputsStable(t *testing.T) {
 // future refactor that ranged the checks map and scrambled order would slip
 // through). This proves the comparison discriminates ordering.
 func TestScorerDeterminismComparisonCatchesReordering(t *testing.T) {
-	fixture := benchmark.IssueOpsBenchmarkFixture{
+	fixture := benchmark.Fixture{
 		ID:               "determinism-teeth",
 		CriticalFailures: []string{"skips domain contract evidence", "skips live evidence matrix"},
 	}

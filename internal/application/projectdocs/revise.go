@@ -13,28 +13,28 @@ type RevisionEffects interface {
 	Now() time.Time
 }
 
-func Revise(request projectdocscontract.ProjectDocsReviseRequest, root, rel, path string, effects RevisionEffects) (projectdocscontract.ProjectDocsReviseResult, error) {
+func Revise(request projectdocscontract.ReviseRequest, root, rel, path string, effects RevisionEffects) (projectdocscontract.ReviseResult, error) {
 	input := projectdocdomain.RevisionInput{
 		Content: request.Content, ExpectedSHA256: request.ExpectedSHA256, Summary: request.Summary,
 		Evidence: request.Evidence, Confirm: request.Confirm,
 	}
 	if err := projectdocdomain.ValidateRevisionInput(input); err != nil {
-		return projectdocscontract.ProjectDocsReviseResult{}, err
+		return projectdocscontract.ReviseResult{}, err
 	}
 	current, exists, err := effects.Read(path)
 	if err != nil {
-		return projectdocscontract.ProjectDocsReviseResult{}, err
+		return projectdocscontract.ReviseResult{}, err
 	}
 	plan, err := projectdocdomain.PlanRevision(input, rel, current, exists)
 	if err != nil {
-		return projectdocscontract.ProjectDocsReviseResult{}, err
+		return projectdocscontract.ReviseResult{}, err
 	}
 	if plan.Write {
 		if err := effects.Write(path, plan.Content); err != nil {
-			return projectdocscontract.ProjectDocsReviseResult{}, err
+			return projectdocscontract.ReviseResult{}, err
 		}
 	}
-	return projectdocscontract.ProjectDocsReviseResult{
+	return projectdocscontract.ReviseResult{
 		OK: true, Kind: "project_docs_revise", RepoRoot: root, RelPath: rel, Path: path,
 		Action: plan.Action, Confirmed: request.Confirm, DryRun: !request.Confirm,
 		GeneratedAt: effects.Now().UTC().Format(time.RFC3339), CurrentSHA256: plan.CurrentSHA256,

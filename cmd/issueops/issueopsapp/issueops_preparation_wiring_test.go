@@ -25,12 +25,12 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 	claimWiringGit(t, repo, "config", "user.email", "issueops@example.invalid")
 	claimWiringGit(t, repo, "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(preflight.GitOut(repo, "rev-parse", "HEAD"))
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-wiring"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: repo, Branch: "199-preparation-wiring"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/199"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
@@ -69,12 +69,12 @@ func TestIssueOpsPrepareWiringPreviewNextCommandConfirmsRealPreparation(t *testi
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(preflight.GitOut(repo, "rev-parse", "HEAD"))
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-confirm"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: repo, Branch: "199-preparation-confirm"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/199"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}

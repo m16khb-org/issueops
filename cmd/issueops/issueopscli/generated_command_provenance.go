@@ -49,13 +49,13 @@ func (cli command) prepareGeneratedCommandInvocation(args []string, deps Depende
 	return clean, true, nil
 }
 
-func generatedProvenanceInvalid(message string) (issueopscontract.IssueOpsRecord, error) {
-	return issueopscontract.IssueOpsRecord{}, &commandparsecontract.GeneratedCommandProvenanceError{
+func generatedProvenanceInvalid(message string) (issueopscontract.Record, error) {
+	return issueopscontract.Record{}, &commandparsecontract.GeneratedCommandProvenanceError{
 		Code: "generated_command_provenance_invalid", Message: message,
 	}
 }
 
-func (cli command) generatedDelegatedBootstrapAuthority(args []string, child issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error) {
+func (cli command) generatedDelegatedBootstrapAuthority(args []string, child issueopscontract.Record) (issueopscontract.Record, error) {
 	command, ok := commandparse.ParseExactIssueOpsArgs(args)
 	if !ok || command.Path != "branch prepare" && command.Path != "execution prepare" || child.Delegation == nil {
 		return generatedProvenanceInvalid("generated command provenance requires IssueOps execution state")
@@ -79,18 +79,18 @@ func (cli command) generatedDelegatedBootstrapAuthority(args []string, child iss
 }
 
 // generatedActiveParent는 자식이 참조하는 활성 부모 실행 기록을 읽어 돌려준다.
-func (cli command) generatedActiveParent(child issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool) {
+func (cli command) generatedActiveParent(child issueopscontract.Record) (issueopscontract.Record, bool) {
 	parentID := strings.TrimSpace(child.Delegation.ParentCycleID)
 	parent, err := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), parentID)
 	if err != nil || parent.Execution == nil || parent.Execution.Lease.Status != issueopscontract.LeaseStatusActive ||
 		!generatedParentReferencesChild(parent, child.ID) {
-		return issueopscontract.IssueOpsRecord{}, false
+		return issueopscontract.Record{}, false
 	}
 	return parent, true
 }
 
 // generatedBootstrapTopologyMismatch는 부트스트랩 명령이 부모 토폴로지와 어긋날 때 사유를, 일치하면 빈 문자열을 돌려준다.
-func generatedBootstrapTopologyMismatch(path string, flags map[string][]string, child, parent issueopscontract.IssueOpsRecord) string {
+func generatedBootstrapTopologyMismatch(path string, flags map[string][]string, child, parent issueopscontract.Record) string {
 	switch path {
 	case "branch prepare":
 		if !generatedBranchPrepareMatchesParent(flags, child, parent) {
@@ -105,7 +105,7 @@ func generatedBootstrapTopologyMismatch(path string, flags map[string][]string, 
 }
 
 // generatedBranchPrepareMatchesParent는 branch prepare 플래그가 자식 브랜치와 부모 토폴로지에 일치하는지 확인한다.
-func generatedBranchPrepareMatchesParent(flags map[string][]string, child, parent issueopscontract.IssueOpsRecord) bool {
+func generatedBranchPrepareMatchesParent(flags map[string][]string, child, parent issueopscontract.Record) bool {
 	branch, branchOK := oneGeneratedFlag(flags, "--branch")
 	baseBranch, baseOK := oneGeneratedFlag(flags, "--base-branch")
 	parentWorktree, worktreeOK := oneGeneratedFlag(flags, "--parent-worktree")
@@ -116,7 +116,7 @@ func generatedBranchPrepareMatchesParent(flags map[string][]string, child, paren
 }
 
 // generatedExecutionPrepareMatchesParent는 기록된 브랜치 준비 결과가 부모 토폴로지에 일치하는지 확인한다.
-func generatedExecutionPrepareMatchesParent(child, parent issueopscontract.IssueOpsRecord) bool {
+func generatedExecutionPrepareMatchesParent(child, parent issueopscontract.Record) bool {
 	prepared := child.BranchPrepare
 	return prepared != nil &&
 		strings.TrimSpace(prepared.Branch) == strings.TrimSpace(child.Branch) &&
@@ -124,7 +124,7 @@ func generatedExecutionPrepareMatchesParent(child, parent issueopscontract.Issue
 		sameExistingIssueOpsPath(prepared.ParentWorktree, parent.Execution.Workspace.Root)
 }
 
-func generatedParentReferencesChild(parent issueopscontract.IssueOpsRecord, childID string) bool {
+func generatedParentReferencesChild(parent issueopscontract.Record, childID string) bool {
 	for _, child := range parent.ChildCycles {
 		if strings.TrimSpace(child.CycleID) == strings.TrimSpace(childID) {
 			return true

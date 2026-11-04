@@ -17,7 +17,7 @@ import (
 
 type Deps struct {
 	IssueOpsRoot func() string
-	StepDeps     application.SelfVerifyStepDeps
+	StepDeps     application.StepDeps
 	FailedStep   func(string, error) selfverify.StepResult
 	PrintStep    func(selfverify.StepResult)
 	Printf       func(string, ...any) (int, error)
@@ -31,7 +31,7 @@ type Request struct {
 	CollectAllSteps bool
 }
 
-func SelfVerify(request Request, deps Deps) (augmentcontract.SelfAugmentResult, error) {
+func SelfVerify(request Request, deps Deps) (augmentcontract.Result, error) {
 	deps = deps.withDefaults()
 	var reporter application.ProgressReporter
 	if request.Reporter != nil {

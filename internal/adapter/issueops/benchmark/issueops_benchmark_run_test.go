@@ -9,9 +9,9 @@ import (
 
 func TestIssueOpsBenchmarkRunStorageAndJudgeMergeBranches(t *testing.T) {
 	stateRoot := t.TempDir()
-	result := domain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{
+	result := domain.FinalizeRun(benchmarkcontract.RunResult{
 		ID: "run-one",
-		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.Score{{
 			OK:           true,
 			FixtureID:    "fixture-one",
 			AverageScore: 100,
@@ -38,7 +38,7 @@ func TestIssueOpsBenchmarkRunStorageAndJudgeMergeBranches(t *testing.T) {
 		t.Fatalf("expected empty benchmark id to fail")
 	}
 
-	merged := domain.MergeScoreWithJudge(result.Scores[0], benchmarkcontract.IssueOpsBenchmarkScore{
+	merged := domain.MergeScoreWithJudge(result.Scores[0], benchmarkcontract.Score{
 		DimensionScores: []benchmarkcontract.IssueOpsDimensionScore{
 			{Dimension: "issue_quality", Score: 70, Evidence: "judge issue"},
 		},
@@ -55,16 +55,16 @@ func TestIssueOpsBenchmarkRunStorageAndJudgeMergeBranches(t *testing.T) {
 		t.Fatalf("expected judge evidence to be retained: %+v", merged.DimensionScores[0])
 	}
 
-	emptyJudge := domain.MergeScoreWithJudge(result.Scores[0], benchmarkcontract.IssueOpsBenchmarkScore{})
+	emptyJudge := domain.MergeScoreWithJudge(result.Scores[0], benchmarkcontract.Score{})
 	if emptyJudge.Passed || len(emptyJudge.JudgeFailures) == 0 {
 		t.Fatalf("expected missing judge dimensions to fail merged score: %+v", emptyJudge)
 	}
 }
 
 func TestFinalizeAndCompareIssueOpsBenchmarkRunsSummarizesScoresAndRegressions(t *testing.T) {
-	baseline := domain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{
+	baseline := domain.FinalizeRun(benchmarkcontract.RunResult{
 		ID: "baseline",
-		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.Score{{
 			FixtureID:    "fixture-one",
 			AverageScore: 90,
 			MinimumScore: 90,
@@ -75,9 +75,9 @@ func TestFinalizeAndCompareIssueOpsBenchmarkRunsSummarizesScoresAndRegressions(t
 			Passed: true,
 		}},
 	})
-	candidate := domain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{
+	candidate := domain.FinalizeRun(benchmarkcontract.RunResult{
 		ID: "candidate",
-		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.Score{{
 			FixtureID:    "fixture-one",
 			AverageScore: 95,
 			MinimumScore: 85,
@@ -99,7 +99,7 @@ func TestFinalizeAndCompareIssueOpsBenchmarkRunsSummarizesScoresAndRegressions(t
 		t.Fatalf("expected dimension regression to be reported: %+v", compare)
 	}
 
-	empty := domain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{ID: "empty"})
+	empty := domain.FinalizeRun(benchmarkcontract.RunResult{ID: "empty"})
 	if !empty.OK || empty.AverageScore != 0 || empty.MinimumScore != 0 || empty.FixtureCount != 0 {
 		t.Fatalf("empty benchmark should summarize to zero without synthetic failures: %+v", empty)
 	}

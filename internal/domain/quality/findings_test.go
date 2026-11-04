@@ -146,11 +146,11 @@ func TestBoundedEvidenceTruncatesWithoutAliasing(t *testing.T) {
 }
 
 func TestQualityStatusesBlockingFinding(t *testing.T) {
-	c, h, g := QualityStatuses(nil, nil)
+	c, h, g := Statuses(nil, nil)
 	if c != contract.CollectionStatusOK || h != contract.HealthStatusHealthy || g != contract.GateStatusPass {
 		t.Fatalf("%s/%s/%s", c, h, g)
 	}
-	_, h, g = QualityStatuses(nil, []contract.Finding{{}, {Blocking: true}})
+	_, h, g = Statuses(nil, []contract.Finding{{}, {Blocking: true}})
 	if h != contract.HealthStatusNeedsAttention || g != contract.GateStatusBlock {
 		t.Fatalf("%s/%s", h, g)
 	}

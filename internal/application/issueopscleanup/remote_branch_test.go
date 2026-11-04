@@ -9,12 +9,12 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-type remoteBranchTestStore struct{ record model.IssueOpsRecord }
+type remoteBranchTestStore struct{ record model.Record }
 
 func (s *remoteBranchTestStore) Load(context.Context, string) (model.CleanupSnapshot, error) {
 	return model.CleanupSnapshot{Record: s.record}, nil
 }
-func (s *remoteBranchTestStore) Arm(_ context.Context, snap model.CleanupSnapshot, a model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
+func (s *remoteBranchTestStore) Arm(_ context.Context, snap model.CleanupSnapshot, a model.CleanupAttempt) (model.CleanupSnapshot, error) {
 	snap.Record.CleanupAttempt = &a
 	return snap, nil
 }
@@ -71,14 +71,14 @@ func TestRemoteBranchCleanerReportsAuditWithoutRemoteBodyWrite(t *testing.T) {
 	ctx := t.Context()
 	calls := []string{}
 	env := &remoteBranchTestEnvironment{t: t, ctx: ctx, calls: &calls, oid: "abc"}
-	record := model.IssueOpsRecord{ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.IssueOpsPhaseDone, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}}
+	record := model.Record{ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.PhaseDone, RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}}
 	s := RemoteBranchCleaner{
 		Records: &remoteBranchTestStore{record},
 		Acquire: func(context.Context, string) (CleanupLifetime, error) { return remoteBranchTestLifetime{}, nil },
-		NewAttempt: func(operation model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
-			return model.IssueOpsCleanupAttempt{Operation: operation, Token: "token", StartedAt: "now"}, nil
+		NewAttempt: func(operation model.CleanupOperation) (model.CleanupAttempt, error) {
+			return model.CleanupAttempt{Operation: operation, Token: "token", StartedAt: "now"}, nil
 		},
-		Preview: RemoteBranchPreviewer{Environment: env, VerifyMergedArtifact: func(artifact model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+		Preview: RemoteBranchPreviewer{Environment: env, VerifyMergedArtifact: func(artifact model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 			calls = append(calls, "merge")
 			if artifact.URL != record.RemoteArtifact.URL {
 				t.Fatal("different artifact verified")

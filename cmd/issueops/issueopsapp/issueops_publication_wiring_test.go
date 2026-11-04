@@ -50,11 +50,11 @@ func TestIssueOpsPublicationCompositionBuildsBothServicesAndCreatesPreview(t *te
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
 	branch := "195-publication-composition"
-	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-		ID: (issueops.CycleStartIdentity{}).StableID(repo, branch), Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePR,
+	record := issueopscontract.Record{
+		OK: true, SchemaVersion: issueopscontract.SchemaVersion,
+		ID: (issueops.CycleStartIdentity{}).StableID(repo, branch), Repo: repo, Branch: branch, Phase: issueopscontract.PhasePR,
 		IssueURL: "https://github.com/acme/repo/issues/195",
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
+		BranchPrepare: &issueopscontract.BranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/195",
 			Branch: branch, BaseBranch: "117-hexagonal-architecture-migration", LinkVerified: true,
 		},
@@ -74,7 +74,7 @@ func TestIssueOpsPublicationCompositionBuildsBothServicesAndCreatesPreview(t *te
 			}
 			return fake, nil
 		},
-		VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+		VerifyLive: func(issueopscontract.RemoteArtifactVerificationRequest) error {
 			verifyCalls++
 			return nil
 		},

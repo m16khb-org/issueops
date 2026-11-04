@@ -18,20 +18,20 @@ func TestPlanAndSave(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reads, writes := 0, 0
-			result, err := PlanAndSave(contract.SelfAugmentPlanRequest{Cycles: 2, TargetScore: 91}, tc.save, "custom-key", PlanAndSaveDeps{
-				Plan: func(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
+			result, err := PlanAndSave(contract.PlanRequest{Cycles: 2, TargetScore: 91}, tc.save, "custom-key", PlanAndSaveDeps{
+				Plan: func(req contract.PlanRequest) contract.PlanResult {
 					reads++
 					if req.Cycles != 2 || req.TargetScore != 91 {
 						t.Fatalf("request changed: %+v", req)
 					}
-					return contract.SelfAugmentPlanResult{OK: true, KoreanName: "fixture"}
+					return contract.PlanResult{OK: true, KoreanName: "fixture"}
 				},
-				Save: func(result *contract.SelfAugmentPlanResult, key string) error {
+				Save: func(result *contract.PlanResult, key string) error {
 					writes++
 					if reads != 1 || result.KoreanName != "fixture" || key != "custom-key" {
 						t.Fatalf("incorrect save input: reads=%d result=%+v key=%q", reads, result, key)
 					}
-					result.StateCheckpoint = &contract.SelfAugmentStateCheckpoint{OK: !tc.fail, Key: key}
+					result.StateCheckpoint = &contract.StateCheckpoint{OK: !tc.fail, Key: key}
 					if tc.fail {
 						result.StateCheckpoint.Error = failure.Error()
 						return failure

@@ -11,22 +11,22 @@ func TestWorkerLifecycleRejectsInvalidTransitions(t *testing.T) {
 		t.Fatal("invalid kind accepted")
 	}
 	queued, err := NewQueued("read-only", "redacted", "job-1", "/worker", "time")
-	if err != nil || queued.Status != workercontract.WorkerStatusQueued {
+	if err != nil || queued.Status != workercontract.StatusQueued {
 		t.Fatalf("queued=%+v err=%v", queued, err)
 	}
 	running, err := Start(queued, []string{"go", "version"}, 22, "later", "updated")
-	if err != nil || running.Status != workercontract.WorkerStatusRunning || running.PID != 22 {
+	if err != nil || running.Status != workercontract.StatusRunning || running.PID != 22 {
 		t.Fatalf("running=%+v err=%v", running, err)
 	}
 	if _, err := Cancel(running, "later"); err == nil {
 		t.Fatal("running job cancelled")
 	}
 	failed := Finish(running, false, "done")
-	if failed.Status != workercontract.WorkerStatusFailed || failed.OK {
+	if failed.Status != workercontract.StatusFailed || failed.OK {
 		t.Fatalf("failed=%+v", failed)
 	}
 	cancelled, err := Cancel(queued, "later")
-	if err != nil || cancelled.Status != workercontract.WorkerStatusCancelled {
+	if err != nil || cancelled.Status != workercontract.StatusCancelled {
 		t.Fatalf("cancelled=%+v err=%v", cancelled, err)
 	}
 	again, err := Cancel(cancelled, "after")
@@ -34,7 +34,7 @@ func TestWorkerLifecycleRejectsInvalidTransitions(t *testing.T) {
 		t.Fatalf("idempotent cancel=%+v err=%v", again, err)
 	}
 	stuck, changed := MarkStuck(running, false, "after")
-	if !changed || stuck.Status != workercontract.WorkerStatusFailed || stuck.Result != nil {
+	if !changed || stuck.Status != workercontract.StatusFailed || stuck.Result != nil {
 		t.Fatalf("stuck=%+v changed=%v", stuck, changed)
 	}
 	if _, changed := MarkStuck(running, true, "after"); changed {

@@ -13,10 +13,10 @@ import (
 func TestRepositoryUpdatesAndReadsRecordWithinSpan(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-routing01"
-	record := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	record := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	}
 	data, err := json.Marshal(record)
 	if err != nil {
@@ -35,7 +35,7 @@ func TestRepositoryUpdatesAndReadsRecordWithinSpan(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		id,
-		func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+		func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 			record.RoutingTrace = append(record.RoutingTrace, issueopscontract.SkillRoutingEntry{
 				Phase: "plan",
 				Skill: "database-schema-architecture",

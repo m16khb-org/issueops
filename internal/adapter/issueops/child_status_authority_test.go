@@ -13,7 +13,7 @@ type childStatusScanTransition struct {
 	change func()
 }
 
-func (s childStatusScanTransition) Scan() ([]model.IssueOpsRecord, error) {
+func (s childStatusScanTransition) Scan() ([]model.Record, error) {
 	records, err := s.ChildCycleStore.Scan()
 	if err == nil {
 		s.change()
@@ -26,7 +26,7 @@ func TestChildIndexRepairReauthorizesParentAfterScan(t *testing.T) {
 
 	root := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, root)
-	started, err := startIssueOpsChildForTest(root, parent, model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: "124-repair-child", TaskScope: "repair with current authority", AcceptanceCriteria: []string{"stale actor cannot repair"}})
+	started, err := startIssueOpsChildForTest(root, parent, model.ChildStartRequest{ParentID: parent.ID, Branch: "124-repair-child", TaskScope: "repair with current authority", AcceptanceCriteria: []string{"stale actor cannot repair"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestChildIndexRepairReauthorizesParentAfterScan(t *testing.T) {
 	parent.ChildCycles = nil
 	parent = writeIssueOpsRecordForDelegationTest(t, root, parent)
 	service := childStatusServiceForTest(root)
-	var transitioned model.IssueOpsRecord
+	var transitioned model.Record
 	service.Records = childStatusScanTransition{ChildCycleStore: ChildCycleStore{CycleRecordStore: CycleRecordStore{StateRoot: root}}, change: func() {
 		current, err := ReadIssueOps(root, parent.ID)
 		if err != nil {

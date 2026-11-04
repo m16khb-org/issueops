@@ -80,7 +80,7 @@ func recordIssueOpsCLIArchitectureForTest(t *testing.T, id string) {
 
 func recordIssueOpsCoreIntentForCLITest(t *testing.T, id string) {
 	t.Helper()
-	if _, err := planningRecorderForTest(nil).Intent(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsIntentRecordRequest{
+	if _, err := planningRecorderForTest(nil).Intent(issueOpsStateRootForTest(), id, issueopscontract.IntentRecordRequest{
 		RawRequest:        "refactor issueops flow",
 		InterpretedIntent: "keep intent and design evidence before implementation",
 		SuccessCriteria:   []string{"intent is recorded", "design is reviewed"},
@@ -91,8 +91,8 @@ func recordIssueOpsCoreIntentForCLITest(t *testing.T, id string) {
 
 func recordIssueOpsCLIPlanPrepForTest(t *testing.T, id string) {
 	t.Helper()
-	waived := issueopscontract.IssueOpsPlanPrepItemRequest{WaiveReason: "cli lifecycle test"}
-	if _, err := planningRecorderForTest(nil).PlanPrep(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsPlanPrepRequest{
+	waived := issueopscontract.PlanPrepItemRequest{WaiveReason: "cli lifecycle test"}
+	if _, err := planningRecorderForTest(nil).PlanPrep(issueOpsStateRootForTest(), id, issueopscontract.PlanPrepRequest{
 		PriorDecisions: waived,
 		RelatedIssues:  waived,
 		WebResearch:    waived,
@@ -119,14 +119,14 @@ func recordIssueOpsCoreArchitectureForCLITest(t *testing.T, id string) {
 	}
 }
 
-func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
+func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.Record) (issueopscontract.Record, issueopscontract.Actor) {
 	t.Helper()
 	baseHead := strings.TrimSpace(record.BranchPrepare.BaseSHA)
 	if len(baseHead) != 40 {
 		baseHead = strings.Repeat("a", 40)
 	}
 	const now = "2026-07-22T00:00:00Z"
-	actor := issueopscontract.IssueOpsActor{Host: "codex", SessionID: "issueops-cli-test", AgentID: "test-agent", CWD: record.WorktreePath}
+	actor := issueopscontract.Actor{Host: "codex", SessionID: "issueops-cli-test", AgentID: "test-agent", CWD: record.WorktreePath}
 	receipt, err := issueopscore.ObserveNativeProcessReceipt(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 	return written, actor
 }
 
-func withIssueOpsCLIActor(args []string, actor issueopscontract.IssueOpsActor) []string {
+func withIssueOpsCLIActor(args []string, actor issueopscontract.Actor) []string {
 	return append(args,
 		"--host", actor.Host,
 		"--session-id", actor.SessionID,

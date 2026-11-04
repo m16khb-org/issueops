@@ -12,32 +12,32 @@ import (
 
 type PhaseService struct {
 	Store          cycleport.PhaseStore
-	WriteMaterials func(issueops.IssueOpsRecord) issueops.IssueOpsTrackedMaterials
+	WriteMaterials func(issueops.Record) issueops.TrackedMaterials
 	Readiness      Readiness
 	Transitions    cycleport.PhaseTransitionObservations
 }
 
-func (s PhaseService) touchWrite(root string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+func (s PhaseService) touchWrite(root string, record issueops.Record) (issueops.Record, error) {
 	record.UpdatedAt = s.Store.Now()
 	return s.Store.Write(root, record)
 }
-func (s PhaseService) Refresh(root string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+func (s PhaseService) Refresh(root string, record issueops.Record) (issueops.Record, error) {
 	return RefreshAISlopClean(cycleport.AISlopCleanRefreshStore{Readiness: s.Readiness.AISlopClean, Now: s.Store.Now, Head: s.Transitions.Head, Fingerprint: s.Transitions.Fingerprint, TouchWrite: s.touchWrite}, root, record)
 }
-func ProblemReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
+func ProblemReadiness(record issueops.Record) issueops.Readiness {
 	return ReadinessFromMissing(record, issueopsdomain.IntentMissing(record))
 }
-func GrillReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
+func GrillReadiness(record issueops.Record) issueops.Readiness {
 	return ReadinessFromMissing(record, issueopsdomain.GrillReadinessMissing(record))
 }
 
-func (s PhaseService) AdvanceReport(stateRoot, id, to string) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
-	var materials issueops.IssueOpsTrackedMaterials
+func (s PhaseService) AdvanceReport(stateRoot, id, to string) (issueops.Record, issueops.TrackedMaterials, error) {
+	var materials issueops.TrackedMaterials
 	upstream, err := s.prefetchForPhase(stateRoot, id, to)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, materials, err
+		return issueops.Record{OK: false}, materials, err
 	}
-	var rec issueops.IssueOpsRecord
+	var rec issueops.Record
 	err = s.Store.WithLock(stateRoot, id, func() error {
 		record, readErr := s.Store.Read(stateRoot, id)
 		if readErr != nil {
@@ -58,7 +58,7 @@ func (s PhaseService) AdvanceReport(stateRoot, id, to string) (issueops.IssueOps
 // 다른 전이는 fetch하지 않는다. 거부될 호출자를 위해 fetch하지
 // 않도록 권한을 먼저 보고, 권한 판정은 span 안에서 다시 한다.
 func (s PhaseService) prefetchForPhase(stateRoot, id, to string) (func(string) review.UpstreamFetch, error) {
-	if issueops.IssueOpsPhase(strings.TrimSpace(to)) != issueops.IssueOpsPhasePR {
+	if issueops.Phase(strings.TrimSpace(to)) != issueops.PhasePR {
 		return nil, nil
 	}
 	record, err := s.Store.Read(stateRoot, id)
@@ -71,17 +71,17 @@ func (s PhaseService) prefetchForPhase(stateRoot, id, to string) (func(string) r
 	return s.Readiness.PrefetchUpstream(record), nil
 }
 
-func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(string) review.UpstreamFetch) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
-	var materials issueops.IssueOpsTrackedMaterials
-	phase := issueops.IssueOpsPhase(strings.TrimSpace(to))
+func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(string) review.UpstreamFetch) (issueops.Record, issueops.TrackedMaterials, error) {
+	var materials issueops.TrackedMaterials
+	phase := issueops.Phase(strings.TrimSpace(to))
 	if !issueopsdomain.KnownIssueOpsPhase(phase) {
 		// Probe: `--to verify` (a next stage, not a phase) and a missing --to
 		// named nothing to use instead.
-		names := make([]string, 0, len(issueops.IssueOpsPhases))
-		for _, known := range issueops.IssueOpsPhases {
+		names := make([]string, 0, len(issueops.Phases))
+		for _, known := range issueops.Phases {
 			names = append(names, string(known))
 		}
-		return issueops.IssueOpsRecord{OK: false}, materials, fmt.Errorf("unknown issueops phase %q (--to wants %s; next's stage.key is not a phase, follow its next_command)", to, strings.Join(names, "|"))
+		return issueops.Record{OK: false}, materials, fmt.Errorf("unknown issueops phase %q (--to wants %s; next's stage.key is not a phase, follow its next_command)", to, strings.Join(names, "|"))
 	}
 	record, err := s.Store.Read(stateRoot, id)
 	if err != nil {
@@ -101,9 +101,9 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 		return record, materials, err
 	}
 	if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, materials, err
+		return issueops.Record{OK: false}, materials, err
 	}
-	if (phase == issueops.IssueOpsPhaseImplement || phase == issueops.IssueOpsPhaseAISlopClean) && s.WriteMaterials != nil {
+	if (phase == issueops.PhaseImplement || phase == issueops.PhaseAISlopClean) && s.WriteMaterials != nil {
 		materials = s.WriteMaterials(record)
 	}
 	record = ApplyPhaseTransition(cycleport.PhaseTransitionObservations{
@@ -117,15 +117,15 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 
 // resealSamePhase handles `--to` naming the phase the record is already in:
 // only ai-slop-clean and pr re-take their seal, every other phase is a no-op.
-func (s PhaseService) resealSamePhase(stateRoot string, record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase, upstream func(string) review.UpstreamFetch) (issueops.IssueOpsRecord, error) {
+func (s PhaseService) resealSamePhase(stateRoot string, record issueops.Record, phase issueops.Phase, upstream func(string) review.UpstreamFetch) (issueops.Record, error) {
 	switch phase {
-	case issueops.IssueOpsPhaseAISlopClean:
+	case issueops.PhaseAISlopClean:
 		return s.Refresh(stateRoot, record)
-	case issueops.IssueOpsPhasePR:
+	case issueops.PhasePR:
 		// pr 안에서 코드를 고치고 정리·문서·검증 봉인을 새 head로 다시 받은 뒤의 재봉인이다.
 		// pr 진입과 같은 strict 판정을 통과해야 completion이 비교할 pr_head가 바뀐다.
 		if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
-			return issueops.IssueOpsRecord{OK: false}, err
+			return issueops.Record{OK: false}, err
 		}
 		record.PRHead = s.Transitions.Head(record)
 		return s.touchWrite(stateRoot, record)
@@ -144,7 +144,7 @@ func (s PhaseService) entryReadiness(stateRoot string, upstream func(string) rev
 		Compatibility: s.Readiness.Compatibility,
 		Implement:     s.Readiness.Implementation,
 		AISlopClean:   s.Readiness.AISlopClean,
-		StrictPR: func(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
+		StrictPR: func(record issueops.Record) issueops.Readiness {
 			if upstream == nil {
 				upstream = func(gitRoot string) review.UpstreamFetch {
 					return review.UpstreamFetch{Root: gitRoot, Failed: true, Stderr: "upstream was not fetched before the pr transition; retry the command"}

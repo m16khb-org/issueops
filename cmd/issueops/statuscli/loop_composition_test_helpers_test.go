@@ -10,7 +10,7 @@ import (
 	loopapp "issueops/internal/application/looprun"
 )
 
-func testLoopStateRoot() string { return filepath.Join(statestore.StateDir(), "loop") }
+func testLoopStateRoot() string { return filepath.Join(statestore.Dir(), "loop") }
 func testLoopStore() loopadapter.Store {
 	return loopadapter.Store{Directory: testLoopStateRoot(), OpenDatabase: func(dir string) (loopadapter.StateDatabase, error) { return sqlstore.Open(dir) }, GetExisting: sqlstore.GetExisting, GetAllExisting: sqlstore.GetAllExisting}
 }

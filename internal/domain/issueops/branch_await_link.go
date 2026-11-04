@@ -20,7 +20,7 @@ const (
 	awaitBranchLinkMaxTimeout = 30 * time.Minute
 )
 
-func AwaitBranchLinkGates(record issueopscontract.IssueOpsRecord, observationAvailable bool) []string {
+func AwaitBranchLinkGates(record issueopscontract.Record, observationAvailable bool) []string {
 	var missing []string
 	if !observationAvailable {
 		missing = append(missing, "linked_branch_observation_unavailable")
@@ -64,7 +64,7 @@ func AwaitBranchLinkTimeout(raw string) (time.Duration, error) {
 // --link-verified, filled from the prepare record that await-link just read
 // back. await-link stays a read-only observer; the holder records the
 // attestation with the values it observed instead of retyping them.
-func BranchLinkVerifiedCommand(record issueopscontract.IssueOpsRecord) string {
+func BranchLinkVerifiedCommand(record issueopscontract.Record) string {
 	prepare := record.BranchPrepare
 	if prepare == nil {
 		return ""

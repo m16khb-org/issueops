@@ -26,7 +26,7 @@ func (s issueOpsProvenanceObserverStub) Observe(context.Context) (provenanceport
 func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-provenance")
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-provenance"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: repo, Branch: "303-provenance"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-exact-binary")
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-exact-binary"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: repo, Branch: "303-exact-binary"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,10 +140,10 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 	child.Branch = "123-334-child-bootstrap"
 	child.WorktreePath = ""
 	child.Execution = nil
-	child.Delegation = &issueopscontract.IssueOpsDelegationContract{
+	child.Delegation = &issueopscontract.DelegationContract{
 		ParentCycleID: parent.ID, TaskScope: "bootstrap", DelegatedAt: "2026-08-04T00:00:00Z",
 	}
-	parent.ChildCycles = append(parent.ChildCycles, issueopscontract.IssueOpsChildCycleRef{
+	parent.ChildCycles = append(parent.ChildCycles, issueopscontract.ChildCycleRef{
 		CycleID: child.ID, Branch: child.Branch, CreatedAt: "2026-08-04T00:00:00Z",
 	})
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), parent); err != nil {

@@ -25,7 +25,7 @@ func handleSelfLoopMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDe
 			ctx,
 			argmap.StringDefault(call.Arguments, "prefix", "self-verify"),
 			argmap.Int(call.Arguments, "limit", 20),
-			augmentcontract.SelfAugmentHistoryRetentionOptions{
+			augmentcontract.HistoryRetentionOptions{
 				Limit:          argmap.Int(call.Arguments, "retention_limit", 0),
 				PruneRequested: argmap.Bool(call.Arguments, "prune_retention"),
 				Confirm:        argmap.Bool(call.Arguments, "confirm"),
@@ -54,10 +54,10 @@ func handleSelfLoopMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDe
 }
 
 func handleSelfAugmentTool(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
-	result, err := augmentapp.PlanAndSave(augmentcontract.SelfAugmentPlanRequest{
+	result, err := augmentapp.PlanAndSave(augmentcontract.PlanRequest{
 		Cycles:      argmap.Int(call.Arguments, "cycles", 1),
 		TargetScore: argmap.Float(call.Arguments, "target_score", 95),
-	}, argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-augment-latest"), augmentapp.PlanAndSaveDeps{Plan: deps.SelfPlanning.Plan, Save: func(result *augmentcontract.SelfAugmentPlanResult, key string) error {
+	}, argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-augment-latest"), augmentapp.PlanAndSaveDeps{Plan: deps.SelfPlanning.Plan, Save: func(result *augmentcontract.PlanResult, key string) error {
 		return deps.SelfState.SavePlan(ctx, result, key)
 	}})
 	if err != nil {
@@ -67,7 +67,7 @@ func handleSelfAugmentTool(ctx context.Context, call MCPToolCall, deps MCPDepend
 }
 
 func handleSelfAugmentLessonTool(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
-	result, err := deps.SelfPlanning.SaveLesson(ctx, augmentcontract.SelfAugmentLessonRequest{
+	result, err := deps.SelfPlanning.SaveLesson(ctx, augmentcontract.LessonRequest{
 		CandidateID: argmap.String(call.Arguments, "candidate_id"),
 		Lesson:      argmap.String(call.Arguments, "lesson"),
 		NextAction:  argmap.String(call.Arguments, "next_action"),
@@ -95,7 +95,7 @@ func handleSelfVerifyTool(ctx context.Context, call MCPToolCall, deps MCPDepende
 		StateKey:  argmap.StringDefault(call.Arguments, "state_key", "self-verify-latest"),
 	}, verifyapp.ExecuteDeps{
 		Verify: deps.SelfVerify,
-		SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
+		SaveSummary: func(result *augmentcontract.Result, key string) error {
 			return deps.SelfState.SaveSummary(ctx, result, key)
 		},
 	})

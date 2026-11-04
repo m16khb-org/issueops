@@ -2,8 +2,8 @@ package issueopsbenchmark
 
 import contract "issueops/internal/contract/issueopsbenchmark"
 
-func CompareRuns(baseline, candidate contract.IssueOpsBenchmarkRunResult) contract.IssueOpsBenchmarkCompareResult {
-	result := contract.IssueOpsBenchmarkCompareResult{
+func CompareRuns(baseline, candidate contract.RunResult) contract.CompareResult {
+	result := contract.CompareResult{
 		OK:                   true,
 		BaselineID:           baseline.ID,
 		CandidateID:          candidate.ID,

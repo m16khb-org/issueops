@@ -20,7 +20,7 @@ type executionSyncBaseGateRun struct {
 	missing   []string
 }
 
-func fillExecutionSyncBaseInventory(inventory *executionSyncBaseInventory, record issueops.IssueOpsRecord, execution *issueops.Execution) {
+func fillExecutionSyncBaseInventory(inventory *executionSyncBaseInventory, record issueops.Record, execution *issueops.Execution) {
 	inventory.PendingIntentAbsent = execution.Pending == nil
 	inventory.LeaseGeneration = execution.Lease.Generation
 	inventory.LeaseStatus = string(execution.Lease.Status)
@@ -37,7 +37,7 @@ func fillExecutionSyncBaseInventory(inventory *executionSyncBaseInventory, recor
 	}
 }
 
-func executionSyncBaseRecordFacts(record issueops.IssueOpsRecord, execution *issueops.Execution, inventory executionSyncBaseInventory) basesyncdomain.RecordGateFacts {
+func executionSyncBaseRecordFacts(record issueops.Record, execution *issueops.Execution, inventory executionSyncBaseInventory) basesyncdomain.RecordGateFacts {
 	facts := basesyncdomain.RecordGateFacts{
 		ExecutionPresent: true, LeaseActive: execution.Lease.Status == issueops.LeaseStatusActive,
 		CompletionPresent: execution.Completion != nil, RemoteArtifactPresent: record.RemoteArtifact != nil,

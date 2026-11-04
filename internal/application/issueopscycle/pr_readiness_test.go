@@ -11,16 +11,16 @@ import (
 
 func TestLocalPRReadinessMissingPreservesOrderedRecordGates(t *testing.T) {
 	observations := cycleport.ReadinessObservations{
-		PlanInLinkedWorktree: func(model.IssueOpsRecord) bool { return true },
+		PlanInLinkedWorktree: func(model.Record) bool { return true },
 	}
 	want := []string{"issue_url", "branch", "branch_prepare", "intent_contract", "architecture_review", "plan_path", "worktree_path", "ai_slop_clean", "project_docs_review"}
-	if got := LocalPRReadinessMissing(model.IssueOpsRecord{}, observations); !reflect.DeepEqual(got, want) {
+	if got := LocalPRReadinessMissing(model.Record{}, observations); !reflect.DeepEqual(got, want) {
 		t.Fatalf("missing=%v, want %v", got, want)
 	}
 }
 
 func TestReviewGateMissingMapsRecordEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{}
+	record := model.Record{}
 	if got := ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("unprepared implementation review=%q", got)
 	}
@@ -34,14 +34,14 @@ func TestReviewGateMissingMapsRecordEvidence(t *testing.T) {
 }
 
 func TestLocalPRReadinessMissingReportsPlanAndFeedbackDefects(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		WorktreePath: "/wt", PlanPath: ".issueops/plans/p.md", AISlopCleanAt: "t",
-		Feedback: []model.IssueOpsFeedbackItem{{Classification: "contract_change"}},
+		Feedback: []model.FeedbackItem{{Classification: "contract_change"}},
 	}
 	var rootSeen, pathSeen string
 	observations := cycleport.ReadinessObservations{
 		PlanPathExists:       func(root, path string) bool { rootSeen, pathSeen = root, path; return false },
-		PlanInLinkedWorktree: func(model.IssueOpsRecord) bool { return false },
+		PlanInLinkedWorktree: func(model.Record) bool { return false },
 	}
 	got := LocalPRReadinessMissing(record, observations)
 	for _, want := range []string{"plan_exists", "plan_in_worktree", "contract_feedback_issue_update"} {

@@ -25,17 +25,17 @@ func (p *posterFake) Post(provider, issueURL, body string) (string, error) {
 	return p.url, p.err
 }
 
-func graphRecord(issueURL, provider string, links ...model.IssueOpsIssueLink) model.IssueOpsRecord {
-	record := model.IssueOpsRecord{ID: "io-graph", IssueURL: issueURL, IssueLinks: links}
+func graphRecord(issueURL, provider string, links ...model.IssueLink) model.Record {
+	record := model.Record{ID: "io-graph", IssueURL: issueURL, IssueLinks: links}
 	if provider != "" {
-		record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: provider}
+		record.BranchPrepare = &model.BranchPrepare{Provider: provider}
 	}
 	return record
 }
 
 func TestIssueGraphSyncPreviewNeverPostsAndCountsLinks(t *testing.T) {
 	poster := &posterFake{url: "unused"}
-	record := graphRecord("", "", model.IssueOpsIssueLink{Type: "child", URL: "u1"}, model.IssueOpsIssueLink{Type: "blocks", URL: "u2"})
+	record := graphRecord("", "", model.IssueLink{Type: "child", URL: "u1"}, model.IssueLink{Type: "blocks", URL: "u2"})
 	store, _ := newArtifactStoreForTest(record)
 	got, err := NewIssueGraphSyncService(store, poster).Sync(context.Background(), record.ID, false)
 	if err != nil {
@@ -47,7 +47,7 @@ func TestIssueGraphSyncPreviewNeverPostsAndCountsLinks(t *testing.T) {
 }
 
 func TestIssueGraphSyncConfirmPostsProviderSpecificResult(t *testing.T) {
-	links := []model.IssueOpsIssueLink{{Type: "depends-on", URL: "https://x/1", Title: "선행"}, {Type: "child", URL: "https://x/2"}}
+	links := []model.IssueLink{{Type: "depends-on", URL: "https://x/1", Title: "선행"}, {Type: "child", URL: "https://x/2"}}
 	for _, tc := range []struct {
 		provider, urlKey string
 	}{{"github", "comment_url"}, {"gitlab", "note_url"}} {
@@ -73,10 +73,10 @@ func TestIssueGraphSyncConfirmPostsProviderSpecificResult(t *testing.T) {
 }
 
 func TestIssueGraphSyncConfirmRefusalsAndNoop(t *testing.T) {
-	link := model.IssueOpsIssueLink{Type: "child", URL: "https://x/2"}
+	link := model.IssueLink{Type: "child", URL: "https://x/2"}
 	for _, tc := range []struct {
 		name    string
-		record  model.IssueOpsRecord
+		record  model.Record
 		wantErr string
 		noop    bool
 	}{
@@ -106,12 +106,12 @@ func TestIssueGraphSyncConfirmRefusalsAndNoop(t *testing.T) {
 }
 
 func TestIssueGraphSyncPropagatesReadAndPostFailures(t *testing.T) {
-	store, _ := newArtifactStoreForTest(model.IssueOpsRecord{ID: "io-graph"})
+	store, _ := newArtifactStoreForTest(model.Record{ID: "io-graph"})
 	if _, err := NewIssueGraphSyncService(store, &posterFake{}).Sync(context.Background(), "io-missing", true); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("read err = %v", err)
 	}
 	boom := errors.New("post failed")
-	record := graphRecord("https://host/issues/1", "github", model.IssueOpsIssueLink{Type: "child", URL: "u"})
+	record := graphRecord("https://host/issues/1", "github", model.IssueLink{Type: "child", URL: "u"})
 	store, _ = newArtifactStoreForTest(record)
 	if got, err := NewIssueGraphSyncService(store, &posterFake{err: boom}).Sync(context.Background(), record.ID, true); !errors.Is(err, boom) || got != nil {
 		t.Fatalf("post err = %v, result %v", err, got)
@@ -119,15 +119,15 @@ func TestIssueGraphSyncPropagatesReadAndPostFailures(t *testing.T) {
 }
 
 func TestBodySyncCommandResolvesProviderBodyAndActor(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-sync", IssueURL: "https://github.com/acme/repo/issues/1"}
+	record := model.Record{ID: "io-sync", IssueURL: "https://github.com/acme/repo/issues/1"}
 	store, _ := newArtifactStoreForTest(record)
 	ancestry := []model.NativeProcessReceipt{{PID: 42}}
 	var gotName, gotID string
 	var gotCmd bodysyncc.Command
-	var gotActor model.IssueOpsActor
+	var gotActor model.Actor
 	resolve := func(name string) (BodySyncOperation, error) {
 		gotName = name
-		return func(_ context.Context, id string, cmd bodysyncc.Command, actor model.IssueOpsActor) (model.IssueOpsRecord, bodysyncc.Result, error) {
+		return func(_ context.Context, id string, cmd bodysyncc.Command, actor model.Actor) (model.Record, bodysyncc.Result, error) {
 			gotID, gotCmd, gotActor = id, cmd, actor
 			return record, bodysyncc.Result{}, nil
 		}, nil
@@ -137,7 +137,7 @@ func TestBodySyncCommandResolvesProviderBodyAndActor(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := NewBodySyncCommandService(store, NewTemplateBodyResolver(os.ReadFile), resolve, func() ([]model.NativeProcessReceipt, error) { return ancestry, nil })
-	_, _, err := service.Sync(context.Background(), BodySyncInput{BodyFile: bodyFile, Command: bodysyncc.Command{ID: "io-sync", Kind: "issue"}, Actor: model.IssueOpsActor{Host: "codex"}})
+	_, _, err := service.Sync(context.Background(), BodySyncInput{BodyFile: bodyFile, Command: bodysyncc.Command{ID: "io-sync", Kind: "issue"}, Actor: model.Actor{Host: "codex"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,12 +147,12 @@ func TestBodySyncCommandResolvesProviderBodyAndActor(t *testing.T) {
 }
 
 func TestBodySyncCommandRefusesBeforeOperationRuns(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-sync", IssueURL: "https://github.com/acme/repo/issues/1"}
-	noProvider := model.IssueOpsRecord{ID: "io-noprov"}
+	record := model.Record{ID: "io-sync", IssueURL: "https://github.com/acme/repo/issues/1"}
+	noProvider := model.Record{ID: "io-noprov"}
 	store, _ := newArtifactStoreForTest(record)
 	store.records[noProvider.ID] = noProvider
 	ran := false
-	op := func(context.Context, string, bodysyncc.Command, model.IssueOpsActor) (model.IssueOpsRecord, bodysyncc.Result, error) {
+	op := func(context.Context, string, bodysyncc.Command, model.Actor) (model.Record, bodysyncc.Result, error) {
 		ran = true
 		return record, bodysyncc.Result{}, nil
 	}
@@ -191,8 +191,8 @@ func TestBodySyncCommandRefusesBeforeOperationRuns(t *testing.T) {
 	}
 }
 
-func publicationRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "io-pub", Branch: "7-demo", IssueURL: "https://github.com/acme/repo/issues/7", BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "main"}}
+func publicationRecord() model.Record {
+	return model.Record{ID: "io-pub", Branch: "7-demo", IssueURL: "https://github.com/acme/repo/issues/7", BranchPrepare: &model.BranchPrepare{BaseBranch: "main"}}
 }
 
 const koreanBody = "## 요약\n\n보고서 형식을 정리했습니다.\n\n## 변경 내용\n\n보고서 형식을 한국어로 정리했습니다.\n\n## 확인한 것\n\n단위 시험을 통과했습니다.\n\n## 리뷰 포인트\n\n본문 구성을 봐 주세요.\n"
@@ -256,7 +256,7 @@ func TestPublicationCommandRefusals(t *testing.T) {
 	secret := "ghp_" + strings.Repeat("a", 36)
 	for _, tc := range []struct {
 		name      string
-		record    model.IssueOpsRecord
+		record    model.Record
 		req       model.RemotePullRequestRequest
 		observe   AncestryObserver
 		normalize func(context.Context, model.NativeActor) (model.NativeActor, error)
@@ -264,7 +264,7 @@ func TestPublicationCommandRefusals(t *testing.T) {
 		want      func(error) bool
 	}{
 		{"missing record", publicationRecord(), model.RemotePullRequestRequest{ID: "io-missing"}, okObserve, okNormalize, okPublish, func(err error) bool { return errors.Is(err, os.ErrNotExist) }},
-		{"no provider", model.IssueOpsRecord{ID: "io-pub"}, model.RemotePullRequestRequest{ID: "io-pub"}, okObserve, okNormalize, okPublish, func(err error) bool { return strings.Contains(err.Error(), "cannot determine provider") }},
+		{"no provider", model.Record{ID: "io-pub"}, model.RemotePullRequestRequest{ID: "io-pub"}, okObserve, okNormalize, okPublish, func(err error) bool { return strings.Contains(err.Error(), "cannot determine provider") }},
 		{"body and file conflict", publicationRecord(), model.RemotePullRequestRequest{ID: "io-pub", Body: "x"}, okObserve, okNormalize, okPublish, nil},
 		{"secret title", publicationRecord(), model.RemotePullRequestRequest{ID: "io-pub", Title: secret, Body: koreanBody}, okObserve, okNormalize, okPublish, func(err error) bool { return strings.Contains(err.Error(), "secret-like") }},
 		{"confirm without labels", publicationRecord(), model.RemotePullRequestRequest{ID: "io-pub", Title: "제목", Body: koreanBody, Confirm: true}, okObserve, okNormalize, okPublish, func(err error) bool { return strings.Contains(err.Error(), "label is required") }},
@@ -308,17 +308,17 @@ type authorityFake struct {
 	calls int
 }
 
-func (a *authorityFake) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+func (a *authorityFake) Authorize(context.Context, model.Record, model.Actor) error {
 	a.calls++
 	return a.err
 }
 
-func reviewedRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
+func reviewedRecord() model.Record {
+	return model.Record{
 		ID: "io-review", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/3",
-		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{
+		DevilsAdvocateReview: &model.DevilsAdvocateReview{
 			Verdict: "approve", Findings: []string{"f1", "f2"},
-			History: []model.IssueOpsDevilsAdvocateRound{{Verdict: "revise", Findings: []string{"old"}}},
+			History: []model.DevilsAdvocateRound{{Verdict: "revise", Findings: []string{"old"}}},
 		},
 	}
 }
@@ -332,7 +332,7 @@ func TestReviewReflectionConfirmStampsRecordAfterRemoteUpdate(t *testing.T) {
 	provider := &reviewProviderFake{result: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true}}
 	auth := &authorityFake{}
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
-	record, result, err := newReviewService(store, auth, provider, now).Reflect(context.Background(), "io-review", "", true, model.IssueOpsActor{})
+	record, result, err := newReviewService(store, auth, provider, now).Reflect(context.Background(), "io-review", "", true, model.Actor{})
 	if err != nil || !result.Updated {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -360,7 +360,7 @@ func TestReviewReflectionPreviewAndNoopLeaveRecordUnstamped(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			store, _ := newArtifactStoreForTest(reviewedRecord())
 			auth := &authorityFake{}
-			_, _, err := newReviewService(store, auth, &reviewProviderFake{result: tc.result}, time.Now()).Reflect(context.Background(), "io-review", "", tc.confirm, model.IssueOpsActor{})
+			_, _, err := newReviewService(store, auth, &reviewProviderFake{result: tc.result}, time.Now()).Reflect(context.Background(), "io-review", "", tc.confirm, model.Actor{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -377,14 +377,14 @@ func TestReviewReflectionRefusals(t *testing.T) {
 	noFindings.DevilsAdvocateReview.Findings = nil
 	noIssue := reviewedRecord()
 	noIssue.IssueURL = ""
-	noIssue.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github"}
+	noIssue.BranchPrepare = &model.BranchPrepare{Provider: "github"}
 	noProvider := reviewedRecord()
 	noProvider.IssueURL = "https://example.com/issues/3"
 	ok := func() ([]model.NativeProcessReceipt, error) { return nil, nil }
 	for _, tc := range []struct {
 		name     string
 		id       string
-		record   model.IssueOpsRecord
+		record   model.Record
 		auth     error
 		resolve  ReviewProviderResolver
 		observe  AncestryObserver
@@ -415,7 +415,7 @@ func TestReviewReflectionRefusals(t *testing.T) {
 				observe = ok
 			}
 			service := NewReviewReflectionService(store, &authorityFake{err: tc.auth}, resolve, observe, time.Now)
-			_, _, err := service.Reflect(context.Background(), tc.id, "", true, model.IssueOpsActor{})
+			_, _, err := service.Reflect(context.Background(), tc.id, "", true, model.Actor{})
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("err = %v, want %q", err, tc.want)
 			}
@@ -427,9 +427,9 @@ func TestReviewReflectionRefusals(t *testing.T) {
 }
 
 func TestReviewReflectionStampFailureAfterRemoteUpdate(t *testing.T) {
-	store := &vanishingReviewStore{artifactStoreForTest: &artifactStoreForTest{records: map[string]model.IssueOpsRecord{"io-review": reviewedRecord()}}}
+	store := &vanishingReviewStore{artifactStoreForTest: &artifactStoreForTest{records: map[string]model.Record{"io-review": reviewedRecord()}}}
 	provider := &reviewProviderFake{result: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true}}
-	_, result, err := newReviewService(store, &authorityFake{}, provider, time.Now()).Reflect(context.Background(), "io-review", "", true, model.IssueOpsActor{})
+	_, result, err := newReviewService(store, &authorityFake{}, provider, time.Now()).Reflect(context.Background(), "io-review", "", true, model.Actor{})
 	if err == nil || !strings.Contains(err.Error(), "disappeared before reflect stamp") || !result.Updated {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -441,7 +441,7 @@ type vanishingReviewStore struct {
 	*artifactStoreForTest
 }
 
-func (s *vanishingReviewStore) Update(ctx context.Context, id string, transition RecordTransition) (model.IssueOpsRecord, error) {
+func (s *vanishingReviewStore) Update(ctx context.Context, id string, transition RecordTransition) (model.Record, error) {
 	record := s.records[id]
 	record.DevilsAdvocateReview = nil
 	s.records[id] = record
@@ -462,7 +462,7 @@ func TestPublicationPreviewWarnsWhenTheIssueIsClosed(t *testing.T) {
 	}{{"CLOSED", nil, "issue_closed: "}, {"closed", nil, "issue_closed: "}, {"OPEN", nil, ""}, {"", errors.New("gh down"), "issue_state_unread: "}} {
 		store, _ := newArtifactStoreForTest(record)
 		service := NewPublicationCommandService(store, NewTemplateBodyResolver(os.ReadFile), nil, nil, publish).
-			WithIssueState(func(context.Context, model.IssueOpsRecord, string) (string, error) { return tc.state, tc.err })
+			WithIssueState(func(context.Context, model.Record, string) (string, error) { return tc.state, tc.err })
 		result, err := service.Create(context.Background(), PublicationInput{Request: model.RemotePullRequestRequest{ID: "io-pub", Title: "제목", Body: koreanBody}})
 		if err != nil {
 			t.Fatal(err)
@@ -514,7 +514,7 @@ type secondCallAuthority struct {
 	err   error
 }
 
-func (a *secondCallAuthority) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+func (a *secondCallAuthority) Authorize(context.Context, model.Record, model.Actor) error {
 	a.calls++
 	if a.calls > 1 {
 		return a.err
@@ -526,7 +526,7 @@ func TestReviewReflectionStampRefusedWhenAuthorityLostAfterRemoteUpdate(t *testi
 	store, _ := newArtifactStoreForTest(reviewedRecord())
 	provider := &reviewProviderFake{result: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true}}
 	lost := errors.New("lease lost")
-	_, result, err := newReviewService(store, &secondCallAuthority{err: lost}, provider, time.Now()).Reflect(context.Background(), "io-review", "", true, model.IssueOpsActor{})
+	_, result, err := newReviewService(store, &secondCallAuthority{err: lost}, provider, time.Now()).Reflect(context.Background(), "io-review", "", true, model.Actor{})
 	if !errors.Is(err, lost) || !result.Updated || store.records["io-review"].DevilsAdvocateReview.IssueReflectedAt != "" {
 		t.Fatalf("result=%+v err=%v stamp=%q", result, err, store.records["io-review"].DevilsAdvocateReview.IssueReflectedAt)
 	}

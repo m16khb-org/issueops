@@ -41,11 +41,11 @@ func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 	repo := makeGitRepoForContract(t)
 	runGitForContract(t, repo, "remote", "add", "origin", "https://github.com/acme/repo.git")
 	var deps [2]issueopscli.Dependencies
-	var records [2]model.IssueOpsRecord
+	var records [2]model.Record
 	for i := range deps {
 		t.Setenv("ISSUEOPS_STATE_DIR", roots[i])
 		var err error
-		records[i], err = startIssueOpsFixture(issueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "991-remote-state"})
+		records[i], err = startIssueOpsFixture(issueOpsStateRoot(), model.StartRequest{Repo: repo, Branch: "991-remote-state"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -71,7 +71,7 @@ func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 func TestRemoteChildCreationUsesRootApplicationAndPersistsLink(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := issueOpsStateRoot()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "1234-child-root"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: makeGitRepoForContract(t), Branch: "1234-child-root"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestRemoteChildCreationUsesRootApplicationAndPersistsLink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = newBranchPreparer(root).Prepare(context.Background(), record.ID, model.IssueOpsBranchPrepareRequest{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main", LinkVerified: true}, nil)
+	record, err = newBranchPreparer(root).Prepare(context.Background(), record.ID, model.BranchPrepareRequest{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main", LinkVerified: true}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

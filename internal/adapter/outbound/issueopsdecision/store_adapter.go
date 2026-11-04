@@ -15,13 +15,13 @@ func (repository Repository) Update(
 	ctx context.Context,
 	stateRoot string,
 	id string,
-	mutate func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error),
-) (issueopscontract.IssueOpsRecord, error) {
+	mutate func(issueopscontract.Record) (issueopscontract.Record, error),
+) (issueopscontract.Record, error) {
 	return repository.Store.Update(
 		ctx,
 		stateRoot,
 		id,
-		func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+		func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 			record, err := mutate(record)
 			return record, err == nil, err
 		},

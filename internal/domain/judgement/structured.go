@@ -11,7 +11,7 @@ import (
 	"issueops/internal/domain/prompt"
 )
 
-func BuildJSONSchemaSection(example string, fieldTypes []string) prompt.PromptDataSection {
+func BuildJSONSchemaSection(example string, fieldTypes []string) prompt.DataSection {
 	lines := []string{
 		"Return exactly one JSON object matching this response schema.",
 		"Do not include prose before or after the JSON object.",
@@ -27,7 +27,7 @@ func BuildJSONSchemaSection(example string, fieldTypes []string) prompt.PromptDa
 	if example != "" {
 		lines = append(lines, "", "Example:", example)
 	}
-	return prompt.PromptDataSection{
+	return prompt.DataSection{
 		Title:   "Host-Agent Judgement Response Schema",
 		Content: strings.Join(lines, "\n"),
 	}

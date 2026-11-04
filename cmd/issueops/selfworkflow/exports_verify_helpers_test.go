@@ -8,7 +8,7 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-func NewSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) augmentcontract.SelfAugmentResult {
+func NewSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) augmentcontract.Result {
 	return verifyapp.NewLoopResult(iterations, baseSeed, targetScore, IssueOpsRoot())
 }
 

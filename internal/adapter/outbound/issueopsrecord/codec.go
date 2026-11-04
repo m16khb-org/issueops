@@ -13,8 +13,8 @@ import (
 	issueopsdomain "issueops/internal/domain/issueops"
 )
 
-func Decode(id string, data []byte) (issueopscontract.IssueOpsRecord, error) {
-	invalid := issueopscontract.IssueOpsRecord{
+func Decode(id string, data []byte) (issueopscontract.Record, error) {
+	invalid := issueopscontract.Record{
 		OK:            false,
 		ID:            id,
 		Invalid:       true,
@@ -24,7 +24,7 @@ func Decode(id string, data []byte) (issueopscontract.IssueOpsRecord, error) {
 	if err != nil || normalizedID != id {
 		return invalid, statecontract.ErrInvalidState
 	}
-	var record issueopscontract.IssueOpsRecord
+	var record issueopscontract.Record
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&record); err != nil {
@@ -33,7 +33,7 @@ func Decode(id string, data []byte) (issueopscontract.IssueOpsRecord, error) {
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return invalid, statecontract.ErrInvalidState
 	}
-	if record.ID != id || record.SchemaVersion != issueopscontract.IssueOpsSchemaVersion {
+	if record.ID != id || record.SchemaVersion != issueopscontract.SchemaVersion {
 		return invalid, statecontract.ErrInvalidState
 	}
 	if err := issueopscontract.ValidateRecord(record); err != nil {
@@ -46,7 +46,7 @@ func Decode(id string, data []byte) (issueopscontract.IssueOpsRecord, error) {
 	return record, nil
 }
 
-func Encode(record issueopscontract.IssueOpsRecord) ([]byte, error) {
+func Encode(record issueopscontract.Record) ([]byte, error) {
 	if _, err := NormalizeID(record.ID); err != nil {
 		return nil, err
 	}

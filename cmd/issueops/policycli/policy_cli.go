@@ -74,7 +74,7 @@ func (command Command) FakeRun(args []string) error {
 		}
 	}
 	if !result.Policy.Allowed {
-		return reportedIf(jsonOut, policydomain.PolicyDeniedError{Reasons: result.Policy.DenyReasons})
+		return reportedIf(jsonOut, policydomain.DeniedError{Reasons: result.Policy.DenyReasons})
 	}
 	return nil
 }
@@ -111,7 +111,7 @@ func (command Command) RunReadOnly(args []string) error {
 		}
 	}
 	if !result.Policy.Allowed {
-		return reportedIf(jsonOut, policydomain.PolicyDeniedError{Reasons: result.Policy.DenyReasons})
+		return reportedIf(jsonOut, policydomain.DeniedError{Reasons: result.Policy.DenyReasons})
 	}
 	if result.ExitCode != 0 {
 		return reportedIf(jsonOut, fmt.Errorf("command exited %d", result.ExitCode))

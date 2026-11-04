@@ -10,7 +10,7 @@ func containsString(items []string, want string) bool {
 	return slices.Contains(items, want)
 }
 
-func stateDoctorHasIssue(issues []statecontract.StateDoctorIssue, code string) bool {
+func stateDoctorHasIssue(issues []statecontract.DoctorIssue, code string) bool {
 	for _, issue := range issues {
 		if issue.Code == code {
 			return true

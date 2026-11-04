@@ -17,7 +17,7 @@ import (
 func newSelfWorkflowPlanning(root, dir, version string) mcpcli.SelfPlanningDependencies {
 	state := newStateService(dir)
 	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: newDocsService().List}, DocsIndex: newDocsService().Index, ListSkillNames: install.ListSkillNames, StateList: state.List, StateRead: state.Read, Now: time.Now}
-	plan := func(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
+	plan := func(req contract.PlanRequest) contract.PlanResult {
 		return planner.Plan(req, root, version)
 	}
 	return mcpcli.SelfPlanningDependencies{
@@ -30,12 +30,12 @@ func newSelfWorkflowPlanning(root, dir, version string) mcpcli.SelfPlanningDepen
 				return json.MarshalIndent(snapshot, "", "  ")
 			}, Write: requestStateWrite(ctx, state), StateDir: func() string { return dir }})
 		},
-		SaveLesson: func(ctx context.Context, req contract.SelfAugmentLessonRequest) (contract.SelfAugmentLessonResult, error) {
-			return augmentapp.SaveLesson(req, augmentapp.SaveLessonDeps{IssueOpsRoot: func() string { return root }, SelectCandidate: func() *contract.SelfAugmentCandidate {
-				return plan(contract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}).SelectedCandidate
-			}, Now: time.Now, Encode: func(snapshot contract.SelfAugmentLessonStateSnapshot) ([]byte, error) {
+		SaveLesson: func(ctx context.Context, req contract.LessonRequest) (contract.LessonResult, error) {
+			return augmentapp.SaveLesson(req, augmentapp.SaveLessonDeps{IssueOpsRoot: func() string { return root }, SelectCandidate: func() *contract.Candidate {
+				return plan(contract.PlanRequest{Cycles: 1, TargetScore: 95}).SelectedCandidate
+			}, Now: time.Now, Encode: func(snapshot contract.LessonStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
-			}, Write: requestStateWrite(ctx, state), StateDir: func() string { return dir }, Prune: func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
+			}, Write: requestStateWrite(ctx, state), StateDir: func() string { return dir }, Prune: func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
 				return state.PrunePrefix(ctx, prefix, maxAge, maxRecords, confirm)
 			}})
 		},

@@ -15,10 +15,10 @@ import (
 func TestRepositoryReadsExistingRecordWithoutCreatingStore(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-status01"
-	record := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	record := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhasePlan,
+		Phase:         issueopscontract.PhasePlan,
 	}
 	data, err := json.Marshal(record)
 	if err != nil {

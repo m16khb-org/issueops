@@ -17,8 +17,8 @@ func TestQualityRefillCandidatesStayOpenWithScoresAndVerification(t *testing.T) 
 		"state-write-locking",
 	}
 
-	byID := map[string]contract.SelfAugmentCandidate{}
-	for _, candidate := range app.Candidates(contract.SelfAugmentRepoSignals{}) {
+	byID := map[string]contract.Candidate{}
+	for _, candidate := range app.Candidates(contract.RepoSignals{}) {
 		byID[candidate.ID] = candidate
 	}
 

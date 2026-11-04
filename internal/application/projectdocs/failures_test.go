@@ -89,11 +89,11 @@ func TestReadPropagatesReadFailure(t *testing.T) {
 
 func TestReviseRejectsInvalidInputBeforeTouchingTheFile(t *testing.T) {
 	cases := map[string]struct {
-		request projectdocscontract.ProjectDocsReviseRequest
+		request projectdocscontract.ReviseRequest
 		want    string
 	}{
-		"blank content": {projectdocscontract.ProjectDocsReviseRequest{Content: " \n", Summary: "why"}, "content is required"},
-		"blank summary": {projectdocscontract.ProjectDocsReviseRequest{Content: "# Doc", Summary: "  "}, "summary is required"},
+		"blank content": {projectdocscontract.ReviseRequest{Content: " \n", Summary: "why"}, "content is required"},
+		"blank summary": {projectdocscontract.ReviseRequest{Content: "# Doc", Summary: "  "}, "summary is required"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestReviseRejectsInvalidInputBeforeTouchingTheFile(t *testing.T) {
 }
 
 func TestRevisePropagatesReadAndWriteFailures(t *testing.T) {
-	request := projectdocscontract.ProjectDocsReviseRequest{Content: "# Doc", Summary: "why", Confirm: true}
+	request := projectdocscontract.ReviseRequest{Content: "# Doc", Summary: "why", Confirm: true}
 	if _, err := Revise(request, "/repo", ".issueops/TESTING.md", "/p", &failingRevision{readErr: errEffect}); !errors.Is(err, errEffect) {
 		t.Fatalf("read err=%v", err)
 	}
@@ -124,12 +124,12 @@ func TestRevisePropagatesReadAndWriteFailures(t *testing.T) {
 
 func TestAppendRejectsInvalidRequestsWithoutTouchingDisk(t *testing.T) {
 	cases := map[string]struct {
-		request projectdocscontract.ProjectDocsAppendRequest
+		request projectdocscontract.AppendRequest
 		want    string
 	}{
-		"unknown kind":  {projectdocscontract.ProjectDocsAppendRequest{Kind: "note", Title: "T", Summary: "S"}, "unsupported record kind"},
-		"blank title":   {projectdocscontract.ProjectDocsAppendRequest{Kind: "adr", Title: " ", Summary: "S"}, "title is required"},
-		"blank summary": {projectdocscontract.ProjectDocsAppendRequest{Kind: "adr", Title: "T", Summary: ""}, "summary is required"},
+		"unknown kind":  {projectdocscontract.AppendRequest{Kind: "note", Title: "T", Summary: "S"}, "unsupported record kind"},
+		"blank title":   {projectdocscontract.AppendRequest{Kind: "adr", Title: " ", Summary: "S"}, "title is required"},
+		"blank summary": {projectdocscontract.AppendRequest{Kind: "adr", Title: "T", Summary: ""}, "summary is required"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestAppendRejectsInvalidRequestsWithoutTouchingDisk(t *testing.T) {
 }
 
 func TestAppendStopsOnDirectoryAndWriteFailures(t *testing.T) {
-	request := projectdocscontract.ProjectDocsAppendRequest{Kind: "adr", Title: "Choice", Summary: "why"}
+	request := projectdocscontract.AppendRequest{Kind: "adr", Title: "Choice", Summary: "why"}
 	fake := &failingAppend{ensureErr: errEffect}
 	if _, err := Append("/repo", request, fake); !errors.Is(err, errEffect) || len(fake.events) != 0 {
 		t.Fatalf("ensure err=%v events=%v", err, fake.events)
@@ -156,7 +156,7 @@ func TestAppendStopsOnDirectoryAndWriteFailures(t *testing.T) {
 
 func TestAppendReportsOverviewLinkFailureAsWarningAfterWritingRecord(t *testing.T) {
 	fake := &failingAppend{lineErr: errEffect, appendEffects: appendEffects{existing: map[string]bool{"/repo/.issueops/cautions/overview.md": true}}}
-	result, err := Append("/repo", projectdocscontract.ProjectDocsAppendRequest{Kind: "caution", Title: "Disk", Summary: "why"}, fake)
+	result, err := Append("/repo", projectdocscontract.AppendRequest{Kind: "caution", Title: "Disk", Summary: "why"}, fake)
 	if err != nil {
 		t.Fatalf("record is written, link failure must not be an error: %v", err)
 	}
@@ -225,13 +225,13 @@ func TestServiceNormalizesRootBeforeEveryOperation(t *testing.T) {
 	if _, err := service.Read("", "TESTING.md"); !errors.Is(err, errEffect) {
 		t.Fatalf("Read err=%v", err)
 	}
-	if _, err := service.Revise(projectdocscontract.ProjectDocsReviseRequest{Content: "x", Summary: "y"}); !errors.Is(err, errEffect) {
+	if _, err := service.Revise(projectdocscontract.ReviseRequest{Content: "x", Summary: "y"}); !errors.Is(err, errEffect) {
 		t.Fatalf("Revise err=%v", err)
 	}
 	if _, err := service.Route("", "task"); !errors.Is(err, errEffect) {
 		t.Fatalf("Route err=%v", err)
 	}
-	if _, err := service.Append(projectdocscontract.ProjectDocsAppendRequest{Kind: "adr", Title: "T", Summary: "S"}); !errors.Is(err, errEffect) {
+	if _, err := service.Append(projectdocscontract.AppendRequest{Kind: "adr", Title: "T", Summary: "S"}); !errors.Is(err, errEffect) {
 		t.Fatalf("Append err=%v", err)
 	}
 }
@@ -241,14 +241,14 @@ func TestServiceReadAndReviseRejectUnknownDocsAndResolveAllowedOnes(t *testing.T
 	if _, err := service.Read("repo", "secrets.md"); err == nil || !strings.Contains(err.Error(), "unsupported project doc") {
 		t.Fatalf("Read err=%v", err)
 	}
-	if _, err := service.Revise(projectdocscontract.ProjectDocsReviseRequest{RepoRoot: "repo", RelPath: "../x.md", Content: "x", Summary: "y"}); err == nil || !strings.Contains(err.Error(), "unsupported project doc") {
+	if _, err := service.Revise(projectdocscontract.ReviseRequest{RepoRoot: "repo", RelPath: "../x.md", Content: "x", Summary: "y"}); err == nil || !strings.Contains(err.Error(), "unsupported project doc") {
 		t.Fatalf("Revise err=%v", err)
 	}
 	read, err := service.Read("repo", "TESTING.md")
 	if err != nil || read.RepoRoot != "/norm/repo" || read.RelPath != ".issueops/TESTING.md" || read.Path != "/norm/repo/.issueops/TESTING.md" || read.Content != "# Old\n" {
 		t.Fatalf("read=%+v err=%v", read, err)
 	}
-	revised, err := service.Revise(projectdocscontract.ProjectDocsReviseRequest{RepoRoot: "repo", RelPath: ".issueops/TESTING.md", Content: "# New", Summary: "y", ExpectedSHA256: projectdocdomain.SHA256Hex("# Old\n")})
+	revised, err := service.Revise(projectdocscontract.ReviseRequest{RepoRoot: "repo", RelPath: ".issueops/TESTING.md", Content: "# New", Summary: "y", ExpectedSHA256: projectdocdomain.SHA256Hex("# Old\n")})
 	if err != nil || revised.Path != "/norm/repo/.issueops/TESTING.md" || revised.Action != "update" || !revised.DryRun {
 		t.Fatalf("revised=%+v err=%v", revised, err)
 	}
@@ -260,7 +260,7 @@ func TestServiceRouteAndAppendUseNormalizedRoot(t *testing.T) {
 	if err != nil || routed.RepoRoot != "/norm/repo" {
 		t.Fatalf("routed=%+v err=%v", routed, err)
 	}
-	appended, err := service.Append(projectdocscontract.ProjectDocsAppendRequest{RepoRoot: "repo", Kind: "adr", Title: "Choice", Summary: "why"})
+	appended, err := service.Append(projectdocscontract.AppendRequest{RepoRoot: "repo", Kind: "adr", Title: "Choice", Summary: "why"})
 	if err != nil || appended.RepoRoot != "/norm/repo" || appended.Path != "/norm/repo/.issueops/adr/2000-01-01-choice.md" {
 		t.Fatalf("appended=%+v err=%v", appended, err)
 	}

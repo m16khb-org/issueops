@@ -29,8 +29,8 @@ func TestSelfVerificationInstancesKeepActualFailuresAndSavedRootsSeparate(t *tes
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			var cli contract.SelfAugmentResult
-			err := verifycmd.Run([]string{"--seed", "42", "--llm-eval=false", "--save-state", "--state-key", "cli", "--json"}, verifycmd.Deps{Verify: execute, SaveSummary: func(result *contract.SelfAugmentResult, key string) error {
+			var cli contract.Result
+			err := verifycmd.Run([]string{"--seed", "42", "--llm-eval=false", "--save-state", "--state-key", "cli", "--json"}, verifycmd.Deps{Verify: execute, SaveSummary: func(result *contract.Result, key string) error {
 				return state.SaveSummary(context.Background(), result, key)
 			}, PrintJSON: func(value any) error {
 				// A failed gate prints the summary with its error as one map document.
@@ -49,12 +49,12 @@ func TestSelfVerificationInstancesKeepActualFailuresAndSavedRootsSeparate(t *tes
 				t.Errorf("instance %d MCP rejected gate result: %v %+v", i, err, result)
 				return
 			}
-			var sdk contract.SelfAugmentResult
+			var sdk contract.Result
 			if err := json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &sdk); err != nil {
 				t.Error(err)
 				return
 			}
-			for _, result := range []contract.SelfAugmentResult{cli, sdk} {
+			for _, result := range []contract.Result{cli, sdk} {
 				if result.OK || result.IssueOpsRoot != roots[i] || len(result.Runs) != 1 || len(result.Runs[0].Steps) != 1 || result.Runs[0].Steps[0].OK || result.Runs[0].Steps[0].Label != "harness invariants" {
 					t.Errorf("mixed root or bypassed actual failed gate: %+v", result)
 					return
@@ -73,7 +73,7 @@ func TestSelfVerificationInstancesKeepActualFailuresAndSavedRootsSeparate(t *tes
 			if err := json.Unmarshal(raw, &record); err != nil {
 				t.Fatal(err)
 			}
-			var saved contract.SelfAugmentResult
+			var saved contract.Result
 			if err := json.Unmarshal([]byte(record.Content), &saved); err != nil {
 				t.Fatal(err)
 			}

@@ -17,10 +17,10 @@ const (
 	finishReplacementPR = "https://github.com/acme/repo/pull/3"
 )
 
-func finishSupersedeRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		ID: "cycle", Repo: "/repo", Phase: model.IssueOpsPhaseDone,
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: finishOriginalPR},
+func finishSupersedeRecord() model.Record {
+	return model.Record{
+		ID: "cycle", Repo: "/repo", Phase: model.PhaseDone,
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: finishOriginalPR},
 	}
 }
 
@@ -34,7 +34,7 @@ func TestFinishPreviewAcceptsSupersedingArtifactInsteadOfMergeEvidence(t *testin
 		return domain.ArtifactObservation{URL: url, Merged: true, State: "MERGED", Body: "Supersedes #1"}, nil
 	}}
 	record := finishSupersedeRecord()
-	record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "parent"}
+	record.BranchPrepare = &model.BranchPrepare{BaseBranch: "parent"}
 	req := finishSupersedeRequest(" " + finishReplacementPR + " ")
 	req.MergedBaseBranch = "main"
 	inventory, result := previewer.Plan(context.Background(), record, req)
@@ -109,7 +109,7 @@ func TestFinishPreviewClassifiesMergedBaseFromOriginRefs(t *testing.T) {
 				return tc.code, tc.out
 			}}
 			record := finishSupersedeRecord()
-			record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "parent"}
+			record.BranchPrepare = &model.BranchPrepare{BaseBranch: "parent"}
 			req := finishSupersedeRequest("")
 			req.Merged, req.MergedBaseBranch = true, "main"
 			_, result := (app.FinishPreviewer{Environment: env}).Plan(context.Background(), record, req)

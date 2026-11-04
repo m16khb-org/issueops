@@ -112,7 +112,7 @@ func TestExecutionReplacementRefusesFinalizeWhileOwnerIsLive(t *testing.T) {
 	}
 }
 
-func replacementExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRecord) {
+func replacementExecutionFixture(t *testing.T) (string, contractissueops.Record) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	fixture := newClaimableExecutionFixture(t, stateRoot, "270-dead-owner")

@@ -2,8 +2,8 @@ package selfaugment
 
 import contract "issueops/internal/contract/selfaugment"
 
-func ResearchInfluences() []contract.SelfAugmentInfluence {
-	return []contract.SelfAugmentInfluence{
+func ResearchInfluences() []contract.Influence {
+	return []contract.Influence{
 		{Name: "Reflexion", Source: "https://arxiv.org/abs/2303.11366", Adopted: "scalar/test feedback is converted into reusable verbal lessons between cycles"},
 		{Name: "Self-Refine", Source: "https://arxiv.org/abs/2303.17651", Adopted: "generate-feedback-refine is used inside candidate design and implementation retries"},
 		{Name: "Voyager", Source: "https://arxiv.org/abs/2305.16291", Adopted: "automatic curriculum and skill-library thinking guide open-ended improvement selection"},

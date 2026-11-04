@@ -9,16 +9,16 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func RecordDomainReview(store reviewport.ReviewMutationStore, stateRoot, id string, req model.IssueOpsDomainReviewRequest) (model.IssueOpsRecord, error) {
+func RecordDomainReview(store reviewport.ReviewMutationStore, stateRoot, id string, req model.DomainReviewRequest) (model.Record, error) {
 	var modelFit string
 	var terminology []string
 	return mutateReviewRecord(store, stateRoot, id, func() error {
 		modelFit = strings.TrimSpace(req.ModelFit)
 		terminology = issueopsintent.CleanTextValues(req.Terminology)
 		return reviewdomain.ValidateDomainReviewRecord(modelFit, len(terminology))
-	}, func(record *model.IssueOpsRecord) error {
+	}, func(record *model.Record) error {
 		now := store.Now()
-		record.DomainReview = &model.IssueOpsDomainReview{
+		record.DomainReview = &model.DomainReview{
 			Terminology:       terminology,
 			ModelFit:          modelFit,
 			Risks:             issueopsintent.CleanTextValues(req.Risks),

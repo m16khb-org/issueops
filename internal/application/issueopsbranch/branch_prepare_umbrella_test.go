@@ -9,49 +9,49 @@ import (
 
 // umbrellaStore는 자식 사이클 하나와 그 부모 우산 사이클 하나를 갖는 최소 스토어다.
 type umbrellaStore struct {
-	child    model.IssueOpsRecord
-	umbrella model.IssueOpsRecord
+	child    model.Record
+	umbrella model.Record
 	// lookups는 역조회가 실제로 자식 이슈 URL로 호출됐는지 검증한다.
 	lookups []string
 }
 
 func (s *umbrellaStore) store() Store {
 	return Store{
-		Read: func(string, string) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) {
 			return s.child, nil
 		},
-		TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 			s.child = record
 			return record, nil
 		},
-		UmbrellaForChildIssue: func(repo, childIssueURL string) (model.IssueOpsRecord, bool) {
+		UmbrellaForChildIssue: func(repo, childIssueURL string) (model.Record, bool) {
 			s.lookups = append(s.lookups, repo+" "+childIssueURL)
 			for _, link := range s.umbrella.IssueLinks {
 				if link.Type == "child" && strings.TrimSpace(link.URL) == strings.TrimSpace(childIssueURL) {
 					return s.umbrella, true
 				}
 			}
-			return model.IssueOpsRecord{}, false
+			return model.Record{}, false
 		},
 	}
 }
 
 func newUmbrellaStore() *umbrellaStore {
 	return &umbrellaStore{
-		child: model.IssueOpsRecord{
+		child: model.Record{
 			ID:       "io-child",
 			OK:       true,
 			Repo:     "/repo/example",
 			Branch:   "79-child-task",
 			IssueURL: "https://github.com/example/repo/issues/79",
 		},
-		umbrella: model.IssueOpsRecord{
+		umbrella: model.Record{
 			ID:       "io-umbrella",
 			OK:       true,
 			Repo:     "/repo/example",
 			Branch:   "78-umbrella",
 			IssueURL: "https://github.com/example/repo/issues/78",
-			IssueLinks: []model.IssueOpsIssueLink{
+			IssueLinks: []model.IssueLink{
 				{Type: "child", URL: "https://github.com/example/repo/issues/79"},
 			},
 		},
@@ -61,7 +61,7 @@ func newUmbrellaStore() *umbrellaStore {
 func TestPrepareRejectsChildBaseBranchOutsideUmbrella(t *testing.T) {
 	store := newUmbrellaStore()
 
-	_, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
+	_, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/79",
 		Branch:     "79-child-task",
@@ -81,7 +81,7 @@ func TestPrepareRejectsChildBaseBranchOutsideUmbrella(t *testing.T) {
 func TestPrepareAcceptsChildBaseBranchOnUmbrella(t *testing.T) {
 	store := newUmbrellaStore()
 
-	record, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
+	record, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/79",
 		Branch:     "79-child-task",
@@ -101,7 +101,7 @@ func TestPrepareAllowsCycleWithoutUmbrella(t *testing.T) {
 	store := newUmbrellaStore()
 	store.umbrella.IssueLinks = nil
 
-	if _, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
+	if _, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/79",
 		Branch:     "79-child-task",
@@ -113,7 +113,7 @@ func TestPrepareAllowsCycleWithoutUmbrella(t *testing.T) {
 
 // 역조회 표면이 주입되지 않은 호출자는 종전대로 동작한다.
 func TestPrepareWithoutUmbrellaLookupIsUnchanged(t *testing.T) {
-	store := newBranchPrepareTestStore(model.IssueOpsRecord{
+	store := newBranchPrepareTestStore(model.Record{
 		ID:       "io-plain",
 		OK:       true,
 		Repo:     "/repo/example",
@@ -121,7 +121,7 @@ func TestPrepareWithoutUmbrellaLookupIsUnchanged(t *testing.T) {
 		IssueURL: "https://github.com/example/repo/issues/456",
 	})
 
-	if _, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-plain", model.IssueOpsBranchPrepareRequest{
+	if _, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-plain", model.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/456",
 		Branch:     "456-plain-cycle",

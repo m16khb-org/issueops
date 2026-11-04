@@ -18,8 +18,8 @@ func NewMaintenanceService(dependencies MaintenanceDependencies) *MaintenanceSer
 	return &MaintenanceService{dependencies: dependencies}
 }
 
-func (service *MaintenanceService) Maintain() (statecontract.StateMaintainResult, error) {
-	result := statecontract.StateMaintainResult{Roots: []statecontract.StoreMaintainResult{}}
+func (service *MaintenanceService) Maintain() (statecontract.MaintainResult, error) {
+	result := statecontract.MaintainResult{Roots: []statecontract.StoreMaintainResult{}}
 	roots, err := service.dependencies.AllRoots()
 	if err != nil {
 		return result, err

@@ -14,7 +14,7 @@ type Handlers struct {
 		string,
 		string,
 		string,
-		issueopscontract.IssueOpsActor,
+		issueopscontract.Actor,
 	) (issueopsroutingcontract.Record, error)
 	Score func(
 		string,
@@ -30,7 +30,7 @@ func NewHandlers(service *issueopsroutingapplication.Service) Handlers {
 			id string,
 			phase string,
 			skill string,
-			actor issueopscontract.IssueOpsActor,
+			actor issueopscontract.Actor,
 		) (issueopsroutingcontract.Record, error) {
 			return service.Record(context.Background(), stateRoot, id, phase, skill, actor)
 		},

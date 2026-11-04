@@ -21,7 +21,7 @@ func TestChildStartRollsBackParentAndChildWhenSecondWriteFails(t *testing.T) {
 
 	root := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, root)
-	req := model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: "124-atomic-child", Title: "atomic", TaskScope: "atomic parent and child", AcceptanceCriteria: []string{"no partial graph"}}
+	req := model.ChildStartRequest{ParentID: parent.ID, Branch: "124-atomic-child", Title: "atomic", TaskScope: "atomic parent and child", AcceptanceCriteria: []string{"no partial graph"}}
 	id := CycleStartIdentity{}.StableID(parent.Repo, req.Branch)
 	db, err := sql.Open("sqlite", filepath.Join(root, "issueops.db"))
 	if err != nil {
@@ -68,7 +68,7 @@ func TestChildStartRefusalPreservesBothRows(t *testing.T) {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
 			parent := createDelegationReadyParentForTest(t, root)
-			req := model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: "124-refused-child", TaskScope: "preserve the graph", AcceptanceCriteria: []string{"no writes on refusal"}}
+			req := model.ChildStartRequest{ParentID: parent.ID, Branch: "124-refused-child", TaskScope: "preserve the graph", AcceptanceCriteria: []string{"no writes on refusal"}}
 			actor := issueOpsActorForTest(parent.WorktreePath)
 			started, err := childStarterForTest(root).Start(context.Background(), req, &actor)
 			if err != nil {
@@ -89,7 +89,7 @@ func TestChildStartRefusalPreservesBothRows(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				record.CleanupAbandonFailure = &model.IssueOpsCleanupAbandonFailure{Step: "applying", Fingerprint: strings.Repeat("a", 64), At: "2026-08-04T00:00:00Z"}
+				record.CleanupAbandonFailure = &model.CleanupAbandonFailure{Step: "applying", Fingerprint: strings.Repeat("a", 64), At: "2026-08-04T00:00:00Z"}
 				if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 					t.Fatal(err)
 				}

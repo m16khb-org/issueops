@@ -167,7 +167,7 @@ func classifyBlockedExecution(in Input, decision Decision, index int) (Decision,
 		decision.NextCommand = "issueops execution reconcile --id " + in.Record.ID + " --preview $ACTOR_FLAGS --json"
 		return decision, true
 	}
-	if execution == nil && issueopsdomain.IssueOpsPhaseRank(in.Record.Phase) >= issueopsdomain.IssueOpsPhaseRank(issueopsnextcontract.PhasePlan) &&
+	if execution == nil && issueopsdomain.PhaseRank(in.Record.Phase) >= issueopsdomain.PhaseRank(issueopsnextcontract.PhasePlan) &&
 		strings.TrimSpace(in.RootConflictID) != "" {
 		decision.Stage = stage(issueopsnextcontract.StageBlockedRoot, 3)
 		decision.NextCommand = "issueops list --repo " + placeholder(in.SourceRoot, "<source_root>") + " --json"
@@ -825,7 +825,7 @@ func warnings(in Input) []string {
 func childCreateWarnings(in Input) []string {
 	var out []string
 	for _, op := range in.Record.ChildCreateOperations {
-		if issueCreateUnsettled(&op.IssueOpsIssueCreateIntent) {
+		if issueCreateUnsettled(&op.IssueCreateIntent) {
 			out = append(out, "child create "+op.OperationID+" is unsettled ("+op.Status+"); before any create-child run: issueops remote reconcile-child --id "+in.Record.ID+" --operation-id "+op.OperationID+" $RECORD_ACTOR_FLAGS --json")
 		}
 	}

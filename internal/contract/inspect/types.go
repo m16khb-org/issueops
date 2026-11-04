@@ -4,7 +4,7 @@
 // 알 필요가 없다.
 package inspect
 
-type InspectInfo struct {
+type Info struct {
 	OK           bool              `json:"ok"`
 	Version      string            `json:"version"`
 	IssueOpsRoot string            `json:"issueops_root"`

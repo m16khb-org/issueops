@@ -7,7 +7,7 @@ import (
 	cycledomain "issueops/internal/domain/issueops"
 )
 
-func BaseImplementationMissing(record model.IssueOpsRecord) []string {
+func BaseImplementationMissing(record model.Record) []string {
 	missing := cycledomain.BranchEvidenceMissing(record)
 	missing = append(missing, cycledomain.IntentMissing(record)...)
 	missing = append(missing, ArchitectureReviewMissing(record)...)

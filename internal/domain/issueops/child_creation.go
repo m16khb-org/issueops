@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func ValidateChildCreation(record model.IssueOpsRecord, title string, labels, assignees []string) error {
+func ValidateChildCreation(record model.Record, title string, labels, assignees []string) error {
 	if strings.TrimSpace(record.IssueURL) == "" {
 		return fmt.Errorf("cannot create child before linked parent issue")
 	}

@@ -18,12 +18,12 @@ import (
 )
 
 func TestByIDReadsRecordAndReportsMissingEvidence(t *testing.T) {
-	store := newCleanupStatusTestStore(model.IssueOpsRecord{
+	store := newCleanupStatusTestStore(model.Record{
 		ID:     "io-123456789abc",
 		Repo:   t.TempDir(),
 		Branch: "1-cleanup",
-		Phase:  model.IssueOpsPhasePR,
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{
+		Phase:  model.PhasePR,
+		RemoteArtifact: &model.RemoteArtifactVerification{
 			Provider:  "github",
 			Kind:      "pr",
 			URL:       "https://github.com/example/repo/pull/1",
@@ -50,7 +50,7 @@ func TestByIDReadsRecordAndReportsMissingEvidence(t *testing.T) {
 }
 
 func TestByIDReturnsReadError(t *testing.T) {
-	store := newCleanupStatusTestStore(model.IssueOpsRecord{})
+	store := newCleanupStatusTestStore(model.Record{})
 	status, err := (app.StatusService{Records: store, Structural: cleanupStructuralForTest()}).Status(context.Background(), "io-123456789abc", false)
 	if err == nil {
 		t.Fatal("ByID(missing) error = nil, want error")
@@ -61,7 +61,7 @@ func TestByIDReturnsReadError(t *testing.T) {
 }
 
 func TestRemoteArtifactMissingFieldsAreSorted(t *testing.T) {
-	missing := domain.RemoteArtifactMissing(model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{
+	missing := domain.RemoteArtifactMissing(model.Record{RemoteArtifact: &model.RemoteArtifactVerification{
 		Labels:    []string{" ", ""},
 		Assignees: nil,
 	}})
@@ -74,14 +74,14 @@ func TestRemoteArtifactMissingFieldsAreSorted(t *testing.T) {
 
 func TestForRecordRequiresLinkedChildCloseEvidence(t *testing.T) {
 	record := completeCleanupRecord(t)
-	record.IssueLinks = []model.IssueOpsIssueLink{{
+	record.IssueLinks = []model.IssueLink{{
 		Type:      "child",
 		URL:       "https://github.com/example/repo/issues/2",
 		Provider:  "github",
 		CreatedAt: "2026-06-17T00:00:00Z",
 	}}
 
-	status := ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: true})
+	status := ForRecord(record, model.CleanupStatusRequest{Merged: true})
 	if status.Ready || !containsString(status.Missing, "child_tasks_closed") {
 		t.Fatalf("linked child without close evidence should block cleanup: %#v", status)
 	}
@@ -89,7 +89,7 @@ func TestForRecordRequiresLinkedChildCloseEvidence(t *testing.T) {
 	record.IssueLinks[0].ClosedAt = "2026-06-17T00:01:00Z"
 	record.IssueLinks[0].CloseVerifiedAt = "2026-06-17T00:01:30Z"
 	record.IssueLinks[0].CloseReason = "completed"
-	status = ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: true})
+	status = ForRecord(record, model.CleanupStatusRequest{Merged: true})
 	if containsString(status.Missing, "child_tasks_closed") {
 		t.Fatalf("verified child close evidence should unblock child cleanup: %#v", status)
 	}
@@ -98,7 +98,7 @@ func TestForRecordRequiresLinkedChildCloseEvidence(t *testing.T) {
 func TestForRecordCoversWorktreeAndGitBranches(t *testing.T) {
 	record := completeCleanupRecord(t)
 	record.WorktreePath = filepath.Join(t.TempDir(), "missing")
-	status := ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: true})
+	status := ForRecord(record, model.CleanupStatusRequest{Merged: true})
 	if status.Ready || !containsString(status.Missing, "worktree_exists") {
 		t.Fatalf("missing worktree status = %#v", status)
 	}
@@ -106,7 +106,7 @@ func TestForRecordCoversWorktreeAndGitBranches(t *testing.T) {
 	repo := newCleanupGitRepo(t)
 	record.WorktreePath = repo
 	record.Branch = "1234-cleanup"
-	status = ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: true})
+	status = ForRecord(record, model.CleanupStatusRequest{Merged: true})
 	if status.Ready || !containsString(status.Missing, "remote_branch_check_unavailable") {
 		t.Fatalf("repo without remote status = %#v", status)
 	}
@@ -114,13 +114,13 @@ func TestForRecordCoversWorktreeAndGitBranches(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "dirty.txt"), []byte("dirty"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	status = ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: true})
+	status = ForRecord(record, model.CleanupStatusRequest{Merged: true})
 	if !containsString(status.Missing, "worktree_clean") {
 		t.Fatalf("dirty worktree status = %#v", status)
 	}
 
 	record.Branch = "different"
-	status = ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: true})
+	status = ForRecord(record, model.CleanupStatusRequest{Merged: true})
 	if !containsString(status.Missing, "branch_match") {
 		t.Fatalf("branch mismatch status = %#v", status)
 	}
@@ -130,23 +130,23 @@ func TestForRecordCoversWorktreeAndGitBranches(t *testing.T) {
 }
 
 type cleanupStatusTestStore struct {
-	record model.IssueOpsRecord
+	record model.Record
 }
 
-func newCleanupStatusTestStore(record model.IssueOpsRecord) *cleanupStatusTestStore {
+func newCleanupStatusTestStore(record model.Record) *cleanupStatusTestStore {
 	return &cleanupStatusTestStore{record: record}
 }
 
-func (s *cleanupStatusTestStore) Load(id string) (model.IssueOpsRecord, error) {
+func (s *cleanupStatusTestStore) Load(id string) (model.Record, error) {
 	if s.record.ID != id {
-		return model.IssueOpsRecord{}, fmt.Errorf("missing record")
+		return model.Record{}, fmt.Errorf("missing record")
 	}
 	return s.record, nil
 }
 func cleanupStructuralForTest() app.StructuralStatus {
 	return app.StructuralStatus{Environment: core.CleanupStatusEnvironment{RunGit: preflight.GitCmd, ReadGit: preflight.GitOut}}
 }
-func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusRequest) model.IssueOpsCleanupStatus {
+func ForRecord(record model.Record, req model.CleanupStatusRequest) model.CleanupStatus {
 	return cleanupStructuralForTest().ForRecord(record, req)
 }
 
@@ -154,13 +154,13 @@ func containsString(values []string, want string) bool {
 	return slices.Contains(values, want)
 }
 
-func completeCleanupRecord(t *testing.T) model.IssueOpsRecord {
+func completeCleanupRecord(t *testing.T) model.Record {
 	t.Helper()
-	return model.IssueOpsRecord{
+	return model.Record{
 		ID:     "io-cleanup",
-		Phase:  model.IssueOpsPhasePR,
+		Phase:  model.PhasePR,
 		Branch: "1234-cleanup",
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{
+		RemoteArtifact: &model.RemoteArtifactVerification{
 			Provider:  "github",
 			Kind:      "pr",
 			URL:       "https://github.com/example/repo/pull/1",

@@ -23,10 +23,10 @@ func TestRunFeedbackAddAndMarkIssueUpdated(t *testing.T) {
 	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
-	var printed []issueopscontract.IssueOpsRecord
+	var printed []issueopscontract.Record
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
-		PrintResult: func(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
+		PrintResult: func(record issueopscontract.Record, jsonOut bool, err error) error {
 			if err != nil {
 				return err
 			}
@@ -67,7 +67,7 @@ func TestRunCleanupStatusAndJSONError(t *testing.T) {
 			printedErrors = append(printedErrors, err)
 			return nil
 		},
-		VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
+		VerifyMerged: func(issueopscontract.RemoteArtifactVerification) error {
 			return nil
 		},
 	}
@@ -87,7 +87,7 @@ func TestRunCleanupStatusAndJSONError(t *testing.T) {
 
 func TestCleanupCommandBoundaries(t *testing.T) {
 	command := testCleanupCommand()
-	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintResult: func(issueopscontract.IssueOpsRecord, bool, error) error { return nil }}
+	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintResult: func(issueopscontract.Record, bool, error) error { return nil }}
 	if err := command.RunFeedback(nil, deps); err != nil {
 		t.Fatalf("help feedback returned error: %v", err)
 	}
@@ -111,36 +111,36 @@ func TestRunCleanupStatusSkipsRemoteObservationUntilFinishEligible(t *testing.T)
 
 	cases := []struct {
 		name    string
-		prepare func(*testing.T) issueopscontract.IssueOpsRecord
-		args    func(issueopscontract.IssueOpsRecord) []string
+		prepare func(*testing.T) issueopscontract.Record
+		args    func(issueopscontract.Record) []string
 		missing string
 	}{
 		{
 			name: "early phase with merged flag",
-			prepare: func(t *testing.T) issueopscontract.IssueOpsRecord {
+			prepare: func(t *testing.T) issueopscontract.Record {
 				return cleanupStatusRecord(t, false, true)
 			},
-			args: func(record issueopscontract.IssueOpsRecord) []string {
+			args: func(record issueopscontract.Record) []string {
 				return []string{"status", "--id", record.ID, "--merged", "--json"}
 			},
 			missing: "pr_phase",
 		},
 		{
 			name: "done without artifact",
-			prepare: func(t *testing.T) issueopscontract.IssueOpsRecord {
+			prepare: func(t *testing.T) issueopscontract.Record {
 				return cleanupStatusRecord(t, true, false)
 			},
-			args: func(record issueopscontract.IssueOpsRecord) []string {
+			args: func(record issueopscontract.Record) []string {
 				return []string{"status", "--id", record.ID, "--merged", "--json"}
 			},
 			missing: "remote_artifact",
 		},
 		{
 			name: "done with artifact but no merged flag",
-			prepare: func(t *testing.T) issueopscontract.IssueOpsRecord {
+			prepare: func(t *testing.T) issueopscontract.Record {
 				return cleanupStatusRecord(t, true, true)
 			},
-			args: func(record issueopscontract.IssueOpsRecord) []string {
+			args: func(record issueopscontract.Record) []string {
 				return []string{"status", "--id", record.ID, "--json"}
 			},
 			missing: "remote_artifact_merged",
@@ -154,7 +154,7 @@ func TestRunCleanupStatusSkipsRemoteObservationUntilFinishEligible(t *testing.T)
 			providerCalls := 0
 			var printed []any
 			deps := cleanupStatusDeps(&printed)
-			deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+			deps.VerifyMergedHead = func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 				mergeCalls++
 				return issueopscontract.CleanupRemoteBranchArtifactHead{}, nil
 			}
@@ -196,7 +196,7 @@ func TestRunCleanupStatusFailsClosedOnMergedReadbackErrors(t *testing.T) {
 				providerCalls++
 				return &cleanupStatusProvider{}, nil
 			}
-			deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+			deps.VerifyMergedHead = func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 				return issueopscontract.CleanupRemoteBranchArtifactHead{}, tc.err
 			}
 
@@ -251,7 +251,7 @@ func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
 			t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 			record := cleanupStatusRecord(t, true, true)
 			var printed []any
-			provider := &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
+			provider := &cleanupStatusProvider{snapshot: executionissue.Snapshot{
 				URL: record.IssueURL, Body: tc.issueBody, State: tc.issueState,
 			}}
 			deps := cleanupStatusDeps(&printed)
@@ -261,7 +261,7 @@ func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
 				}
 				return provider, nil
 			}
-			deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+			deps.VerifyMergedHead = func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 				return issueopscontract.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: "abc123", BaseRefName: tc.mergedBase}, nil
 			}
 			gitCalls := 0
@@ -346,7 +346,7 @@ func TestRunCleanupStatusDoesNotNormalizeProviderOrIssueErrors(t *testing.T) {
 			record := cleanupStatusRecord(t, true, true)
 			deps := cleanupStatusDeps(nil)
 			deps.Provider = tc.provider
-			deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+			deps.VerifyMergedHead = func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 				return issueopscontract.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 			}
 			err := command.RunCleanup([]string{"status", "--id", record.ID, "--merged"}, deps)
@@ -362,13 +362,13 @@ func TestRunCleanupFinishForwardsSupersedingArtifactToApplication(t *testing.T) 
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	replacement := "https://github.com/acme/repo/pull/454"
-	provider := &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
+	provider := &cleanupStatusProvider{snapshot: executionissue.Snapshot{
 		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}
 	deps := cleanupStatusDeps(nil)
 	deps.Provider = func(string) (port.IssueProvider, error) { return provider, nil }
 	observed := []string{}
-	deps.VerifyMergedHead = func(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+	deps.VerifyMergedHead = func(artifact issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 		observed = append(observed, artifact.URL)
 		if artifact.URL == record.RemoteArtifact.URL {
 			return issueopscontract.CleanupRemoteBranchArtifactHead{}, errors.New("original child PR is not merged")
@@ -445,29 +445,29 @@ func TestRunCleanupOrphanDefaultsToPreviewAndGatesApply(t *testing.T) {
 	}
 }
 
-func feedbackCleanupIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
+func feedbackCleanupIssueOpsRecord(t *testing.T) issueopscontract.Record {
 	t.Helper()
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "1234-feedback-cleanup"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "1234-feedback-cleanup"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
 	return record
 }
 
-func cleanupStatusRecord(t *testing.T, done, withArtifact bool) issueopscontract.IssueOpsRecord {
+func cleanupStatusRecord(t *testing.T, done, withArtifact bool) issueopscontract.Record {
 	t.Helper()
 	record := feedbackCleanupIssueOpsRecord(t)
 	record.IssueURL = "https://github.com/acme/repo/issues/285"
 	if done {
-		record.Phase = issueopscontract.IssueOpsPhaseDone
+		record.Phase = issueopscontract.PhaseDone
 	}
 	if withArtifact {
-		record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+		record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/300",
 			Labels: []string{"bug"}, Assignees: []string{"m16khb"},
 		}
 	}
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: strings.Repeat("a", 40), LinkVerified: true,
 	}
@@ -516,12 +516,12 @@ func cleanupStatusDeps(printed *[]any) Deps {
 	}
 }
 
-func printedCleanupStatus(t *testing.T, printed []any) issueopscontract.IssueOpsCleanupStatus {
+func printedCleanupStatus(t *testing.T, printed []any) issueopscontract.CleanupStatus {
 	t.Helper()
 	if len(printed) != 1 {
 		t.Fatalf("printed values = %d, want 1", len(printed))
 	}
-	status, ok := printed[0].(issueopscontract.IssueOpsCleanupStatus)
+	status, ok := printed[0].(issueopscontract.CleanupStatus)
 	if !ok {
 		t.Fatalf("printed type = %T", printed[0])
 	}
@@ -533,7 +533,7 @@ func containsCleanupStatusValue(values []string, want string) bool {
 }
 
 type cleanupStatusProvider struct {
-	snapshot  executionissue.ExecutionIssueSnapshot
+	snapshot  executionissue.Snapshot
 	readErr   error
 	readCalls int
 }
@@ -557,7 +557,7 @@ func (p *cleanupStatusProvider) CloseIssue(context.Context, port.IssueProviderCl
 func (p *cleanupStatusProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, errors.New("unexpected update issue body")
 }
-func (p *cleanupStatusProvider) ReadIssueSnapshot(context.Context, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+func (p *cleanupStatusProvider) ReadIssueSnapshot(context.Context, executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 	p.readCalls++
 	return p.snapshot, p.readErr
 }
@@ -580,26 +580,26 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 	record := feedbackCleanupIssueOpsRecord(t)
 	var printed []any
 	var printedErrors []error
-	var requests []issueopscontract.IssueOpsCloseChildrenRequest
+	var requests []issueopscontract.CloseChildrenRequest
 	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 
-	wired.CloseIssueOpsChildren = func(_ string, _ string, req issueopscontract.IssueOpsCloseChildrenRequest, _ Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+	wired.CloseIssueOpsChildren = func(_ string, _ string, req issueopscontract.CloseChildrenRequest, _ Deps) (issueopscontract.CloseChildrenResult, error) {
 		requests = append(requests, req)
-		return issueopscontract.IssueOpsCloseChildrenResult{ClosedCount: 1, Children: []issueopscontract.IssueOpsCloseChildResult{{URL: "https://example.com/i/1", Closed: true, State: "closed"}}}, nil
+		return issueopscontract.CloseChildrenResult{ClosedCount: 1, Children: []issueopscontract.CloseChildResult{{URL: "https://example.com/i/1", Closed: true, State: "closed"}}}, nil
 	}
 	command.Operations = wired
 	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
-		service.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
+		service.Read = func(string) (issueopscontract.Record, error) {
 			t.Fatal("CLI dispatch must not read the record before application locking")
-			return issueopscontract.IssueOpsRecord{}, nil
+			return issueopscontract.Record{}, nil
 		}
 	})
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
 		PrintError: func(err error) error { printedErrors = append(printedErrors, err); return nil },
-		VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
+		VerifyMerged: func(issueopscontract.RemoteArtifactVerification) error {
 			return nil
 		},
 	}
@@ -617,12 +617,12 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 	failing := command.Operations
 	failing.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 
-	failing.CloseIssueOpsChildren = func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
-		return issueopscontract.IssueOpsCloseChildrenResult{}, errors.New("provider refused")
+	failing.CloseIssueOpsChildren = func(string, string, issueopscontract.CloseChildrenRequest, Deps) (issueopscontract.CloseChildrenResult, error) {
+		return issueopscontract.CloseChildrenResult{}, errors.New("provider refused")
 	}
 	command.Operations = failing
 	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
-		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+		service.Read = func(id string) (issueopscontract.Record, error) {
 			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 		}
 	})
@@ -670,7 +670,7 @@ func TestRunCleanupAbandonDispatchesToAdapter(t *testing.T) {
 
 	command.Operations = wired
 	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
-		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+		service.Read = func(id string) (issueopscontract.Record, error) {
 			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 		}
 		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
@@ -716,7 +716,7 @@ func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
 
 	command.Operations = wired
 	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
-		service.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
+		service.Read = func(string) (issueopscontract.Record, error) {
 			return record, nil
 		}
 		service.RunRemoteBranch = func(_ context.Context, req issueopscontract.CleanupRemoteBranchRequest) (issueopscontract.CleanupRemoteBranchResult, error) {
@@ -729,7 +729,7 @@ func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
 		PrintError: func(err error) error { printedErrors = append(printedErrors, err); return nil },
 		Provider:   func(string) (port.IssueProvider, error) { return nil, nil },
-		VerifyMergedHead: func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+		VerifyMergedHead: func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 			return issueopscontract.CleanupRemoteBranchArtifactHead{}, nil
 		},
 	}
@@ -764,7 +764,7 @@ func TestRunCleanupLinkedBranchDisciplineAndDispatch(t *testing.T) {
 
 	command.Operations = wired
 	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
-		service.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
+		service.Read = func(string) (issueopscontract.Record, error) {
 			return record, nil
 		}
 		service.RunLinkedBranch = func(_ context.Context, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error) {

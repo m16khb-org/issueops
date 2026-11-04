@@ -10,7 +10,7 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func ApplyGateLedgers(ready model.IssueOpsReadiness, root, issueNumber string, ports cycleport.GateLedgerReadiness) model.IssueOpsReadiness {
+func ApplyGateLedgers(ready model.Readiness, root, issueNumber string, ports cycleport.GateLedgerReadiness) model.Readiness {
 	root = strings.TrimSpace(root)
 	if root == "" {
 		return ready

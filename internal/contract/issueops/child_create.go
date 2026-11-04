@@ -8,7 +8,7 @@ import (
 
 // ChildCreateOperation seals one remote create without retaining the body.
 type ChildCreateOperation struct {
-	IssueOpsIssueCreateIntent
+	IssueCreateIntent
 	Origin        string       `json:"origin"`
 	RequestSHA256 string       `json:"request_sha256"`
 	ParentURL     string       `json:"parent_url"`
@@ -20,7 +20,7 @@ type ChildCreateOperation struct {
 func ValidateChildCreateOperations(operations []ChildCreateOperation) error {
 	ids, implicit := map[string]bool{}, map[string]bool{}
 	for _, op := range operations {
-		shape := op.IssueOpsIssueCreateIntent
+		shape := op.IssueCreateIntent
 		shape.Marker = "<!-- issueops:issue-create:" + op.OperationID + " -->"
 		if err := ValidateIssueCreateIntent(shape); err != nil {
 			return err

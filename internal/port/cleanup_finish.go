@@ -10,15 +10,15 @@ import (
 // Arm may recover only a crashed attempt of the same operation.
 type CleanupOwnershipRecords interface {
 	Load(context.Context, string) (model.CleanupSnapshot, error)
-	Arm(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error)
+	Arm(context.Context, model.CleanupSnapshot, model.CleanupAttempt) (model.CleanupSnapshot, error)
 	Check(context.Context, model.CleanupSnapshot) error
 }
 
 type CleanupFinishRecords interface {
 	CleanupOwnershipRecords
-	Fail(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupFinishFailure, bool) (model.CleanupSnapshot, error)
+	Fail(context.Context, model.CleanupSnapshot, model.CleanupFinishFailure, bool) (model.CleanupSnapshot, error)
 	// Delete removes the record and stores outcome in the same transaction.
-	Delete(context.Context, model.CleanupSnapshot, model.IssueOpsCycleOutcome) error
+	Delete(context.Context, model.CleanupSnapshot, model.CycleOutcome) error
 }
 
 type CleanupRemoteBranchRecords interface {

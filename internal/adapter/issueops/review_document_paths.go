@@ -11,7 +11,7 @@ import (
 
 type ReviewDocumentPaths struct{}
 
-func (ReviewDocumentPaths) Root(record model.IssueOpsRecord) string {
+func (ReviewDocumentPaths) Root(record model.Record) string {
 	return readinesspaths.StrictGitRoot(record)
 }
 

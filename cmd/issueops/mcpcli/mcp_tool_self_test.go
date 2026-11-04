@@ -146,9 +146,9 @@ func TestSelfPlanAndCandidatesReturnFailedCheckpointOnSaveError(t *testing.T) {
 
 func TestSelfVerifyMCPForwardsBaseRefAndRejectsInvalidScope(t *testing.T) {
 	var got string
-	deps := MCPDependencies{SelfVerify: func(request verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+	deps := MCPDependencies{SelfVerify: func(request verifyapp.LoopRequest) (augmentcontract.Result, error) {
 		got = request.BaseRef
-		return augmentcontract.SelfAugmentResult{OK: true}, nil
+		return augmentcontract.Result{OK: true}, nil
 	}}
 	outcome := handleSelfLoopMCPToolCall(context.Background(), MCPToolCall{Name: "self_verify", Arguments: map[string]any{"base_ref": "HEAD~1"}}, deps)
 	if outcome.Err != nil || got != "HEAD~1" {

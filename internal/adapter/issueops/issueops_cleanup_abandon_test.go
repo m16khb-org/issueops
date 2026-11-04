@@ -32,11 +32,11 @@ func (g *fakeAbandonGit) run(_ string, args ...string) (int, string) {
 	return 0, ""
 }
 
-func abandonTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func abandonTestRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "106-abandon"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "106-abandon"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func abandonExecution(repo, root string, lease issueops.WriteLease) *issueops.Ex
 // abandonIntentRecord는 실측 형태를 재현한다: released lease +
 // external_operation_ambiguous failure + 디스크에 없는 workspace root. pendingKind가
 // 비어 있지 않으면 같은 operation의 pending intent도 건다.
-func abandonIntentRecord(t *testing.T, pendingKind string, writeRow bool) (string, issueops.IssueOpsRecord, string, string) {
+func abandonIntentRecord(t *testing.T, pendingKind string, writeRow bool) (string, issueops.Record, string, string) {
 	t.Helper()
 	stateRoot, record := abandonTestRecord(t)
 	root := filepath.Join(t.TempDir(), "absent-worktree")
@@ -105,7 +105,7 @@ func abandonIntentRecord(t *testing.T, pendingKind string, writeRow bool) (strin
 	if writeRow {
 		writeAbandonIntentRow(t, stateRoot, operationID, record.ID)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 		if pendingKind != "" {
 			rec.Execution.Pending = &issueops.ExternalIntent{
@@ -154,11 +154,11 @@ func TestCleanupAbandonPreviewThenApplyDeletesRecord(t *testing.T) {
 	if _, err := ReadIssueOps(stateRoot, record.ID); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("record must be gone after abandon: %v", err)
 	}
-	fresh, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "106-abandon"})
+	fresh, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: record.Repo, Branch: "106-abandon"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.Phase != issueops.IssueOpsPhaseProblem || fresh.Execution != nil {
+	if fresh.Phase != issueops.PhaseProblem || fresh.Execution != nil {
 		t.Fatalf("abandon must unlock same-branch rework with a fresh cycle: %+v", fresh)
 	}
 }
@@ -188,7 +188,7 @@ func TestCleanupAbandonLeaseAllowlistCoversEveryStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			stateRoot, record := abandonTestRecord(t)
 			root := filepath.Join(t.TempDir(), "absent-worktree")
-			mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+			mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 				rec.Execution = abandonExecution(rec.Repo, root, tc.lease)
 			})
 			deps := abandonDeps(&fakeAbandonGit{})
@@ -210,7 +210,7 @@ func TestCleanupAbandonLeaseAllowlistCoversEveryStatus(t *testing.T) {
 func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 	cases := []struct {
 		name    string
-		mutate  func(*issueops.IssueOpsRecord)
+		mutate  func(*issueops.Record)
 		request func(id string) issueops.CleanupAbandonRequest
 		missing string
 	}{
@@ -218,9 +218,9 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 			// done + 머지 증적은 여전히 reflect→finish의 몫이다. 미병합 관측이
 			// 없으면 phase가 done이든 아니든 게이트는 닫힌 채로 남는다(#342).
 			name: "done phase with an artifact belongs to finish",
-			mutate: func(rec *issueops.IssueOpsRecord) {
-				rec.Phase = issueops.IssueOpsPhaseDone
-				rec.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+			mutate: func(rec *issueops.Record) {
+				rec.Phase = issueops.PhaseDone
+				rec.RemoteArtifact = &issueops.RemoteArtifactVerification{
 					Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 				}
 			},
@@ -228,8 +228,8 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 		},
 		{
 			name: "remote artifact belongs to reflect then finish",
-			mutate: func(rec *issueops.IssueOpsRecord) {
-				rec.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+			mutate: func(rec *issueops.Record) {
+				rec.RemoteArtifact = &issueops.RemoteArtifactVerification{
 					Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 				}
 			},
@@ -237,15 +237,15 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 		},
 		{
 			name: "child cycles would be orphaned",
-			mutate: func(rec *issueops.IssueOpsRecord) {
-				rec.ChildCycles = append(rec.ChildCycles, issueops.IssueOpsChildCycleRef{CycleID: "io-child000000", Branch: "child"})
+			mutate: func(rec *issueops.Record) {
+				rec.ChildCycles = append(rec.ChildCycles, issueops.ChildCycleRef{CycleID: "io-child000000", Branch: "child"})
 			},
 			missing: "no_children",
 		},
 		{
 			name: "unclosed child issue link",
-			mutate: func(rec *issueops.IssueOpsRecord) {
-				rec.IssueLinks = append(rec.IssueLinks, issueops.IssueOpsIssueLink{Type: "child", URL: "https://github.com/acme/repo/issues/91"})
+			mutate: func(rec *issueops.Record) {
+				rec.IssueLinks = append(rec.IssueLinks, issueops.IssueLink{Type: "child", URL: "https://github.com/acme/repo/issues/91"})
 			},
 			missing: "no_children",
 		},
@@ -307,9 +307,9 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 
 func TestCleanupAbandonIgnoresSelfChildIssueLink(t *testing.T) {
 	stateRoot, record := abandonTestRecord(t)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.IssueURL = "https://github.com/acme/repo/issues/91"
-		rec.IssueLinks = append(rec.IssueLinks, issueops.IssueOpsIssueLink{
+		rec.IssueLinks = append(rec.IssueLinks, issueops.IssueLink{
 			Type: "child",
 			URL:  rec.IssueURL,
 		})
@@ -338,7 +338,7 @@ func TestCleanupAbandonRejectsLocalResidue(t *testing.T) {
 		if err := os.MkdirAll(root, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 		})
 		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}))
@@ -367,7 +367,7 @@ func TestCleanupAbandonRejectsLocalResidue(t *testing.T) {
 	t.Run("worktree identity conflict", func(t *testing.T) {
 		stateRoot, record := abandonTestRecord(t)
 		root := filepath.Join(t.TempDir(), "absent-worktree")
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 			rec.WorktreePath = filepath.Join(t.TempDir(), "other-worktree")
 		})
@@ -423,7 +423,7 @@ func TestCleanupAbandonDeletesRecordAndIntentRowAtomically(t *testing.T) {
 func TestCleanupAbandonTreatsAbsentIntentRowAsSuccess(t *testing.T) {
 	stateRoot, record := abandonTestRecord(t)
 	root := filepath.Join(t.TempDir(), "absent-worktree")
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 		rec.Execution.Failure = &issueops.ExecutionFailure{
 			OperationID: "op-already-collected", Code: "external_operation_ambiguous", At: "2026-07-24T00:00:00Z",
@@ -449,7 +449,7 @@ func TestCleanupAbandonRefusesToDeleteAnotherLifecyclesIntentRow(t *testing.T) {
 	stateRoot, record, operationID, _ := abandonIntentRecord(t, "", true)
 	foreign := "op-foreign-row"
 	writeAbandonIntentRow(t, stateRoot, foreign, "io-someoneelse")
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.Execution.Failure.OperationID = foreign
 	})
 	deps := abandonDeps(&fakeAbandonGit{})
@@ -484,7 +484,7 @@ func TestCleanupAbandonApplyRejectsStaleFingerprintAndMissingConfirm(t *testing.
 		t.Fatalf("apply without confirm must be rejected: %v", err)
 	}
 	// phase 이동은 게이트를 통과하지만 fingerprint 입력을 바꾼다.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePlan })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.Phase = issueops.PhasePlan })
 	if _, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, true, preview.Fingerprint), deps); err == nil ||
 		!strings.Contains(err.Error(), "stale cleanup fingerprint") {
 		t.Fatalf("stale fingerprint must be rejected: %v", err)
@@ -526,7 +526,7 @@ func TestCleanupAbandonRejectsNonDirectoryWorkspace(t *testing.T) {
 	if err := os.WriteFile(path, []byte("preserve"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, root, record.ID, func(r *issueops.IssueOpsRecord) { r.WorktreePath = path })
+	mutateFinishRecord(t, root, record.ID, func(r *issueops.Record) { r.WorktreePath = path })
 	deps := abandonDeps(&fakeAbandonGit{})
 	preview, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, false, ""), deps)
 	if err == nil || preview.OK || preview.Fingerprint != "" {

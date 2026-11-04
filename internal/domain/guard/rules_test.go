@@ -8,7 +8,7 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
-func ruleLines(findings []guardcontract.GuardFinding, rule string) []int {
+func ruleLines(findings []guardcontract.Finding, rule string) []int {
 	var lines []int
 	for _, finding := range findings {
 		if finding.Rule == rule {
@@ -20,14 +20,14 @@ func ruleLines(findings []guardcontract.GuardFinding, rule string) []int {
 
 func TestModeFallsBackByRequestShape(t *testing.T) {
 	cases := map[string]struct {
-		request guardcontract.GuardCheckRequest
+		request guardcontract.CheckRequest
 		want    string
 	}{
-		"staged flag":        {guardcontract.GuardCheckRequest{Staged: true}, "staged"},
-		"explicit files":     {guardcontract.GuardCheckRequest{Files: []string{"a.go"}}, "files"},
-		"empty request":      {guardcontract.GuardCheckRequest{}, "staged"},
-		"all beats staged":   {guardcontract.GuardCheckRequest{All: true, Staged: true}, "all"},
-		"staged beats files": {guardcontract.GuardCheckRequest{Staged: true, Files: []string{"a.go"}}, "staged"},
+		"staged flag":        {guardcontract.CheckRequest{Staged: true}, "staged"},
+		"explicit files":     {guardcontract.CheckRequest{Files: []string{"a.go"}}, "files"},
+		"empty request":      {guardcontract.CheckRequest{}, "staged"},
+		"all beats staged":   {guardcontract.CheckRequest{All: true, Staged: true}, "all"},
+		"staged beats files": {guardcontract.CheckRequest{Staged: true, Files: []string{"a.go"}}, "staged"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -77,14 +77,14 @@ func TestSeverityRankOrdersBlockBeforeWarnBeforeReview(t *testing.T) {
 }
 
 func TestDedupeFindingsKeepsFirstOfIdenticalKeysAndDistinctLines(t *testing.T) {
-	first := guardcontract.GuardFinding{Severity: "warn", Rule: "r", File: "f.go", Line: 3, Evidence: "e", Message: "first"}
+	first := guardcontract.Finding{Severity: "warn", Rule: "r", File: "f.go", Line: 3, Evidence: "e", Message: "first"}
 	dup := first
 	dup.Message = "second"
 	otherLine := first
 	otherLine.Line = 4
 	otherSeverity := first
 	otherSeverity.Severity = "block"
-	got := DedupeFindings([]guardcontract.GuardFinding{first, dup, otherLine, otherSeverity})
+	got := DedupeFindings([]guardcontract.Finding{first, dup, otherLine, otherSeverity})
 	if len(got) != 3 || got[0].Message != "first" || got[1].Line != 4 || got[2].Severity != "block" {
 		t.Fatalf("DedupeFindings = %+v", got)
 	}
@@ -94,10 +94,10 @@ func TestDedupeFindingsKeepsFirstOfIdenticalKeysAndDistinctLines(t *testing.T) {
 }
 
 func TestFindingLessOrdersBySeverityFileLineThenRule(t *testing.T) {
-	f := func(sev, file string, line int, rule string) guardcontract.GuardFinding {
-		return guardcontract.GuardFinding{Severity: sev, File: file, Line: line, Rule: rule}
+	f := func(sev, file string, line int, rule string) guardcontract.Finding {
+		return guardcontract.Finding{Severity: sev, File: file, Line: line, Rule: rule}
 	}
-	ordered := []guardcontract.GuardFinding{
+	ordered := []guardcontract.Finding{
 		f("block", "z.go", 9, "z"),
 		f("warn", "a.go", 1, "a"),
 		f("warn", "b.go", 1, "a"),
@@ -115,7 +115,7 @@ func TestFindingLessOrdersBySeverityFileLineThenRule(t *testing.T) {
 }
 
 func TestSummarizeFindingsCountsEachSeverityAndTreatsUnknownAsInfo(t *testing.T) {
-	got := summarizeFindings([]guardcontract.GuardFinding{
+	got := summarizeFindings([]guardcontract.Finding{
 		{Severity: "block"}, {Severity: "warn"}, {Severity: "warn"}, {Severity: "review"}, {Severity: "info"}, {Severity: "weird"},
 	})
 	if got.Block != 1 || got.Warn != 2 || got.Review != 1 || got.Info != 2 {

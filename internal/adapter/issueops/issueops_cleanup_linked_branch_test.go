@@ -17,13 +17,13 @@ const (
 )
 
 // lbFixture는 branch prepare까지 진행된 record를 state root에 심는다.
-func lbFixture(t *testing.T) (string, issueopscontract.IssueOpsRecord) {
+func lbFixture(t *testing.T) (string, issueopscontract.Record) {
 	t.Helper()
 	root := t.TempDir()
-	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: 1, ID: "io-lb01", Repo: t.TempDir(), Phase: issueopscontract.IssueOpsPhaseImplement,
+	record := issueopscontract.Record{
+		OK: true, SchemaVersion: 1, ID: "io-lb01", Repo: t.TempDir(), Phase: issueopscontract.PhaseImplement,
 		IssueURL: lbIssueURL, CreatedAt: "2026-08-08T00:00:00Z", UpdatedAt: "2026-08-08T00:00:00Z",
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
+		BranchPrepare: &issueopscontract.BranchPrepare{
 			Provider: "github", IssueURL: lbIssueURL, Branch: lbBranch,
 			BaseBranch: "main", BaseSHA: lbSealedBase, CreatedAt: "2026-08-08T00:00:00Z",
 		},

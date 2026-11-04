@@ -26,9 +26,9 @@ func (r planRepository) HasImplementationDelta(root string) bool {
 	*r.calls = append(*r.calls, "git:"+root)
 	return true
 }
-func (r planRepository) CollectSignals(root string, n int, skills []string, text string) contract.SelfAugmentRepoSignals {
+func (r planRepository) CollectSignals(root string, n int, skills []string, text string) contract.RepoSignals {
 	*r.calls = append(*r.calls, "signals:"+root)
-	return contract.SelfAugmentRepoSignals{HasGeniusThink: text != "", DocsIndexed: n, Skills: skills}
+	return contract.RepoSignals{HasGeniusThink: text != "", DocsIndexed: n, Skills: skills}
 }
 
 func TestPlannerObservesEachGoalOnceAndUsesOneSnapshotForScoreAndEvidence(t *testing.T) {
@@ -37,29 +37,29 @@ func TestPlannerObservesEachGoalOnceAndUsesOneSnapshotForScoreAndEvidence(t *tes
 	now := time.Date(2026, 9, 29, 3, 0, 0, 0, time.UTC)
 	planner := Planner{
 		Repository: planRepository{calls: &calls},
-		DocsIndex: func(root, version string) docs.DocsIndexResult {
+		DocsIndex: func(root, version string) docs.IndexResult {
 			calls = append(calls, "docs:"+root+":"+version)
-			return docs.DocsIndexResult{OK: true}
+			return docs.IndexResult{OK: true}
 		},
 		ListSkillNames: func(root string) ([]string, error) {
 			calls = append(calls, "skills:"+root)
 			return []string{"self-augment"}, nil
 		},
-		StateList: func() (state.StateListResult, error) {
+		StateList: func() (state.ListResult, error) {
 			lists++
 			calls = append(calls, "list")
 			if lists == 1 {
-				return state.StateListResult{Keys: []string{"self-augment-lesson-observed"}}, nil
+				return state.ListResult{Keys: []string{"self-augment-lesson-observed"}}, nil
 			}
-			return state.StateListResult{}, nil
+			return state.ListResult{}, nil
 		},
-		StateRead: func(key string) (state.StateResult, error) {
+		StateRead: func(key string) (state.Result, error) {
 			calls = append(calls, "read:"+key)
-			return state.StateResult{Record: state.RecordEnvelope{Content: currentSummaryFixture(t, true)}}, nil
+			return state.Result{Record: state.RecordEnvelope{Content: currentSummaryFixture(t, true)}}, nil
 		},
 		Now: func() time.Time { return now },
 	}
-	result := planner.Plan(contract.SelfAugmentPlanRequest{Cycles: 2, TargetScore: 95}, "/repo", "v1")
+	result := planner.Plan(contract.PlanRequest{Cycles: 2, TargetScore: 95}, "/repo", "v1")
 	want := []string{"genius:/repo", "docs:/repo:v1", "skills:/repo", "signals:/repo", "git:/repo", "read:self-verify-latest", "list", "list"}
 	if !reflect.DeepEqual(calls, want) {
 		t.Fatalf("observations=%v want=%v", calls, want)
@@ -87,13 +87,13 @@ func TestPlannerObservationErrorsFailGoalsAndPreserveOrderedWarnings(t *testing.
 	calls := []string{}
 	planner := Planner{
 		Repository:     planRepository{calls: &calls, geniusErr: errors.New("not found")},
-		DocsIndex:      func(string, string) docs.DocsIndexResult { return docs.DocsIndexResult{} },
+		DocsIndex:      func(string, string) docs.IndexResult { return docs.IndexResult{} },
 		ListSkillNames: func(string) ([]string, error) { return nil, errors.New("skills unavailable") },
-		StateList:      func() (state.StateListResult, error) { return state.StateListResult{}, errors.New("store unavailable") },
-		StateRead:      func(string) (state.StateResult, error) { return state.StateResult{}, errors.New("read unavailable") },
+		StateList:      func() (state.ListResult, error) { return state.ListResult{}, errors.New("store unavailable") },
+		StateRead:      func(string) (state.Result, error) { return state.Result{}, errors.New("read unavailable") },
 		Now:            func() time.Time { return time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC) },
 	}
-	result := planner.Plan(contract.SelfAugmentPlanRequest{TargetScore: 95}, "/repo", "v1")
+	result := planner.Plan(contract.PlanRequest{TargetScore: 95}, "/repo", "v1")
 	if result.UsesGeniusThink || result.TerminationEligible || result.Goals[0].Passed || result.Goals[2].Passed || result.Goals[3].Passed {
 		t.Fatal(result.Goals)
 	}
@@ -106,20 +106,20 @@ func TestLessonScanSkipsUnreadableMalformedAndWrongKindBeforeCounting(t *testing
 	now := time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)
 	reads := []string{}
 	planner := Planner{
-		StateList: func() (state.StateListResult, error) {
-			return state.StateListResult{Keys: []string{"unrelated", "self-augment-lesson-read-error", "self-augment-lesson-malformed", "self-augment-lesson-wrong-kind", "self-augment-lesson-recent"}}, nil
+		StateList: func() (state.ListResult, error) {
+			return state.ListResult{Keys: []string{"unrelated", "self-augment-lesson-read-error", "self-augment-lesson-malformed", "self-augment-lesson-wrong-kind", "self-augment-lesson-recent"}}, nil
 		},
-		StateRead: func(key string) (state.StateResult, error) {
+		StateRead: func(key string) (state.Result, error) {
 			reads = append(reads, key)
 			switch key {
 			case "self-augment-lesson-read-error":
-				return state.StateResult{}, errors.New("unreadable")
+				return state.Result{}, errors.New("unreadable")
 			case "self-augment-lesson-malformed":
-				return state.StateResult{Record: state.RecordEnvelope{Content: "{"}}, nil
+				return state.Result{Record: state.RecordEnvelope{Content: "{"}}, nil
 			case "self-augment-lesson-wrong-kind":
-				return state.StateResult{Record: state.RecordEnvelope{Content: `{"kind":"other","candidate_id":"wrong","severity":"error","generated_at":"2026-09-29T00:00:00Z"}`}}, nil
+				return state.Result{Record: state.RecordEnvelope{Content: `{"kind":"other","candidate_id":"wrong","severity":"error","generated_at":"2026-09-29T00:00:00Z"}`}}, nil
 			default:
-				return state.StateResult{Record: state.RecordEnvelope{Content: `{"schema_version":1,"kind":"self_augmentation_lesson","candidate_id":"candidate","severity":"error","generated_at":"2026-09-29T00:00:00Z"}`}}, nil
+				return state.Result{Record: state.RecordEnvelope{Content: `{"schema_version":1,"kind":"self_augmentation_lesson","candidate_id":"candidate","severity":"error","generated_at":"2026-09-29T00:00:00Z"}`}}, nil
 			}
 		},
 	}
@@ -131,7 +131,7 @@ func TestLessonScanSkipsUnreadableMalformedAndWrongKindBeforeCounting(t *testing
 
 func currentSummaryFixture(t *testing.T, ok bool) string {
 	t.Helper()
-	snapshot := contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.SelfAugmentSummary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}}
+	snapshot := contract.StateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.Summary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}}
 	NormalizeSnapshotFailureCause(&snapshot)
 	data, err := json.Marshal(snapshot)
 	if err != nil {

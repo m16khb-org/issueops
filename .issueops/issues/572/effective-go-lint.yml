@@ -1,0 +1,73 @@
+# Effective Go measurement for issue #572 (not a CI gate).
+#
+# The repository gate (.golangci.yml) keeps revive and stylecheck off on
+# purpose (.issueops/testing/unit-and-contract.md). This file only measures
+# production code against the Effective Go naming, commentary, and control-flow
+# conventions for issue #572: golangci-lint run -c .issueops/issues/572/effective-go-lint.yml ./...
+version: "2"
+run:
+  timeout: 20m
+linters:
+  default: none
+  enable:
+    - revive
+    - staticcheck
+  settings:
+    staticcheck:
+      checks:
+        - ST1000
+        - ST1003
+        - ST1005
+        - ST1006
+        - ST1008
+        - ST1011
+        - ST1012
+        - ST1016
+        - ST1017
+        - ST1019
+        - ST1020
+        - ST1021
+        - ST1022
+        - ST1023
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: var-naming
+        - name: receiver-naming
+        - name: indent-error-flow
+        - name: superfluous-else
+        - name: early-return
+        - name: error-strings
+        - name: error-naming
+        - name: error-return
+        - name: errorf
+        - name: increment-decrement
+        - name: unexported-return
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: blank-imports
+        - name: range
+        - name: redefines-builtin-id
+        - name: time-naming
+        - name: var-declaration
+        - name: empty-block
+        - name: if-return
+        - name: get-return
+        - name: confusing-naming
+        - name: unnecessary-stmt
+        - name: bare-return
+        - name: use-any
+        - name: modifies-value-receiver
+        - name: deep-exit
+  exclusions:
+    generated: lax
+    rules:
+      - path: _test\.go
+        linters:
+          - revive
+          - staticcheck
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

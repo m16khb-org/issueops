@@ -55,7 +55,7 @@ func BuiltinCatalog() Catalog {
 	}
 }
 
-func (catalog *Catalog) Apply(overrides policycontract.PolicyOverrides) {
+func (catalog *Catalog) Apply(overrides policycontract.Overrides) {
 	addToSet(catalog.shellInterpreters, overrides.AdditionalShellInterpreters)
 	addToSet(catalog.networkCommands, overrides.AdditionalNetworkCommands)
 	addSubcommands(catalog.networkSubcommands, overrides.AdditionalNetworkSubcommands)

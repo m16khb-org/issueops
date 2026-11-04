@@ -13,20 +13,20 @@ import (
 )
 
 func collectSelfAugmentOpenCount(root string) (int, error) {
-	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+	plan := planningForTest(root, statestore.Dir(), hostDeps.Version).Plan(augmentcontract.PlanRequest{Cycles: 1, TargetScore: 95})
 	return len(augmentdomain.CandidateIDsByStatus(plan.Candidates, augmentcontract.CandidateStatusOpen)), nil
 }
 
 func collectSelfVerifyOpenCount(root string) (int, error) {
-	result := planningForTest(root, statestore.StateDir(), hostDeps.Version).ExportCandidates()
+	result := planningForTest(root, statestore.Dir(), hostDeps.Version).ExportCandidates()
 	return len(verifydomain.CandidateIDsByStatus(result.Candidates, augmentcontract.CandidateStatusOpen)), nil
 }
 
 func collectQualityCandidates(root string) []qualitycatalogcontract.Candidate {
 	candidates := qualitycatalog.Candidates()
 
-	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
-	statusByID := map[string]augmentcontract.SelfAugmentCandidate{}
+	plan := planningForTest(root, statestore.Dir(), hostDeps.Version).Plan(augmentcontract.PlanRequest{Cycles: 1, TargetScore: 95})
+	statusByID := map[string]augmentcontract.Candidate{}
 	for _, candidate := range plan.Candidates {
 		statusByID[candidate.ID] = candidate
 	}

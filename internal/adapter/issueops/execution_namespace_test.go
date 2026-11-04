@@ -15,14 +15,14 @@ import (
 
 func TestIssueOpsUsesOnlySchemaOneAndDedicatedNamespace(t *testing.T) {
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "69-v1-namespace"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: t.TempDir(), Branch: "69-v1-namespace"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if issueops.IssueOpsSchemaVersion != 1 {
-		t.Fatalf("model schema constant=%d want 1", issueops.IssueOpsSchemaVersion)
+	if issueops.SchemaVersion != 1 {
+		t.Fatalf("model schema constant=%d want 1", issueops.SchemaVersion)
 	}
-	if record.SchemaVersion != issueops.IssueOpsSchemaVersion {
+	if record.SchemaVersion != issueops.SchemaVersion {
 		t.Fatalf("new record schema=%d want 1", record.SchemaVersion)
 	}
 	db, err := sqlstore.Open(stateRoot)
@@ -73,7 +73,7 @@ func TestIssueOpsReaderRejectsMissingAndZeroSchema(t *testing.T) {
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			stateRoot := t.TempDir()
-			record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "901-noncurrent-schema-" + testCase.name})
+			record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: t.TempDir(), Branch: "901-noncurrent-schema-" + testCase.name})
 			if err != nil {
 				t.Fatal(err)
 			}

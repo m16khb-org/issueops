@@ -5,9 +5,9 @@ import (
 	"strconv"
 )
 
-func SelfVerifyRerunCommands(failedStep string, baseSeed int64, targetScore float64) []string {
+func RerunCommands(failedStep string, baseSeed int64, targetScore float64) []string {
 	commands := []string{}
-	if command, ok := SelfVerifyStepRerunCommand(failedStep); ok {
+	if command, ok := StepRerunCommand(failedStep); ok {
 		commands = append(commands, command)
 	}
 	commands = append(commands, fmt.Sprintf("./bin/issueops self-verify --collect-all-steps --seed=%d --target-score=%s --llm-eval=false --progress=jsonl --json", baseSeed, FormatScore(targetScore)))
@@ -41,7 +41,7 @@ var selfVerifyStepRerunCommands = map[string]string{
 	"harness invariants":     "go test ./cmd/issueops -run Test -count=1",
 }
 
-func SelfVerifyStepRerunCommand(label string) (string, bool) {
+func StepRerunCommand(label string) (string, bool) {
 	command, ok := selfVerifyStepRerunCommands[label]
 	return command, ok
 }

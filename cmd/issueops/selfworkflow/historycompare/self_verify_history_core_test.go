@@ -10,19 +10,19 @@ import (
 func TestSelfAugmentHistoryCoversInvalidTimestampSchemaSkipAndNilSlices(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if err := writeSnapshotForTest(dir, "self-verify-invalid-time", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-invalid-time", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "not-a-time",
-		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1},
+		Summary:       augmentcontract.Summary{TotalRuns: 1, TotalSteps: 1},
 	}); err != nil {
 		t.Fatalf("write invalid time: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "self-verify-bad-schema", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-bad-schema", augmentcontract.StateSnapshot{
 		SchemaVersion: 2,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
-		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1},
+		Summary:       augmentcontract.Summary{TotalRuns: 1},
 	}); err != nil {
 		t.Fatalf("write bad schema: %v", err)
 	}

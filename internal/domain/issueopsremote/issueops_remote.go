@@ -1,14 +1,14 @@
-package remote
+package issueopsremote
 
 const defaultIssueOpsRemoteThreshold = 0.70
 
-type IssueOpsRemoteArtifact struct {
+type ArtifactDraft struct {
 	Provider string `json:"provider,omitempty"`
 	Title    string `json:"title"`
 	Body     string `json:"body"`
 }
 
-type IssueOpsRemoteIssueCandidate struct {
+type IssueCandidate struct {
 	ID     string   `json:"id"`
 	Title  string   `json:"title"`
 	Body   string   `json:"body,omitempty"`
@@ -18,22 +18,22 @@ type IssueOpsRemoteIssueCandidate struct {
 	Score  *float64 `json:"score,omitempty"`
 }
 
-type IssueOpsRemoteLabelCandidate struct {
+type LabelCandidate struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
 	Aliases     []string `json:"aliases,omitempty"`
 	Score       *float64 `json:"score,omitempty"`
 }
 
-type IssueOpsRemoteScoringRequest struct {
-	Provider        string                         `json:"provider,omitempty"`
-	Threshold       float64                        `json:"threshold,omitempty"`
-	Issue           IssueOpsRemoteArtifact         `json:"issue"`
-	IssueCandidates []IssueOpsRemoteIssueCandidate `json:"issue_candidates,omitempty"`
-	LabelCandidates []IssueOpsRemoteLabelCandidate `json:"label_candidates,omitempty"`
+type ScoringRequest struct {
+	Provider        string           `json:"provider,omitempty"`
+	Threshold       float64          `json:"threshold,omitempty"`
+	Issue           ArtifactDraft    `json:"issue"`
+	IssueCandidates []IssueCandidate `json:"issue_candidates,omitempty"`
+	LabelCandidates []LabelCandidate `json:"label_candidates,omitempty"`
 }
 
-type IssueOpsRemoteScoredItem struct {
+type ScoredItem struct {
 	ID           string   `json:"id,omitempty"`
 	Name         string   `json:"name,omitempty"`
 	Title        string   `json:"title,omitempty"`
@@ -46,26 +46,26 @@ type IssueOpsRemoteScoredItem struct {
 	RejectReason string   `json:"reject_reason,omitempty"`
 }
 
-type IssueOpsRemoteScoringResult struct {
-	OK                    bool                       `json:"ok"`
-	Provider              string                     `json:"provider"`
-	Threshold             float64                    `json:"threshold"`
-	ExecutionClass        string                     `json:"execution_class,omitempty"`
-	ReadOnly              bool                       `json:"read_only,omitempty"`
-	JoinBefore            string                     `json:"join_before,omitempty"`
-	SelectedRelatedIssues []IssueOpsRemoteScoredItem `json:"selected_related_issues"`
-	RejectedRelatedIssues []IssueOpsRemoteScoredItem `json:"rejected_related_issues"`
-	SelectedLabels        []IssueOpsRemoteScoredItem `json:"selected_labels"`
-	RejectedLabels        []IssueOpsRemoteScoredItem `json:"rejected_labels"`
-	ApplyInstructions     []string                   `json:"apply_instructions"`
-	Warnings              []string                   `json:"warnings"`
+type ScoringResult struct {
+	OK                    bool         `json:"ok"`
+	Provider              string       `json:"provider"`
+	Threshold             float64      `json:"threshold"`
+	ExecutionClass        string       `json:"execution_class,omitempty"`
+	ReadOnly              bool         `json:"read_only,omitempty"`
+	JoinBefore            string       `json:"join_before,omitempty"`
+	SelectedRelatedIssues []ScoredItem `json:"selected_related_issues"`
+	RejectedRelatedIssues []ScoredItem `json:"rejected_related_issues"`
+	SelectedLabels        []ScoredItem `json:"selected_labels"`
+	RejectedLabels        []ScoredItem `json:"rejected_labels"`
+	ApplyInstructions     []string     `json:"apply_instructions"`
+	Warnings              []string     `json:"warnings"`
 }
 
-type IssueOpsRemoteLLMJudgeRequest struct {
-	Request IssueOpsRemoteScoringRequest
+type LLMJudgeRequest struct {
+	Request ScoringRequest
 }
 
-type IssueOpsRemoteJudgePromptResult struct {
+type JudgePromptResult struct {
 	OK             bool   `json:"ok"`
 	ExecutionClass string `json:"execution_class"`
 	ReadOnly       bool   `json:"read_only"`

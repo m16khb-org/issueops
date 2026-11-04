@@ -11,15 +11,15 @@ import (
 
 type SaveLessonDeps struct {
 	IssueOpsRoot    func() string
-	SelectCandidate func() *model.SelfAugmentCandidate
+	SelectCandidate func() *model.Candidate
 	Now             func() time.Time
-	Encode          func(model.SelfAugmentLessonStateSnapshot) ([]byte, error)
-	Write           func(string, string) (state.StateResult, error)
+	Encode          func(model.LessonStateSnapshot) ([]byte, error)
+	Write           func(string, string) (state.Result, error)
 	StateDir        func() string
-	Prune           func(string, time.Duration, int, bool) (state.StatePruneResult, error)
+	Prune           func(string, time.Duration, int, bool) (state.PruneResult, error)
 }
 
-func SaveLesson(req model.SelfAugmentLessonRequest, deps SaveLessonDeps) (model.SelfAugmentLessonResult, error) {
+func SaveLesson(req model.LessonRequest, deps SaveLessonDeps) (model.LessonResult, error) {
 	root := "."
 	if deps.IssueOpsRoot != nil {
 		root = deps.IssueOpsRoot()
@@ -41,16 +41,16 @@ func SaveLesson(req model.SelfAugmentLessonRequest, deps SaveLessonDeps) (model.
 	b, err := deps.Encode(snapshot)
 	if err != nil {
 		result.OK = false
-		result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{OK: false, Key: key, Error: err.Error()}
+		result.StateCheckpoint = &model.StateCheckpoint{OK: false, Key: key, Error: err.Error()}
 		return result, err
 	}
 	state, err := deps.Write(key, string(b))
 	if err != nil {
 		result.OK = false
-		result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{OK: false, Key: key, StateDir: deps.StateDir(), Error: err.Error()}
+		result.StateCheckpoint = &model.StateCheckpoint{OK: false, Key: key, StateDir: deps.StateDir(), Error: err.Error()}
 		return result, err
 	}
-	result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{
+	result.StateCheckpoint = &model.StateCheckpoint{
 		OK:       true,
 		Key:      state.Record.Key,
 		StateDir: state.StateDir,

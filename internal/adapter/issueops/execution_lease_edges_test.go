@@ -12,13 +12,13 @@ import (
 	"issueops/internal/port"
 )
 
-func claimTokenRecord(t *testing.T) issueops.IssueOpsRecord {
+func claimTokenRecord(t *testing.T) issueops.Record {
 	t.Helper()
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	return issueops.IssueOpsRecord{
+	return issueops.Record{
 		ID: "io-token",
 		Execution: &issueops.Execution{
 			Workspace: issueops.Workspace{Root: root},

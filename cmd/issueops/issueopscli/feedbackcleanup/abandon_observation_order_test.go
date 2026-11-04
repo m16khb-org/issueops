@@ -21,7 +21,7 @@ func TestAbandonOwnershipRefusalPrecedesArtifactObservation(t *testing.T) {
 			return issueopscontract.CleanupAbandonResult{OK: false, ID: req.ID}, context.Canceled
 		}
 	})
-	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintJSON: func(any) error { return nil }, PrintError: func(error) error { return nil }, ObserveArtifactMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error) { observed++; return false, nil }}
+	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintJSON: func(any) error { return nil }, PrintError: func(error) error { return nil }, ObserveArtifactMerged: func(issueopscontract.RemoteArtifactVerification) (bool, error) { observed++; return false, nil }}
 	err := command.RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "ownership-test", "--preview", "--json"}, deps)
 	if err == nil || !entered {
 		t.Fatalf("executor refusal not reached: %v", err)

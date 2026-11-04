@@ -27,7 +27,7 @@ const (
 	MaxIssueCreateValueBytes     = 256
 )
 
-type IssueOpsIssueCreateIntent struct {
+type IssueCreateIntent struct {
 	OperationID      string   `json:"operation_id"`
 	Marker           string   `json:"marker"`
 	Provider         string   `json:"provider"`
@@ -44,7 +44,7 @@ type IssueOpsIssueCreateIntent struct {
 	UpdatedAt        string   `json:"updated_at"`
 }
 
-type IssueOpsIssueCreateIntentRequest struct {
+type IssueCreateIntentRequest struct {
 	OperationID      string
 	Provider         string
 	ProjectAuthority string
@@ -55,20 +55,20 @@ type IssueOpsIssueCreateIntentRequest struct {
 	StartedAt        string
 }
 
-type IssueOpsIssueCreateOutcome struct {
+type IssueCreateOutcome struct {
 	Status       string
 	CanonicalURL string
 	Failure      string
 	ObservedAt   string
 }
 
-type IssueOpsIssueCreateReconcileResult struct {
-	OK                bool                       `json:"ok"`
-	CandidateCount    int                        `json:"candidate_count"`
-	CandidateURL      string                     `json:"candidate_url"`
-	WouldAdopt        bool                       `json:"would_adopt"`
-	IssueURL          string                     `json:"issue_url"`
-	IssueCreateIntent *IssueOpsIssueCreateIntent `json:"issue_create_intent"`
+type IssueCreateReconcileResult struct {
+	OK                bool               `json:"ok"`
+	CandidateCount    int                `json:"candidate_count"`
+	CandidateURL      string             `json:"candidate_url"`
+	WouldAdopt        bool               `json:"would_adopt"`
+	IssueURL          string             `json:"issue_url"`
+	IssueCreateIntent *IssueCreateIntent `json:"issue_create_intent"`
 	// NextCommand is the --confirm adoption a preview that found the one
 	// matching issue hands back.
 	NextCommand string `json:"next_command,omitempty"`
@@ -77,7 +77,7 @@ type IssueOpsIssueCreateReconcileResult struct {
 	WouldRelease bool `json:"would_release,omitempty"`
 }
 
-func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
+func ValidateIssueCreateIntent(intent IssueCreateIntent) error {
 	if err := validateIssueCreateRequiredFields(intent); err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
 	return validateIssueCreateMarkerAttemptStatus(intent)
 }
 
-func validateIssueCreateRequiredFields(intent IssueOpsIssueCreateIntent) error {
+func validateIssueCreateRequiredFields(intent IssueCreateIntent) error {
 	for _, field := range []struct{ name, value string }{
 		{"operation_id", intent.OperationID},
 		{"marker", intent.Marker},
@@ -114,7 +114,7 @@ func validateIssueCreateRequiredFields(intent IssueOpsIssueCreateIntent) error {
 	return nil
 }
 
-func validateIssueCreateDigestsAndProvider(intent IssueOpsIssueCreateIntent) error {
+func validateIssueCreateDigestsAndProvider(intent IssueCreateIntent) error {
 	if len(intent.BodySHA256) != 64 {
 		return fmt.Errorf("issue create intent body_sha256 must be 64 hex characters")
 	}
@@ -137,7 +137,7 @@ func validateIssueCreateDigestsAndProvider(intent IssueOpsIssueCreateIntent) err
 	return nil
 }
 
-func validateIssueCreateFieldSizes(intent IssueOpsIssueCreateIntent) error {
+func validateIssueCreateFieldSizes(intent IssueCreateIntent) error {
 	if len(intent.ProjectAuthority) > MaxIssueCreateAuthorityBytes {
 		return fmt.Errorf("issue create intent project_authority exceeds %d bytes", MaxIssueCreateAuthorityBytes)
 	}
@@ -156,7 +156,7 @@ func validateIssueCreateFieldSizes(intent IssueOpsIssueCreateIntent) error {
 	return nil
 }
 
-func validateIssueCreateMarkerAttemptStatus(intent IssueOpsIssueCreateIntent) error {
+func validateIssueCreateMarkerAttemptStatus(intent IssueCreateIntent) error {
 	if intent.Marker != "<!-- issueops:issue-create:"+intent.OperationID+" -->" {
 		return fmt.Errorf("issue create intent marker does not match operation_id")
 	}

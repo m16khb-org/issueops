@@ -8,7 +8,7 @@ import (
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/artifacttemplate"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/policy"
 )
 
@@ -27,14 +27,14 @@ type PublicationCommandService struct {
 	normalize func(context.Context, model.NativeActor) (model.NativeActor, error)
 	publish   PublicationInvoker
 	// issueState reads the linked issue's provider state for the preview.
-	issueState func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)
+	issueState func(ctx context.Context, record model.Record, provider string) (string, error)
 	// readFile reads the repository's own PR/MR template for the preview.
 	readFile func(string) ([]byte, error)
 }
 
 // WithIssueState lets the preview read the linked issue's state, so a PR is
 // not prepared for an issue someone closed meanwhile without saying so.
-func (s *PublicationCommandService) WithIssueState(read func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)) *PublicationCommandService {
+func (s *PublicationCommandService) WithIssueState(read func(ctx context.Context, record model.Record, provider string) (string, error)) *PublicationCommandService {
 	s.issueState = read
 	return s
 }
@@ -53,7 +53,7 @@ func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBody
 func (s *PublicationCommandService) Create(ctx context.Context, input PublicationInput) (PublicationResult, error) {
 	var result PublicationResult
 	req := input.Request
-	req.Labels, req.Assignees = remote.CleanValues(req.Labels), remote.CleanValues(req.Assignees)
+	req.Labels, req.Assignees = issueopsremote.CleanValues(req.Labels), issueopsremote.CleanValues(req.Assignees)
 	record, err := s.records.Read(ctx, req.ID)
 	if err != nil {
 		return result, err
@@ -71,7 +71,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	if err := policy.ValidateRemoteCreateInputs("pr create", req.Title, req.Body, req.Labels, req.Assignees); err != nil {
 		return result, err
 	}
-	if err := remote.ValidateConfirmCreateMetadata(req.Confirm, req.Labels, req.Assignees); err != nil {
+	if err := issueopsremote.ValidateConfirmCreateMetadata(req.Confirm, req.Labels, req.Assignees); err != nil {
 		return result, err
 	}
 	if !req.Confirm {
@@ -99,7 +99,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 // issueWarnings names a linked issue that is no longer open. QA: an issue
 // closed as a duplicate between sessions went unnoticed, and the next session
 // built and published a PR that "Closes" it.
-func (s *PublicationCommandService) issueWarnings(ctx context.Context, record model.IssueOpsRecord, provider string) []string {
+func (s *PublicationCommandService) issueWarnings(ctx context.Context, record model.Record, provider string) []string {
 	if s.issueState == nil || strings.TrimSpace(record.IssueURL) == "" {
 		return nil
 	}
@@ -116,7 +116,7 @@ func (s *PublicationCommandService) issueWarnings(ctx context.Context, record mo
 // templateWarnings names repository PR/MR template sections the body lacks.
 // QA: an agent published a body with only the issueops sections in a
 // repository whose template asked for What, Risk and a checklist.
-func (s *PublicationCommandService) templateWarnings(record model.IssueOpsRecord, provider, body string) []string {
+func (s *PublicationCommandService) templateWarnings(record model.Record, provider, body string) []string {
 	if s.readFile == nil {
 		return nil
 	}
@@ -130,12 +130,12 @@ func (s *PublicationCommandService) templateWarnings(record model.IssueOpsRecord
 	if root == "" {
 		return nil
 	}
-	for _, rel := range remote.RepoPullRequestTemplatePaths(provider) {
+	for _, rel := range issueopsremote.RepoPullRequestTemplatePaths(provider) {
 		content, err := s.readFile(strings.TrimRight(root, "/") + "/" + rel)
 		if err != nil {
 			continue
 		}
-		missing := remote.TemplateSectionsMissing(string(content), body)
+		missing := issueopsremote.TemplateSectionsMissing(string(content), body)
 		if len(missing) == 0 {
 			return nil
 		}

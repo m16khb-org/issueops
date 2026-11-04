@@ -101,7 +101,7 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 			actor := claimWiringActor(t)
 			process := *actor.SessionProcess
 			observation.Target.Process = &process
-			observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
+			observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.HandoffDeliveryEvidenceLauncherReceipt)
 			if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 				t.Fatal(err)
 			}
@@ -120,7 +120,7 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 				t.Fatal(err)
 			}
 			got := folded[observation.LifecycleID+"\x00"+observation.LineageID]
-			claimed := got.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved
+			claimed := got.OwnerClaimed.Status == issueopscontract.HandoffDeliveryStateObserved
 			if claimed != test.wantClaim {
 				t.Fatalf("owner claim attached=%v want=%v observation=%+v", claimed, test.wantClaim, got)
 			}
@@ -153,7 +153,7 @@ func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelati
 				observation.Target.SurfaceID = "22222222-2222-4222-8222-222222222222"
 			}
 			if test.inputAccepted {
-				observation.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: createdAt, Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput}
+				observation.InputAccepted = issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateObserved, ObservedAt: createdAt, Evidence: issueopscontract.HandoffDeliveryEvidenceRawInput}
 			}
 			if test.process {
 				process := *actor.SessionProcess
@@ -175,7 +175,7 @@ func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelati
 				t.Fatal(err)
 			}
 			got := folded[observation.LifecycleID+"\x00"+observation.LineageID]
-			if claimed := got.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved; claimed != test.wantClaim {
+			if claimed := got.OwnerClaimed.Status == issueopscontract.HandoffDeliveryStateObserved; claimed != test.wantClaim {
 				t.Fatalf("claim=%v want=%v observation=%+v", claimed, test.wantClaim, got)
 			}
 		})
@@ -192,7 +192,7 @@ func TestSuccessfulDirectClaimRejectsAmbiguousManualLineages(t *testing.T) {
 		observation := manualHerdrHandoffObservation(lifecycleID, 1, suffix, at)
 		process := *actor.SessionProcess
 		observation.Target.Process = &process
-		observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
+		observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.HandoffDeliveryEvidenceLauncherReceipt)
 		if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 			t.Fatal(err)
 		}
@@ -229,7 +229,7 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	observation := manualHerdrHandoffObservation(record.ID, 1, "reseed-claim", at)
 	process := *actor.SessionProcess
 	observation.Target.Process = &process
-	observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
+	observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.HandoffDeliveryEvidenceLauncherReceipt)
 	if _, err := newHandoffDeliveryService(stateRoot).ObserveManual(observation); err != nil {
 		t.Fatalf("production manual producer rejected the released-generation observation: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := folded[observation.LifecycleID+"\x00"+observation.LineageID]
-	if got.SourceGeneration != 1 || got.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved ||
+	if got.SourceGeneration != 1 || got.OwnerClaimed.Status != issueopscontract.HandoffDeliveryStateObserved ||
 		!got.OwnerClaim.Claimed || got.OwnerClaim.Generation != 2 || got.OwnerActor == nil || got.OwnerActor.SessionID != actor.SessionID {
 		t.Fatalf("released-to-reseeded claim observation=%+v", got)
 	}
@@ -339,7 +339,7 @@ func TestIssueOpsConcurrentReceiversHaveOneAuthorityHolderAndLoserDoesNoWork(t *
 
 // seedDirectClaimFixture는 generation 1이 claimable인 direct 실행 레코드와 발급된
 // claim 토큰 파일을 만든다.
-func seedDirectClaimFixture(t *testing.T) (string, issueopscontract.IssueOpsRecord, string) {
+func seedDirectClaimFixture(t *testing.T) (string, issueopscontract.Record, string) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	source := filepath.Join(t.TempDir(), "source")
@@ -353,13 +353,13 @@ func seedDirectClaimFixture(t *testing.T) (string, issueopscontract.IssueOpsReco
 	claimWiringGit(t, source, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "-q", "-m", "test: direct claim fixture")
 	claimWiringGit(t, source, "worktree", "add", "-q", "-b", branch, worktree, "main")
 	baseHead := strings.TrimSpace(claimWiringGit(t, worktree, "rev-parse", "HEAD"))
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: source, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: source, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueopscontract.IssueOpsPhaseImplement
+	record.Phase = issueopscontract.PhaseImplement
 	record.IssueURL = "https://github.com/acme/repo/issues/16"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true}
+	record.BranchPrepare = &issueopscontract.BranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true}
 	record.WorktreePath = worktree
 	record.Execution = &issueopscontract.Execution{
 		Workspace: issueopscontract.Workspace{SourceRoot: source, Root: worktree, Branch: record.Branch, BaseHead: baseHead, LinkedAt: "2026-07-30T09:00:00Z", ArtifactDir: ".issueops/issues/16/artifact"},

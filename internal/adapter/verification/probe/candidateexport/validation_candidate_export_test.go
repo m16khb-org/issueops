@@ -32,7 +32,7 @@ func TestValidateCandidateExportWithDepsCoversSuccessAndCommandFailure(t *testin
 	export := validCandidateExportResult(key)
 	snapshot := validCandidateExportSnapshot(export)
 	calls := []string{}
-	deps := CandidateExportValidationDeps{
+	deps := ValidationDeps{
 		MakeTempState: func(seed int64) (string, error) {
 			if seed != 77 {
 				t.Fatalf("unexpected seed: %d", seed)
@@ -54,7 +54,7 @@ func TestValidateCandidateExportWithDepsCoversSuccessAndCommandFailure(t *testin
 			case "candidate export":
 				return selfverify.StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
 			case "candidate export state read":
-				return selfverify.StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, snapshot)}})}
+				return selfverify.StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.Result{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, snapshot)}})}
 			default:
 				t.Fatalf("unexpected label: %s", label)
 			}
@@ -80,7 +80,7 @@ func TestValidateCandidateExportWithDepsCoversParseAndContractFailures(t *testin
 	tempState := t.TempDir()
 	key := "self-verify-candidates-5"
 	export := validCandidateExportResult(key)
-	deps := CandidateExportValidationDeps{
+	deps := ValidationDeps{
 		MakeTempState: func(int64) (string, error) { return tempState, nil },
 		RemoveAll:     func(string) error { return nil },
 	}
@@ -108,7 +108,7 @@ func TestValidateCandidateExportWithDepsCoversParseAndContractFailures(t *testin
 		if label == "candidate export" {
 			return selfverify.StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
 		}
-		return selfverify.StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: "{"}})}
+		return selfverify.StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.Result{OK: true, Record: statecontract.RecordEnvelope{Content: "{"}})}
 	}
 	badSnapshot := ValidateSelfVerifyCandidateExportWithDeps("bin", root, 5, deps)
 	if badSnapshot.OK || !strings.Contains(badSnapshot.Error, "candidate export state snapshot parse") {
@@ -121,7 +121,7 @@ func TestValidateCandidateExportWithDepsCoversParseAndContractFailures(t *testin
 		if label == "candidate export" {
 			return selfverify.StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, invalidExport)}
 		}
-		return selfverify.StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, validCandidateExportSnapshot(export))}})}
+		return selfverify.StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.Result{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, validCandidateExportSnapshot(export))}})}
 	}
 	contractFailure := ValidateSelfVerifyCandidateExportWithDeps("bin", root, 5, deps)
 	if contractFailure.OK || !strings.Contains(contractFailure.Error, "candidate export did not include the candidate curriculum") {
@@ -147,7 +147,7 @@ func validCandidateExportResult(key string) selfaugment.SelfVerificationCandidat
 		CandidateCount:        len(candidates),
 		SatisfiedCandidateIDs: []string{"completion-evidence-audit", "self-verify-candidate-export", "self-verify-step-budget-baseline", "self-verify-install-dry-run-smoke"},
 		Candidates:            candidates,
-		StateCheckpoint:       &selfaugment.SelfAugmentStateCheckpoint{OK: true, Key: key},
+		StateCheckpoint:       &selfaugment.StateCheckpoint{OK: true, Key: key},
 	}
 }
 
@@ -175,7 +175,7 @@ func writeCandidateExportFakeBinary(t *testing.T, dir, key string) string {
 	t.Helper()
 	export := validCandidateExportResult(key)
 	snapshot := validCandidateExportSnapshot(export)
-	state := statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, snapshot)}}
+	state := statecontract.Result{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, snapshot)}}
 	body := "#!/bin/sh\nset -eu\ncase \"$*\" in\n" +
 		"  \"self-verify candidates --save-state --state-key " + key + " --json\") printf '%s\\n' '" + mustMarshalCandidateExportTest(t, export) + "' ;;\n" +
 		"  \"state read --key " + key + " --json\") printf '%s\\n' '" + mustMarshalCandidateExportTest(t, state) + "' ;;\n" +

@@ -68,7 +68,7 @@ func TestSelfVerifyReuseFixtureEntryPoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var decoded augment.SelfAugmentStateSnapshot
+	var decoded augment.StateSnapshot
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
 	}
@@ -82,13 +82,13 @@ func TestSelfVerifyReuseFixtureEntryPoint(t *testing.T) {
 		t.Fatalf("fixture workspace was not removed: %v", err)
 	}
 	output, err := json.Marshal(struct {
-		ContractVersion int                                   `json:"contract_version"`
-		SnapshotSchema  int                                   `json:"snapshot_schema"`
-		PassedSteps     int                                   `json:"passed_steps"`
-		Stats           []augment.SelfAugmentStepDurationStat `json:"step_duration_stats"`
+		ContractVersion int                        `json:"contract_version"`
+		SnapshotSchema  int                        `json:"snapshot_schema"`
+		PassedSteps     int                        `json:"passed_steps"`
+		Stats           []augment.StepDurationStat `json:"step_duration_stats"`
 	}{
 		result.Summary.Contract.Version, decoded.SchemaVersion, result.Summary.PassedSteps,
-		[]augment.SelfAugmentStepDurationStat{stats["risk QA tier"], stats["go test"], stats["contract golden tests"]},
+		[]augment.StepDurationStat{stats["risk QA tier"], stats["go test"], stats["contract golden tests"]},
 	})
 	if err != nil {
 		t.Fatal(err)

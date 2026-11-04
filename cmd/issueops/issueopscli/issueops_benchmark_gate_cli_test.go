@@ -11,9 +11,9 @@ import (
 func TestRunIssueOpsBenchmarkGateCLIKeepsCandidate(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	baseline := benchmarkcontract.IssueOpsBenchmarkRunResult{
+	baseline := benchmarkcontract.RunResult{
 		ID: "baseline",
-		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.Score{{
 			OK:           true,
 			FixtureID:    "fixture",
 			AverageScore: 100,
@@ -54,9 +54,9 @@ func TestRunIssueOpsBenchmarkGateCLIKeepsCandidate(t *testing.T) {
 func TestRunIssueOpsBenchmarkGateCLIDiscardsOutsideEditSurface(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	run := benchmarkdomain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{
+	run := benchmarkdomain.FinalizeRun(benchmarkcontract.RunResult{
 		ID: "baseline",
-		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.Score{{
 			OK:           true,
 			FixtureID:    "fixture",
 			AverageScore: 100,

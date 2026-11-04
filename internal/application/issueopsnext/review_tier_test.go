@@ -14,9 +14,9 @@ import (
 
 // reviewTierPorts는 티어 관측을 계측한 ports다. 호출 횟수를 세어 implement 이전
 // phase에서 git을 읽지 않는다는 계약을 검증한다.
-func reviewTierPorts(record issueopscontract.IssueOpsRecord, paths []string, observed bool, calls *int) Ports {
+func reviewTierPorts(record issueopscontract.Record, paths []string, observed bool, calls *int) Ports {
 	entries := []issueopsinventorycontract.ListEntry{{ID: record.ID, Phase: record.Phase, Branch: record.Branch}}
-	ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{record.ID: record})
+	ports := testPorts(entries, map[string]issueopscontract.Record{record.ID: record})
 	ports.Actor = func() (string, string, error) { return "claude", "session-1", nil }
 	ports.ReviewModel = func(host string, role agentmodelcontract.Role, tier, repo string) (string, string, error) {
 		if tier == "docs-only" {
@@ -24,15 +24,15 @@ func reviewTierPorts(record issueopscontract.IssueOpsRecord, paths []string, obs
 		}
 		return "planner-model", "high", nil
 	}
-	ports.ChangedPaths = func(issueopscontract.IssueOpsRecord) ([]string, bool) {
+	ports.ChangedPaths = func(issueopscontract.Record) ([]string, bool) {
 		*calls++
 		return paths, observed
 	}
 	return ports
 }
 
-func implementRecordForTier() issueopscontract.IssueOpsRecord {
-	return issueopscontract.IssueOpsRecord{ID: "io-tier", Repo: "/repo", Branch: "9-tier", Phase: issueopscontract.IssueOpsPhaseImplement}
+func implementRecordForTier() issueopscontract.Record {
+	return issueopscontract.Record{ID: "io-tier", Repo: "/repo", Branch: "9-tier", Phase: issueopscontract.PhaseImplement}
 }
 
 // 문서만 바뀐 사이클은 side effect 렌즈 하나와 낮은 effort로 검토한다.
@@ -80,7 +80,7 @@ func TestNextKeepsFullLensesForContractChangeSets(t *testing.T) {
 func TestNextDoesNotObserveChangedPathsBeforeImplement(t *testing.T) {
 	calls := 0
 	record := implementRecordForTier()
-	record.Phase = issueopscontract.IssueOpsPhasePlan
+	record.Phase = issueopscontract.PhasePlan
 	ports := reviewTierPorts(record, []string{".issueops/CAUTIONS.md"}, true, &calls)
 	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
 	if err != nil {
@@ -105,8 +105,8 @@ func TestNextReportsNoTierWhileImplementationChangesAreMissing(t *testing.T) {
 	record := implementRecordForTier()
 	record.Execution = &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusActive, Holder: &issueopscontract.NativeActor{Host: "claude", SessionID: "session-1"}}}
 	ports := reviewTierPorts(record, []string{".issueops/issues/9/plan.md"}, true, &calls)
-	ports.Completion = func(issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsPhase) issueopscontract.IssueOpsReadiness {
-		return issueopscontract.IssueOpsReadiness{Missing: []string{"implementation_changes"}}
+	ports.Completion = func(issueopscontract.Record, issueopscontract.Phase) issueopscontract.Readiness {
+		return issueopscontract.Readiness{Missing: []string{"implementation_changes"}}
 	}
 	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
 	if err != nil {
@@ -177,10 +177,10 @@ func TestNextFlagsFrontendChangeSetsWithoutChangingTier(t *testing.T) {
 
 // plan 이전에는 plan-review, implement 이후에는 diff-review 역할로 해석한다.
 func TestNextResolvesTheReviewRoleByPhase(t *testing.T) {
-	for phase, want := range map[issueopscontract.IssueOpsPhase]agentmodelcontract.Role{
-		issueopscontract.IssueOpsPhasePlan:        agentmodelcontract.RolePlanReview,
-		issueopscontract.IssueOpsPhaseImplement:   agentmodelcontract.RoleDiffReview,
-		issueopscontract.IssueOpsPhaseAISlopClean: agentmodelcontract.RoleDiffReview,
+	for phase, want := range map[issueopscontract.Phase]agentmodelcontract.Role{
+		issueopscontract.PhasePlan:        agentmodelcontract.RolePlanReview,
+		issueopscontract.PhaseImplement:   agentmodelcontract.RoleDiffReview,
+		issueopscontract.PhaseAISlopClean: agentmodelcontract.RoleDiffReview,
 	} {
 		calls := 0
 		record := implementRecordForTier()

@@ -18,7 +18,7 @@ func (source Source) ResolveRoot(path string) string {
 	return root
 }
 
-func (Source) TargetFiles(root string, request guardcontract.GuardCheckRequest) []string {
+func (Source) TargetFiles(root string, request guardcontract.CheckRequest) []string {
 	return guardTargetFiles(root, request)
 }
 func (Source) ExistingSymbols(root string, files []string) map[string][]string {

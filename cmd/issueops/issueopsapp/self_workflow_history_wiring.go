@@ -15,8 +15,8 @@ func newSelfWorkflowHistory(dir string) augmentapp.HistoryService {
 }
 
 func selfWorkflowHistoryCLI() historycompare.CLIDeps {
-	service := newSelfWorkflowHistory(statestore.StateDir())
-	return historycompare.CLIDeps{History: func(prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
+	service := newSelfWorkflowHistory(statestore.Dir())
+	return historycompare.CLIDeps{History: func(prefix string, limit int, retention contract.HistoryRetentionOptions) (contract.HistoryResult, error) {
 		return service.History(context.Background(), prefix, limit, retention)
 	}, Compare: service.Compare, PrintJSON: printJSON}
 }

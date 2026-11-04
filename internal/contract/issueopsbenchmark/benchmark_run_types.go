@@ -8,7 +8,7 @@ type IssueOpsDimensionScore struct {
 	Evidence      string  `json:"evidence"`
 	NotApplicable bool    `json:"not_applicable,omitempty"`
 }
-type IssueOpsBenchmarkScore struct {
+type Score struct {
 	OK                    bool                     `json:"ok"`
 	FixtureID             string                   `json:"fixture_id"`
 	AverageScore          float64                  `json:"average_score"`
@@ -19,16 +19,16 @@ type IssueOpsBenchmarkScore struct {
 	CriticalFailures      []string                 `json:"critical_failures"`
 	Passed                bool                     `json:"passed"`
 }
-type IssueOpsBenchmarkRunResult struct {
-	OK                   bool                     `json:"ok"`
-	ID                   string                   `json:"id"`
-	FixtureCount         int                      `json:"fixture_count"`
-	AverageScore         float64                  `json:"average_score"`
-	MinimumScore         float64                  `json:"minimum_score"`
-	CriticalFailureCount int                      `json:"critical_failure_count"`
-	Scores               []IssueOpsBenchmarkScore `json:"scores"`
+type RunResult struct {
+	OK                   bool    `json:"ok"`
+	ID                   string  `json:"id"`
+	FixtureCount         int     `json:"fixture_count"`
+	AverageScore         float64 `json:"average_score"`
+	MinimumScore         float64 `json:"minimum_score"`
+	CriticalFailureCount int     `json:"critical_failure_count"`
+	Scores               []Score `json:"scores"`
 }
-type IssueOpsBenchmarkCompareResult struct {
+type CompareResult struct {
 	OK                   bool     `json:"ok"`
 	Improved             bool     `json:"improved"`
 	BaselineID           string   `json:"baseline_id"`
@@ -46,18 +46,18 @@ type IssueOpsAutoresearchCandidate struct {
 }
 type IssueOpsAutoresearchGateRequest struct {
 	Candidate    IssueOpsAutoresearchCandidate
-	BaselineRun  IssueOpsBenchmarkRunResult
-	CandidateRun IssueOpsBenchmarkRunResult
+	BaselineRun  RunResult
+	CandidateRun RunResult
 	ChangedPaths []string
 }
 type IssueOpsAutoresearchGateResult struct {
-	OK                         bool                           `json:"ok"`
-	KeepCandidate              bool                           `json:"keep_candidate"`
-	CandidateID                string                         `json:"candidate_id"`
-	BenchmarkCompare           IssueOpsBenchmarkCompareResult `json:"benchmark_compare"`
-	EditSurfaceViolations      []string                       `json:"edit_surface_violations,omitempty"`
-	TargetDimensionRegressions []string                       `json:"target_dimension_regressions,omitempty"`
-	DiscardReasons             []string                       `json:"discard_reasons,omitempty"`
+	OK                         bool          `json:"ok"`
+	KeepCandidate              bool          `json:"keep_candidate"`
+	CandidateID                string        `json:"candidate_id"`
+	BenchmarkCompare           CompareResult `json:"benchmark_compare"`
+	EditSurfaceViolations      []string      `json:"edit_surface_violations,omitempty"`
+	TargetDimensionRegressions []string      `json:"target_dimension_regressions,omitempty"`
+	DiscardReasons             []string      `json:"discard_reasons,omitempty"`
 }
 
 // A7 — judge-map provenance. The --judge file backend merges externally-produced
@@ -73,9 +73,9 @@ type IssueOpsAutoresearchGateResult struct {
 // does NOT establish that an independent judge evaluated different artifacts;
 // the dashboard must not claim "independent judge" on the strength of this gate.
 type IssueOpsJudgeMap struct {
-	SourceRunID string                            `json:"source_run_id"`
-	Provenance  string                            `json:"provenance"`
-	Scores      map[string]IssueOpsBenchmarkScore `json:"scores"`
+	SourceRunID string           `json:"source_run_id"`
+	Provenance  string           `json:"provenance"`
+	Scores      map[string]Score `json:"scores"`
 }
 
 // RecordedRun은 SUT를 offline으로 한 번 실행한 fixture별 pass/fail 결과다.
@@ -131,9 +131,9 @@ type ReliabilityReport struct {
 // non-empty: this is the machine-checkable guard (ported from the RecordedRun /
 // judge-provenance guards) against re-using one judge sample as N fake voters.
 type JudgeSample struct {
-	SampleID   string                 `json:"sample_id"`
-	Provenance string                 `json:"provenance"`
-	Score      IssueOpsBenchmarkScore `json:"score"`
+	SampleID   string `json:"sample_id"`
+	Provenance string `json:"provenance"`
+	Score      Score  `json:"score"`
 }
 
 // ConsensusVerdict is the self-consistency aggregation of N judge samples.

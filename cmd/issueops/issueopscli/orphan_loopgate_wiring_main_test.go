@@ -14,7 +14,7 @@ import (
 // 고아 정리를 검증하므로 같은 배선을 재현한다.
 func wireOrphanAndLoopGateForTests() {
 	testIssueOpsGates = LoopGateDeps{
-		AdvancePhaseReport: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsTrackedMaterials, error) {
+		AdvancePhaseReport: func(stateRoot, id, to string, actor issueopscontract.Actor) (issueopscontract.Record, issueopscontract.TrackedMaterials, error) {
 			return advanceLoopPhaseForTest(stateRoot, id, to, actor)
 		},
 		StrictPRReadinessWithState: strictLoopReadinessForTest,

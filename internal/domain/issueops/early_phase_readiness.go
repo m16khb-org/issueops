@@ -6,7 +6,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func PlanReadinessMissing(record model.IssueOpsRecord) []string {
+func PlanReadinessMissing(record model.Record) []string {
 	missing := IntentMissing(record)
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")
@@ -17,7 +17,7 @@ func PlanReadinessMissing(record model.IssueOpsRecord) []string {
 	return missing
 }
 
-func GrillReadinessMissing(record model.IssueOpsRecord) []string {
+func GrillReadinessMissing(record model.Record) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")
@@ -32,7 +32,7 @@ func GrillReadinessMissing(record model.IssueOpsRecord) []string {
 	return append(missing, DomainReviewMissing(record)...)
 }
 
-func BranchEvidenceMissing(record model.IssueOpsRecord) []string {
+func BranchEvidenceMissing(record model.Record) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")

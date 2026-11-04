@@ -7,7 +7,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ValidateReviewReflection(record model.IssueOpsRecord) error {
+func ValidateReviewReflection(record model.Record) error {
 	review := record.DevilsAdvocateReview
 	if review == nil || len(review.Findings) == 0 {
 		return fmt.Errorf("no devil's-advocate findings to reflect")
@@ -18,7 +18,7 @@ func ValidateReviewReflection(record model.IssueOpsRecord) error {
 	return nil
 }
 
-func ValidateReviewReflectionStamp(record model.IssueOpsRecord) error {
+func ValidateReviewReflectionStamp(record model.Record) error {
 	if record.DevilsAdvocateReview == nil {
 		return fmt.Errorf("devil's-advocate review disappeared before reflect stamp")
 	}
@@ -26,7 +26,7 @@ func ValidateReviewReflectionStamp(record model.IssueOpsRecord) error {
 }
 
 // MarkReviewReflected applies a stamp after validating the current review and authority.
-func MarkReviewReflected(record model.IssueOpsRecord, now string) model.IssueOpsRecord {
+func MarkReviewReflected(record model.Record, now string) model.Record {
 	review := *record.DevilsAdvocateReview
 	review.IssueReflectedAt = now
 	record.DevilsAdvocateReview = &review
@@ -41,7 +41,7 @@ func MarkReviewReflected(record model.IssueOpsRecord, now string) model.IssueOps
 // the next reflect) showed "1차 통과" and lost the stop the team had seen
 // (QA). Each regress follows exactly one reflected stop; its finding count
 // is gone with the cleared review, so the round carries none.
-func PlanReviewRounds(review *model.IssueOpsDevilsAdvocateReview, regressed int) []model.PlanReviewRound {
+func PlanReviewRounds(review *model.DevilsAdvocateReview, regressed int) []model.PlanReviewRound {
 	rounds := make([]model.PlanReviewRound, 0, regressed+len(review.History)+1)
 	for range regressed {
 		rounds = append(rounds, model.PlanReviewRound{Verdict: "stop"})

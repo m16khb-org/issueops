@@ -34,7 +34,7 @@ func BuildPrompt(diff string) string {
 			"Lore body contains Intent, Why, Changes, Verify, and Risk.",
 			"The message does not mention files or tests not supported by the diff.",
 		},
-		Data: []prompt.PromptDataSection{
+		Data: []prompt.DataSection{
 			judgement.BuildJSONSchemaSection(commitSuggestResponseSchemaExample(), []string{
 				"commit_message: string, required, the complete Conventional Commit subject and Lore body.",
 			}),

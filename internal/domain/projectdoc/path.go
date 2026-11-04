@@ -12,7 +12,7 @@ import (
 // DESIGN.md only for repositories with a client surface), so iteration over
 // this list must skip empty render results.
 func PrefixedKnownProjectDocNames() []string {
-	names := append(ProjectDocNames(), optionalProjectDocNames...)
+	names := append(Names(), optionalProjectDocNames...)
 	out := make([]string, 0, len(names))
 	for _, name := range names {
 		out = append(out, filepath.ToSlash(filepath.Join(ProjectDocsDir, name)))

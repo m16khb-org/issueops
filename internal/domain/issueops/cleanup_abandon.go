@@ -46,7 +46,7 @@ func CleanupAbandonPreviewCommand(id, reason string, req issueops.CleanupAbandon
 		id, reason, CleanupAbandonRemoteFlags(req))
 }
 
-func CleanupAbandonPartialBranchRetry(record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
+func CleanupAbandonPartialBranchRetry(record issueops.Record, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
 	branchPresent := inventory.BranchOID != ""
 	failure := record.CleanupAbandonFailure
 	return !inventory.WorktreePresent && branchPresent && failure != nil &&
@@ -56,7 +56,7 @@ func CleanupAbandonPartialBranchRetry(record issueops.IssueOpsRecord, inventory 
 		failure.WorktreeHead == inventory.BranchOID
 }
 
-func CleanupAbandonFailureInventoryMatches(record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
+func CleanupAbandonFailureInventoryMatches(record issueops.Record, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
 	failure := record.CleanupAbandonFailure
 	if failure == nil {
 		return true
@@ -85,7 +85,7 @@ func CleanupAbandonFailureInventoryMatches(record issueops.IssueOpsRecord, inven
 
 // cleanupAbandonReceiptSealed는 receipt의 지문들이 형식에 맞고 봉인·worktree
 // 증거와 branch 이름이 현재 inventory와 일치하는지 확인한다.
-func cleanupAbandonReceiptSealed(failure *issueops.IssueOpsCleanupAbandonFailure, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
+func cleanupAbandonReceiptSealed(failure *issueops.CleanupAbandonFailure, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
 	return cleanupAbandonValidFingerprint(failure.Fingerprint) &&
 		cleanupAbandonValidFingerprint(failure.RecordSHA) &&
 		cleanupAbandonValidFingerprint(failure.InventorySHA256) &&
@@ -96,14 +96,14 @@ func cleanupAbandonReceiptSealed(failure *issueops.IssueOpsCleanupAbandonFailure
 // cleanupAbandonReceiptMatcher는 receipt가 기록한 원래 자원 모양과 현재
 // inventory를 비교한다.
 type cleanupAbandonReceiptMatcher struct {
-	failure       *issueops.IssueOpsCleanupAbandonFailure
+	failure       *issueops.CleanupAbandonFailure
 	inventory     issueops.CleanupAbandonInventory
 	origWorktree  bool
 	origBranch    bool
 	branchPresent bool
 }
 
-func newCleanupAbandonReceiptMatcher(failure *issueops.IssueOpsCleanupAbandonFailure, inventory issueops.CleanupAbandonInventory) cleanupAbandonReceiptMatcher {
+func newCleanupAbandonReceiptMatcher(failure *issueops.CleanupAbandonFailure, inventory issueops.CleanupAbandonInventory) cleanupAbandonReceiptMatcher {
 	return cleanupAbandonReceiptMatcher{
 		failure: failure, inventory: inventory,
 		origWorktree:  failure.WorktreeHead != "",
@@ -166,7 +166,7 @@ func cleanupAbandonValidFingerprint(value string) bool {
 	return err == nil
 }
 
-func CleanupAbandonRemovalPlan(record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory) []string {
+func CleanupAbandonRemovalPlan(record issueops.Record, inventory issueops.CleanupAbandonInventory) []string {
 	plan := []string{}
 	if inventory.WorktreePresent {
 		plan = append(plan, "local_worktree:"+inventory.WorktreeRoot)
@@ -184,14 +184,14 @@ func CleanupAbandonRemovalPlan(record issueops.IssueOpsRecord, inventory issueop
 // CleanupAbandonPendingError는 미해결 외부 intent가 남은 사이클의 abandon을 막는
 // 사유다. 해결 중인 intent는 reconcile이 정리해야 하므로, 비어 있지 않은 값은
 // pending_intent_safe 게이트를 미충족으로 만든다.
-func CleanupAbandonPendingError(record issueops.IssueOpsRecord) string {
+func CleanupAbandonPendingError(record issueops.Record) string {
 	if record.Execution == nil || record.Execution.Pending == nil {
 		return ""
 	}
 	return fmt.Sprintf("pending external intent kind %q is unresolved; run `issueops execution reconcile --id %s --preview --json` until it settles before retrying abandon", record.Execution.Pending.Kind, record.ID)
 }
 
-func CleanupAbandonIntentOperationIDs(record issueops.IssueOpsRecord) []string {
+func CleanupAbandonIntentOperationIDs(record issueops.Record) []string {
 	if record.Execution == nil {
 		return nil
 	}
@@ -215,7 +215,7 @@ func CleanupAbandonIntentOperationIDs(record issueops.IssueOpsRecord) []string {
 	return out
 }
 
-func CleanupAbandonUnresolvedChildren(record issueops.IssueOpsRecord, resolved map[string]bool) []string {
+func CleanupAbandonUnresolvedChildren(record issueops.Record, resolved map[string]bool) []string {
 	var unresolved []string
 	for _, child := range record.ChildCycles {
 		id := strings.TrimSpace(child.CycleID)
@@ -253,7 +253,7 @@ func ValidateCleanupAbandonReason(reason string) error {
 	return nil
 }
 
-func CleanupAbandonTargets(record issueops.IssueOpsRecord) issueops.CleanupAbandonInventory {
+func CleanupAbandonTargets(record issueops.Record) issueops.CleanupAbandonInventory {
 	inventory := issueops.CleanupAbandonInventory{
 		ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch),
 		Phase: string(record.Phase), LeaseStatus: "none",
@@ -276,10 +276,10 @@ func CleanupAbandonTargets(record issueops.IssueOpsRecord) issueops.CleanupAband
 
 // Only an observed done record resolves a child. Missing or unreadable child
 // records provide no completion evidence.
-func CleanupAbandonResolvedChildren(children []issueops.IssueOpsRecord) map[string]bool {
+func CleanupAbandonResolvedChildren(children []issueops.Record) map[string]bool {
 	resolved := map[string]bool{}
 	for _, child := range children {
-		if child.Phase == issueops.IssueOpsPhaseDone {
+		if child.Phase == issueops.PhaseDone {
 			resolved[child.ID] = true
 		}
 	}

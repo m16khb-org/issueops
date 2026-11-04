@@ -18,7 +18,7 @@ func newProbeSnapshotStore() app.SnapshotStore {
 	return app.SnapshotStore{NormalizeKey: statepath.NormalizeKey, WriteRecord: probeStateWriteRecord, Now: time.Now}
 }
 func newStateRoundtripProbe() stateroundtrip.Validator {
-	return stateroundtrip.Validator{StateRead: func(dir, key string) (statecontract.StateResult, error) { return newStateService(dir).Read(key) }, WriteRecord: probeStateWriteRecord, WriteSnapshot: newProbeSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}
+	return stateroundtrip.Validator{StateRead: func(dir, key string) (statecontract.Result, error) { return newStateService(dir).Read(key) }, WriteRecord: probeStateWriteRecord, WriteSnapshot: newProbeSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}
 }
 
 // probeStateWriteRecord serves the self-verification probes, whose executor
@@ -27,8 +27,8 @@ func probeStateWriteRecord(dir, key string, record statecontract.RecordEnvelope)
 	return statestore.WriteStateRecord(context.Background(), dir, key, record)
 }
 
-func newStepBudgetProbe() stepbudget.StepBudgetValidationDeps {
-	return stepbudget.StepBudgetValidationDeps{WriteSnapshot: newProbeSnapshotStore().Write}
+func newStepBudgetProbe() stepbudget.ValidationDeps {
+	return stepbudget.ValidationDeps{WriteSnapshot: newProbeSnapshotStore().Write}
 }
 func newDocsQAProbe() qagate.Validator {
 	return qagate.Validator{ListDocs: newDocsService().List, ListSkills: install.ListSkillNames}

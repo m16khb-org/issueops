@@ -5,15 +5,15 @@ import (
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-func FeedbackCompletionMissing(record model.IssueOpsRecord) []string {
+func FeedbackCompletionMissing(record model.Record) []string {
 	return reviewdomain.FeedbackCompletionMissing(feedbackSnapshots(record))
 }
 
-func HasUnresolvedContractFeedback(record model.IssueOpsRecord) bool {
+func HasUnresolvedContractFeedback(record model.Record) bool {
 	return reviewdomain.HasUnresolvedContractFeedback(feedbackSnapshots(record))
 }
 
-func feedbackSnapshots(record model.IssueOpsRecord) []reviewdomain.FeedbackSnapshot {
+func feedbackSnapshots(record model.Record) []reviewdomain.FeedbackSnapshot {
 	items := make([]reviewdomain.FeedbackSnapshot, 0, len(record.Feedback))
 	for _, item := range record.Feedback {
 		items = append(items, reviewdomain.FeedbackSnapshot{

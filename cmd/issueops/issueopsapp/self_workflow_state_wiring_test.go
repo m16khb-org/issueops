@@ -36,12 +36,12 @@ func TestSelfWorkflowStateInstancesSaveAndPromoteIndependently(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			service := services[i]
-			summary := contract.SelfAugmentResult{OK: true, IssueOpsRoot: fmt.Sprintf("repo-%d", i), Summary: contract.SelfAugmentSummary{TerminationEligible: true}}
+			summary := contract.Result{OK: true, IssueOpsRoot: fmt.Sprintf("repo-%d", i), Summary: contract.Summary{TerminationEligible: true}}
 			if err := service.SaveSummary(context.Background(), &summary, "source"); err != nil {
 				t.Error(err)
 				return
 			}
-			plan := contract.SelfAugmentPlanResult{OK: true, IssueOpsRoot: fmt.Sprintf("repo-%d", i)}
+			plan := contract.PlanResult{OK: true, IssueOpsRoot: fmt.Sprintf("repo-%d", i)}
 			if err := service.SavePlan(context.Background(), &plan, "plan"); err != nil {
 				t.Error(err)
 				return
@@ -50,10 +50,10 @@ func TestSelfWorkflowStateInstancesSaveAndPromoteIndependently(t *testing.T) {
 				t.Errorf("checkpoint escaped instance %d: %+v %+v", i, summary.StateCheckpoint, plan.StateCheckpoint)
 				return
 			}
-			var promoted contract.SelfAugmentPromoteResult
-			if err := promotecmd.Run([]string{"--from-key", "source", "--baseline-key", "cli-baseline", "--confirm", "--json"}, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
+			var promoted contract.PromoteResult
+			if err := promotecmd.Run([]string{"--from-key", "source", "--baseline-key", "cli-baseline", "--confirm", "--json"}, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (contract.PromoteResult, error) {
 				return service.Promote(context.Background(), from, to, confirm, allowFailed)
-			}, PrintJSON: func(value any) error { promoted = value.(contract.SelfAugmentPromoteResult); return nil }}); err != nil || !promoted.Promoted || promoted.StateDir != dirs[i] {
+			}, PrintJSON: func(value any) error { promoted = value.(contract.PromoteResult); return nil }}); err != nil || !promoted.Promoted || promoted.StateDir != dirs[i] {
 				t.Errorf("CLI promotion instance %d: %+v %v", i, promoted, err)
 				return
 			}
@@ -63,7 +63,7 @@ func TestSelfWorkflowStateInstancesSaveAndPromoteIndependently(t *testing.T) {
 					t.Errorf("MCP promotion instance %d: %+v %v", i, result, err)
 					return
 				}
-				var got contract.SelfAugmentPromoteResult
+				var got contract.PromoteResult
 				if err := json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &got); err != nil || got.Promoted != confirm || got.StateDir != dirs[i] {
 					t.Errorf("MCP promotion result %+v %v", got, err)
 					return
@@ -106,7 +106,7 @@ func TestSelfWorkflowStateInstancesSaveAndPromoteIndependently(t *testing.T) {
 func TestSelfWorkflowPromotionRefusesFailedAndUnknownSummaryWithoutWriting(t *testing.T) {
 	dir := t.TempDir()
 	service := newSelfWorkflowState(dir)
-	failed := contract.SelfAugmentResult{OK: false, Summary: contract.SelfAugmentSummary{TerminationEligible: false}}
+	failed := contract.Result{OK: false, Summary: contract.Summary{TerminationEligible: false}}
 	if err := service.SaveSummary(context.Background(), &failed, "failed"); err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestSelfWorkflowPromotionRefusesFailedAndUnknownSummaryWithoutWriting(t *te
 	if text, refused := toolRefusal(session.CallTool(context.Background(), &mcp.CallToolParams{Name: "self_verify_promote", Arguments: map[string]any{"from_key": "failed", "baseline_key": "forbidden", "confirm": true}})); !refused || !strings.Contains(text, "refusing to promote") {
 		t.Fatalf("SDK gate refused incorrectly: %q %v", text, refused)
 	}
-	if err := promotecmd.Run([]string{"--from-key", "failed", "--baseline-key", "forbidden", "--confirm", "--json"}, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
+	if err := promotecmd.Run([]string{"--from-key", "failed", "--baseline-key", "forbidden", "--confirm", "--json"}, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (contract.PromoteResult, error) {
 		return service.Promote(context.Background(), from, to, confirm, allowFailed)
 	}, PrintJSON: func(any) error { return nil }}); err == nil || !strings.Contains(err.Error(), "refusing to promote") {
 		t.Fatalf("CLI gate refused incorrectly: %v", err)

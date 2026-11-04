@@ -8,7 +8,7 @@ import (
 
 func GoalPassed(score, target float64) bool { return score > target }
 
-func AllGoalsPassed(goals []contract.SelfAugmentGoal) bool {
+func AllGoalsPassed(goals []contract.Goal) bool {
 	if len(goals) == 0 {
 		return false
 	}
@@ -27,7 +27,7 @@ func ScoreBool(ok bool) float64 {
 	return 0
 }
 
-func PrioritizeCandidates(candidates []contract.SelfAugmentCandidate) {
+func PrioritizeCandidates(candidates []contract.Candidate) {
 	sort.Slice(candidates, func(i, j int) bool {
 		leftOpen := candidates[i].Status == contract.CandidateStatusOpen
 		rightOpen := candidates[j].Status == contract.CandidateStatusOpen
@@ -41,7 +41,7 @@ func PrioritizeCandidates(candidates []contract.SelfAugmentCandidate) {
 	})
 }
 
-func SelectedCandidate(candidates []contract.SelfAugmentCandidate) *contract.SelfAugmentCandidate {
+func SelectedCandidate(candidates []contract.Candidate) *contract.Candidate {
 	for _, candidate := range candidates {
 		if candidate.Status == contract.CandidateStatusOpen {
 			copyCandidate := candidate
@@ -51,7 +51,7 @@ func SelectedCandidate(candidates []contract.SelfAugmentCandidate) *contract.Sel
 	return nil
 }
 
-func SelectedCandidateID(candidate *contract.SelfAugmentCandidate) string {
+func SelectedCandidateID(candidate *contract.Candidate) string {
 	if candidate == nil {
 		return ""
 	}

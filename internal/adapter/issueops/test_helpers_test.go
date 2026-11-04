@@ -35,7 +35,7 @@ func recordIssueOpsProjectDocsReviewForTest(t *testing.T, stateRoot, id string) 
 			t.Fatal(err)
 		}
 	}
-	if _, err := RecordIssueOpsProjectDocsReviewWithActor(stateRoot, id, issueops.IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReviewWithActor(stateRoot, id, issueops.ProjectDocsReviewRequest{
 		Verdict:      "no-change",
 		ReviewedDocs: []string{".issueops/CAUTIONS.md"},
 		Evidence:     []string{"이 변경은 운영 문서에 남길 결정을 만들지 않는다"},
@@ -53,7 +53,7 @@ func recordIssueOpsImplementationReviewForTest(t *testing.T, stateRoot, id strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := RecordIssueOpsImplementationReviewWithActor(stateRoot, id, issueops.IssueOpsImplementationReviewRequest{
+	if _, err := RecordIssueOpsImplementationReviewWithActor(stateRoot, id, issueops.ImplementationReviewRequest{
 		Verdict:      "pass",
 		Findings:     []string{"변경 범위가 이슈 계약을 넘지 않는다"},
 		Evidence:     []string{"go test ./internal/adapter/issueops -count=1"},
@@ -66,12 +66,12 @@ func recordIssueOpsImplementationReviewForTest(t *testing.T, stateRoot, id strin
 // evidenceRecorderActorForTest는 레코드의 활성 lease holder로 인정되는 actor를
 // 만든다. evidence 기록은 owner mutation이라 lease가 있으면 holder만 쓸 수 있다.
 // lease holder가 없으면 fence가 적용되지 않으므로 기본 테스트 actor를 쓴다.
-func evidenceRecorderActorForTest(record issueops.IssueOpsRecord) issueops.IssueOpsActor {
+func evidenceRecorderActorForTest(record issueops.Record) issueops.Actor {
 	if record.Execution == nil || record.Execution.Lease.Holder == nil {
 		return issueOpsActorForTest(record.WorktreePath)
 	}
 	holder := record.Execution.Lease.Holder
-	actor := issueops.IssueOpsActor{Host: holder.Host, SessionID: holder.SessionID, AgentID: holder.AgentID, CWD: record.Execution.Workspace.Root}
+	actor := issueops.Actor{Host: holder.Host, SessionID: holder.SessionID, AgentID: holder.AgentID, CWD: record.Execution.Workspace.Root}
 	if holder.SessionProcess != nil {
 		actor.NativeProcessAncestry = []issueops.NativeProcessReceipt{*holder.SessionProcess}
 	}

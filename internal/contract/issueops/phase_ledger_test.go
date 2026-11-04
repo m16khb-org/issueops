@@ -11,9 +11,9 @@ import (
 // golden fixtures stay byte-compatible.
 
 func TestIssueOpsPhaseLedgerEntryRoundTrip(t *testing.T) {
-	ledger := IssueOpsPhaseLedger{
-		IssueOpsPhaseProblem: IssueOpsPhaseLedgerEntry{
-			Phase:       IssueOpsPhaseProblem,
+	ledger := PhaseLedger{
+		PhaseProblem: PhaseLedgerEntry{
+			Phase:       PhaseProblem,
 			EnteredAt:   "2026-06-29T00:00:00Z",
 			CompletedAt: "2026-06-29T00:01:00Z",
 			Artifacts:   []string{"intent_contract"},
@@ -25,15 +25,15 @@ func TestIssueOpsPhaseLedgerEntryRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal ledger: %v", err)
 	}
-	var got IssueOpsPhaseLedger
+	var got PhaseLedger
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("unmarshal ledger: %v", err)
 	}
-	entry, ok := got[IssueOpsPhaseProblem]
+	entry, ok := got[PhaseProblem]
 	if !ok {
 		t.Fatalf("expected problem entry, got %#v", got)
 	}
-	if entry.Phase != IssueOpsPhaseProblem {
+	if entry.Phase != PhaseProblem {
 		t.Fatalf("entry phase should equal its map key, got %q", entry.Phase)
 	}
 	if entry.CompletedAt != "2026-06-29T00:01:00Z" || len(entry.Artifacts) != 1 || entry.Artifacts[0] != "intent_contract" {
@@ -42,7 +42,7 @@ func TestIssueOpsPhaseLedgerEntryRoundTrip(t *testing.T) {
 }
 
 func TestIssueOpsPhaseLedgerEntryOmitsEmptyFields(t *testing.T) {
-	entry := IssueOpsPhaseLedgerEntry{Phase: IssueOpsPhaseGrill, EnteredAt: "2026-06-29T00:00:00Z"}
+	entry := PhaseLedgerEntry{Phase: PhaseGrill, EnteredAt: "2026-06-29T00:00:00Z"}
 	data, err := json.Marshal(entry)
 	if err != nil {
 		t.Fatalf("marshal entry: %v", err)
@@ -59,7 +59,7 @@ func TestIssueOpsPhaseLedgerEntryOmitsEmptyFields(t *testing.T) {
 }
 
 func TestIssueOpsRecordNewFieldsOmitEmpty(t *testing.T) {
-	rec := IssueOpsRecord{ID: "1", Repo: "/repo", Phase: IssueOpsPhaseProblem}
+	rec := Record{ID: "1", Repo: "/repo", Phase: PhaseProblem}
 	data, err := json.Marshal(rec)
 	if err != nil {
 		t.Fatalf("marshal record: %v", err)
@@ -73,11 +73,11 @@ func TestIssueOpsRecordNewFieldsOmitEmpty(t *testing.T) {
 }
 
 func TestIssueOpsRecordNewFieldsRoundTrip(t *testing.T) {
-	rec := IssueOpsRecord{
+	rec := Record{
 		ID:    "1",
 		Repo:  "/repo",
-		Phase: IssueOpsPhaseGrill,
-		DomainReview: &IssueOpsDomainReview{
+		Phase: PhaseGrill,
+		DomainReview: &DomainReview{
 			Terminology:       []string{"ledger"},
 			ModelFit:          "fits",
 			Risks:             []string{"deadlock"},
@@ -86,15 +86,15 @@ func TestIssueOpsRecordNewFieldsRoundTrip(t *testing.T) {
 		},
 		AISlopCleanCategories:   []string{"dead-code"},
 		AISlopCleanVerification: []string{"go test ./..."},
-		PhaseLedger: IssueOpsPhaseLedger{
-			IssueOpsPhaseProblem: IssueOpsPhaseLedgerEntry{Phase: IssueOpsPhaseProblem, CompletedAt: "2026-06-29T00:01:00Z", Artifacts: []string{"intent_contract"}},
+		PhaseLedger: PhaseLedger{
+			PhaseProblem: PhaseLedgerEntry{Phase: PhaseProblem, CompletedAt: "2026-06-29T00:01:00Z", Artifacts: []string{"intent_contract"}},
 		},
 	}
 	data, err := json.Marshal(rec)
 	if err != nil {
 		t.Fatalf("marshal record: %v", err)
 	}
-	var got IssueOpsRecord
+	var got Record
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("unmarshal record: %v", err)
 	}
@@ -107,13 +107,13 @@ func TestIssueOpsRecordNewFieldsRoundTrip(t *testing.T) {
 	if len(got.AISlopCleanVerification) != 1 || got.AISlopCleanVerification[0] != "go test ./..." {
 		t.Fatalf("verification evidence did not round-trip: %#v", got.AISlopCleanVerification)
 	}
-	if _, ok := got.PhaseLedger[IssueOpsPhaseProblem]; !ok {
+	if _, ok := got.PhaseLedger[PhaseProblem]; !ok {
 		t.Fatalf("phase ledger did not round-trip: %#v", got.PhaseLedger)
 	}
 }
 
 func TestIssueOpsFeedbackItemResolutionRoundTrip(t *testing.T) {
-	item := IssueOpsFeedbackItem{Source: "review", Body: "fix", Classification: "defect", CreatedAt: "2026-06-29T00:00:00Z", Resolution: "valid-defect"}
+	item := FeedbackItem{Source: "review", Body: "fix", Classification: "defect", CreatedAt: "2026-06-29T00:00:00Z", Resolution: "valid-defect"}
 	data, err := json.Marshal(item)
 	if err != nil {
 		t.Fatalf("marshal feedback: %v", err)
@@ -121,7 +121,7 @@ func TestIssueOpsFeedbackItemResolutionRoundTrip(t *testing.T) {
 	if !strings.Contains(string(data), "\"resolution\":\"valid-defect\"") {
 		t.Fatalf("resolution should serialize, got %s", data)
 	}
-	empty := IssueOpsFeedbackItem{Source: "review", Body: "fix", Classification: "defect", CreatedAt: "2026-06-29T00:00:00Z"}
+	empty := FeedbackItem{Source: "review", Body: "fix", Classification: "defect", CreatedAt: "2026-06-29T00:00:00Z"}
 	emptyData, _ := json.Marshal(empty)
 	if strings.Contains(string(emptyData), "resolution") {
 		t.Fatalf("empty resolution should be omitted, got %s", emptyData)
@@ -129,7 +129,7 @@ func TestIssueOpsFeedbackItemResolutionRoundTrip(t *testing.T) {
 }
 
 func TestIssueOpsRemoteArtifactTargetBranchRoundTrip(t *testing.T) {
-	art := IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://x/1", TargetBranch: "main", VerifiedAt: "2026-06-29T00:00:00Z"}
+	art := RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://x/1", TargetBranch: "main", VerifiedAt: "2026-06-29T00:00:00Z"}
 	data, err := json.Marshal(art)
 	if err != nil {
 		t.Fatalf("marshal artifact: %v", err)
@@ -137,7 +137,7 @@ func TestIssueOpsRemoteArtifactTargetBranchRoundTrip(t *testing.T) {
 	if !strings.Contains(string(data), "\"target_branch\":\"main\"") {
 		t.Fatalf("target_branch should serialize, got %s", data)
 	}
-	empty := IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://x/1", VerifiedAt: "2026-06-29T00:00:00Z"}
+	empty := RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://x/1", VerifiedAt: "2026-06-29T00:00:00Z"}
 	emptyData, _ := json.Marshal(empty)
 	if strings.Contains(string(emptyData), "target_branch") {
 		t.Fatalf("empty target_branch should be omitted, got %s", emptyData)

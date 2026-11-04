@@ -9,7 +9,7 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 	cycledomain "issueops/internal/domain/issueops"
 	domain "issueops/internal/domain/issueopspublication"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 type PublicationJournal struct {
@@ -33,8 +33,8 @@ func (j *PublicationJournal) BeginCreate(ctx context.Context, prepared contract.
 	marker := "<!-- issueops:issueops-v1 operation=" + operationID + " -->"
 	request := prepared.Request.Clone()
 	request.Body = strings.TrimSpace(request.Body) + "\n\n" + marker
-	payload := contract.IntentPayload{SchemaVersion: model.IssueOpsSchemaVersion, OperationID: operationID, Provider: prepared.Command.Provider, Kind: prepared.Eligibility.Kind, Request: request, InvocationState: string(contract.InvocationUnknown)}
-	var persisted model.IssueOpsRecord
+	payload := contract.IntentPayload{SchemaVersion: model.SchemaVersion, OperationID: operationID, Provider: prepared.Command.Provider, Kind: prepared.Eligibility.Kind, Request: request, InvocationState: string(contract.InvocationUnknown)}
+	var persisted model.Record
 	err = j.store.WithinTransaction(ctx, prepared.Command.ID, func(tx context.Context) error {
 		current, err := j.store.Read(tx, prepared.Command.ID)
 		if err != nil {
@@ -114,7 +114,7 @@ func (j *PublicationJournal) RecordFailure(ctx context.Context, intent contract.
 			return err
 		}
 		payload = domain.FailurePayload(payload, string(invocation), expected.RetryCount, knownURL)
-		current = cycledomain.FailPublication(current, expected.OperationID, remote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), false)
+		current = cycledomain.FailPublication(current, expected.OperationID, issueopsremote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), false)
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Payload: &payload})
 		return err
 	})
@@ -141,15 +141,15 @@ func (j *PublicationJournal) Complete(ctx context.Context, intent contract.Inten
 		if err := domain.ValidatePayloadUnchanged(stored, payload, domain.CheckpointReceipt); err != nil {
 			return err
 		}
-		authority := remote.ArtifactAuthority{Phase: string(current.Phase), IssueURL: current.IssueURL}
+		authority := issueopsremote.ArtifactAuthority{Phase: string(current.Phase), IssueURL: current.IssueURL}
 		if current.BranchPrepare != nil {
 			authority.CodeProjectKey = current.BranchPrepare.CodeProjectKey
 		}
-		artifact, err := remote.ProjectArtifact(authority, remote.Artifact{Provider: payload.Provider, Kind: payload.Kind, URL: strings.TrimSpace(url), Labels: payload.Request.Labels, Assignees: payload.Request.Assignees, TargetBranch: payload.Request.BaseBranch})
+		artifact, err := issueopsremote.ProjectArtifact(authority, issueopsremote.Artifact{Provider: payload.Provider, Kind: payload.Kind, URL: strings.TrimSpace(url), Labels: payload.Request.Labels, Assignees: payload.Request.Assignees, TargetBranch: payload.Request.BaseBranch})
 		if err != nil {
 			return err
 		}
-		current = cycledomain.CompletePublication(current, model.IssueOpsRemoteArtifactVerification{Provider: artifact.Provider, Kind: artifact.Kind, URL: artifact.URL, Labels: artifact.Labels, Assignees: artifact.Assignees, TargetBranch: artifact.TargetBranch, VerifiedAt: j.environment.Timestamp()})
+		current = cycledomain.CompletePublication(current, model.RemoteArtifactVerification{Provider: artifact.Provider, Kind: artifact.Kind, URL: artifact.URL, Labels: artifact.Labels, Assignees: artifact.Assignees, TargetBranch: artifact.TargetBranch, VerifiedAt: j.environment.Timestamp()})
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Delete: true})
 		return err
 	})
@@ -179,7 +179,7 @@ func (j *PublicationJournal) CompleteNotInvoked(ctx context.Context, intent cont
 		if err := domain.ValidatePayloadUnchanged(stored, payload, domain.CheckpointNotInvoked); err != nil {
 			return err
 		}
-		current = cycledomain.FailPublication(current, payload.OperationID, remote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), true)
+		current = cycledomain.FailPublication(current, payload.OperationID, issueopsremote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), true)
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Delete: true})
 		return err
 	})
@@ -217,7 +217,7 @@ func (j *PublicationJournal) Latest(ctx context.Context, id string) (contract.Re
 	return j.store.RecordSnapshot(ctx, record.ID)
 }
 
-func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.IssueOpsRecord, payload contract.IntentPayload, eligibility contract.CreateEligibility) (contract.Intent, error) {
+func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.Record, payload contract.IntentPayload, eligibility contract.CreateEligibility) (contract.Intent, error) {
 	snapshot, err := j.store.RecordSnapshot(ctx, record.ID)
 	if err != nil {
 		return contract.Intent{}, err
@@ -233,7 +233,7 @@ func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.Issu
 	return intent, nil
 }
 
-func (j *PublicationJournal) receiptAuthorityFacts(current model.IssueOpsRecord, payload contract.IntentPayload, enforceOriginalGeneration bool) domain.ReceiptAuthorityFacts {
+func (j *PublicationJournal) receiptAuthorityFacts(current model.Record, payload contract.IntentPayload, enforceOriginalGeneration bool) domain.ReceiptAuthorityFacts {
 	facts := domain.ReceiptAuthorityFacts{Prepared: current.Execution != nil, ExpectedOperationID: payload.OperationID, ExpectedGeneration: payload.Generation}
 	if current.Execution != nil {
 		facts.Pending = current.Execution.Pending != nil
@@ -254,7 +254,7 @@ func (j *PublicationJournal) receiptAuthorityFacts(current model.IssueOpsRecord,
 	return facts
 }
 
-func pendingFacts(record model.IssueOpsRecord, expected string) domain.PendingIntentFacts {
+func pendingFacts(record model.Record, expected string) domain.PendingIntentFacts {
 	facts := domain.PendingIntentFacts{Prepared: record.Execution != nil, ExpectedOperationID: expected}
 	if record.Execution != nil && record.Execution.Pending != nil {
 		facts.Pending = true
@@ -263,8 +263,8 @@ func pendingFacts(record model.IssueOpsRecord, expected string) domain.PendingIn
 	return facts
 }
 
-func publicationEligibility(record model.IssueOpsRecord, payload contract.IntentPayload) contract.CreateEligibility {
-	return contract.CreateEligibility{Provider: strings.ToLower(strings.TrimSpace(payload.Provider)), Kind: payload.Kind, Confirm: payload.Request.Confirm, PhasePR: record.Phase == model.IssueOpsPhasePR, ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive, NoPending: record.Execution == nil || record.Execution.Pending == nil, NoArtifact: record.RemoteArtifact == nil, BranchAuthority: true, CanonicalLabelsAssignees: len(payload.Request.Labels) > 0 && len(payload.Request.Assignees) > 0}
+func publicationEligibility(record model.Record, payload contract.IntentPayload) contract.CreateEligibility {
+	return contract.CreateEligibility{Provider: strings.ToLower(strings.TrimSpace(payload.Provider)), Kind: payload.Kind, Confirm: payload.Request.Confirm, PhasePR: record.Phase == model.PhasePR, ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive, NoPending: record.Execution == nil || record.Execution.Pending == nil, NoArtifact: record.RemoteArtifact == nil, BranchAuthority: true, CanonicalLabelsAssignees: len(payload.Request.Labels) > 0 && len(payload.Request.Assignees) > 0}
 }
 
 var _ publicationapp.Repository = (*PublicationJournal)(nil)

@@ -29,7 +29,7 @@ func TestRunIssueOpsChildLifecycle(t *testing.T) {
 			"--json",
 		}, actor))
 	})
-	var started issueopscontract.IssueOpsChildStartResult
+	var started issueopscontract.ChildStartResult
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
@@ -43,7 +43,7 @@ func TestRunIssueOpsChildLifecycle(t *testing.T) {
 	statusOut := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"child", "status", "--parent", parent.ID, "--json"}, actor))
 	})
-	var status issueopscontract.IssueOpsChildStatusResult
+	var status issueopscontract.ChildStatusResult
 	if err := json.Unmarshal([]byte(statusOut), &status); err != nil {
 		t.Fatalf("child status should return JSON: %v\n%s", err, statusOut)
 	}
@@ -54,7 +54,7 @@ func TestRunIssueOpsChildLifecycle(t *testing.T) {
 	listOut := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"child", "list", "--parent", parent.ID, "--json"}, actor))
 	})
-	var listed issueopscontract.IssueOpsChildStatusResult
+	var listed issueopscontract.ChildStatusResult
 	if err := json.Unmarshal([]byte(listOut), &listed); err != nil {
 		t.Fatalf("child list should return status JSON: %v\n%s", err, listOut)
 	}
@@ -63,14 +63,14 @@ func TestRunIssueOpsChildLifecycle(t *testing.T) {
 	}
 
 	child := started.Child
-	child.Phase = issueopscontract.IssueOpsPhaseDone
+	child.Phase = issueopscontract.PhaseDone
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), child); err != nil {
 		t.Fatal(err)
 	}
 	acceptOut := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"child", "accept", "--parent", parent.ID, "--child", child.ID, "--evidence", "parent verified child output", "--json"}, actor))
 	})
-	var accepted issueopscontract.IssueOpsChildValidationResult
+	var accepted issueopscontract.ChildValidationResult
 	if err := json.Unmarshal([]byte(acceptOut), &accepted); err != nil {
 		t.Fatalf("child accept should return JSON: %v\n%s", err, acceptOut)
 	}
@@ -106,11 +106,11 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 			"--json",
 		}, actor))
 	})
-	var started issueopscontract.IssueOpsChildStartResult
+	var started issueopscontract.ChildStartResult
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.PhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, parent.ID)
@@ -122,7 +122,7 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 	assertIssueOpsJSONErrorContains(t, blockedOut, err, "child_incomplete:"+started.Child.ID)
 
 	child := started.Child
-	child.Phase = issueopscontract.IssueOpsPhaseDone
+	child.Phase = issueopscontract.PhaseDone
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), child); err != nil {
 		t.Fatal(err)
 	}
@@ -132,11 +132,11 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 	prOut := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"phase", "--id", parent.ID, "--to", "pr", "--json"}, actor))
 	})
-	var prRecord issueopscontract.IssueOpsRecord
+	var prRecord issueopscontract.Record
 	if err := json.Unmarshal([]byte(prOut), &prRecord); err != nil {
 		t.Fatalf("phase pr should return JSON after child acceptance: %v\n%s", err, prOut)
 	}
-	if prRecord.Phase != issueopscontract.IssueOpsPhasePR {
+	if prRecord.Phase != issueopscontract.PhasePR {
 		t.Fatalf("accepted child should allow parent pr phase, got %s", prRecord.Phase)
 	}
 }
@@ -157,18 +157,18 @@ func TestCLIIssueOpsStrictPRReadinessReportsIncompleteChildren(t *testing.T) {
 			"--json",
 		}, actor))
 	})
-	var started issueopscontract.IssueOpsChildStartResult
+	var started issueopscontract.ChildStartResult
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.PhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 
 	readinessOut := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"pr-readiness", "--id", parent.ID, "--strict", "--json"})
 	})
-	var readiness issueopscontract.IssueOpsReadiness
+	var readiness issueopscontract.Readiness
 	if err := json.Unmarshal([]byte(readinessOut), &readiness); err != nil {
 		t.Fatalf("strict pr-readiness should return JSON: %v\n%s", err, readinessOut)
 	}
@@ -177,12 +177,12 @@ func TestCLIIssueOpsStrictPRReadinessReportsIncompleteChildren(t *testing.T) {
 	}
 }
 
-func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
+func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (issueopscontract.Record, issueopscontract.Actor) {
 	t.Helper()
 	out := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"start", "--repo", repo, "--branch", branch, "--json"})
 	})
-	var record issueopscontract.IssueOpsRecord
+	var record issueopscontract.Record
 	if err := json.Unmarshal([]byte(out), &record); err != nil {
 		t.Fatalf("start should return JSON: %v\n%s", err, out)
 	}
@@ -196,14 +196,14 @@ func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (i
 		t.Fatal(err)
 	}
 	record, actor := seedIssueOpsCLIExecution(t, record)
-	record, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), record.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
+	record, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), record.ID, string(issueopscontract.PhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return record, actor
 }
 
-func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
+func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (issueopscontract.Record, issueopscontract.Actor) {
 	t.Helper()
 	if code, _, stderr := preflight.GitCmd(repo, "checkout", "-q", "-b", branch); code != 0 {
 		t.Fatalf("git checkout parent branch failed: %s", stderr)
@@ -230,7 +230,7 @@ func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (
 	out := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"start", "--repo", repo, "--branch", branch, "--json"})
 	})
-	var parent issueopscontract.IssueOpsRecord
+	var parent issueopscontract.Record
 	if err := json.Unmarshal([]byte(out), &parent); err != nil {
 		t.Fatalf("start should return JSON: %v\n%s", err, out)
 	}
@@ -241,7 +241,7 @@ func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (
 		t.Fatal(err)
 	}
 	parent, actor := seedIssueOpsCLIExecution(t, parent)
-	parent, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
+	parent, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.PhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +272,7 @@ func prepareIssueOpsCLIParentImplementationSurface(t *testing.T, id, branch, wor
 	if _, err := LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), id, "https://github.com/example/repo/issues/123"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsBranchPrepareRequest{
+	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/example/repo/issues/123",
 		Branch:       branch,
@@ -294,7 +294,7 @@ func recordIssueOpsCLIParentDelegationPrereqs(t *testing.T, id, planPath string)
 	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, planPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := recordDomainReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDomainReviewRequest{
+	if _, err := recordDomainReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.DomainReviewRequest{
 		ModelFit:    "delegation cli fixture follows IssueOps domain model",
 		Terminology: []string{"parent cycle", "child cycle"},
 	}); err != nil {

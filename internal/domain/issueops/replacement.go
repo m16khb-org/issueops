@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func ValidateReplacementGeneration(record model.IssueOpsRecord, generation uint64, discovery bool) error {
+func ValidateReplacementGeneration(record model.Record, generation uint64, discovery bool) error {
 	if record.Execution == nil {
 		return fmt.Errorf("IssueOps execution v1 is not prepared")
 	}
@@ -47,7 +47,7 @@ func FinalizeReplacement(lease model.WriteLease, workspaceAbsent bool, tokenSHA 
 	}
 	return lease
 }
-func CompletedReplacementBase(record model.IssueOpsRecord, selected uint64) (bool, error) {
+func CompletedReplacementBase(record model.Record, selected uint64) (bool, error) {
 	execution := record.Execution
 	if execution == nil || execution.Completion == nil || (execution.Lease.Status != model.LeaseStatusReleased && execution.Lease.Status != model.LeaseStatusClaimable) {
 		return false, nil

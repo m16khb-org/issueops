@@ -35,16 +35,16 @@ func TestValidateVerdicts(t *testing.T) {
 }
 
 func TestRecordPersistsReview(t *testing.T) {
-	var written model.IssueOpsRecord
+	var written model.Record
 	store := reviewport.DevilsAdvocateStore{
-		Read: func(_, id string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{OK: true, ID: id, PlanPath: "plans/demo.md"}, nil
+		Read: func(_, id string) (model.Record, error) {
+			return model.Record{OK: true, ID: id, PlanPath: "plans/demo.md"}, nil
 		},
-		TouchWrite: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(_ string, r model.Record) (model.Record, error) {
 			written = r
 			return r, nil
 		},
-		PlanDigest: func(string, model.IssueOpsRecord) (string, error) { return "digest", nil },
+		PlanDigest: func(string, model.Record) (string, error) { return "digest", nil },
 	}
 	rec, err := Record(store, "root", "io-1", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}})
 	if err != nil {

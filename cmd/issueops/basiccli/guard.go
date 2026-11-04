@@ -47,7 +47,7 @@ func (command Command) runGuardCheck(args []string) error {
 	if *all {
 		*staged = false
 	}
-	result, checkErr := command.Guard.CheckForCommand(guardcontract.GuardCheckRequest{RepoRoot: *repo, Staged: *staged, All: *all, Files: files})
+	result, checkErr := command.Guard.CheckForCommand(guardcontract.CheckRequest{RepoRoot: *repo, Staged: *staged, All: *all, Files: files})
 	if *jsonOut {
 		if err := printJSON(result); err != nil {
 			return err

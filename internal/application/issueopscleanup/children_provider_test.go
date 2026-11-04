@@ -16,7 +16,7 @@ func closerFor(records *lockedChildCleanupRecords, provider func(string) (port.I
 	return app.ChildrenCloser{
 		Records:      records,
 		Provider:     provider,
-		VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { return nil },
+		VerifyMerged: func(model.RemoteArtifactVerification) error { return nil },
 		Now:          func() time.Time { return time.Unix(123, 0) },
 	}
 }
@@ -26,14 +26,14 @@ func TestChildrenCloserWithoutMergeEvidenceRequiresReadableChildState(t *testing
 	childURL := "https://github.com/acme/repo/issues/2"
 	cases := []struct {
 		name     string
-		link     model.IssueOpsIssueLink
+		link     model.IssueLink
 		parent   string
 		provider func(string) (port.IssueProvider, error)
 		want     string
 	}{
-		{name: "provider cannot be determined", link: model.IssueOpsIssueLink{Type: "child", URL: "child-2"}, parent: "https://example.test/issues/1", provider: func(string) (port.IssueProvider, error) { t.Fatal("provider requested"); return nil, nil }, want: "cannot determine provider for child child-2"},
-		{name: "provider construction fails", link: model.IssueOpsIssueLink{Type: "child", URL: childURL}, parent: "https://github.com/acme/repo/issues/1", provider: func(string) (port.IssueProvider, error) { return nil, providerFailure }, want: "no such provider"},
-		{name: "child state probe fails", link: model.IssueOpsIssueLink{Type: "child", URL: childURL}, parent: "https://github.com/acme/repo/issues/1", provider: func(string) (port.IssueProvider, error) {
+		{name: "provider cannot be determined", link: model.IssueLink{Type: "child", URL: "child-2"}, parent: "https://example.test/issues/1", provider: func(string) (port.IssueProvider, error) { t.Fatal("provider requested"); return nil, nil }, want: "cannot determine provider for child child-2"},
+		{name: "provider construction fails", link: model.IssueLink{Type: "child", URL: childURL}, parent: "https://github.com/acme/repo/issues/1", provider: func(string) (port.IssueProvider, error) { return nil, providerFailure }, want: "no such provider"},
+		{name: "child state probe fails", link: model.IssueLink{Type: "child", URL: childURL}, parent: "https://github.com/acme/repo/issues/1", provider: func(string) (port.IssueProvider, error) {
 			return childCloseFunction{close: func(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 				return port.IssueProviderCloseChildResult{}, closeFailure
 			}}, nil
@@ -41,7 +41,7 @@ func TestChildrenCloserWithoutMergeEvidenceRequiresReadableChildState(t *testing
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "parent", IssueURL: tc.parent, IssueLinks: []model.IssueOpsIssueLink{tc.link}}
+			record := model.Record{ID: "parent", IssueURL: tc.parent, IssueLinks: []model.IssueLink{tc.link}}
 			records := &lockedChildCleanupRecords{t: t, record: record}
 			result, err := closerFor(records, tc.provider).Close(context.Background(), record.ID, true, true)
 			if err == nil || !strings.Contains(err.Error(), tc.want) || result.ClosedCount != 0 || records.saves != 0 {
@@ -52,7 +52,7 @@ func TestChildrenCloserWithoutMergeEvidenceRequiresReadableChildState(t *testing
 }
 
 func TestChildrenCloserProbesChildStateWithoutConfirmingClose(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "parent", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", IssueLinks: []model.IssueOpsIssueLink{
+	record := model.Record{ID: "parent", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", IssueLinks: []model.IssueLink{
 		{Type: "child", URL: "https://github.com/acme/repo/issues/2"},
 		{Type: "related", URL: "https://github.com/acme/repo/issues/9"},
 	}}
@@ -88,7 +88,7 @@ func TestChildrenCloserReportsCanonicalChildIdentityFromProvider(t *testing.T) {
 		{name: "provider leaves identity blank", provider: port.IssueProviderCloseChildResult{Closed: true, HierarchyVerified: true}, wantURL: childURL, wantProvider: "github"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: childURL}}}
+			record := model.Record{ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, IssueLinks: []model.IssueLink{{Type: "child", URL: childURL}}}
 			records := &lockedChildCleanupRecords{t: t, record: record}
 			provider := childCloseFunction{close: func(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 				return tc.provider, nil
@@ -106,14 +106,14 @@ func TestChildrenCloserReportsCanonicalChildIdentityFromProvider(t *testing.T) {
 
 func TestChildrenCloserReportsUnresolvableChildProvider(t *testing.T) {
 	providerFailure := errors.New("provider disabled")
-	record := model.IssueOpsRecord{ID: "parent", IssueURL: "https://example.test/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: "child-2"}}}
+	record := model.Record{ID: "parent", IssueURL: "https://example.test/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, IssueLinks: []model.IssueLink{{Type: "child", URL: "child-2"}}}
 	records := &lockedChildCleanupRecords{t: t, record: record}
 	result, err := closerFor(records, func(string) (port.IssueProvider, error) { return nil, nil }).Close(context.Background(), record.ID, true, true)
 	if err == nil || len(result.Children) != 1 || result.Children[0].Error != "cannot determine provider" || records.saves != 0 {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/1"
-	record.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}}
+	record.IssueLinks = []model.IssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}}
 	records = &lockedChildCleanupRecords{t: t, record: record}
 	result, err = closerFor(records, func(string) (port.IssueProvider, error) { return nil, providerFailure }).Close(context.Background(), record.ID, true, true)
 	if !errors.Is(err, providerFailure) || len(result.Children) != 1 || result.Children[0].Error != providerFailure.Error() || result.Children[0].Provider != "github" {

@@ -49,7 +49,7 @@ func TestFinishPreviewRequiresObservableLocalBranch(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			env := &finishPreviewEnvironment{branchCode: tc.code, branchOID: tc.oid}
-			record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Branch: "123-cleanup", Phase: model.IssueOpsPhaseDone}
+			record := model.Record{ID: "cycle", Repo: "/repo", Branch: "123-cleanup", Phase: model.PhaseDone}
 			_, result := (app.FinishPreviewer{Environment: env}).Plan(context.Background(), record, model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true})
 			if slices.Contains(result.Missing, "local_branch_observable") != tc.blocked || result.OK == tc.blocked {
 				t.Fatalf("result=%+v", result)
@@ -63,7 +63,7 @@ func TestFinishPreviewRequiresObservableLocalBranch(t *testing.T) {
 
 func TestFinishPreviewRequiresObservableWorktree(t *testing.T) {
 	env := &finishPreviewEnvironment{branchCode: 1, directoryErr: errors.New("permission denied")}
-	record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", WorktreePath: "/workspace", Phase: model.IssueOpsPhaseDone}
+	record := model.Record{ID: "cycle", Repo: "/repo", WorktreePath: "/workspace", Phase: model.PhaseDone}
 	_, result := (app.FinishPreviewer{Environment: env}).Plan(context.Background(), record, model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true})
 	if result.OK || !slices.Contains(result.Missing, "worktree_observable") {
 		t.Fatalf("result=%+v", result)
@@ -80,13 +80,13 @@ func TestFinishPreviewPreservesObservationOrderAndBoundTargets(t *testing.T) {
 		}
 		return 0, ""
 	}}
-	record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Branch: "record-branch", Phase: model.IssueOpsPhaseDone,
-		BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "parent"},
+	record := model.Record{ID: "cycle", Repo: "/repo", Branch: "record-branch", Phase: model.PhaseDone,
+		BranchPrepare: &model.BranchPrepare{BaseBranch: "parent"},
 		Execution:     &model.Execution{Workspace: model.Workspace{Root: "/worktree", Branch: "123-cleanup"}, Lease: model.WriteLease{Status: model.LeaseStatusReleased}},
 	}
 	type requestContextKey struct{}
 	ctx := context.WithValue(context.Background(), requestContextKey{}, "request")
-	service := app.FinishPreviewer{Environment: env, Workspace: func(got context.Context, current model.IssueOpsRecord, root string) (app.FinishWorkspaceObservation, []string) {
+	service := app.FinishPreviewer{Environment: env, Workspace: func(got context.Context, current model.Record, root string) (app.FinishWorkspaceObservation, []string) {
 		if got != ctx || current.ID != record.ID || root != "/worktree" {
 			t.Fatal("workspace observation lost context or target")
 		}
@@ -114,7 +114,7 @@ func (e *withinFinishPreviewEnvironment) PathWithin(path, root string) bool {
 }
 
 func TestFinishPreviewFlagsRequesterCWDInsideWorktreeOnlyWhenCWDIsGiven(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Branch: "123-cleanup", WorktreePath: "/worktree", Phase: model.IssueOpsPhaseDone}
+	record := model.Record{ID: "cycle", Repo: "/repo", Branch: "123-cleanup", WorktreePath: "/worktree", Phase: model.PhaseDone}
 	for _, tc := range []struct {
 		name       string
 		cwd        string
@@ -126,7 +126,7 @@ func TestFinishPreviewFlagsRequesterCWDInsideWorktreeOnlyWhenCWDIsGiven(t *testi
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			env := &withinFinishPreviewEnvironment{finishPreviewEnvironment: finishPreviewEnvironment{directory: true, branchCode: 1}}
-			service := app.FinishPreviewer{Environment: env, Workspace: func(context.Context, model.IssueOpsRecord, string) (app.FinishWorkspaceObservation, []string) {
+			service := app.FinishPreviewer{Environment: env, Workspace: func(context.Context, model.Record, string) (app.FinishWorkspaceObservation, []string) {
 				return app.FinishWorkspaceObservation{}, nil
 			}}
 			_, result := service.Plan(context.Background(), record, model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true, CWD: tc.cwd})

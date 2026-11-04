@@ -6,7 +6,7 @@ import (
 )
 
 func TestStepBudgetMissingSnapshotWriterFailsClosed(t *testing.T) {
-	step := ValidateStepBudgetBaselineWithDeps("unused-binary", t.TempDir(), 100, StepBudgetValidationDeps{})
+	step := ValidateStepBudgetBaselineWithDeps("unused-binary", t.TempDir(), 100, ValidationDeps{})
 	if step.OK || !strings.Contains(step.Error, "snapshot writer dependency is required") {
 		t.Fatalf("missing snapshot writer accepted: %+v", step)
 	}

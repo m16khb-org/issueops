@@ -87,7 +87,7 @@ func captureStdoutForContract(t *testing.T, fn func() error) string {
 	return string(read.out)
 }
 
-func mustStateReadForContract(t *testing.T, key string) statecontract.StateResult {
+func mustStateReadForContract(t *testing.T, key string) statecontract.Result {
 	t.Helper()
 	result, err := statestore.NewService().Read(key)
 	if err != nil {

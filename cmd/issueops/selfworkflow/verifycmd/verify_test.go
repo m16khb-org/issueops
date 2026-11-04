@@ -20,7 +20,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 	var saveCalled bool
 	deps := Deps{
 		LookupEnv: func(string) (string, bool) { return "", false },
-		Verify: func(request verifyloop.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+		Verify: func(request verifyloop.LoopRequest) (augmentcontract.Result, error) {
 			verifyCalled = true
 			if request.BaseSeed != 42 ||
 				request.TargetScore != 95 ||
@@ -28,7 +28,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 				request.Reporter != nil {
 				t.Fatalf("unexpected verify request: %+v", request)
 			}
-			return augmentcontract.SelfAugmentResult{
+			return augmentcontract.Result{
 				OK:                  true,
 				LoopKind:            "self_verification",
 				KoreanName:          augmentcontract.SelfVerificationKoreanName,
@@ -36,10 +36,10 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 				BaseSeed:            request.BaseSeed,
 				TargetScore:         request.TargetScore,
 				TerminationEligible: true,
-				Summary:             augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
+				Summary:             augmentcontract.Summary{MinimumGoalScore: 100, TerminationEligible: true},
 			}, nil
 		},
-		ApplyLLMEval: func(result augmentcontract.SelfAugmentResult, opts selfverify.LLMEvalOptions) (augmentcontract.SelfAugmentResult, error) {
+		ApplyLLMEval: func(result augmentcontract.Result, opts selfverify.LLMEvalOptions) (augmentcontract.Result, error) {
 			evalCalled = true
 			if !opts.Enabled || opts.Mode != "gate" || opts.TargetScore != 95 {
 				t.Fatalf("unexpected LLM eval options: %+v", opts)
@@ -47,12 +47,12 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 			result.LLMEval = &augmentcontract.SelfVerifyLLMEvalResult{OK: true, Mode: opts.Mode, Score: 99, Summary: "pass"}
 			return result, nil
 		},
-		SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
+		SaveSummary: func(result *augmentcontract.Result, key string) error {
 			saveCalled = true
 			if key != "verify-latest" || result.LLMEval == nil {
 				t.Fatalf("unexpected saved result key=%q result=%+v", key, result)
 			}
-			result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: true, Key: key}
+			result.StateCheckpoint = &augmentcontract.StateCheckpoint{OK: true, Key: key}
 			return nil
 		},
 		PrintJSON: printJSONForTest,
@@ -74,7 +74,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 	if !verifyCalled || !evalCalled || !saveCalled {
 		t.Fatalf("expected verify/eval/save calls, got verify=%v eval=%v save=%v", verifyCalled, evalCalled, saveCalled)
 	}
-	var result augmentcontract.SelfAugmentResult
+	var result augmentcontract.Result
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode self-verify JSON: %v\n%s", err, out)
 	}
@@ -88,11 +88,11 @@ func TestRunReturnsSaveErrorAfterSuccessfulVerification(t *testing.T) {
 	out, err := captureStdoutAllowError(t, func() error {
 		return Run([]string{"--save-state", "--state-key", "bad-key", "--json"}, Deps{
 			LookupEnv: func(string) (string, bool) { return "", false },
-			Verify: func(verifyloop.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
-				return augmentcontract.SelfAugmentResult{OK: true, LoopKind: "self_verification", Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100}}, nil
+			Verify: func(verifyloop.LoopRequest) (augmentcontract.Result, error) {
+				return augmentcontract.Result{OK: true, LoopKind: "self_verification", Summary: augmentcontract.Summary{MinimumGoalScore: 100}}, nil
 			},
-			SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
-				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: false, Key: key, Error: saveErr.Error()}
+			SaveSummary: func(result *augmentcontract.Result, key string) error {
+				result.StateCheckpoint = &augmentcontract.StateCheckpoint{OK: false, Key: key, Error: saveErr.Error()}
 				return saveErr
 			},
 			PrintJSON: printJSONForTest,
@@ -132,9 +132,9 @@ func printJSONForTest(value any) error {
 func TestRunForwardsBaseRefAndRejectsExplicitEmptyScope(t *testing.T) {
 	var got string
 	err := Run([]string{"--base-ref", "HEAD~1", "--llm-eval=false", "--json"}, Deps{
-		Verify: func(request verifyloop.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+		Verify: func(request verifyloop.LoopRequest) (augmentcontract.Result, error) {
 			got = request.BaseRef
-			return augmentcontract.SelfAugmentResult{OK: true}, nil
+			return augmentcontract.Result{OK: true}, nil
 		},
 		PrintJSON: func(any) error { return nil },
 	})

@@ -23,7 +23,7 @@ func TestIssueOpsCompatibilityReviewCLIRecordsReview(t *testing.T) {
 	if _, err := LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), id, "https://github.com/example/repo/issues/123"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsBranchPrepareRequest{
+	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/example/repo/issues/123",
 		Branch:       "123-compatibility-review",

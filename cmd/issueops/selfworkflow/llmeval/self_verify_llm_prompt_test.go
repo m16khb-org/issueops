@@ -9,12 +9,12 @@ import (
 )
 
 func TestSelfVerifyLLMEvalPromptRemainsJSONWhenEvidenceIsLarge(t *testing.T) {
-	result := augmentcontract.SelfAugmentResult{
+	result := augmentcontract.Result{
 		OK:          true,
 		LoopKind:    "self_verification",
 		Iterations:  10,
 		TargetScore: 95,
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			CoverageGaps: []string{strings.Repeat("large-gap-", 6000)},
 		},
 	}
@@ -35,7 +35,7 @@ func TestSelfVerifyLLMEvalPromptRemainsJSONWhenEvidenceIsLarge(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalPromptForcesPlainJSONOutput(t *testing.T) {
-	prompt, _, err := BuildSelfVerifyLLMEvalPrompt(augmentcontract.SelfAugmentResult{
+	prompt, _, err := BuildSelfVerifyLLMEvalPrompt(augmentcontract.Result{
 		OK:                  true,
 		LoopKind:            "self_verification",
 		Iterations:          10,
@@ -107,10 +107,10 @@ func TestSelfVerifyLLMEvalPromptForcesPlainJSONOutput(t *testing.T) {
 
 func selfVerifyLLMEvalPromptWithGap(t *testing.T, gapBytes int) (string, int) {
 	t.Helper()
-	prompt, packetBytes, err := BuildSelfVerifyLLMEvalPrompt(augmentcontract.SelfAugmentResult{
+	prompt, packetBytes, err := BuildSelfVerifyLLMEvalPrompt(augmentcontract.Result{
 		OK:       true,
 		LoopKind: "self_verification",
-		Summary:  augmentcontract.SelfAugmentSummary{CoverageGaps: []string{strings.Repeat("g", gapBytes)}},
+		Summary:  augmentcontract.Summary{CoverageGaps: []string{strings.Repeat("g", gapBytes)}},
 	})
 	if err != nil {
 		t.Fatal(err)

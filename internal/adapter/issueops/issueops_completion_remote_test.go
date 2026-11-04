@@ -45,16 +45,16 @@ func (p *fakeCompletionProvider) UpdateIssueBodySection(ctx context.Context, req
 	return p.updateRes, p.updateErr
 }
 
-func completionTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func completionTestRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "81-completion"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "81-completion"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/81"
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/85",
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
@@ -179,7 +179,7 @@ func portUpdateResult(updated bool) port.IssueProviderUpdateIssueBodySectionResu
 
 func completionServiceForTest(root string, prov port.IssueProvider, merged bool) *completionapp.RemoteCompletionService {
 	store := RemoteRecordStore{StateRoot: root}
-	return completionapp.NewRemoteCompletionService(store, completionapp.TrackedMaterials{Files: MaterialFiles{}}, completionapp.NewCompletionReceipts(store, time.Now), func(string) (completionapp.CompletionProvider, error) { return prov, nil }, func(issueops.IssueOpsRemoteArtifactVerification) error {
+	return completionapp.NewRemoteCompletionService(store, completionapp.TrackedMaterials{Files: MaterialFiles{}}, completionapp.NewCompletionReceipts(store, time.Now), func(string) (completionapp.CompletionProvider, error) { return prov, nil }, func(issueops.RemoteArtifactVerification) error {
 		if !merged {
 			return fmt.Errorf("missing merge evidence")
 		}

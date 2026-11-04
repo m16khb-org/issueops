@@ -17,14 +17,14 @@ type finishTestRecords struct {
 	armErr, checkErr, deleteErr, failErr error
 	failContextErr                       error
 	retained                             bool
-	outcome                              model.IssueOpsCycleOutcome
+	outcome                              model.CycleOutcome
 }
 
 func (s *finishTestRecords) Load(context.Context, string) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "load")
 	return s.snapshot, nil
 }
-func (s *finishTestRecords) Arm(_ context.Context, _ model.CleanupSnapshot, a model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
+func (s *finishTestRecords) Arm(_ context.Context, _ model.CleanupSnapshot, a model.CleanupAttempt) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "arm")
 	s.snapshot.Record.CleanupAttempt = &a
 	return s.snapshot, s.armErr
@@ -33,13 +33,13 @@ func (s *finishTestRecords) Check(context.Context, model.CleanupSnapshot) error 
 	*s.events = append(*s.events, "check")
 	return s.checkErr
 }
-func (s *finishTestRecords) Fail(ctx context.Context, _ model.CleanupSnapshot, _ model.IssueOpsCleanupFinishFailure, drained bool) (model.CleanupSnapshot, error) {
+func (s *finishTestRecords) Fail(ctx context.Context, _ model.CleanupSnapshot, _ model.CleanupFinishFailure, drained bool) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "fail")
 	s.retained = !drained
 	s.failContextErr = ctx.Err()
 	return s.snapshot, s.failErr
 }
-func (s *finishTestRecords) Delete(_ context.Context, _ model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) error {
+func (s *finishTestRecords) Delete(_ context.Context, _ model.CleanupSnapshot, outcome model.CycleOutcome) error {
 	s.outcome = outcome
 	*s.events = append(*s.events, "delete")
 	return s.deleteErr
@@ -68,7 +68,7 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 	t.Helper()
 	events := []string{}
 	lease := &finishTestLease{events: &events}
-	records := &finishTestRecords{events: &events, snapshot: model.CleanupSnapshot{Record: model.IssueOpsRecord{ID: "io-finish", Repo: "/repo"}, Revision: "initial"}}
+	records := &finishTestRecords{events: &events, snapshot: model.CleanupSnapshot{Record: model.Record{ID: "io-finish", Repo: "/repo"}, Revision: "initial"}}
 	checkContext := func(ctx context.Context) {
 		t.Helper()
 		if ctx.Value(finishTestContextKey{}) != true {
@@ -81,19 +81,19 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 			events = append(events, "acquire")
 			return lease, nil
 		},
-		Observe: func(ctx context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
+		Observe: func(ctx context.Context, _ model.Record, r model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
 			checkContext(ctx)
 			events = append(events, "observe")
 			return r, nil
 		},
-		Plan: func(ctx context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
+		Plan: func(ctx context.Context, _ model.Record, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 			checkContext(ctx)
 			events = append(events, "plan")
 			return model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/worktree", Branch: "feature", BranchOID: "oid"}, model.CleanupFinishResult{OK: true, ID: r.ID, Preview: !r.Apply, WorkspaceProcesses: []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}}
 		},
 		Fingerprint: func(model.CleanupFinishInventory) (string, error) { return "fingerprint", nil },
-		NewAttempt: func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
-			return model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
+		NewAttempt: func(model.CleanupOperation) (model.CleanupAttempt, error) {
+			return model.CleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
 		},
 		Stop: func(ctx context.Context, _ model.CleanupFinishInventory, _ []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 			checkContext(ctx)
@@ -125,8 +125,8 @@ func TestFinishExecutorOrdersBoundEffectsAndDrainsBeforeDelete(t *testing.T) {
 		t.Fatalf("events=%v want=%v", *events, want)
 	}
 	// The deleted record leaves its finished-cycle summary in the same call.
-	if got := records.outcome; got.ID != "io-finish" || got.Repo != "/repo" || got.Outcome != model.IssueOpsCycleOutcomeFinished ||
-		got.Metrics.Outcome != model.IssueOpsCycleOutcomeFinished || got.RetainedAt != "2026-09-29T00:00:01Z" {
+	if got := records.outcome; got.ID != "io-finish" || got.Repo != "/repo" || got.Outcome != model.CycleOutcomeFinished ||
+		got.Metrics.Outcome != model.CycleOutcomeFinished || got.RetainedAt != "2026-09-29T00:00:01Z" {
 		t.Fatalf("retained outcome = %+v", got)
 	}
 }

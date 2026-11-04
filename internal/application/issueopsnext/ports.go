@@ -14,22 +14,22 @@ import (
 // 패키지는 어댑터를 import하지 않는다.
 type Ports struct {
 	ListCycles func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error)
-	ReadRecord func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
+	ReadRecord func(stateRoot, id string) (issueopscontract.Record, error)
 	// ReadSelected maps absent or invalid IDs to an invalid record, but preserves I/O errors.
-	ReadSelected func(ctx context.Context, stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
-	ScanRecords  func(ctx context.Context, stateRoot string, visit func(issueopscontract.IssueOpsRecord) error) error
-	Completion   func(record issueopscontract.IssueOpsRecord, phase issueopscontract.IssueOpsPhase) issueopscontract.IssueOpsReadiness
+	ReadSelected func(ctx context.Context, stateRoot, id string) (issueopscontract.Record, error)
+	ScanRecords  func(ctx context.Context, stateRoot string, visit func(issueopscontract.Record) error) error
+	Completion   func(record issueopscontract.Record, phase issueopscontract.Phase) issueopscontract.Readiness
 	// LocalReadiness는 fetch 없는 PR readiness다. 네트워크를 건드리지 않는다.
-	LocalReadiness func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness
+	LocalReadiness func(record issueopscontract.Record) issueopscontract.Readiness
 	// WriterlessCommand는 writer 없는 lease의 회복 명령이다.
-	WriterlessCommand func(record issueopscontract.IssueOpsRecord) string
+	WriterlessCommand func(record issueopscontract.Record) string
 	// ReviewModel resolves the review role's model and effort from the
 	// repository's agent model settings. An error names the broken settings file.
 	ReviewModel func(host string, role agentmodelcontract.Role, tier, repo string) (model, effort string, err error)
 	// ChangedPaths는 봉인 대상 변경 집합의 경로다. observed가 false면 git으로
 	// 관측할 수 없었다는 뜻이며, nil과 빈 슬라이스를 구분해 추정하지 않는다.
 	// implement 이후 phase에서만 호출한다(git 읽기가 두 번 추가된다).
-	ChangedPaths    func(record issueopscontract.IssueOpsRecord) (paths []string, observed bool)
+	ChangedPaths    func(record issueopscontract.Record) (paths []string, observed bool)
 	StagedArtifacts func(stateRoot, id string) (map[string]string, error)
 	Actor           func() (host, sessionID string, err error)
 	// ClaimActorFlags is the caller's whoami claim vector at cwd ("" when the

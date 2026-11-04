@@ -12,18 +12,18 @@ import (
 type spanPersist struct {
 	name    string
 	lock    func(context.Context, string, func(context.Context) error) error
-	persist func(context.Context, issueops.IssueOpsRecord) error
+	persist func(context.Context, issueops.Record) error
 }
 
 func spanPersisters(stateRoot string) []spanPersist {
 	replacement := ReplacementRecords{StateRoot: stateRoot}
 	cycle := CycleRecordStore{StateRoot: stateRoot}
 	return []spanPersist{
-		{name: "replacement", lock: replacement.WithinLock, persist: func(ctx context.Context, record issueops.IssueOpsRecord) error {
+		{name: "replacement", lock: replacement.WithinLock, persist: func(ctx context.Context, record issueops.Record) error {
 			_, err := replacement.Persist(ctx, record, nil)
 			return err
 		}},
-		{name: "cycle", lock: cycle.WithinLock, persist: func(ctx context.Context, record issueops.IssueOpsRecord) error {
+		{name: "cycle", lock: cycle.WithinLock, persist: func(ctx context.Context, record issueops.Record) error {
 			_, err := cycle.Save(ctx, record)
 			return err
 		}},

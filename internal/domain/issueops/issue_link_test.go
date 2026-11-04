@@ -7,11 +7,11 @@ import (
 )
 
 func TestAppendIssueRelationDoesNotMutatePreviousRecordStorage(t *testing.T) {
-	backing := make([]model.IssueOpsIssueLink, 2, 4)
-	backing[0] = model.IssueOpsIssueLink{Type: "blocks", URL: "https://github.com/acme/repo/issues/1"}
-	backing[1] = model.IssueOpsIssueLink{Title: "other snapshot"}
-	before := model.IssueOpsRecord{IssueLinks: backing[:1], UpdatedAt: "before"}
-	got, err := AppendIssueRelation(before, model.IssueOpsIssueLink{Type: "depends-on", URL: backing[0].URL, Title: " dependency "}, "now")
+	backing := make([]model.IssueLink, 2, 4)
+	backing[0] = model.IssueLink{Type: "blocks", URL: "https://github.com/acme/repo/issues/1"}
+	backing[1] = model.IssueLink{Title: "other snapshot"}
+	before := model.Record{IssueLinks: backing[:1], UpdatedAt: "before"}
+	got, err := AppendIssueRelation(before, model.IssueLink{Type: "depends-on", URL: backing[0].URL, Title: " dependency "}, "now")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,15 +4,15 @@ import contract "issueops/internal/contract/selfaugment"
 
 type PlanFacts struct {
 	GeniusText          string
-	Signals             contract.SelfAugmentRepoSignals
+	Signals             contract.RepoSignals
 	DocsOK              bool
 	ImplementationDelta bool
 	VerificationPassed  bool
 	LessonsCaptured     bool
 }
 
-func NewPlan(req contract.SelfAugmentPlanRequest, facts PlanFacts, candidates []contract.SelfAugmentCandidate, lessonCounts map[string]int) contract.SelfAugmentPlanResult {
-	goals := []contract.SelfAugmentGoal{
+func NewPlan(req contract.PlanRequest, facts PlanFacts, candidates []contract.Candidate, lessonCounts map[string]int) contract.PlanResult {
+	goals := []contract.Goal{
 		{
 			Name: "curriculum_selection", KoreanName: "개선 목표 선별", TargetScore: req.TargetScore,
 			Score:       ScoreBool(facts.Signals.HasGeniusThink && facts.DocsOK),
@@ -44,7 +44,7 @@ func NewPlan(req contract.SelfAugmentPlanRequest, facts PlanFacts, candidates []
 	warnings := ApplyLessonPenalties(candidates, lessonCounts)
 	PrioritizeCandidates(candidates)
 	selected := SelectedCandidate(candidates)
-	return contract.SelfAugmentPlanResult{
+	return contract.PlanResult{
 		OK:                  true,
 		LoopKind:            "self_augmentation",
 		KoreanName:          contract.SelfAugmentationKoreanName,

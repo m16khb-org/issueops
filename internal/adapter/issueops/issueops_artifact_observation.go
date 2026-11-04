@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	issueopsdomain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
 // ObserveRemoteArtifact는 원격 artifact의 현재 상태를 provider CLI로 읽는다.
@@ -20,7 +20,7 @@ func ObserveRemoteArtifact(url string) (issueopsdomain.ArtifactObservation, erro
 	if url == "" {
 		return issueopsdomain.ArtifactObservation{}, fmt.Errorf("artifact URL is required")
 	}
-	provider, err := remote.ProviderFromRemoteURLs([]string{url})
+	provider, err := issueopsremote.ProviderFromRemoteURLs([]string{url})
 	if err != nil {
 		return issueopsdomain.ArtifactObservation{}, fmt.Errorf("artifact URL %q has no recognizable provider host", url)
 	}

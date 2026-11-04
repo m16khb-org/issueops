@@ -6,6 +6,6 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-var externalIntentBucket = fmt.Sprintf("external_intent_v%d", issueops.IssueOpsSchemaVersion)
+var externalIntentBucket = fmt.Sprintf("external_intent_v%d", issueops.SchemaVersion)
 
-type RemoteArtifactVerifyFunc func(issueops.IssueOpsRemoteArtifactVerificationRequest) error
+type RemoteArtifactVerifyFunc func(issueops.RemoteArtifactVerificationRequest) error

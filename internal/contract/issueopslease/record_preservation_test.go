@@ -23,7 +23,7 @@ func TestLeaseExecutionShapeCoversEveryPersistedExecutionField(t *testing.T) {
 // json.RawMessage로 받아 원문 그대로 다시 쓴다.
 func TestLeaseRecordCarriesEveryPersistedTopLevelField(t *testing.T) {
 	lease := jsonTaggedFields(reflect.TypeFor[leasecontract.Record]())
-	for _, field := range jsonTaggedFields(reflect.TypeFor[model.IssueOpsRecord]()) {
+	for _, field := range jsonTaggedFields(reflect.TypeFor[model.Record]()) {
 		if _, ok := lease[field.tag]; !ok {
 			t.Errorf("persisted field %q is absent from the lease Record and would be dropped on re-encode", field.tag)
 		}
@@ -48,37 +48,37 @@ func TestDecodeRejectsFieldsThePersistedRecordDoesNotDefine(t *testing.T) {
 
 // Decode와 Encode를 거쳐도 lease 밖의 sidecar는 의미가 바뀌지 않아야 한다.
 func TestDecodeEncodePreservesEverySidecar(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		OK: true, SchemaVersion: 1, ID: "io-preserve", Repo: "/repo", Branch: "12-preserve",
-		Phase:    model.IssueOpsPhaseImplement,
+		Phase:    model.PhaseImplement,
 		IssueURL: "https://github.com/example/issueops/issues/12",
-		Intent: &model.IssueOpsIntentContract{
+		Intent: &model.IntentContract{
 			RawRequest: "keep every sidecar", InterpretedIntent: "preserve", SuccessCriteria: []string{"round trip"},
 			RecordedAt: "2026-09-23T00:00:00Z",
 		},
 		PlanPath:     "/repo.worktrees/12-preserve/plan.md",
 		WorktreePath: "/repo.worktrees/12-preserve",
-		Decisions: []model.IssueOpsDecision{{
+		Decisions: []model.Decision{{
 			Title: "keep", Body: "keep the sidecar", Kind: "architecture", CreatedAt: "2026-09-23T00:00:00Z",
 		}},
-		ImplementationReview: &model.IssueOpsImplementationReview{
+		ImplementationReview: &model.ImplementationReview{
 			Verdict: "pass", Findings: []string{"none"}, Evidence: []string{"go test"},
 			ReviewedFingerprint: strings.Repeat("a", 64), RecordedAt: "2026-09-23T00:00:00Z",
 		},
-		SchemaEvidence: &model.IssueOpsSchemaEvidence{
+		SchemaEvidence: &model.SchemaEvidence{
 			Measurements: []string{"rows=1"}, Sources: []string{"psql"}, RecordedAt: "2026-09-23T00:00:00Z",
 		},
-		LinkedBranchCleanup: &model.IssueOpsLinkedBranchCleanup{
+		LinkedBranchCleanup: &model.LinkedBranchCleanup{
 			State: "deleted", LinkedBranchID: "LB_1", LinkedCount: 1, Deleted: true, ObservedAt: "2026-09-23T00:00:00Z",
 		},
-		BodySyncs: []model.IssueOpsRemoteBodySync{{
+		BodySyncs: []model.RemoteBodySync{{
 			Kind: "issue", URL: "https://github.com/example/issueops/issues/12", ToSHA256: strings.Repeat("b", 64), SyncedAt: "2026-09-23T00:00:00Z",
 		}},
 		AISlopCleanCategories: []string{"dead-code"},
 		CreatedAt:             "2026-09-23T00:00:00Z",
 		UpdatedAt:             "2026-09-23T00:00:00Z",
 	}
-	record.ChildCreateOperations = []model.ChildCreateOperation{{IssueOpsIssueCreateIntent: model.IssueOpsIssueCreateIntent{OperationID: strings.Repeat("c", 32), Marker: "<!-- issueops:child-create:" + strings.Repeat("c", 32) + " -->", Provider: "github", ProjectAuthority: "github.com/example/issueops", Title: "child", BodySHA256: strings.Repeat("d", 64), Status: model.IssueCreateIntentPending, Attempt: 1, StartedAt: record.CreatedAt, UpdatedAt: record.UpdatedAt}, Origin: "implicit", RequestSHA256: strings.Repeat("e", 64), ParentURL: record.IssueURL}}
+	record.ChildCreateOperations = []model.ChildCreateOperation{{IssueCreateIntent: model.IssueCreateIntent{OperationID: strings.Repeat("c", 32), Marker: "<!-- issueops:child-create:" + strings.Repeat("c", 32) + " -->", Provider: "github", ProjectAuthority: "github.com/example/issueops", Title: "child", BodySHA256: strings.Repeat("d", 64), Status: model.IssueCreateIntentPending, Attempt: 1, StartedAt: record.CreatedAt, UpdatedAt: record.UpdatedAt}, Origin: "implicit", RequestSHA256: strings.Repeat("e", 64), ParentURL: record.IssueURL}}
 	data, err := json.Marshal(record)
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func TestDecodeEncodePreservesEverySidecar(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode: %v", err)
 	}
-	var before, after model.IssueOpsRecord
+	var before, after model.Record
 	if err := json.Unmarshal(data, &before); err != nil {
 		t.Fatal(err)
 	}

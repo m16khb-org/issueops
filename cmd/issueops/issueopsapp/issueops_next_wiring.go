@@ -47,7 +47,7 @@ func issueOpsNextHandler(
 			},
 			ReadRecord:   issueopscore.ReadIssueOps,
 			ReadSelected: issueopsrecord.Store{}.ReadSelected,
-			ScanRecords: func(ctx context.Context, stateRoot string, visit func(issueopscontract.IssueOpsRecord) error) error {
+			ScanRecords: func(ctx context.Context, stateRoot string, visit func(issueopscontract.Record) error) error {
 				_, err := (issueopsrecord.Store{}).ScanEach(ctx, stateRoot, visit)
 				return err
 			},
@@ -79,8 +79,8 @@ func issueOpsNextHandler(
 }
 
 type nextLocalReadinessObservation struct {
-	observe  func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation)
-	fallback func(issueopscontract.IssueOpsRecord) ([]string, bool)
+	observe  func(issueopscontract.Record) (issueopscontract.Readiness, reviewcontract.LocalChangeObservation)
+	fallback func(issueopscontract.Record) ([]string, bool)
 	record   nextObservationRecord
 	changes  reviewcontract.LocalChangeObservation
 	set      bool
@@ -91,7 +91,7 @@ type nextObservationRecord struct {
 	branch, baseBranch, baseSHA       string
 }
 
-func (observation *nextLocalReadinessObservation) localReadiness(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
+func (observation *nextLocalReadinessObservation) localReadiness(record issueopscontract.Record) issueopscontract.Readiness {
 	ready, changes := observation.observe(record)
 	observation.record = nextObservationRecordOf(record)
 	observation.changes = changes
@@ -99,7 +99,7 @@ func (observation *nextLocalReadinessObservation) localReadiness(record issueops
 	return ready
 }
 
-func (observation *nextLocalReadinessObservation) changedPaths(record issueopscontract.IssueOpsRecord) ([]string, bool) {
+func (observation *nextLocalReadinessObservation) changedPaths(record issueopscontract.Record) ([]string, bool) {
 	if observation.set && observation.record == nextObservationRecordOf(record) {
 		return append([]string{}, observation.changes.Paths...), observation.changes.Verified
 	}
@@ -109,7 +109,7 @@ func (observation *nextLocalReadinessObservation) changedPaths(record issueopsco
 	return observation.fallback(record)
 }
 
-func nextObservationRecordOf(record issueopscontract.IssueOpsRecord) nextObservationRecord {
+func nextObservationRecordOf(record issueopscontract.Record) nextObservationRecord {
 	key := nextObservationRecord{
 		id: record.ID, repo: record.Repo, worktree: record.WorktreePath, branch: record.Branch,
 	}

@@ -147,8 +147,8 @@ func normalizeLoopID(id string) (string, error) {
 }
 
 func validateLoopSchemaVersion(loop loopruncontract.LoopRun) error {
-	if loop.SchemaVersion != LoopRunCurrentSchemaVersion {
-		return fmt.Errorf("unsupported loop schema_version %d; current is %d", loop.SchemaVersion, LoopRunCurrentSchemaVersion)
+	if loop.SchemaVersion != CurrentSchemaVersion {
+		return fmt.Errorf("unsupported loop schema_version %d; current is %d", loop.SchemaVersion, CurrentSchemaVersion)
 	}
 	return nil
 }

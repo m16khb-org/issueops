@@ -24,7 +24,7 @@ func (OverrideLoader) Load(repoRoot string) policyapp.OverrideSnapshot {
 	return policyapp.OverrideSnapshot{Values: overrides}
 }
 
-func readPolicyOverrides(repoRoot string) (*policycontract.PolicyOverrides, error) {
+func readPolicyOverrides(repoRoot string) (*policycontract.Overrides, error) {
 	path := filepath.Join(repoRoot, ".issueops", "policy.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -33,7 +33,7 @@ func readPolicyOverrides(repoRoot string) (*policycontract.PolicyOverrides, erro
 		}
 		return nil, fmt.Errorf("policy_override_read_failed: %w", err)
 	}
-	var overrides policycontract.PolicyOverrides
+	var overrides policycontract.Overrides
 	if err := json.Unmarshal(data, &overrides); err != nil {
 		return nil, fmt.Errorf("policy_override_parse_failed: %w", err)
 	}

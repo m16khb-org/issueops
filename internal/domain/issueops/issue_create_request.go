@@ -15,7 +15,7 @@ func ValidateIssueCreateTitle(title string) error {
 	return nil
 }
 
-func SealIssueCreateRequest(record model.IssueOpsRecord, request model.IssueOpsIssueCreateIntentRequest, body string) (model.IssueOpsIssueCreateIntentRequest, string) {
+func SealIssueCreateRequest(record model.Record, request model.IssueCreateIntentRequest, body string) (model.IssueCreateIntentRequest, string) {
 	var marker string
 	if record.IssueCreateIntent != nil {
 		request.OperationID = record.IssueCreateIntent.OperationID

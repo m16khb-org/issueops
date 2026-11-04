@@ -18,37 +18,37 @@ func TestServicePrunesOnlyProvablyRetainedDoneCycles(t *testing.T) {
 	active := issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusActive}
 	repository := &fakeRepository{
 		ids: []string{"old", "recent", "active", "unreflected", "reflected"},
-		records: map[string]issueopscontract.IssueOpsRecord{
+		records: map[string]issueopscontract.Record{
 			"old": {
 				ID:        "old",
-				Phase:     issueopscontract.IssueOpsPhaseDone,
+				Phase:     issueopscontract.PhaseDone,
 				UpdatedAt: old,
 				Execution: &issueopscontract.Execution{Lease: released},
 			},
 			"recent": {
 				ID:        "recent",
-				Phase:     issueopscontract.IssueOpsPhaseDone,
+				Phase:     issueopscontract.PhaseDone,
 				UpdatedAt: recent,
 				Execution: &issueopscontract.Execution{Lease: released},
 			},
 			"active": {
 				ID:        "active",
-				Phase:     issueopscontract.IssueOpsPhaseDone,
+				Phase:     issueopscontract.PhaseDone,
 				UpdatedAt: old,
 				Execution: &issueopscontract.Execution{Lease: active},
 			},
 			"unreflected": {
 				ID:             "unreflected",
-				Phase:          issueopscontract.IssueOpsPhaseDone,
+				Phase:          issueopscontract.PhaseDone,
 				UpdatedAt:      old,
-				RemoteArtifact: &issueopscontract.IssueOpsRemoteArtifactVerification{},
+				RemoteArtifact: &issueopscontract.RemoteArtifactVerification{},
 			},
 			"reflected": {
 				ID:               "reflected",
-				Phase:            issueopscontract.IssueOpsPhaseDone,
+				Phase:            issueopscontract.PhaseDone,
 				UpdatedAt:        old,
-				RemoteArtifact:   &issueopscontract.IssueOpsRemoteArtifactVerification{},
-				RemoteCompletion: &issueopscontract.IssueOpsRemoteCompletion{ReflectedAt: "2026-08-01T00:00:00Z"},
+				RemoteArtifact:   &issueopscontract.RemoteArtifactVerification{},
+				RemoteCompletion: &issueopscontract.RemoteCompletion{ReflectedAt: "2026-08-01T00:00:00Z"},
 			},
 		},
 	}
@@ -85,10 +85,10 @@ func TestServiceReportsUnreadableRecordsAndContinues(t *testing.T) {
 	now := time.Date(2026, 8, 11, 4, 0, 0, 0, time.UTC)
 	repository := &fakeRepository{
 		ids: []string{"broken", "old"},
-		records: map[string]issueopscontract.IssueOpsRecord{
+		records: map[string]issueopscontract.Record{
 			"old": {
 				ID:        "old",
-				Phase:     issueopscontract.IssueOpsPhaseDone,
+				Phase:     issueopscontract.PhaseDone,
 				UpdatedAt: now.Add(-60 * 24 * time.Hour).Format(time.RFC3339Nano),
 				Execution: &issueopscontract.Execution{
 					Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusReleased},
@@ -130,10 +130,10 @@ func TestServiceBoundsUnreadableDiagnosticsWithoutStoppingPrune(t *testing.T) {
 	ids = append(ids, "old")
 	repository := &fakeRepository{
 		ids: ids,
-		records: map[string]issueopscontract.IssueOpsRecord{
+		records: map[string]issueopscontract.Record{
 			"old": {
 				ID:        "old",
-				Phase:     issueopscontract.IssueOpsPhaseDone,
+				Phase:     issueopscontract.PhaseDone,
 				UpdatedAt: now.Add(-60 * 24 * time.Hour).Format(time.RFC3339Nano),
 				Execution: &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusReleased}},
 			},
@@ -155,17 +155,17 @@ func TestServiceBoundsUnreadableDiagnosticsWithoutStoppingPrune(t *testing.T) {
 
 func TestServiceReturnsPartialReceiptWhenLaterDeleteFails(t *testing.T) {
 	now := time.Date(2026, 8, 14, 12, 0, 0, 0, time.UTC)
-	old := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	old := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            "old",
-		Phase:         issueopscontract.IssueOpsPhaseDone,
+		Phase:         issueopscontract.PhaseDone,
 		UpdatedAt:     now.Add(-60 * 24 * time.Hour).Format(time.RFC3339Nano),
 	}
 	later := old
 	later.ID = "later"
 	repository := &fakeRepository{
 		ids:          []string{"old", "later"},
-		records:      map[string]issueopscontract.IssueOpsRecord{"old": old, "later": later},
+		records:      map[string]issueopscontract.Record{"old": old, "later": later},
 		deleteErrors: map[string]error{"later": errors.New("compare-and-swap failed")},
 	}
 
@@ -191,7 +191,7 @@ func TestServiceReturnsPartialReceiptWhenLaterDeleteFails(t *testing.T) {
 
 type fakeRepository struct {
 	ids          []string
-	records      map[string]issueopscontract.IssueOpsRecord
+	records      map[string]issueopscontract.Record
 	readErrors   map[string]error
 	deleteErrors map[string]error
 	deleted      []string
@@ -201,14 +201,14 @@ func (repository *fakeRepository) ListIDs(context.Context, string) ([]string, er
 	return repository.ids, nil
 }
 
-func (repository *fakeRepository) ReadUnchecked(_ context.Context, _ string, id string) (issueopscontract.IssueOpsRecord, error) {
+func (repository *fakeRepository) ReadUnchecked(_ context.Context, _ string, id string) (issueopscontract.Record, error) {
 	if err := repository.readErrors[id]; err != nil {
-		return issueopscontract.IssueOpsRecord{}, err
+		return issueopscontract.Record{}, err
 	}
 	return repository.records[id], nil
 }
 
-func (repository *fakeRepository) DeleteIfUnchanged(_ context.Context, _ string, id string, _ issueopscontract.IssueOpsRecord) error {
+func (repository *fakeRepository) DeleteIfUnchanged(_ context.Context, _ string, id string, _ issueopscontract.Record) error {
 	if err := repository.deleteErrors[id]; err != nil {
 		return err
 	}
