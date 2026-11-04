@@ -69,6 +69,29 @@ grep `.issueops/cautions` and `.issueops/adr` for the subsystem you touch.
 Trigger this skill when a completed unit of work produced one of the left-side
 outcomes. Do not batch updates speculatively for hypothetical future work.
 
+## Recurring Cautions: Promote, Do Not Repeat
+
+A caution about a mistake that already has a record is a recurrence, and a
+second note does not stop a third occurrence. Before
+`project_docs_append(kind=caution)`, grep `.issueops/cautions` for two or three
+terms of the symptom and the subsystem, in addition to the route result.
+
+- No earlier record: append as usual.
+- Earlier record found: do not append a new record. `project_docs_read` the
+  earlier record (or the section of a living module that covers it) and
+  `project_docs_revise` it to add one line:
+  `- Recurred: YYYY-MM-DD <issue, PR, or session> — promotion candidate: <test, lint rule, gate CHECK, or CLI validation that would have caught it>`.
+  Then report the candidate to the user, who decides whether to promote it;
+  inside an IssueOps cycle it goes in the completion report that the Finish
+  section of `.issueops/AGENT_WORKFLOW.md` defines, not in a mid-cycle question.
+  Do not add the test, lint rule, or general rule without that approval: a
+  check fitted to one incident is often too narrow, and the user ratifies it.
+- After an approved promotion lands, revise the line to
+  `- Promoted: YYYY-MM-DD <path of the test, lint rule, or doc rule>`.
+
+`grep -l '^- Recurred:' .issueops/cautions/*.md` lists the open promotion
+candidates; a cleanup or self-augmentation pass starts there.
+
 ## Decision Table: append vs revise
 
 | | `project_docs_append` (default) | `project_docs_revise` (exception) |

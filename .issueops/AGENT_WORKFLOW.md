@@ -21,7 +21,7 @@ description: Agent start, execution, verification, and completion flow; read whe
 - 문서가 현재 코드/사용자 컨센서스와 어긋나면 MCP `project_docs_read`로 현재 SHA를 확인하고 `project_docs_revise`로 한 문서씩 갱신한다.
 - remote VCS 작업은 canonical worktree의 선택 문서 `.issueops/VCS.md`를 먼저 읽는다. 문서에 없는 provider recipe를 실제로 성공시켰다면 같은 worktree에서 `project_docs_read` 후 `project_docs_revise` SHA-CAS로 갱신한다. GitLab/GitHub 모두 기록할 수 있지만 secret, 개인 tool 경로, server namespace, 추측한 MCP 이름은 남기지 않는다.
 - 구조 선택이나 대안 기각 사유가 생기면 MCP `project_docs_append(kind=adr)`로 `.issueops/ADR.md`에 남긴다.
-- 반복 실패, false case, 위험한 운영 주의는 MCP `project_docs_append(kind=caution)`으로 `.issueops/CAUTIONS.md`에 남긴다.
+- 반복 실패, false case, 위험한 운영 주의는 MCP `project_docs_append(kind=caution)`으로 `.issueops/CAUTIONS.md`에 남긴다. 같은 실수의 기록이 이미 있으면 새 기록을 만들지 않고 `skills/project-docs-update/SKILL.md`의 `Recurring Cautions` 절을 따른다.
 - IssueOps 사이클 안에서 위 두 append의 시점은 `skills/issueops-docs/SKILL.md`가 소유한다. 구현 단계(4)의 append는 정리 봉인보다 앞서므로 그대로 두고, 정리 봉인(5) 뒤의 append는 문서 단계(6)가 재봉인하며, 검증(7) 이후의 append는 두 봉인을 stale로 만들어 `issueops next`가 문서 단계로 되돌린다. 계획 단계(3)에서 읽은 문서는 계획의 `## 적용되는 결정과 주의사항` 절에 남기고, `issueops link-plan`이 그 절을 포함한 네 필수 절의 존재를 검사한다.
 
 ## IssueOps 자동 세션 인계
@@ -62,6 +62,7 @@ cleanup은 승인에 포함하지 않는다. 일반 테스트 실패와 stale �
 
 - 커밋이 필요하면 `.issueops/COMMIT_POLICY.md`를 따른다.
 - 해결한 false case나 구조 결정은 필요한 경우 MCP `project_docs_append`로 기록한다. IssueOps 사이클이라면 그 기록의 시점과 재봉인은 문서 단계(`skills/issueops-docs/SKILL.md`)가 소유하고, publication 게이트 `project_docs_review`는 `no-change`에도 실제로 읽은 `--reviewed-doc` 경로를 요구한다.
+- 재발한 caution에 `- Recurred:` 줄을 남겼으면 완료 보고에 그 기록 경로와 승격 후보(테스트, lint 규칙, 게이트 CHECK, CLI 검증)를 적는다. 승격 여부는 사용자가 정한다.
 - 사용자에게 하는 진행·완료·중단 보고와 질문은 ASD-STE100 기반 보고 규칙(`skills/fluent-korean/references/report-ste100.md`)을 따른다. `결과` → `변경한 것` → `확인한 것` → `경고`·`주의` → `사용자가 할 일` 순서로 쓴다.
 
 ## Hook context injection and lifecycle observation

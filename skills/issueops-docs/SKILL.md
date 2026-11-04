@@ -74,7 +74,8 @@ verified-execution report의 `## 문서 → 구현 대조` 절에
 **구현 → 문서.** 이번 변경이 문서가 아직 모르는 것을 만들었는가.
 
 - 구조 결정이나 대안 기각 사유가 생겼다 → ADR
-- 다시 밟을 함정이나 재발한 문제를 해결했다 → CAUTIONS
+- 다시 밟을 함정이나 재발한 문제를 해결했다 → CAUTIONS. 같은 실수의 기록이 이미 있으면 새 기록 대신
+  [`project-docs-update`](../project-docs-update/SKILL.md)의 `Recurring Cautions` 절을 따른다
 - 새 명령·플래그·컨벤션·모듈 경계가 생겼다 → CONVENTIONS 또는 ARCHITECTURE
 - 검증 방식이 바뀌었다 → TESTING
 - 설치·실행·배포·운영 절차가 바뀌었다 → OPERATIONS
