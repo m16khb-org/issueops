@@ -13,3 +13,8 @@
 `artifact stage`는 actor 플래그를 받지 않는다. `--id`, `--name`, `--file`, `--json`뿐이다.
 잘못 올렸으면 `issueops artifact unstage --id "$ISSUEOPS_ID" --name plan --json`으로
 내린다.
+
+## 아키텍처 문서와 계획을 source checkout 밖에 쓰는 이유
+
+source checkout 안에 만들면 그 파일이 커밋 대상이 되고, 워크트리가 생긴 뒤에는 두 곳에 같은 문서가
+존재한다.

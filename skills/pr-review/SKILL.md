@@ -64,13 +64,9 @@ at `head_sha` (`context.checkout`, `worktree=null`); only a dirty or different-h
 checkout needs `<out_dir>/worktree`. Never create a redundant detached worktree.
 
 `workflow_args.json` already contains the finder units, the checkout path, the candidate caps,
-the hunk ranges and prior lessons for the prescreen — never hand-build it. A **unit** is one
-lens bundle × one shard of the changed files (bundles: behavior = logic/boundary/data/async,
-contract = security/contract/rules, intent = tests/scope/intent); each unit has one
-self-contained pack (`pack/<unit>.md`: that slice's cumulative diff, the definitions and
-one-hop neighbours of the symbols it defines, matching rules, threads and prior lessons). One
-finder applies its bundle's lenses separately over one pack read. Shards keep
-packs under ~150 KB of diff; `defs.md` and `hunks/<file>.patch` serve skeptics.
+the hunk ranges and prior lessons for the prescreen — never hand-build it. A unit is one
+lens bundle × one shard of the changed files with one self-contained `pack/<unit>.md`
+([unit and pack layout](references/workflow-details.md)).
 
 ### 1. Gate
 
@@ -96,9 +92,8 @@ unanchorable 50) are hop-exempt. All review numbers come from the gate, never es
 3. Emit the finder schema below, at most `perLensCap` candidates and 3 `verified_ok`
    entries per lens. Attest every assigned file exactly once in `reviewed_files`.
 4. `xhigh` only: after every unit, take one more pass over the diff as a fresh reviewer holding
-   the current list, looking **only** for defects not already on it — moved/extracted code that
-   dropped a guard, setup/teardown asymmetry in tests, config defaults flipped. Add nothing you
-   already have; return nothing rather than padding.
+   the current list, looking **only** for defects not already on it (examples in
+   [workflow-details](references/workflow-details.md)). Return nothing rather than padding.
 
 State missing hops and cap confidence at 50. Low/medium favor actionable precision;
 high/xhigh favor recall with a nameable failure scenario, then confidence screening.
@@ -108,17 +103,9 @@ high/xhigh favor recall with a nameable failure scenario, then confidence screen
 Apply only the generated unit's effort-selected lenses independently; never share finder conclusions.
 Low is limited to `logic` and `boundary`. The five-lens base below applies to other
 levels when selected by the generator; topic matches do not add undisclosed lenses.
-`logic` covers control/data flow; `boundary` covers changed exports, callers and
-callee shapes; `tests` covers real regression assertions; `rules` requires explicit
-rule text, matching glob, changed line, and cited rule; `scope` compares description
-with cumulative diff. `intent`, when selected, applies with linked issues:
-map each claim, criterion, checklist/table row to code/tests and quote unmet issue lines.
-`security` applies to security/controller/gateway/DTO/ops or auth/token/secret/
-permission/env changes; `data` to DB/migration/query/repository/transaction changes;
-`async` to async/gateway/queue/stream/retry/timeout; `contract` to DTO/controller/
-gateway/generated changes. Check authorization/injection, partial writes/indexes/
-migration symmetry, durability/idempotency/cancellation, and public/generated
-API shape/error documentation respectively.
+`rules` requires explicit rule text, matching glob, changed line, and cited rule; `intent`,
+when selected, maps each claim, criterion, checklist/table row to code/tests and quotes
+unmet issue lines. Per-lens scope and applicability triggers: [lenses](references/lenses.md).
 
 ```json
 {"lens":"<id>","reviewed_files":["<each assigned path once>"],"inspected":["<opened files/symbols>"],
@@ -161,25 +148,16 @@ python3 <skill>/scripts/omo_driver.py --args <out_dir>/workflow_args.json \
   --profile omo-flash --provider zai --model glm-5.3-flash
 ```
 
-The Omo adapter pins `zai/glm-5.3-flash`, checks `--no-model-fallback`, and
-sets `SENPI_NO_FALLBACK=1`; never silently switch providers. It owns rate-limit
-backoff: 429 is not a format error/provider switch. `omo-flash` uses 24 finder
-turns, 18 skeptic turns, cap floor 40, concurrency 10, high thinking;
-`standard` uses Workflow budgets. Finder/tracer permissions are read-only;
-only the reproducer may create throwaway tests. The adapter supplies temporary
-read-only inputs and schema-constrained `submit_pr_review_*` output, enforces
-budgets, recovers validated submissions from empty final replies, and retries
-format failures with original input and only the submit tool enabled.
-Remove the temporary input directory after all phases; retain diagnostic artifacts.
-Retain raw stdout/stderr, exit, timeout, denial, parse/schema diagnostics and
-`failure_counts` (`parse_failure`, `schema_failure`, `timeout`, `rate_limited`,
-`low_confidence_abstain`, `coverage_gap`). Missing/duplicate `reviewed_files`,
-failed children, or abstention mean non-zero/degraded, never a clean review.
+The Omo adapter pins `zai/glm-5.3-flash` and never silently switches providers.
+Missing/duplicate `reviewed_files`, failed children, or abstention mean
+non-zero/degraded, never a clean review. Read [max-fanout](references/max-fanout.md)
+before running the adapter or recovering a failed run: permissions, budgets, temporary
+input cleanup, retained diagnostics (`failure_counts`), and recovery commands.
 
 Other hosts use current sub-agent tools with `workflow.js`'s finder/skeptic
-prompts (or the contracts in this body when the asset is absent). Budget:
-one finder per unit, then tracer and only if needed reproducer per candidate;
-10 finder messages and 8 skeptic messages, batched reads. Use the session model
+prompts (or the contracts in this body when the asset is absent): one finder per unit,
+then tracer and only if needed reproducer per candidate, with the finder and skeptic
+message budgets in [max-fanout](references/max-fanout.md). Use the session model
 unless `args.models = {finder, tracer, reproducer}` overrides it.
 Save `<out_dir>/workflow-result.json` before reading; quote its `cost` block
 (agents, prescreened, reproducers skipped, output tokens) in chat.
@@ -207,25 +185,11 @@ case, 75 real reachable path, 90–100 reproduction or definitions with no escap
 No reproduction and no proof from definitions can refute a scenario; tool inability
 alone cannot. Intent alone is not correctness.
 
-Missing finders or incomplete/duplicate coverage block verify. Recover only failed units:
-
-```bash
-python3 <skill>/scripts/omo_driver.py --args <out_dir>/workflow_args.json \
-  --phase verify --retry-failed-units
-```
-
-This repairs failed-unit results/diagnostics, rebuilds whole-stage dedup/prescreen/
-coverage and persists `find-stage.json`. No tracers until coverage is complete;
-failure exits non-zero. Never combine with skeptic-abstention retry below.
-
-To rerun only candidates that were kept as `skeptics unavailable (abstain)` in a degraded run:
-
-```bash
-python3 <skill>/scripts/omo_driver.py --args <out_dir>/workflow_args.json \
-  --phase verify --retry-degraded-from <out_dir>/workflow-result.json
-```
-
-This leaves the original result untouched and writes `<out_dir>/workflow-retry-result.json`.
+Missing finders or incomplete/duplicate coverage block verify, and no tracers run until
+coverage is complete. Recover only failed units, or rerun only candidates kept as
+`skeptics unavailable (abstain)`, with the `--retry-failed-units` and
+`--retry-degraded-from` commands in [max-fanout](references/max-fanout.md); never
+combine the two retries.
 
 ### 3. Merge (you are the moderator)
 
@@ -237,29 +201,24 @@ Write `<out_dir>/findings.json` (schema: `post_review.py` docstring):
   `prescreened.json → candidates` (keep `upstream`/`downstream`; there is no
   `skeptics_passed`, and never invent one — `post_review.py` reads it as "both skeptics failed
   to refute this" and lowers the inline bar to 50 on the strength of it).
-- The workflow's `partial` list (refuted candidates where a skeptic still stood at ≥ 70)
-  becomes `open_questions`: one line each — the residual risk in the standing skeptic's words,
-  the location, and what the author should confirm. Inline levels have no `partial`; put the
-  hops you could not complete there instead.
-- `verified_ok` entries stay as `{concern, why_ok, loc, thread}` objects; pick at most 8,
-  preferring ones that contradict an existing bot thread (`thread` set).
+- `partial` refutations become `open_questions` (inline levels list the hops you could not
+  complete instead); `verified_ok` keeps `{concern, why_ok, loc, thread}` objects, at most 8,
+  preferring ones that contradict an existing bot thread. Selection rules:
+  [merge-details](references/merge-details.md).
 - Drop a finding whose line already has a bot/human thread unless it contradicts that thread
   (then say so in `what`). Never repeat a claim in `prior_review_lessons`.
-- Re-review of a moved head: `context.json → prior_review_threads` lists earlier threads
-  this skill posted (either marker); resolved ones go to `verified_ok` as "이전 지적 Fn 해결 확인", unresolved ones are
-  referenced, not re-posted.
-- `verified_ok` = the risky-looking things inspectors traced and cleared, each with evidence.
-- `rule_candidates` = each refutation that hinged on a project fact, as one Korean sentence
-  naming the fact and the proving file.
+- Re-review of a moved head: resolved earlier threads in `context.json → prior_review_threads`
+  go to `verified_ok` as "이전 지적 Fn 해결 확인", unresolved ones are referenced, not
+  re-posted. `rule_candidates` are the refutations that hinged on a project fact, one Korean
+  sentence each naming the fact and the proving file.
 - Verdict: `request_changes` if any critical/high; `approve` if nothing ≥ medium and the
   tests lens found the changed behavior covered; else `comment`.
 - Korean prose; identifiers, paths, commands verbatim. Never quote secret values.
 - Before posting, use `fluent-korean` when installed and polish every Korean prose
-  field the agents produced — `summary`, `verified_ok`, `open_questions`,
-  `rule_candidates`, and each finding's `title`/`what`/`why`/`how`. Sub-agent prose
-  field. The polish pass is required even in an isolated copy: write complete,
-  direct Korean sentences, remove filler/translationese, keep terminology stable,
-  and preserve facts, evidence lines, identifiers, and commands exactly.
+  field the agents produced (`summary`, `verified_ok`, `open_questions`,
+  `rule_candidates`, each finding's `title`/`what`/`why`/`how`). The polish pass is
+  required even in an isolated copy; wording rules in
+  [merge-details](references/merge-details.md).
 
 ### 4. Post
 
@@ -286,24 +245,13 @@ reason from `prescreened.json`). Do not paste the inline bodies. The
 summary's first paragraph must name only defects that appear in the tables or in "저자 확인
 요청" — never mention a finding the reader cannot find below.
 
-### 4b. Remember refutations (team memory)
+### 4b. Remember refutations and 4c. Re-review
 
-```bash
-python3 <skill>/scripts/record_refuted.py --result <out_dir>/workflow-result.json --context <out_dir>/context.json
-```
-
-Appends evidence-backed refutations (skeptic confidence ≥ 80) to `<repo>/.issueops/pr-review/refuted.jsonl`
-— commit it with the repo. The next run's prescreen drops a same-file candidate whose title/what overlap
-≥ 0.5 with a recorded refutation; `security`/`data` candidates are never suppressed. Prescreen kills are
-not recorded (they carry no evidence).
-
-### 4c. Re-review of a moved head
-
-Run preflight with `--incremental`: when `<out_dir>` already holds `workflow-result.json` and
-`context.prev.json` from the previous head, only units whose files changed since that head are
-re-inspected and findings on untouched files are carried (`carried_from`). Findings on changed
-files are dropped and re-found or not. `post_review.py` still validates every line against the
-new diff.
+After a `max` run, `scripts/record_refuted.py` appends evidence-backed refutations to
+`<repo>/.issueops/pr-review/refuted.jsonl`; `security`/`data` candidates are never suppressed.
+For a moved head, run preflight with `--incremental`: only units whose files changed are
+re-inspected and findings on untouched files are carried. Commands and rules:
+[workflow-details](references/workflow-details.md).
 
 ### 5. Clean up
 
@@ -329,5 +277,5 @@ threads, merge, silently upgrade effort, or add a posting approval the user did
 not give. In an IssueOps cycle return evidence to its owning stage for authenticated
 recording and preserve its lifecycle/actor/generation/cwd and publication gates.
 
-[Lenses](references/lenses.md) and [verification](references/verification.md)
-provide optional detail; this body's effort, output, and posting rules govern.
+Optional detail in `references/`: `lenses.md`, `verification.md`, `max-fanout.md`,
+`merge-details.md`, `workflow-details.md`. This body's effort, output, and posting rules govern.

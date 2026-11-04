@@ -33,39 +33,25 @@ issueops next --json
 `start`는 **source checkout**에서만 실행한다. worktree를 record의 repo로 만들지 않는다.
 
 `next`가 기존 사이클을 선택했지만 사용자가 별도의 새 사이클을 명시적으로 요청했다면
-첫 명령에 `--new`를 붙인다. `--new`는 `--branch`와 함께 쓸 수 없고, 실행할 때마다
-새 lifecycle ID를 만든다. 성공 응답의 ID를 이후 명령에 계속 사용한다. 응답을 받았는지
-불분명하면 `issueops list --repo "$SOURCE_ROOT" --json`으로 먼저 확인하고, 같은 명령을
-바로 다시 실행하지 않는다.
+첫 명령에 `--new`를 붙인다. `--new`는 `--branch`와 함께 쓸 수 없고 실행할 때마다 새 lifecycle ID를
+만든다. 응답을 받았는지 불분명하면 같은 명령을 다시 실행하지 않고 먼저 `issueops list --repo "$SOURCE_ROOT" --json`으로
+확인한다. 성공 응답의 ID를 이후 명령에 계속 사용한다.
 
 ## 입력 세 가지
 
-세 입력의 조사 출처를 plan-prep evidence 문자열로 남긴다.
+세 입력의 조사 출처를 plan-prep evidence 문자열로 남긴다. 조사 방법 전문은
+[입력 조사](references/input-research.md)를 읽고 따른다.
 
-1. **사용자가 준 정보.** 원문을 그대로 intent contract의 `--raw-request`에 넣는다.
-   요약해서 넣으면 나중에 해석이 맞았는지 대조할 원본이 사라진다.
-   사용자가 HWP·PDF·DOCX 기획서나 화면 캡처를 줬으면
-   요구사항·모순·누락을 원문·표·화면·작은 글씨까지 확인해 먼저 추출한다. 설치된
-   `requirements-analysis`를 활용한다. 원문 요청은 그대로 `--raw-request`에 넣고, 추출한 제약은
-   `intent record --constraint`에, 모순과 누락은 `--ambiguity`에 넣는다. 문서를 요약해
-   `--raw-request`를 대체하지 않는다.
-2. **코드베이스 조사.** `.codegraph/`가 있으면 `codegraph explore "<질문>"`으로 관련
-   심볼과 호출 경로를 찾고, 없으면 `rg`로 찾는다. 만진 심볼·파일·호출 경로를 evidence
-   문자열로 만든다(`--codebase-survey-evidence`). 운영 문서는 `project_docs_route`에 요청
-   요약을 넣어 고른다. 이미 내려진 결정(`.issueops/ADR.md`와 `adr/` 기록)과 반복 실수
-   (`.issueops/CAUTIONS.md`와 `cautions/` 기록) 중 이 요청에 걸리는 항목은 문서 경로와 항목
-   제목을 `--decisions-evidence`에 적는다. 걸리는 항목이 없으면 대조한 문서 목록을 적는다.
-   `project_docs_route`는 요청과 단어가 두 개 이상 겹치는 기록만 고르므로, 요청이 새로 들이는 핵심 단어(새
-   플래그·명령 이름, 동작을 가리키는 영어 단어)는 따로 `.issueops/adr/`와 `.issueops/cautions/`에서 Grep한다.
-   걸린 기록은 열어서 그 문장이 이 요청의 범위나 방식을 정하는지 판정한다. 정하면 위 evidence와 이슈 본문의
-   범위·비목표에 옮긴다. 걸렸는데 열어 보지 않고 "해당 없음"으로 적지 않는다.
-   모든 변경에 걸리는 원칙(`.issueops/CONSTITUTION.md`)도 연다. 요청한 동작이 원칙에 걸리면(예: 반복·재시도·
-   감시 루프의 상한과 종료 경로, secret 처리, 권한 경계) 그 원칙을 성공 기준이나 제약으로 이슈 본문에
-   옮기거나, 지키는 방법이 갈리면 blocking 질문으로 묻는다.
-3. **배경지식과 웹 조사.** 외부 API의 의미나 계약이 걸릴 때만
-   출처를 직접 조사하고(설치된 `web-research` 활용) 그 결과를
-   `--web-research-evidence`에 넣는다. 조사하지 않았으면 waive하지 말고 왜 필요 없는지를
-   evidence로 쓴다. 관련 이슈는 `--related-score-ref`로 남긴다.
+1. **사용자가 준 정보.** 원문을 그대로 intent contract의 `--raw-request`에 넣고 요약해 대체하지 않는다.
+   기획서·화면 캡처는 설치된 `requirements-analysis`로 먼저 추출해 제약은 `intent record --constraint`에,
+   모순과 누락은 `--ambiguity`에 넣는다.
+2. **코드베이스 조사.** 만진 심볼·파일·호출 경로를 `--codebase-survey-evidence`에 적고, 이 요청에 걸리는
+   ADR·CAUTIONS 항목의 문서 경로와 제목(없으면 대조한 문서 목록)을 `--decisions-evidence`에 적는다. 걸린
+   기록은 열어서 이 요청의 범위나 방식을 정하는지 판정하고, 열어 보지 않고 "해당 없음"으로 적지 않는다.
+   `.issueops/CONSTITUTION.md`의 원칙에 걸리면 성공 기준이나 제약으로 이슈 본문에 옮긴다.
+3. **배경지식과 웹 조사.** 외부 API의 의미나 계약이 걸릴 때만 직접 조사해 `--web-research-evidence`에
+   넣는다. 조사하지 않았으면 waive하지 말고 왜 필요 없는지를 evidence로 쓴다. 관련 이슈는
+   `--related-score-ref`로 남긴다.
 
 원격 이슈를 쓰기 전에 `.issueops/AGENT_WORKFLOW.md`의 Start·Work 절을 읽는다. Work 절이
 가리키는 `.issueops/VCS.md`가 있으면 provider recipe와 CLI 대체 경로를 거기서 확인한다.
@@ -114,9 +100,7 @@ issueops decision add --id "$ISSUEOPS_ID" --kind scope \
   --title "no split" --body "<한 owner·한 리뷰로 끝나는 근거>" $RECORD_ACTOR_FLAGS --json
 # 분할하면 title을 "split: <child 목록>"으로 쓴다. child는 branch prepare 뒤에 만든다(아래 Parent와 child).
 
-# 관련 이슈·라벨 점수는 plan-prep보다 먼저 만든다. 그 요약이 --related-score-ref다.
-# 입력 JSON 형식은 `issueops remote score --example`이 출력한다. 후보는 provider의 열린 이슈·라벨 목록이다.
-# issueops에는 목록 조회 명령이 없다. gh issue list / gh label list(GitLab은 glab)로 읽기만 한다.
+# 관련 이슈·라벨 점수는 plan-prep보다 먼저 만든다. 그 요약이 --related-score-ref다(입력 형식은 발행 세부 규칙).
 issueops remote score --input "$SCORE_INPUT" --judge none --json > "$SCORE_FILE"
 # 선택하거나 거절한 라벨과 threshold는 본문이 아니라 record에 남긴다.
 issueops decision add --id "$ISSUEOPS_ID" --kind review --title "라벨 판단" \
@@ -135,8 +119,8 @@ issueops phase --id "$ISSUEOPS_ID" --to grill $RECORD_ACTOR_FLAGS --json
 
 `remote create-issue` 뒤 `status --json`에 `issue_url`이 없을 때만
 `issueops link-issue --id "$ISSUEOPS_ID" --issue-url "$ISSUE_URL" $RECORD_ACTOR_FLAGS --json`을 실행한다.
-사용자가 기존 이슈(번호나 URL)를 처리하라고 하면 새로 만들지 않는다. 그 이슈를 읽어 intent를 기록하고
-같은 `link-issue`로 붙인다. 기존 이슈의 라벨은 바꾸지 않는다. score가 고른 라벨은 PR의 `--label`에 쓰고 보고한다. 본문에 완료 기준이 없거나 범위가 바뀌면 [`issueops-sync-issue`](../issueops-sync-issue/SKILL.md)로 갱신한다.
+사용자가 기존 이슈(번호나 URL)를 처리하라고 하면 새로 만들지 않는다. 처리 절차는
+[발행 세부 규칙](references/publication-details.md)을 읽고 따른다.
 
 이슈만 요청했으면 다음 세 줄로 완료 보고한다. 전체 작업 요청이면 진행 상황으로 알린 뒤
 같은 ID로 `issueops-prepare`를 실행한다. worktree 준비 후 환경별 자동 세션 인계를 적용한다.
@@ -203,14 +187,11 @@ plan-prep 네 항목은 waive로 채우지 않는다. 조사 결과나 불필요
 ## Canonical publication
 
 1. 현재 provider 이슈·label 후보를 조사한다. 일치하는 이슈가 있으면 중복 생성 대신
-   연결/갱신한다. score의 기본 threshold는 0.70(더 강한 repo/user 값 우선)이며 선택된
-   label·관련 이슈만 적용한다. 없는 label도 선택된 것만 먼저 만든다. 미선택 label을
-   적용하려면 근거 있는 override를 decision/feedback에 기록한다. 무라벨 발행은 하지 않는다.
-   모든 후보가 threshold 미만이거나 `abstained`이면, 사용자가 말한 유형("버그로", "기능 추가")이나
-   요청 내용에 맞는 label 하나를 고르고 그 근거를 같은 decision에 override로 적는다.
-2. deterministic score 뒤 semantic 판단이 필요하면 `remote score --judge prompt`를
-   fresh 독립 read-only agent에게 주고 결과 JSON을 `--judge file --judge-file`로 검증한다.
-   독립 agent가 없거나 비활성화했으면 deterministic 결과를 쓰고 그 선택을 기록한다.
+   연결/갱신한다. 선택된 label·관련 이슈만 적용하고(score 기본 threshold 0.70) 무라벨 발행은 하지 않는다.
+2. semantic 판단이 필요하면 `remote score --judge prompt`를 fresh 독립 read-only agent에게 주고 결과 JSON을
+   `--judge file --judge-file`로 검증한다. 독립 agent가 없으면 deterministic 결과를 쓰고 그 선택을
+   기록한다. override·`abstained`·label 생성 규칙은 [발행 세부 규칙](references/publication-details.md)을
+   읽고 따른다.
 3. 한국어 본문을 `fluent-korean` 스킬로 다듬는다. issueops와 함께 설치되므로 생략하지 않는다(원격 쓰기의
    선행 조건, `issueops-remote-write` 규칙 2). secret을 제거하고 실제
    assignee를 확인한다(`@me` 금지). 사용자가 따로 정하지 않았으면 인증된 사용자를 쓴다:

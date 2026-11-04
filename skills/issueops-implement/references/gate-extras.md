@@ -19,7 +19,7 @@ schema 변경은 실제 인덱스·카탈로그 추정 row 수와 출처를 기�
 
 ## 추적 사본
 
-- `phase --to implement`와 `phase --to ai-slop-clean`은 `.issueops/issues/<n>/`에 구현 자료의
+- 사본을 직접 고치면 다음 전이가 봉인 원본으로 되돌린다. `phase --to implement`와 `phase --to ai-slop-clean`은 `.issueops/issues/<n>/`에 구현 자료의
   추적 사본(plan.md, intent.md, spec.md, plan-review.md)을 쓰고, 새로 쓰거나 바뀐 사본이 있을 때만
   응답 `tracked_materials`에 경로를 보고한다. 사본은 변경 집합에 들어가므로 구현 진입 뒤 첫 커밋에 포함한다.
 
@@ -28,3 +28,9 @@ schema 변경은 실제 인덱스·카탈로그 추정 row 수와 출처를 기�
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다.
   해당 문서가 없는 대상도 변경 endpoint·public error 계약을 조사하고, 제공되는 static check와
   agent review 결과를 기록한다. 관련 없는 legacy 부채로 실패시키지 않는다.
+
+## 종료 전 커밋 훅 사전 실행
+
+저장소에 커밋 훅이 있으면(`.git/hooks/pre-commit`, `core.hooksPath`, `.pre-commit-config.yaml`, husky)
+worktree에서 `git add -A && git hook run --ignore-missing pre-commit`으로 지금 돌린다(훅이 없으면 아무것도 하지 않는다). 훅이 파일을 고치면 확인하고
+테스트를 다시 돌린다. 8단계 커밋에서 훅이 처음 파일을 고치면 정리·문서·구현 리뷰 봉인이 모두 stale이 된다.

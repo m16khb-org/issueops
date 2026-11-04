@@ -83,3 +83,17 @@ error; `high` = wrong behavior on a real path, partial writes, crash on reachabl
 `medium` = degraded behavior, missing timeout/cleanup, contract drift consumers will notice;
 `low` = correctness-adjacent hygiene with a real (rare) scenario. Anything without a scenario is
 not a finding.
+
+## Lens scope in one paragraph
+
+`logic` covers control/data flow; `boundary` covers changed exports, callers and
+callee shapes; `tests` covers real regression assertions; `rules` requires explicit
+rule text, matching glob, changed line, and cited rule; `scope` compares description
+with cumulative diff. `intent`, when selected, applies with linked issues:
+map each claim, criterion, checklist/table row to code/tests and quote unmet issue lines.
+`security` applies to security/controller/gateway/DTO/ops or auth/token/secret/
+permission/env changes; `data` to DB/migration/query/repository/transaction changes;
+`async` to async/gateway/queue/stream/retry/timeout; `contract` to DTO/controller/
+gateway/generated changes. Check authorization/injection, partial writes/indexes/
+migration symmetry, durability/idempotency/cancellation, and public/generated
+API shape/error documentation respectively.
