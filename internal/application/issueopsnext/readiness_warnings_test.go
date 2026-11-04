@@ -14,7 +14,8 @@ import (
 func TestNextPassesLocalReadinessWarningsThrough(t *testing.T) {
 	record := issueopscontract.IssueOpsRecord{
 		ID: "io-warn", Repo: "/repo", Branch: "9-warn",
-		Phase: issueopscontract.IssueOpsPhaseAISlopClean,
+		Phase:     issueopscontract.IssueOpsPhaseAISlopClean,
+		Execution: &issueopscontract.Execution{},
 	}
 	entries := []issueopsinventorycontract.ListEntry{{ID: record.ID, Phase: record.Phase, Branch: record.Branch}}
 	ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{record.ID: record})

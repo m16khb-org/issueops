@@ -396,6 +396,11 @@ func classifyImplementation(in Input, decision Decision) (Decision, bool) {
 			return next, true
 		}
 	}
+	// ai-slop-clean 이후 phase는 lease 홀더가 진행한다. execution이 없으면
+	// 이상 상태이므로 clean·verify 명령 대신 unknown(status 안내)으로 보낸다.
+	if record.Execution == nil {
+		return decision, false
+	}
 	if record.Phase == issueopsnextcontract.PhaseAISlopClean {
 		if missing := intersect(in.Completion(issueopsnextcontract.PhaseAISlopClean).Missing, cleanCompletionKeys); len(missing) > 0 {
 			decision.Stage = stage(issueopsnextcontract.StageClean, 5)

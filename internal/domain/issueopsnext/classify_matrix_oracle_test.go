@@ -411,6 +411,9 @@ func exactLocalGateStage(missing []string) string {
 }
 
 func exactPostImplementStage(in Input) string {
+	if in.Record.Execution == nil {
+		return issueopsnextcontract.StageUnknown
+	}
 	if in.Record.Phase == issueopsnextcontract.PhaseAISlopClean &&
 		anyIn(in.Completion(issueopsnextcontract.PhaseAISlopClean).Missing, specCleanCompletionKeys) {
 		return issueopsnextcontract.StageClean
