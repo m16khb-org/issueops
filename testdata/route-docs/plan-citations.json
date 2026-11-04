@@ -1,0 +1,250 @@
+{
+  "source": "## 적용되는 결정과 주의사항 of .issueops/issues/*/plan.md",
+  "tasks": [
+    {
+      "issue": 513,
+      "title": "이슈·PR을 사람이 읽는 문서로 만든다: 구현 계획 (3차)",
+      "cited": [
+        ".issueops/adr/2026-09-08-issueops-project-doc-gates-link-plan-checks-the-four-plan-se.md",
+        ".issueops/adr/2026-09-09-issueops-seals-the-requester-intent-as-a-derived-artifact.md",
+        ".issueops/cautions/issueops-lifecycle.md",
+        ".issueops/cautions/issueops-stages.md"
+      ]
+    },
+    {
+      "issue": 515,
+      "title": "#515 새 본문 10건 측정과 독자 검토 정책 결정",
+      "cited": [
+        ".issueops/adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md"
+      ]
+    },
+    {
+      "issue": 517,
+      "title": "리뷰 3라운드에서 Fable 5를 자동 선택하지 않게 한다: 구현 계획 (3차)",
+      "cited": [
+        ".issueops/cautions/2026-09-23-gates-init-spec-pipe-segment.md",
+        ".issueops/cautions/issueops-lifecycle.md"
+      ]
+    },
+    {
+      "issue": 521,
+      "title": "#521 품질 지표의 제품 코드 선정 경계",
+      "cited": [
+        ".issueops/cautions/audit-and-process.md"
+      ]
+    },
+    {
+      "issue": 523,
+      "title": "최신 자기 검증 상태 선택 개선",
+      "cited": [
+        ".issueops/adr/2026-09-08-issueops-project-doc-gates-link-plan-checks-the-four-plan-se.md"
+      ]
+    },
+    {
+      "issue": 527,
+      "title": "공개 추적 문서의 로컬 경로 재유입 수정",
+      "cited": [
+        ".issueops/cautions/issueops-stages.md"
+      ]
+    },
+    {
+      "issue": 532,
+      "title": "#532 정책 실행기의 프로세스 종료와 출력 상한",
+      "cited": [
+        ".issueops/cautions/runtime.md",
+        ".issueops/cautions/security.md"
+      ]
+    },
+    {
+      "issue": 533,
+      "title": "#533 하위 이슈 생성의 중복 방지와 복구",
+      "cited": [
+        ".issueops/adr/2026-09-23-the-lease-contract-decodes-persisted-records-through-the-pro.md",
+        ".issueops/cautions/issueops-lifecycle.md"
+      ]
+    },
+    {
+      "issue": 536,
+      "title": "#536 활성 실행 안내를 현재 계약에 맞춘다",
+      "cited": [
+        ".issueops/adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md",
+        ".issueops/cautions/audit-and-process.md"
+      ]
+    },
+    {
+      "issue": 542,
+      "title": "감사표 판독 실패와 명시적 0건 구분",
+      "cited": [
+        ".issueops/cautions/audit-and-process.md"
+      ]
+    },
+    {
+      "issue": 543,
+      "title": "커밋된 변경을 포함한 risk QA 검증 계획",
+      "cited": [
+        ".issueops/cautions/audit-and-process.md"
+      ]
+    },
+    {
+      "issue": 544,
+      "title": "문서 변경 검증의 책임과 운영 예시를 분리한다",
+      "cited": [
+        ".issueops/adr/2026-09-08-adversarial-review-throughput-executable-findings-change-tie.md"
+      ]
+    },
+    {
+      "issue": 548,
+      "title": "계획: #548 코드베이스 점검 결과 정비",
+      "cited": [
+        ".issueops/cautions/2026-09-25-gate-check-15-minute-cap-under-host-load.md",
+        ".issueops/cautions/2026-10-03-native-http-validation-and-lint-toolchain.md",
+        ".issueops/cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md"
+      ]
+    },
+    {
+      "issue": 550,
+      "title": "계획: #550 main CI install 실패와 #548 후속 정비 후보",
+      "cited": [
+        ".issueops/adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md",
+        ".issueops/cautions/2026-09-25-gate-check-15-minute-cap-under-host-load.md",
+        ".issueops/cautions/2026-10-03-http.md"
+      ]
+    },
+    {
+      "issue": 552,
+      "title": "계획: #552 Linux supervisor HOME 불일치와 pr-review grep 대체 경로 결함",
+      "cited": [
+        ".issueops/adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md",
+        ".issueops/cautions/2026-09-25-gate-check-15-minute-cap-under-host-load.md",
+        ".issueops/cautions/2026-10-03-http.md"
+      ]
+    },
+    {
+      "issue": 553,
+      "title": "553 역할별 서브에이전트 모델 설정 (issueops model, global·local)",
+      "cited": [
+        ".issueops/adr/2026-07-07-standalone-harness-policy.md",
+        ".issueops/adr/2026-09-24-claude-role-models-opus-5-plans-and-reviews-sonnet-5-impleme.md",
+        ".issueops/cautions/2026-08-03-orca-resume-prompt-template-trust-root.md",
+        ".issueops/cautions/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md",
+        ".issueops/cautions/2026-08-28-install-dry-run-spawned-the-claude-cli.md",
+        ".issueops/cautions/2026-08-28-verify-host-cli-flags-against-the-installed-version.md",
+        ".issueops/cautions/2026-10-02-real-host-qa-tool-results-service-tier-amfi-exact-edits.md",
+        ".issueops/cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md",
+        ".issueops/cautions/integrations.md",
+        ".issueops/cautions/issueops-lifecycle.md"
+      ]
+    },
+    {
+      "issue": 555,
+      "title": "555 세션 시작 문서 카탈로그 개선과 SubagentStart 훅",
+      "cited": [
+        ".issueops/adr/2026-08-10-default-hooks-thin-static-context.md",
+        ".issueops/adr/2026-08-27-session-start-owns-compaction-context.md",
+        ".issueops/cautions/2026-08-28-verify-host-cli-flags-against-the-installed-version.md",
+        ".issueops/cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md",
+        ".issueops/cautions/integrations.md"
+      ]
+    },
+    {
+      "issue": 558,
+      "title": "#558 계획: CI lint 복구와 채널 조회·로그·state 잔재·host adapter 정비",
+      "cited": [
+        ".issueops/adr/2026-07-08-sqlite-store-maintenance-policy.md",
+        ".issueops/adr/2026-08-22-cross-session-channel.md",
+        ".issueops/cautions/2026-07-07-sqlite-sqlstore-span-discipline.md",
+        ".issueops/cautions/runtime.md"
+      ]
+    },
+    {
+      "issue": 560,
+      "title": "#560 Orca 연동 제거 계획",
+      "cited": [
+        ".issueops/adr/2026-07-19-operational-health-authority-and-external-reconciliation.md",
+        ".issueops/adr/2026-09-05-issueops-ten-stage-skills-with-auto-execution-mode.md",
+        ".issueops/adr/2026-10-06-remove-openwiki-and-the-remaining-legacy-test-only-and-unsup.md",
+        ".issueops/adr/2026-10-07-readers-accept-only-the-current-record-shape.md",
+        ".issueops/cautions/2026-08-03-orca-resume-prompt-template-trust-root.md",
+        ".issueops/cautions/2026-09-20-manual-handoff-state-root-and-next-generation-claim.md",
+        ".issueops/cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md",
+        ".issueops/cautions/audit-and-process.md",
+        ".issueops/cautions/issueops-execution.md",
+        ".issueops/cautions/issueops-lifecycle.md",
+        ".issueops/cautions/issueops-stages.md"
+      ]
+    },
+    {
+      "issue": 561,
+      "title": "#561 remote score 라벨 점수 수정 계획",
+      "cited": [
+        ".issueops/adr/2026-07-07-standalone-harness-policy.md",
+        ".issueops/adr/2026-08-22-task-gate-ledger.md",
+        ".issueops/adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md",
+        ".issueops/adr/2026-10-06-delete-re-export-shims-and-stop-naming-live-code-legacy.md",
+        ".issueops/adr/2026-10-06-remove-the-last-legacy-compatibility-paths-and-non-release-p.md",
+        ".issueops/cautions/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md",
+        ".issueops/cautions/issueops-lifecycle.md"
+      ]
+    },
+    {
+      "issue": 563,
+      "title": "계획: main CI lint 실패 90건을 테스트 코드에서 고친다 (#563)",
+      "cited": [
+        ".issueops/cautions/2026-08-26-ci-gofmt-gate-local-battery-drift.md",
+        ".issueops/cautions/2026-09-01-cleanup-deadlock-advanced-remote-branch.md",
+        ".issueops/cautions/2026-09-25-gate-check-15-minute-cap-under-host-load.md",
+        ".issueops/cautions/2026-10-03-native-http-validation-and-lint-toolchain.md",
+        ".issueops/cautions/2026-10-07-ci-home-runner-rg-worktree-lint-cache-binary.md",
+        ".issueops/cautions/2026-10-13-mutation-tests-must-stay-on-the-consumer-boundary.md"
+      ]
+    },
+    {
+      "issue": 566,
+      "title": "계획: 리뷰어 출력 계약과 PR 본문 규칙에 Claude Code 팀 리뷰 관행을 반영한다 (#566)",
+      "cited": [
+        ".issueops/adr/2026-09-08-adversarial-review-throughput-executable-findings-change-tie.md",
+        ".issueops/adr/2026-10-02-sync-base-skill-chooses-merge-or-rebase-by-evidence.md",
+        ".issueops/adr/2026-10-07-review-revise-and-regress-rounds-are-capped-at-five.md",
+        ".issueops/adr/2026-10-14-gates-lint-and-pre-delta-author-sweep.md",
+        ".issueops/cautions/2026-08-27-cleanup-stops-worktree-processes.md",
+        ".issueops/cautions/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md",
+        ".issueops/cautions/2026-08-28-devils-advocate-record-was-unbound.md",
+        ".issueops/cautions/2026-08-28-gitlab-workitem-labels-assignees-selection-create-child-glab.md",
+        ".issueops/cautions/2026-10-07-check-expect-escape-re2.md",
+        ".issueops/cautions/audit-and-process.md",
+        ".issueops/cautions/integrations.md",
+        ".issueops/cautions/issueops-lifecycle.md"
+      ]
+    },
+    {
+      "issue": 568,
+      "title": "opencode v2를 다섯 번째 first-party host로 통합",
+      "cited": [
+        ".issueops/adr/2026-08-12-omo-native-first-party-host.md",
+        ".issueops/adr/2026-08-27-session-start-owns-compaction-context.md",
+        ".issueops/adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md",
+        ".issueops/adr/2026-10-08-omp-first-party-host.md",
+        ".issueops/adr/2026-10-12-omp-role-models-resolve-from-the-agent-model-settings-files.md",
+        ".issueops/adr/2026-10-15-remove-orca-integration-and-execution-mode-selection.md",
+        ".issueops/cautions/2026-08-28-verify-host-cli-flags-against-the-installed-version.md",
+        ".issueops/cautions/audit-and-process.md",
+        ".issueops/cautions/integrations.md"
+      ]
+    },
+    {
+      "issue": 570,
+      "title": "계획 단계 앞에 아키텍처 단계를 두고 design 용어를 architecture로 바꾼다 (#570)",
+      "cited": [
+        ".issueops/adr/2026-06-09-expose-issueops-gate-contracts.md",
+        ".issueops/adr/2026-06-18-issueops-plan-prep-evidence-gate.md",
+        ".issueops/adr/2026-10-07-readers-accept-only-the-current-record-shape.md",
+        ".issueops/cautions/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md",
+        ".issueops/cautions/2026-08-28-devils-advocate-record-was-unbound.md",
+        ".issueops/cautions/2026-09-23-issueopsrecord-field-lease-record.md",
+        ".issueops/cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md",
+        ".issueops/cautions/2026-10-18-gate-checks-that-run-go-tests-or-self-verify-need-lang-and-t.md",
+        ".issueops/cautions/issueops-lifecycle.md"
+      ]
+    }
+  ]
+}

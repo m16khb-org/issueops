@@ -141,6 +141,10 @@ CI도 `RUNNER_TEMP`의 환경을 사용하여 checkout이나 사용자 홈을 �
 이는 저장소 테스트 환경 준비이며 CLI/MCP의 운영 의존성이나 native 설치기의
 자동 설치 항목이 아니다.
 
+### route-docs 순위 측정
+
+`project route-docs`의 순위 규칙(`internal/domain/projectdoc/records.go`)을 바꾸기 전과 후에 `go build -o /tmp/issueops ./cmd/issueops && python3 scripts/route_docs_eval.py measure --binary /tmp/issueops`를 실행하고, 두 번의 recall@5와 precision을 커밋 Lore `Verify`에 함께 적는다. 이 도구는 `testdata/route-docs/plan-citations.json`(커밋된 계획이 인용한 cautions·adr 기록)을 기준으로 삼는 측정 도구이며 CI 게이트가 아니다. 기록이 자주 늘어나므로 절대값은 달라지고, 같은 저장소 상태에서 변경 전후를 비교할 때만 의미가 있다. fixture는 `python3 scripts/route_docs_eval.py build-fixture`로 다시 만든다. 점수 계산과 fixture 파싱은 `scripts/route_docs_eval_test.py`가 가짜 runner로 검증한다.
+
 ### OS 중립 fixture (Windows)
 
 `go test ./...`는 darwin·linux·windows에서 모두 통과해야 한다. fixture는 `internal/testsupport`의 helper로 OS 차이를 흡수한다.

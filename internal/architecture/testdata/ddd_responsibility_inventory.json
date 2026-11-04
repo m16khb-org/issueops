@@ -136,6 +136,16 @@
       "task": "T12"
     },
     {
+      "path": "scripts/route_docs_eval.py",
+      "owner": "execution-script",
+      "task": "T17"
+    },
+    {
+      "path": "scripts/route_docs_eval_test.py",
+      "owner": "execution-script",
+      "task": "T17"
+    },
+    {
       "path": "scripts/sync-glab-mcp.sh",
       "owner": "execution-script",
       "task": "T12"
