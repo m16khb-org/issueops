@@ -132,7 +132,9 @@ var fakeCommandShimPath = sync.OnceValues(func() (string, error) {
 		return "", err
 	}
 	temporary.Close()
-	build := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-o", temporary.Name(), ".")
+	// The test binary runs on the machine that built it, and tests may point
+	// PATH at fake commands, so the toolchain root is the reliable go binary.
+	build := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-o", temporary.Name(), ".") //nolint:staticcheck // SA1019: see the comment above; PATH lookup would find test fakes
 	build.Dir = source
 	if output, err := build.CombinedOutput(); err != nil {
 		os.Remove(temporary.Name())
