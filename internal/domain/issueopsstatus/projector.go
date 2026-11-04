@@ -27,7 +27,7 @@ func (projector Projector) Project(record issueopsstatuscontract.Record) issueop
 	maps.Copy(ledger, record.PhaseLedger)
 	for _, phase := range phases {
 		if _, exists := ledger[phase]; !exists {
-			ledger[phase] = projector.derive(record, phase)
+			ledger[phase] = projector.deriveEntry(record, phase)
 		}
 	}
 	record.PhaseLedger = ledger
@@ -37,7 +37,7 @@ func (projector Projector) Project(record issueopsstatuscontract.Record) issueop
 func (projector Projector) Derive(record issueopsstatuscontract.Record) issueopsstatuscontract.PhaseLedger {
 	ledger := issueopsstatuscontract.PhaseLedger{}
 	for _, phase := range phases {
-		ledger[phase] = projector.derive(record, phase)
+		ledger[phase] = projector.deriveEntry(record, phase)
 	}
 	return ledger
 }
@@ -54,7 +54,7 @@ var phases = [...]issueopsstatuscontract.Phase{
 	issueopsstatuscontract.PhaseDone,
 }
 
-func (projector Projector) derive(record issueopsstatuscontract.Record, phase issueopsstatuscontract.Phase) issueopsstatuscontract.PhaseLedgerEntry {
+func (projector Projector) deriveEntry(record issueopsstatuscontract.Record, phase issueopsstatuscontract.Phase) issueopsstatuscontract.PhaseLedgerEntry {
 	entry := issueopsstatuscontract.PhaseLedgerEntry{
 		Phase: phase,
 		Notes: []string{"derived"},

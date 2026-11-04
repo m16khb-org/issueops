@@ -113,7 +113,7 @@ func (s *Service) Bind(ctx context.Context, use contract.Use) (context.Context, 
 	if err != nil {
 		return ctx, model.VerifiedActor{}, err
 	}
-	record, err := s.check(ctx, bound, s.recordReader(), s.now())
+	record, err := s.checkBound(ctx, bound, s.recordReader(), s.now())
 	if err != nil {
 		return ctx, model.VerifiedActor{}, err
 	}
@@ -132,7 +132,7 @@ func (s *Service) BindSpan(ctx context.Context, reader authorityport.RecordReade
 		return nil, err
 	}
 	at := s.now()
-	if _, err := s.check(ctx, bound, reader, at); err != nil {
+	if _, err := s.checkBound(ctx, bound, reader, at); err != nil {
 		return nil, err
 	}
 	return context.WithValue(ctx, spanKey{}, &spanState{binding: bound, reader: reader, at: at}), nil
@@ -156,7 +156,7 @@ func (s *Service) Verify(ctx context.Context, actor model.NativeActor) (model.Ve
 	if span, _ := ctx.Value(spanKey{}).(*spanState); span != nil && span.binding == bound {
 		reader, at = span.reader, span.at
 	}
-	record, err := s.check(ctx, bound, reader, at)
+	record, err := s.checkBound(ctx, bound, reader, at)
 	if err != nil {
 		return model.VerifiedActor{}, err
 	}
@@ -174,7 +174,7 @@ func (s *Service) Check(ctx context.Context, use contract.Use, reader authorityp
 	if err != nil {
 		return err
 	}
-	_, err = s.check(ctx, bound, reader, s.now())
+	_, err = s.checkBound(ctx, bound, reader, s.now())
 	return err
 }
 
@@ -194,7 +194,7 @@ func (s *Service) resolveBinding(ctx context.Context, use contract.Use) (*bindin
 	return &binding{use: use, scope: scope}, nil
 }
 
-func (s *Service) check(ctx context.Context, bound *binding, reader authorityport.RecordReader, at time.Time) (contract.Record, error) {
+func (s *Service) checkBound(ctx context.Context, bound *binding, reader authorityport.RecordReader, at time.Time) (contract.Record, error) {
 	if reader == nil {
 		return contract.Record{}, domain.Invalid("authority grant store is unavailable")
 	}

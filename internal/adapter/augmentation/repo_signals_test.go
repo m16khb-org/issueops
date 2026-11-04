@@ -35,7 +35,7 @@ func TestCollectSignalsHoldOnThisRepository(t *testing.T) {
 	}}
 	signals := repo.CollectSignals(root, 0, []string{"self-augment"}, "genius")
 	value := reflect.ValueOf(signals)
-	for i := 0; i < value.NumField(); i++ {
+	for i := range value.NumField() {
 		if value.Field(i).Kind() == reflect.Bool && !value.Field(i).Bool() {
 			t.Errorf("signal %s is false for this repository", value.Type().Field(i).Name)
 		}

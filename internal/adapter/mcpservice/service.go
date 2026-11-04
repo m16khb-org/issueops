@@ -19,6 +19,7 @@ import (
 
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/contract/processidentity"
+	"issueops/internal/port"
 )
 
 const (
@@ -68,6 +69,8 @@ type Service struct {
 	cfg        Config
 	supervisor supervisor
 }
+
+var _ port.MCPService = (*Service)(nil)
 
 func New(cfg Config) *Service {
 	if cfg.LockHolder == nil {

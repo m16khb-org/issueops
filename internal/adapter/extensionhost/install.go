@@ -39,6 +39,8 @@ func NewInstaller(spec Spec, deps Dependencies, lifecycleExtension func(string) 
 	return Installer{spec: spec, deps: deps, lifecycleExtension: lifecycleExtension}
 }
 
+var _ port.HostInstaller = Installer{}
+
 func (installer Installer) Name() string { return installer.spec.Host }
 
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {

@@ -53,7 +53,7 @@ func newFakeFiles() *fakeFiles {
 	}
 }
 
-func run(t *testing.T, files *fakeFiles, args ...string) (map[string]any, error) {
+func runModelCommand(t *testing.T, files *fakeFiles, args ...string) (map[string]any, error) {
 	t.Helper()
 	var out bytes.Buffer
 	err := Run(files.deps(&out), args)
@@ -69,7 +69,7 @@ func run(t *testing.T, files *fakeFiles, args ...string) (map[string]any, error)
 
 func TestSetThenResolve(t *testing.T) {
 	files := newFakeFiles()
-	got, err := run(t, files, "set", "--scope", "global", "--host", "codex", "--role", "research", "--model", "gpt-6-luna", "--effort", "low", "--json")
+	got, err := runModelCommand(t, files, "set", "--scope", "global", "--host", "codex", "--role", "research", "--model", "gpt-6-luna", "--effort", "low", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestSetThenResolve(t *testing.T) {
 	if files.written["/xdg/issueops/agent-models.json"].Codex[contract.RoleResearch] != (contract.Layer{Model: "gpt-6-luna", Effort: "low"}) {
 		t.Fatalf("written = %+v", files.written)
 	}
-	resolved, err := run(t, files, "resolve", "--host", "codex", "--role", "research", "--json")
+	resolved, err := runModelCommand(t, files, "resolve", "--host", "codex", "--role", "research", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestSetThenResolve(t *testing.T) {
 func TestSetMergesFieldsAndReportsLocalExclude(t *testing.T) {
 	files := newFakeFiles()
 	files.settings.Local = contract.Config{Version: 1, Claude: map[contract.Role]contract.Layer{contract.RoleImplement: {Model: "opus"}}}
-	got, err := run(t, files, "set", "--scope", "local", "--host", "claude", "--role", "implement", "--effort", "xhigh", "--json")
+	got, err := runModelCommand(t, files, "set", "--scope", "local", "--host", "claude", "--role", "implement", "--effort", "xhigh", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,13 +108,13 @@ func TestSetMergesFieldsAndReportsLocalExclude(t *testing.T) {
 
 func TestSetOmpWritesItsOwnSection(t *testing.T) {
 	files := newFakeFiles()
-	if _, err := run(t, files, "set", "--scope", "local", "--host", "omp", "--role", "implement", "--model", "anthropic/claude-sonnet-5-5", "--json"); err != nil {
+	if _, err := runModelCommand(t, files, "set", "--scope", "local", "--host", "omp", "--role", "implement", "--model", "anthropic/claude-sonnet-5-5", "--json"); err != nil {
 		t.Fatal(err)
 	}
 	if files.settings.Local.Omp[contract.RoleImplement] != (contract.Layer{Model: "anthropic/claude-sonnet-5-5"}) || files.settings.Local.Claude != nil {
 		t.Fatalf("local = %+v", files.settings.Local)
 	}
-	resolved, err := run(t, files, "resolve", "--host", "omp", "--role", "implement", "--json")
+	resolved, err := runModelCommand(t, files, "resolve", "--host", "omp", "--role", "implement", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestSetOmpWritesItsOwnSection(t *testing.T) {
 
 func TestSetWarnsButSavesUnknownModels(t *testing.T) {
 	files := newFakeFiles()
-	got, err := run(t, files, "set", "--scope", "global", "--host", "codex", "--role", "diff-review", "--model", "gpt-6-astra", "--json")
+	got, err := runModelCommand(t, files, "set", "--scope", "global", "--host", "codex", "--role", "diff-review", "--model", "gpt-6-astra", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,12 +145,12 @@ func TestUsageErrors(t *testing.T) {
 		{"resolve", "--host", "claude", "--role", "implement", "--round", "-1"},
 		{"bogus"},
 	} {
-		_, err := run(t, newFakeFiles(), args...)
+		_, err := runModelCommand(t, newFakeFiles(), args...)
 		if _, ok := errors.AsType[UsageError](err); !ok {
 			t.Fatalf("%v: err = %v, want UsageError", args, err)
 		}
 	}
-	_, err := run(t, newFakeFiles(), "set", "--scope", "global", "--host", "claude", "--role", "implement", "--effort", "ultra")
+	_, err := runModelCommand(t, newFakeFiles(), "set", "--scope", "global", "--host", "claude", "--role", "implement", "--effort", "ultra")
 	if !strings.Contains(err.Error(), "low, medium, high, xhigh, max") {
 		t.Fatalf("effort error must list the allowed values: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestBrokenSettingsAreFileErrors(t *testing.T) {
 		{"set", "--scope", "global", "--host", "claude", "--role", "implement", "--model", "opus"},
 		{"resolve", "--host", "claude", "--role", "implement", "--json"},
 	} {
-		_, err := run(t, files, args...)
+		_, err := runModelCommand(t, files, args...)
 		var usage UsageError
 		if err == nil || errors.As(err, &usage) || !strings.Contains(err.Error(), "/xdg/issueops/agent-models.json") {
 			t.Fatalf("%v: err = %v", args, err)
@@ -180,20 +180,20 @@ func TestUnset(t *testing.T) {
 	files.settings.Global = contract.Config{Version: 1, Codex: map[contract.Role]contract.Layer{
 		contract.RoleResearch: {Model: "gpt-6-luna", Effort: "low"},
 	}}
-	if _, err := run(t, files, "unset", "--scope", "global", "--host", "codex", "--role", "research", "--field", "effort", "--json"); err != nil {
+	if _, err := runModelCommand(t, files, "unset", "--scope", "global", "--host", "codex", "--role", "research", "--field", "effort", "--json"); err != nil {
 		t.Fatal(err)
 	}
 	if files.settings.Global.Codex[contract.RoleResearch] != (contract.Layer{Model: "gpt-6-luna"}) {
 		t.Fatalf("after field unset = %+v", files.settings.Global)
 	}
-	got, err := run(t, files, "unset", "--scope", "global", "--host", "codex", "--role", "research", "--json")
+	got, err := runModelCommand(t, files, "unset", "--scope", "global", "--host", "codex", "--role", "research", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got["removed"] != true || files.settings.Global.Codex != nil {
 		t.Fatalf("after role unset = %v %+v", got, files.settings.Global)
 	}
-	got, _ = run(t, files, "unset", "--scope", "global", "--host", "codex", "--role", "research", "--json")
+	got, _ = runModelCommand(t, files, "unset", "--scope", "global", "--host", "codex", "--role", "research", "--json")
 	if got["removed"] != false {
 		t.Fatalf("unsetting an absent role = %v", got)
 	}
@@ -202,7 +202,7 @@ func TestUnset(t *testing.T) {
 func TestShowListsEveryRoleWithSources(t *testing.T) {
 	files := newFakeFiles()
 	files.settings.Local = contract.Config{Version: 1, Claude: map[contract.Role]contract.Layer{contract.RoleResearch: {Effort: "low"}}}
-	got, err := run(t, files, "show", "--json")
+	got, err := runModelCommand(t, files, "show", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestShowListsEveryRoleWithSources(t *testing.T) {
 	if got["local_path"] != "/repo/.issueops/agent-models.local.json" || got["global_path"] != "/xdg/issueops/agent-models.json" {
 		t.Fatalf("paths = %v", got)
 	}
-	text, err := run(t, files, "show", "--host", "codex")
+	text, err := runModelCommand(t, files, "show", "--host", "codex")
 	if err != nil || !strings.Contains(text["text"].(string), "codex  research") {
 		t.Fatalf("text show = %v, %v", text, err)
 	}
@@ -226,14 +226,14 @@ func TestShowListsEveryRoleWithSources(t *testing.T) {
 
 func TestResolveAgentsAndRounds(t *testing.T) {
 	files := newFakeFiles()
-	got, err := run(t, files, "resolve", "--host", "claude", "--role", "diff-review", "--round", "3", "--tier", "docs-only", "--agents", "--json")
+	got, err := runModelCommand(t, files, "resolve", "--host", "claude", "--role", "diff-review", "--round", "3", "--tier", "docs-only", "--agents", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got["effort"] != "high" || got["effort_source"] != "inherited" || files.agentCalls != 1 || len(got["agent_args"].([]any)) != 2 {
 		t.Fatalf("resolve = %v", got)
 	}
-	flagged, err := run(t, files, "resolve", "--host", "claude", "--role", "implement", "--model", "sonnet", "--json")
+	flagged, err := runModelCommand(t, files, "resolve", "--host", "claude", "--role", "implement", "--model", "sonnet", "--json")
 	if err != nil || flagged["model"] != "sonnet" || flagged["model_source"] != "flag" {
 		t.Fatalf("flag resolve = %v, %v", flagged, err)
 	}

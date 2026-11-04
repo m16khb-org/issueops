@@ -585,11 +585,11 @@ func (c *Conformance) runConformanceServe(args []string) error {
 func (c *Conformance) sourceSchema(name string) map[string]any {
 	for _, t := range c.deps.Catalog() {
 		if t.Name == name {
-			copy, err := cloneJSONMap(t.InputSchema)
+			schema, err := cloneJSONMap(t.InputSchema)
 			if err != nil {
 				return nil
 			}
-			return copy
+			return schema
 		}
 	}
 	return nil
@@ -600,11 +600,11 @@ func cloneJSONMap(value map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var copy map[string]any
-	if err := json.Unmarshal(b, &copy); err != nil {
+	var clone map[string]any
+	if err := json.Unmarshal(b, &clone); err != nil {
 		return nil, err
 	}
-	return copy, nil
+	return clone, nil
 }
 
 type stringSlice []string

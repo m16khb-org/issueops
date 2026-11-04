@@ -19,31 +19,34 @@ import (
 	"strings"
 )
 
-func main() {
+func main() { os.Exit(shim()) }
+
+// shim runs NAME.sh and returns the exit status the process ends with.
+func shim() int {
 	self, err := os.Executable()
 	if err != nil {
-		fail(err)
+		return fail(err)
 	}
 	bash, err := os.ReadFile(self + ".bash")
 	if err != nil {
-		fail(err)
+		return fail(err)
 	}
 	// Next to the shim, not in TMP: runners may strip TMP/TEMP from the env.
 	args, err := os.CreateTemp(filepath.Dir(self), ".fakecmd-args-*")
 	if err != nil {
-		fail(err)
+		return fail(err)
 	}
 	for _, arg := range os.Args[1:] {
 		if _, err := args.WriteString(arg + "\x00"); err != nil {
-			fail(err)
+			return fail(err)
 		}
 	}
 	if err := args.Close(); err != nil {
-		fail(err)
+		return fail(err)
 	}
 	status := run(strings.TrimSpace(string(bash)), strings.TrimSuffix(self, ".exe")+".run.sh", args.Name())
 	_ = os.Remove(args.Name())
-	os.Exit(status)
+	return status
 }
 
 func run(bash, runner, args string) int {
@@ -56,12 +59,13 @@ func run(bash, runner, args string) int {
 		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 			return exit.ExitCode()
 		}
-		fail(err)
+		return fail(err)
 	}
 	return 0
 }
 
-func fail(err error) {
+// fail reports err and returns the status of a shim that could not run.
+func fail(err error) int {
 	fmt.Fprintln(os.Stderr, "fakecmd:", err)
-	os.Exit(127)
+	return 127
 }

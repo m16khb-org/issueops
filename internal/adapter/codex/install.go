@@ -10,6 +10,8 @@ type Installer struct{ deps Dependencies }
 
 func NewInstaller(deps Dependencies) Installer { return Installer{deps: deps} }
 
+var _ port.HostInstaller = Installer{}
+
 func (Installer) Name() string { return "codex" }
 
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
@@ -30,7 +32,7 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 	plan.Messages(hookMessages)
 
 	hooksTemplatePath := filepath.Join(req.Root, "configs", "codex", "hooks.json")
-	plan.File(installer.deps.WriteJSONPlan(hooksTemplatePath, "codex_hooks_template", hooksConfig("./bin/issueops", ""), 0o644, req.DryRun))
+	plan.File(installer.deps.WriteJSONPlan(hooksTemplatePath, "codex_hooks_template", hooksConfigFor("./bin/issueops", ""), 0o644, req.DryRun))
 
 	if req.DryRun {
 		plan.Message("dry-run: planned Codex user skill links, MCP config, and lifecycle hooks without writing")

@@ -15,7 +15,7 @@ var nestPathParamRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustC
 var apiResponseStatusRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`@ApiResponses?\s*\(`) })
 var apiResponseStatusValueRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`status\s*:\s*(?:HttpStatus\.)?([0-9]+|[A-Z_]+)`) })
 
-var nestHttpStatusNames = map[string]int{
+var nestHTTPStatusNames = map[string]int{
 	"OK":                    200,
 	"CREATED":               201,
 	"ACCEPTED":              202,
@@ -194,7 +194,7 @@ func HasNestResponseStatus(block string, status int) bool {
 		for _, m := range apiResponseStatusValueRe().FindAllStringSubmatch(span, -1) {
 			code, err := strconv.Atoi(m[1])
 			if err != nil {
-				code = nestHttpStatusNames[m[1]]
+				code = nestHTTPStatusNames[m[1]]
 			}
 			if code == status {
 				return true

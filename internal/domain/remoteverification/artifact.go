@@ -39,10 +39,7 @@ func ValidateArtifact(url string, labels, assignees []string, artifact model.Art
 	if err := requireRemoteValues("label", labels, artifact.Labels); err != nil {
 		return err
 	}
-	if err := requireRemoteValues("assignee", assignees, artifact.Assignees); err != nil {
-		return err
-	}
-	return nil
+	return requireRemoteValues("assignee", assignees, artifact.Assignees)
 }
 
 func RequireMerged(url string, merged bool) error {

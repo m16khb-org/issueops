@@ -17,7 +17,7 @@ import (
 	"issueops/internal/port"
 )
 
-func (c Command) runInstall(args []string) error {
+func (c Command) RunInstall(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	projectLocal := fs.Bool("project-local", false, "also write project-local .mcp.json/.claude settings and project skill links; default is user/global only")
 	dryRun := fs.Bool("dry-run", false, "plan files and links without writing them")

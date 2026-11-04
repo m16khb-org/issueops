@@ -12,7 +12,6 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
-	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
@@ -21,15 +20,15 @@ var leaseHolderBucket = fmt.Sprintf("lease_holder_v%d", issueops.SchemaVersion)
 
 // ListLeaseHolderIndexes는 state를 생성하거나 복구하지 않고 reverse index를
 // 읽는다. 모든 row는 content에서 파생한 key와 대조해 검증한다.
-func ListLeaseHolderIndexes(stateRoot string) ([]issueopscontract.LeaseHolderIndex, error) {
+func ListLeaseHolderIndexes(stateRoot string) ([]issueops.LeaseHolderIndex, error) {
 	rows, err := sqlstore.GetAllExisting(stateRoot, leaseHolderBucket)
 	if errors.Is(err, fs.ErrNotExist) {
-		return []issueopscontract.LeaseHolderIndex{}, nil
+		return []issueops.LeaseHolderIndex{}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	result := make([]issueopscontract.LeaseHolderIndex, 0, len(rows))
+	result := make([]issueops.LeaseHolderIndex, 0, len(rows))
 	for _, row := range rows {
 		index, err := decodeLeaseHolderIndexRow(row)
 		if err != nil {
@@ -40,8 +39,8 @@ func ListLeaseHolderIndexes(stateRoot string) ([]issueopscontract.LeaseHolderInd
 	return result, nil
 }
 
-func decodeLeaseHolderIndexRow(row port.RecordRow) (issueopscontract.LeaseHolderIndex, error) {
-	var index issueopscontract.LeaseHolderIndex
+func decodeLeaseHolderIndexRow(row port.RecordRow) (issueops.LeaseHolderIndex, error) {
+	var index issueops.LeaseHolderIndex
 	if err := json.Unmarshal(row.Data, &index); err != nil {
 		return index, fmt.Errorf("decode active lease-holder index %s: %w", row.ID, err)
 	}
@@ -59,7 +58,7 @@ func decodeLeaseHolderIndexRow(row port.RecordRow) (issueopscontract.LeaseHolder
 	return index, nil
 }
 
-func leaseHolderIndexFieldsValid(index issueopscontract.LeaseHolderIndex) bool {
+func leaseHolderIndexFieldsValid(index issueops.LeaseHolderIndex) bool {
 	return index.SchemaVersion == issueops.SchemaVersion && index.Generation != 0 && strings.TrimSpace(index.LifecycleID) != "" &&
 		leaseHolderHostKnown(index.Host) && strings.TrimSpace(index.SessionID) != ""
 }
@@ -134,7 +133,7 @@ func activeLeaseIndexMutation(db *sqlstore.DB, encoded issueops.Record) (*port.R
 	if err != nil {
 		return nil, err
 	}
-	index := issueopscontract.LeaseHolderIndex{
+	index := issueops.LeaseHolderIndex{
 		SchemaVersion: issueops.SchemaVersion,
 		LifecycleID:   encoded.ID,
 		Generation:    encoded.Execution.Lease.Generation,
@@ -162,7 +161,7 @@ func requireLeaseIndexAvailable(db *sqlstore.DB, lifecycleID string, generation 
 	if !ok {
 		return false, nil
 	}
-	var existing issueopscontract.LeaseHolderIndex
+	var existing issueops.LeaseHolderIndex
 	if err := json.Unmarshal(data, &existing); err != nil {
 		return false, fmt.Errorf("decode active lease-holder index: %w", err)
 	}
@@ -181,7 +180,7 @@ func leaseIndexDeleteMutation(db *sqlstore.DB, lifecycleID string, actor issueop
 	if err != nil || !ok {
 		return nil, err
 	}
-	var existing issueopscontract.LeaseHolderIndex
+	var existing issueops.LeaseHolderIndex
 	if err := json.Unmarshal(data, &existing); err != nil {
 		return nil, fmt.Errorf("decode active lease-holder index: %w", err)
 	}

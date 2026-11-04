@@ -516,10 +516,7 @@ func validateHandoffDeliveryClaimConsistency(observation issueopscontract.Handof
 	if claimedAt.Before(createdAt) || claimedAt.After(updatedAt) {
 		return fmt.Errorf("delivery owner claim timestamp is not monotonic")
 	}
-	if err := validateHandoffDeliveryOwnerClaim(observation, observation.OwnerClaim); err != nil {
-		return err
-	}
-	return nil
+	return validateHandoffDeliveryOwnerClaim(observation, observation.OwnerClaim)
 }
 
 func mergeHandoffDeliveryState(current, next issueopscontract.HandoffDeliveryState) issueopscontract.HandoffDeliveryState {
@@ -600,7 +597,7 @@ func validateHandoffDeliveryModeEvidence(observation issueopscontract.HandoffDel
 	if observation.Launcher.Name == issueopscontract.HandoffDeliveryLauncherHerdr &&
 		observation.NativeTurnObserved.Status == issueopscontract.HandoffDeliveryStateObserved &&
 		observation.NativeTurnObserved.Evidence == issueopscontract.HandoffDeliveryEvidenceHerdrWaitState {
-		return fmt.Errorf("Herdr wait state cannot prove native turn")
+		return fmt.Errorf("Herdr wait state cannot prove native turn") //nolint:staticcheck,nolintlint // error string starts with the proper noun Herdr
 	}
 	if observation.Launcher.Name == issueopscontract.HandoffDeliveryLauncherCmux &&
 		observation.NativeTurnObserved.Status == issueopscontract.HandoffDeliveryStateObserved &&

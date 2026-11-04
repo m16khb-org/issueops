@@ -23,6 +23,8 @@ func NewInstaller(deps Dependencies, lifecycle func(string) string, configRoot f
 	return Installer{deps: deps, lifecycle: lifecycle, configRoot: configRoot}
 }
 
+var _ port.HostInstaller = Installer{}
+
 func (Installer) Name() string { return host }
 
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {

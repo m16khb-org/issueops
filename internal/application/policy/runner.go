@@ -48,7 +48,7 @@ func (service Service) RunReadOnly(request policycontract.CommandPolicyRequest) 
 	request.WriteAllowed = false
 	request.NetworkAllowed = false
 	request.ShellAllowed = false
-	result := service.run(request, "read_only")
+	result := service.runWithTier(request, "read_only")
 	result.Policy.Warnings = policydomain.ForcedReadOnlyWarnings(result.Policy.Warnings)
 	return result
 }
@@ -56,12 +56,12 @@ func (service Service) RunReadOnly(request policycontract.CommandPolicyRequest) 
 func (service Service) Run(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
 	request.ShellAllowed = false
 	if request.WriteAllowed || request.NetworkAllowed {
-		return service.run(request, "privileged")
+		return service.runWithTier(request, "privileged")
 	}
-	return service.run(request, "read_only")
+	return service.runWithTier(request, "read_only")
 }
 
-func (service Service) run(request policycontract.CommandPolicyRequest, tier string) policycontract.CommandRunResult {
+func (service Service) runWithTier(request policycontract.CommandPolicyRequest, tier string) policycontract.CommandRunResult {
 	started := service.Clock.Now()
 	policy := service.Evaluate(request)
 	result := policycontract.CommandRunResult{

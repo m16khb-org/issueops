@@ -57,7 +57,7 @@ func (service *Service) Write(ctx context.Context, key, content string) (stateco
 			UpdatedAt:     service.now().UTC().Format(time.RFC3339Nano),
 			Bytes:         len([]byte(content)),
 		}
-		path, writeErr := service.writeRecord(spanCtx, store, dir, key, record)
+		path, writeErr := service.persistRecord(spanCtx, store, dir, key, record)
 		result = statecontract.Result{OK: writeErr == nil, StateDir: dir, Path: path, Record: record}
 		return writeErr
 	})
@@ -72,10 +72,10 @@ func (service *Service) Read(key string) (statecontract.Result, error) {
 	if err != nil {
 		return statecontract.Result{OK: false, StateDir: service.stateDir()}, err
 	}
-	return service.read(service.stateDir(), key)
+	return service.readIn(service.stateDir(), key)
 }
 
-func (service *Service) read(dir, key string) (statecontract.Result, error) {
+func (service *Service) readIn(dir, key string) (statecontract.Result, error) {
 	path := service.dependencies.StatePath(dir, key)
 	raw, ok, err := service.dependencies.ExistingRecords.GetExisting(dir, stateBucket, key)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -125,7 +125,7 @@ func (service *Service) List() (statecontract.ListResult, error) {
 		if _, err := statepath.NormalizeKey(key); err != nil {
 			continue
 		}
-		result, err := service.read(dir, key)
+		result, err := service.readIn(dir, key)
 		if err != nil {
 			continue
 		}
@@ -162,13 +162,13 @@ func (service *Service) WriteRecord(ctx context.Context, dir, key string, record
 	var path string
 	err = store.WithSpan(ctx, func(spanCtx context.Context) error {
 		var writeErr error
-		path, writeErr = service.writeRecord(spanCtx, store, dir, key, record)
+		path, writeErr = service.persistRecord(spanCtx, store, dir, key, record)
 		return writeErr
 	})
 	return path, err
 }
 
-func (service *Service) writeRecord(ctx context.Context, store stateport.Store, dir, key string, record statecontract.RecordEnvelope) (string, error) {
+func (service *Service) persistRecord(ctx context.Context, store stateport.Store, dir, key string, record statecontract.RecordEnvelope) (string, error) {
 	path := service.dependencies.StatePath(dir, key)
 	if err := statedomain.ValidateRecord(key, record); err != nil {
 		return path, err

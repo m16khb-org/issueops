@@ -11,6 +11,8 @@ type Installer struct{ deps Dependencies }
 
 func NewInstaller(deps Dependencies) Installer { return Installer{deps: deps} }
 
+var _ port.HostInstaller = Installer{}
+
 func (Installer) Name() string { return "agy" }
 
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {

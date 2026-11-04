@@ -26,7 +26,7 @@ func (s WorkspaceFileStore) Discover(cwd string) ([]string, error) {
 		return nil, err
 	}
 	defer root.Close()
-	return discoverGateFiles(root.FS(), filepath.ToSlash(dir), cwd), nil
+	return discoverGateFilesIn(root.FS(), filepath.ToSlash(dir), cwd), nil
 }
 
 func (s WorkspaceFileStore) Read(file string) ([]byte, error) {

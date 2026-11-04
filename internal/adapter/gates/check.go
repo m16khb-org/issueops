@@ -52,12 +52,12 @@ func DiscoverGateFiles(root string) ([]string, error) {
 	if strings.TrimSpace(root) == "" {
 		return nil, nil
 	}
-	return discoverGateFiles(os.DirFS(root), ".", root), nil
+	return discoverGateFilesIn(os.DirFS(root), ".", root), nil
 }
 
-// discoverGateFiles walks dir inside fsys and reports each ledger as prefix
+// discoverGateFilesIn walks dir inside fsys and reports each ledger as prefix
 // joined with its dir-relative path.
-func discoverGateFiles(fsys fs.FS, dir, prefix string) []string {
+func discoverGateFilesIn(fsys fs.FS, dir, prefix string) []string {
 	scan := gateFileScan{fsys: fsys, dir: dir, prefix: prefix}
 	files := scan.appendIssueFolderGateFiles([]string{}, IssueFolderDir)
 	return scan.appendMarkdownGateFiles(files, ".issueops/gates")

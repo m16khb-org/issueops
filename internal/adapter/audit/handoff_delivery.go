@@ -84,7 +84,7 @@ func (store HandoffDeliveryStore) Append(observation issueopscontract.HandoffDel
 		return auditcontract.HandoffDeliveryAuditRecord{}, err
 	}
 	record.RecordDigest = handoffDeliveryRecordDigest(record)
-	if err := store.append(record); err != nil {
+	if err := store.writeRecord(record); err != nil {
 		return record, err
 	}
 	return record, nil
@@ -172,7 +172,7 @@ func handoffDeliveryAuditErrorAffects(record auditcontract.HandoffDeliveryAuditR
 		(record.Observation.LifecycleID == lifecycleID && record.Observation.LineageID == lineageID)
 }
 
-func (store HandoffDeliveryStore) append(record auditcontract.HandoffDeliveryAuditRecord) error {
+func (store HandoffDeliveryStore) writeRecord(record auditcontract.HandoffDeliveryAuditRecord) error {
 	line, err := json.Marshal(record)
 	if err != nil {
 		return err

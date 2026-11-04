@@ -45,7 +45,7 @@ func grantUsersRead(t *testing.T, path string) {
 	}
 }
 
-func perm(t *testing.T, path string) os.FileMode {
+func permOf(t *testing.T, path string) os.FileMode {
 	t.Helper()
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -71,19 +71,19 @@ func TestPermReportsOwnerOnlyObjectsAsPrivate(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got := perm(t, dir); got != 0o700 {
+	if got := permOf(t, dir); got != 0o700 {
 		t.Fatalf("directory perm = %o, want 700", got)
 	}
-	if got := perm(t, file); got != 0o600 {
+	if got := permOf(t, file); got != 0o600 {
 		t.Fatalf("file perm = %o, want 600", got)
 	}
-	if got := perm(t, exe); got != 0o700 {
+	if got := permOf(t, exe); got != 0o700 {
 		t.Fatalf("executable perm = %o, want 700", got)
 	}
 	if err := os.Chmod(file, 0o400); err != nil {
 		t.Fatal(err)
 	}
-	if got := perm(t, file); got != 0o400 {
+	if got := permOf(t, file); got != 0o400 {
 		t.Fatalf("read-only perm = %o, want 400", got)
 	}
 }
@@ -94,31 +94,31 @@ func TestPermExposesAnotherPrincipalAndChmodRestoresOwnerOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	grantUsersRead(t, dir)
-	if got := perm(t, dir); got != 0o777 {
+	if got := permOf(t, dir); got != 0o777 {
 		t.Fatalf("shared directory perm = %o, want 777", got)
 	}
 	if err := Chmod(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if got := perm(t, dir); got != 0o700 {
+	if got := permOf(t, dir); got != 0o700 {
 		t.Fatalf("restricted directory perm = %o, want 700", got)
 	}
 	child := filepath.Join(dir, "child")
 	if err := os.WriteFile(child, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := perm(t, child); got != 0o600 {
+	if got := permOf(t, child); got != 0o600 {
 		t.Fatalf("child of restricted directory perm = %o, want 600", got)
 	}
 	grantUsersRead(t, child)
-	if got := perm(t, child); got != 0o666 {
+	if got := permOf(t, child); got != 0o666 {
 		t.Fatalf("shared file perm = %o, want 666", got)
 	}
 	if err := Chmod(child, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// Group/other access follows the parent, which is owner-only here.
-	if got := perm(t, child); got != 0o600 {
+	if got := permOf(t, child); got != 0o600 {
 		t.Fatalf("inherited file perm = %o, want 600", got)
 	}
 }

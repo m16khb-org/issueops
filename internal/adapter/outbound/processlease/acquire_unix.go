@@ -16,11 +16,11 @@ import (
 )
 
 func Acquire(ctx context.Context, directory, key string) (*Lease, error) {
-	return acquire(ctx, directory, key, unix.LOCK_EX)
+	return acquireLease(ctx, directory, key, unix.LOCK_EX)
 }
 
 func AcquireShared(ctx context.Context, directory, key string) (*SharedLease, error) {
-	lease, err := acquire(ctx, directory, key, unix.LOCK_SH)
+	lease, err := acquireLease(ctx, directory, key, unix.LOCK_SH)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func AcquireShared(ctx context.Context, directory, key string) (*SharedLease, er
 
 func inherit(cmd *exec.Cmd, file *os.File) { cmd.ExtraFiles = append(cmd.ExtraFiles, file) }
 
-func acquire(ctx context.Context, directory, key string, mode int) (*Lease, error) {
+func acquireLease(ctx context.Context, directory, key string, mode int) (*Lease, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

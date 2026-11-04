@@ -377,8 +377,6 @@ func TestNewClaudeRunnerNormalizesDependencies(t *testing.T) {
 	}
 }
 
-var _ port.HostProbeRunner = ClaudeRunner{}
-
 func claudeSuccessfulStream(model, probeTool string) []byte {
 	return []byte(strings.Join([]string{
 		`{"type":"system","subtype":"init","model":` + jsonString(model) + `}`,

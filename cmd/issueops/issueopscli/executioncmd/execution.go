@@ -454,7 +454,7 @@ func RecordActorFlags(getenv func(string) string, cwd string) string {
 	if err != nil || strings.TrimSpace(cwd) == "" {
 		return ""
 	}
-	return recordActorFlags(identity, cwd)
+	return formatRecordActorFlags(identity, cwd)
 }
 
 // ClaimActorFlags is whoami's claim vector for this process with the given
@@ -477,7 +477,7 @@ func ClaimActorFlags(getenv func(string) string, observe func(int) ([]model.Nati
 	return result.ClaimActorFlags[0]
 }
 
-func recordActorFlags(identity nativeSessionIdentity, cwd string) string {
+func formatRecordActorFlags(identity nativeSessionIdentity, cwd string) string {
 	return fmt.Sprintf("--host %s --session-id %s --cwd %s",
 		identity.Host, shellQuoteClaimValue(identity.SessionID), shellQuoteClaimValue(cwd))
 }
@@ -503,7 +503,7 @@ func executionWhoamiResult(
 	// claim 벡터의 receipt 플래그도 선택적으로 받는다(라이브 ancestry와 대조).
 	// whoami는 두 벡터를 모두 내놓아 어느 쪽을 복붙해도 라이프사이클 전체를
 	// 진행할 수 있게 한다.
-	result.RecordActorFlags = recordActorFlags(identity, cwd)
+	result.RecordActorFlags = formatRecordActorFlags(identity, cwd)
 	// claim/release/complete 등 실행 리스 전환은 ACTOR_FLAGS "all or none"
 	// 규칙을 검사한다. whoami 벡터에서 --cwd를 빼면 복붙한 명령이 그 규칙에
 	// 걸려 바로 거부되므로, claim 벡터도 전체 ACTOR_FLAGS를 담아야 한다.

@@ -38,7 +38,7 @@ func TestSpanCompareAndApplyCommitIsAttributed(t *testing.T) {
 			// callback end, lock released, gate released.
 			clock := newScriptedClock(t, 0, 1, 2, 4, 9, 10, 11, 12)
 			ctx, observations := collectSpans(context.Background())
-			if err := database.withSpan(ctx, clock.now, func(spanCtx context.Context) error {
+			if err := database.withSpanAt(ctx, clock.now, func(spanCtx context.Context) error {
 				return write(spanCtx, database)
 			}); err != nil {
 				t.Fatal(err)
@@ -65,7 +65,7 @@ func TestSpanAutocommitDeletesAreUnknown(t *testing.T) {
 			seedRow(t, database, "seed")
 			clock := newScriptedClock(t, 0, 1, 2, 3, 4, 5)
 			ctx, observations := collectSpans(context.Background())
-			if err := database.withSpan(ctx, clock.now, func(context.Context) error {
+			if err := database.withSpanAt(ctx, clock.now, func(context.Context) error {
 				return write(database)
 			}); err != nil {
 				t.Fatal(err)

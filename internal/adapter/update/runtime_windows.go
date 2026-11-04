@@ -285,16 +285,16 @@ func (run *nativeInstallRun) log(message string) {
 // deleted on Windows but can be renamed, so it is moved aside first and put
 // back if the staged binary cannot take its name.
 func swapBinary(staged, bin string) error {
-	if file, err := os.OpenFile(staged, os.O_RDWR, 0); err == nil {
-		syncErr := file.Sync()
-		if closeErr := file.Close(); syncErr == nil {
-			syncErr = closeErr
-		}
-		if syncErr != nil {
-			return syncErr
-		}
-	} else {
+	file, err := os.OpenFile(staged, os.O_RDWR, 0)
+	if err != nil {
 		return err
+	}
+	syncErr := file.Sync()
+	if closeErr := file.Close(); syncErr == nil {
+		syncErr = closeErr
+	}
+	if syncErr != nil {
+		return syncErr
 	}
 	retired := ""
 	if fileExists(bin) {

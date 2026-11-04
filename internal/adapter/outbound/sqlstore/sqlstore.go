@@ -323,10 +323,10 @@ func openSQLite(path, params string) (*sql.DB, error) {
 // active-root chain을 전파하며, 로컬 대기와 SQLite lock 대기 모두 ctx를
 // 따르게 한다.
 func (d *DB) WithSpan(ctx context.Context, fn func(context.Context) error) error {
-	return d.withSpan(ctx, time.Now, fn)
+	return d.withSpanAt(ctx, time.Now, fn)
 }
 
-func (d *DB) withSpan(ctx context.Context, now func() time.Time, fn func(context.Context) error) (err error) {
+func (d *DB) withSpanAt(ctx context.Context, now func() time.Time, fn func(context.Context) error) (err error) {
 	if ctx == nil {
 		return fmt.Errorf("sqlstore span context is required")
 	}

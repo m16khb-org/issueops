@@ -53,7 +53,7 @@ func transientSharingError(err error) bool {
 // OWNER RIGHTS. An unreadable security descriptor counts as not owner-only.
 func Perm(path string, info fs.FileInfo) fs.FileMode {
 	owner := fs.FileMode(0o600)
-	if info.IsDir() || executableName(path) {
+	if info.IsDir() || isExecutableName(path) {
 		owner = 0o700
 	}
 	if info.Mode().Perm()&0o200 == 0 {
@@ -335,9 +335,9 @@ func ownerOnlyACL(directory bool) (*windows.ACL, error) {
 	return windows.ACLFromEntries(entries, nil)
 }
 
-// executableName reports whether path has a PATHEXT extension, the Windows
+// isExecutableName reports whether path has a PATHEXT extension, the Windows
 // equivalent of an execute bit.
-func executableName(path string) bool {
+func isExecutableName(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	if ext == "" {
 		return false

@@ -11,17 +11,17 @@ import (
 )
 
 func (service *Service) Prune(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.PruneResult, error) {
-	return service.prune(ctx, "", maxAge, 0, confirm)
+	return service.pruneMatching(ctx, "", maxAge, 0, confirm)
 }
 
 func (service *Service) PrunePrefix(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
 	if prefix == "" {
 		return service.newPruneResult(maxAge, confirm), fmt.Errorf("prefix is required")
 	}
-	return service.prune(ctx, prefix, maxAge, maxRecords, confirm)
+	return service.pruneMatching(ctx, prefix, maxAge, maxRecords, confirm)
 }
 
-func (service *Service) prune(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
+func (service *Service) pruneMatching(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
 	result := service.newPruneResult(maxAge, confirm)
 	if maxAge <= 0 {
 		return result, fmt.Errorf("max age must be positive: pass a Go duration such as 720h (CLI --max-age, MCP max_age)")

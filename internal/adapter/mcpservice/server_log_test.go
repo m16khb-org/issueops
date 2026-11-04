@@ -25,7 +25,7 @@ func TestCappedLogWriterCopyTruncatesPastLimit(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "server.log")
 	stderr := openServiceLogForTest(t, path, 0)
 	stdout := openServiceLogForTest(t, path, os.O_APPEND)
-	writer := serviceLogWriter(stdout, stderr, path, 16)
+	writer := serviceLogWriterAt(stdout, stderr, path, 16)
 	if _, ok := writer.(*cappedLogWriter); !ok {
 		t.Fatalf("service log writer = %T", writer)
 	}
@@ -57,11 +57,11 @@ func TestServiceLogWriterWrapsOnlyTheServiceLog(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "server.log")
 	other := openServiceLogForTest(t, filepath.Join(dir, "other.log"), os.O_APPEND)
-	if writer := serviceLogWriter(nil, other, path, 16); writer != other {
+	if writer := serviceLogWriterAt(nil, other, path, 16); writer != other {
 		t.Fatalf("missing service log wrapped %T", writer)
 	}
 	openServiceLogForTest(t, path, os.O_APPEND)
-	if writer := serviceLogWriter(nil, other, path, 16); writer != other {
+	if writer := serviceLogWriterAt(nil, other, path, 16); writer != other {
 		t.Fatalf("unrelated stderr wrapped %T", writer)
 	}
 	if got := ServiceLogPath("/state"); !strings.HasSuffix(got, filepath.Join("mcp-http", "server.log")) {
@@ -88,7 +88,7 @@ func TestCappedLogWriterReportsRotationFailureInTheLogAndKeepsWriting(t *testing
 	dir := t.TempDir()
 	path := filepath.Join(dir, "server.log")
 	stderr := openServiceLogForTest(t, path, os.O_APPEND)
-	writer := serviceLogWriter(nil, stderr, path, 4)
+	writer := serviceLogWriterAt(nil, stderr, path, 4)
 	moved := filepath.Join(dir, "moved.log")
 	if err := os.Rename(path, moved); err != nil {
 		t.Fatal(err)
@@ -105,7 +105,7 @@ func TestCappedLogWriterReportsRotationFailureInTheLogAndKeepsWriting(t *testing
 func TestCappedLogWriterPropagatesWriteErrors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "server.log")
 	stderr := openServiceLogForTest(t, path, os.O_APPEND)
-	writer := serviceLogWriter(nil, stderr, path, 1024)
+	writer := serviceLogWriterAt(nil, stderr, path, 1024)
 	if err := stderr.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestSameFileIsFalseForClosedFileOrMissingPath(t *testing.T) {
 func TestCappedLogWriterRotatesOnlyWhenSizeExceedsLimit(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "server.log")
 	stderr := openServiceLogForTest(t, path, os.O_APPEND)
-	writer := serviceLogWriter(nil, stderr, path, 16)
+	writer := serviceLogWriterAt(nil, stderr, path, 16)
 	if _, err := writer.Write([]byte("exactly16bytes!\n")); err != nil {
 		t.Fatal(err)
 	}

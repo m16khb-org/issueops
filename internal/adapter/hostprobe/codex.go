@@ -30,6 +30,8 @@ func NewCodexRunner(harnessBinary string, deps Dependencies) CodexRunner {
 	}
 }
 
+var _ port.HostProbeRunner = CodexRunner{}
+
 func (r CodexRunner) Name() string {
 	return "codex"
 }

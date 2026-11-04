@@ -34,6 +34,8 @@ func NewClaudeRunner(harnessBinary string, deps Dependencies) ClaudeRunner {
 	}
 }
 
+var _ port.HostProbeRunner = ClaudeRunner{}
+
 func (ClaudeRunner) Name() string { return "claude" }
 
 func (r ClaudeRunner) Preflight(ctx context.Context, request port.HostProbeRequest) port.HostProbePreflight {

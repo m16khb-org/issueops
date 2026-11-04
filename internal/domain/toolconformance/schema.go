@@ -175,7 +175,7 @@ func Validate(schema map[string]any, value any) ([]toolconformancecontract.Diagn
 		return nil, err
 	}
 	out := []toolconformancecontract.Diagnostic{}
-	validate(schema, value, "", &out)
+	validateSchema(schema, value, "", &out)
 	SortDiagnostics(out)
 	return out, nil
 }
@@ -291,7 +291,7 @@ func supportedPattern(value any) error {
 	}
 	return nil
 }
-func validate(s map[string]any, v any, p string, out *[]toolconformancecontract.Diagnostic) {
+func validateSchema(s map[string]any, v any, p string, out *[]toolconformancecontract.Diagnostic) {
 	typ, _ := s["type"].(string)
 	if typ == "object" {
 		validateObject(s, v, p, out)
@@ -341,7 +341,7 @@ func validateObject(s map[string]any, v any, p string, out *[]toolconformancecon
 			}
 			continue
 		}
-		validate(child.(map[string]any), item, pointer(p, key), out)
+		validateSchema(child.(map[string]any), item, pointer(p, key), out)
 	}
 }
 
@@ -353,7 +353,7 @@ func validateArray(s map[string]any, v any, p string, out *[]toolconformancecont
 	}
 	child, _ := s["items"].(map[string]any)
 	for i, item := range arr {
-		validate(child, item, pointer(p, strconv.Itoa(i)), out)
+		validateSchema(child, item, pointer(p, strconv.Itoa(i)), out)
 	}
 }
 

@@ -24,7 +24,7 @@ var skillNamePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.Must
 // Plan decides what one sync pass should do, given the declaration and what the
 // host already has. Plugins come first, then skills; both keep declaration order.
 func Plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed) []upstreamcontract.PlanItem {
-	return plan(cfg, observed, true)
+	return buildPlan(cfg, observed, true)
 }
 
 // PlanWithoutPluginHost is Plan for a host whose plugin CLI is missing: plugin
@@ -32,10 +32,10 @@ func Plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed) []ups
 // that cannot run. Skills are unaffected because they are provisioned by the
 // harness itself.
 func PlanWithoutPluginHost(cfg upstreamcontract.Config, observed upstreamcontract.Observed) []upstreamcontract.PlanItem {
-	return plan(cfg, observed, false)
+	return buildPlan(cfg, observed, false)
 }
 
-func plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, pluginHostAvailable bool) []upstreamcontract.PlanItem {
+func buildPlan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, pluginHostAvailable bool) []upstreamcontract.PlanItem {
 	installedPlugins := indexOf(observed.Plugins)
 	marketplaces := indexOf(observed.Marketplaces)
 	installedSkills := indexOf(observed.Skills)

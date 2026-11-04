@@ -5,19 +5,19 @@ import (
 	"unicode/utf8"
 )
 
-func TailWithBudget(s string, max int) (string, bool, int) {
-	return tailWithBudget(s, len(s), max)
+func TailWithBudget(s string, limit int) (string, bool, int) {
+	return tailWithOriginalBytes(s, len(s), limit)
 }
 
-// s contains at least the last max raw bytes when originalBytes exceeds max.
-func tailWithBudget(s string, originalBytes, max int) (string, bool, int) {
-	if max <= 0 {
+// s contains at least the last limit raw bytes when originalBytes exceeds limit.
+func tailWithOriginalBytes(s string, originalBytes, limit int) (string, bool, int) {
+	if limit <= 0 {
 		return "", originalBytes > 0, originalBytes
 	}
-	if originalBytes <= max {
+	if originalBytes <= limit {
 		return s, false, originalBytes
 	}
-	tailBudget := max
+	tailBudget := limit
 	for {
 		tail := ""
 		if tailBudget > 0 {
@@ -30,9 +30,9 @@ func tailWithBudget(s string, originalBytes, max int) (string, bool, int) {
 			tail = s[start:]
 		}
 		marker := fmt.Sprintf("[truncated: original_bytes=%d omitted_bytes=%d]\n", originalBytes, originalBytes-len(tail))
-		tailBudgetNext := max - len(marker)
+		tailBudgetNext := limit - len(marker)
 		if tailBudgetNext < 0 {
-			return marker[:max], true, originalBytes
+			return marker[:limit], true, originalBytes
 		}
 		if tailBudgetNext == tailBudget {
 			return marker + tail, true, originalBytes

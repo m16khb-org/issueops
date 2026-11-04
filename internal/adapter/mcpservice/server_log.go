@@ -20,10 +20,10 @@ const serviceLogLimit = 8 << 20
 // unchanged. The unit files keep redirecting output, so the cap rotates by
 // copy-then-truncate, which needs O_APPEND on every descriptor sharing the file.
 func ServiceLogWriter(stdout, stderr *os.File, stateDir string) io.Writer {
-	return serviceLogWriter(stdout, stderr, ServiceLogPath(stateDir), serviceLogLimit)
+	return serviceLogWriterAt(stdout, stderr, ServiceLogPath(stateDir), serviceLogLimit)
 }
 
-func serviceLogWriter(stdout, stderr *os.File, path string, limit int64) io.Writer {
+func serviceLogWriterAt(stdout, stderr *os.File, path string, limit int64) io.Writer {
 	if !sameFile(stderr, path) {
 		return stderr
 	}

@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func runHook(args []string) error {
+func runHookWithTestConfig(args []string) error {
 	service := app.CatalogService{DiscoverReport: projectdocadapter.DiscoverProjectDocsReport, FormatCompact: projectdocadapter.FormatProjectDocCatalog, FormatUserView: hookpromptadapter.RenderProjectDocCatalogUserView}
 	return RunHook(args, hookcatalog.Config{BuildCatalog: service.Build, ResolveTarget: pathutil.ResolveTarget, FormatContext: hostprotocol.FormatHookContext, PrintJSON: func(v any) error { enc := json.NewEncoder(os.Stdout); enc.SetIndent("", "  "); return enc.Encode(v) }})
 }

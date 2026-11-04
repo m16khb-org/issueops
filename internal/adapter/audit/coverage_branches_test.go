@@ -337,7 +337,7 @@ func TestHandoffDeliveryAppendRejectsRecordBeyondReaderLimit(t *testing.T) {
 	store := auditStoreForTest(stateRoot)
 	record := auditcontract.HandoffDeliveryAuditRecord{OK: true, Kind: "handoff_delivery_observation", SchemaVersion: 1}
 	record.Observation.Launcher.Name = strings.Repeat("x", 256*1024)
-	if err := store.append(record); err == nil || !strings.Contains(err.Error(), "exceeds reader limit") {
+	if err := store.writeRecord(record); err == nil || !strings.Contains(err.Error(), "exceeds reader limit") {
 		t.Fatalf("oversized record: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(stateRoot, "audit")); !os.IsNotExist(err) {

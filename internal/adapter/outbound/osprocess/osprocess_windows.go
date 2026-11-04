@@ -26,11 +26,11 @@ func KillTree(pid int) error {
 	}
 	var errs []error
 	for i := len(tree) - 1; i >= 0; i-- {
-		if err := terminate(tree[i]); err != nil && !errors.Is(err, os.ErrProcessDone) {
+		if err := terminateProcess(tree[i]); err != nil && !errors.Is(err, os.ErrProcessDone) {
 			errs = append(errs, err)
 		}
 	}
-	if err := terminate(uint32(pid)); err != nil {
+	if err := terminateProcess(uint32(pid)); err != nil {
 		if errors.Is(err, os.ErrProcessDone) && len(errs) == 0 {
 			return os.ErrProcessDone
 		}
@@ -66,10 +66,10 @@ func Terminate(pid int) error {
 	if pid <= 0 {
 		return os.ErrProcessDone
 	}
-	return terminate(uint32(pid))
+	return terminateProcess(uint32(pid))
 }
 
-func terminate(pid uint32) error {
+func terminateProcess(pid uint32) error {
 	handle, err := windows.OpenProcess(windows.PROCESS_TERMINATE|windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
 		return os.ErrProcessDone

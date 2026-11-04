@@ -18,11 +18,7 @@ func validateParallelTempIsolationWithDeps(binary, root string, seed int64, deps
 	results := make(chan parallelIsolationProbe, workers)
 	var wg sync.WaitGroup
 	for worker := range workers {
-		wg.Add(1)
-		go func(worker int) {
-			defer wg.Done()
-			results <- deps.runProbe(binary, root, seed, worker)
-		}(worker)
+		wg.Go(func() { results <- deps.runProbe(binary, root, seed, worker) })
 	}
 	wg.Wait()
 	close(results)

@@ -68,10 +68,10 @@ func expectRegex(expect string) (re *regexp.Regexp, isRegex bool, err error) {
 }
 
 // EvidenceTail은 증거로 기록할 결정적 출력 꼬리를 만든다. unlazy처럼 비어 있지
-// 않은 라인의 마지막 2개를 " | "로 잇고 max 문자로 자른다.
-func EvidenceTail(output string, max int) string {
-	if max <= 0 {
-		max = 200
+// 않은 라인의 마지막 2개를 " | "로 잇고 limit 문자로 자른다.
+func EvidenceTail(output string, limit int) string {
+	if limit <= 0 {
+		limit = 200
 	}
 	lines := strings.Split(strings.ReplaceAll(output, "\r\n", "\n"), "\n")
 	kept := make([]string, 0, 2)
@@ -84,8 +84,8 @@ func EvidenceTail(output string, max int) string {
 	if joined == "" {
 		joined = "(no output)"
 	}
-	if len(joined) > max {
-		joined = policy.TruncateBytes(joined, max)
+	if len(joined) > limit {
+		joined = policy.TruncateBytes(joined, limit)
 	}
 	return joined
 }

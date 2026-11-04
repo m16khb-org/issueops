@@ -53,5 +53,5 @@ func (o *CommandOutput) Result() (string, bool, int) {
 	}
 	first := copy(tail, o.ring[start:start+min(retained, o.budget-start)])
 	copy(tail[first:], o.ring[:retained-first])
-	return tailWithBudget(string(tail), o.total, o.budget)
+	return tailWithOriginalBytes(string(tail), o.total, o.budget)
 }

@@ -16,6 +16,7 @@ import (
 	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 
+	// Registers the "sqlite" database/sql driver that readOmpAuthSchema opens.
 	_ "modernc.org/sqlite"
 )
 

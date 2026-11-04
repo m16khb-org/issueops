@@ -35,18 +35,18 @@ func (s Readiness) Plan(record model.Record) model.Readiness {
 	return ReadinessFromMissing(record, domain.PlanReadinessMissing(record))
 }
 func (s Readiness) Compatibility(record model.Record) model.Readiness {
-	s = s.scoped()
-	return ReadinessFromMissing(record, CompatibilityReadinessMissing(record, s.Paths))
+	scoped := s.scoped()
+	return ReadinessFromMissing(record, CompatibilityReadinessMissing(record, scoped.Paths))
 }
 func (s Readiness) Implementation(record model.Record) model.Readiness {
-	s = s.scoped()
-	return ReadinessFromMissing(record, ImplementationReadinessMissing(record, true, s.Paths))
+	scoped := s.scoped()
+	return ReadinessFromMissing(record, ImplementationReadinessMissing(record, true, scoped.Paths))
 }
 func (s Readiness) AISlopClean(record model.Record) model.Readiness {
-	s = s.scoped()
-	ready := ReadinessFromMissing(record, ImplementationReadinessMissing(record, false, s.Paths))
+	scoped := s.scoped()
+	ready := ReadinessFromMissing(record, ImplementationReadinessMissing(record, false, scoped.Paths))
 	missing := append([]string{}, ready.Missing...)
-	if key := reviewdomain.ImplementationEvidenceMissing(s.HasEvidence(record)); key != "" {
+	if key := reviewdomain.ImplementationEvidenceMissing(scoped.HasEvidence(record)); key != "" {
 		missing = append(missing, key)
 	}
 	ready.Missing = stringlist.UniqueSorted(missing)
@@ -58,28 +58,28 @@ func (s Readiness) AISlopClean(record model.Record) model.Readiness {
 // it: it can never be ready before the merge and costs a network ls-remote;
 // `issueops cleanup status` owns it.
 func (s Readiness) PR(record model.Record) model.Readiness {
-	s = s.scoped()
-	missing := stringlist.UniqueSorted(LocalPRReadinessMissing(record, s.Paths))
+	scoped := s.scoped()
+	missing := stringlist.UniqueSorted(LocalPRReadinessMissing(record, scoped.Paths))
 	return model.Readiness{OK: true, Ready: len(missing) == 0, Missing: missing, Warnings: domain.PRReadinessWarnings(record), IssueURL: record.IssueURL, PlanPath: record.PlanPath, WorktreePath: record.WorktreePath, Branch: record.Branch}
 }
 func (s Readiness) Completion(record model.Record, phase model.Phase) model.Readiness {
-	s = s.scoped()
-	return PhaseCompletion(record, phase, port.PhaseCompletionReadiness{Compatibility: s.Compatibility, AISlopClean: s.AISlopClean, PR: s.PR, RemoteArtifactMissing: domain.RemoteArtifactMissing})
+	scoped := s.scoped()
+	return PhaseCompletion(record, phase, port.PhaseCompletionReadiness{Compatibility: scoped.Compatibility, AISlopClean: scoped.AISlopClean, PR: scoped.PR, RemoteArtifactMissing: domain.RemoteArtifactMissing})
 }
 
 // ObserveLocalPR is the fetch-free, network-free PR readiness `next` reads.
 func (s Readiness) ObserveLocalPR(record model.Record) (model.Readiness, review.LocalChangeObservation) {
-	s = s.scoped()
-	return s.observePR(record, nil)
+	scoped := s.scoped()
+	return scoped.observePR(record, nil)
 }
 func (s Readiness) StrictPRWithState(root string, record model.Record) model.Readiness {
-	s = s.scoped()
-	return s.StrictPRWithFetch(root, record, s.Git.Fetch)
+	scoped := s.scoped()
+	return scoped.StrictPRWithFetch(root, record, scoped.Git.Fetch)
 }
 func (s Readiness) StrictPRWithFetch(root string, record model.Record, fetch func(string) review.UpstreamFetch) model.Readiness {
-	s = s.scoped()
-	ready, _ := s.observePR(record, fetch)
-	missing, warnings := s.ChildMissing(root, record)
+	scoped := s.scoped()
+	ready, _ := scoped.observePR(record, fetch)
+	missing, warnings := scoped.ChildMissing(root, record)
 	if len(missing) == 0 && len(warnings) == 0 {
 		return ready
 	}
@@ -88,11 +88,11 @@ func (s Readiness) StrictPRWithFetch(root string, record model.Record, fetch fun
 
 // PrefetchUpstream runs outside the lifecycle lock. Its result is valid only for the observed root.
 func (s Readiness) PrefetchUpstream(record model.Record) func(string) review.UpstreamFetch {
-	s = s.scoped()
-	root := s.Git.Root(record)
+	scoped := s.scoped()
+	root := scoped.Git.Root(record)
 	fetched := review.UpstreamFetch{Root: root, Failed: true, Stderr: "upstream was not fetched before this readiness check; retry the command"}
-	if root != "" && s.Git.Upstream(root) != "" {
-		fetched = s.Git.Fetch(root)
+	if root != "" && scoped.Git.Upstream(root) != "" {
+		fetched = scoped.Git.Fetch(root)
 	}
 	return func(root string) review.UpstreamFetch {
 		if root != fetched.Root {

@@ -114,7 +114,7 @@ func TestStateWriteLockingIsSatisfiedByLockedStateWrite(t *testing.T) {
 
 func (service *Service) Write(ctx context.Context, key, content string) (Result, error) {
 	err := store.WithSpan(ctx, func(spanCtx context.Context) error {
-		_, err := service.writeRecord(spanCtx, store, dir, key, record)
+		_, err := service.persistRecord(spanCtx, store, dir, key, record)
 		return err
 	})
 	return result, err

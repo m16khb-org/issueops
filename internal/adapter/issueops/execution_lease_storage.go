@@ -174,10 +174,7 @@ func removeReplacementRuntimeFile(root, path string) error {
 	if info.IsDir() {
 		return fmt.Errorf("replacement residue path is a directory")
 	}
-	if err := os.Remove(path); err != nil {
-		return err
-	}
-	return nil
+	return os.Remove(path)
 }
 
 func secureMkdirAll(root, target string) error {

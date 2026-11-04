@@ -132,15 +132,13 @@ func (s ChildrenCloser) closeConcurrently(record model.Record, indices []int, re
 	outcomes := make([]closeChildOutcome, len(indices))
 	limit := make(chan struct{}, 4)
 	var workers sync.WaitGroup
-	workers.Add(len(indices))
 	for index, linkIndex := range indices {
-		go func() {
-			defer workers.Done()
+		workers.Go(func() {
 			limit <- struct{}{}
 			defer func() { <-limit }()
 			result, changed, err := s.closeChild(record, record.IssueLinks[linkIndex], req)
 			outcomes[index] = closeChildOutcome{result: result, changed: changed, err: err}
-		}()
+		})
 	}
 	workers.Wait()
 	return outcomes

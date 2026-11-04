@@ -18,7 +18,7 @@ func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]po
 	hooksPath := filepath.Join(req.Home, ".claude", "settings.json")
 	hooksDigest, err := installer.deps.VerifyHookActivation(hooksPath, installer.claudeSettingsConfig(req.BinPath))
 	if err != nil {
-		return nil, fmt.Errorf("Claude hook readback failed: %w", err)
+		return nil, fmt.Errorf("Claude hook readback failed: %w", err) //nolint:staticcheck,nolintlint // error string starts with the proper noun Claude
 	}
 	mcpEvidence, err := installer.deps.CaptureNativeActivationEvidence("claude", "mcp", mcpPath, expectedDigest)
 	if err != nil {

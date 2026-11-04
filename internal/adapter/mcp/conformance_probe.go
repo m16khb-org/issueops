@@ -127,11 +127,11 @@ func cloneSchema(schema map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var copy map[string]any
-	if err := json.Unmarshal(b, &copy); err != nil {
+	var clone map[string]any
+	if err := json.Unmarshal(b, &clone); err != nil {
 		return nil, err
 	}
-	return copy, nil
+	return clone, nil
 }
 
 func captureCollisionCode(path, runToken string) string {

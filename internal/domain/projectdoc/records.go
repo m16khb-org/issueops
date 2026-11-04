@@ -179,14 +179,14 @@ func RecordIndexLine(title, fileName string) string {
 // weighs ln(N/df) over the given records, so words most records use barely
 // count. Korean task words reach English records through koreanTerms.
 func MatchRecords(task string, records []Record, limit int) []RouteDoc {
-	return matchRecords(task, records, limit, "past record %q shares: %s", false)
+	return matchRecordsWith(task, records, limit, "past record %q shares: %s", false)
 }
 
 // MatchModules is MatchRecords for the living modules of a routed index doc:
 // the module files its table points to, matched by title, description, and
 // section headings, so a task reaches the module that owns the detailed rule.
 func MatchModules(task string, modules []Record, limit int) []RouteDoc {
-	return matchRecords(task, modules, limit, "module %q of the routed index shares: %s", true)
+	return matchRecordsWith(task, modules, limit, "module %q of the routed index shares: %s", true)
 }
 
 // ParseModule is the routing view of a living module: its H1, frontmatter
@@ -216,7 +216,7 @@ type recordMatch struct {
 	shared []string
 }
 
-func matchRecords(task string, records []Record, limit int, reasonFormat string, skipCommon bool) []RouteDoc {
+func matchRecordsWith(task string, records []Record, limit int, reasonFormat string, skipCommon bool) []RouteDoc {
 	taskTerms := routeTerms(task)
 	if len(taskTerms) < 2 || len(records) == 0 || limit <= 0 {
 		return nil

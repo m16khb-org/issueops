@@ -13,7 +13,7 @@ import (
 
 func TestHelpPrintsUsageForEveryHelpSpelling(t *testing.T) {
 	for _, args := range [][]string{nil, {"--help"}, {"-h"}, {"help"}} {
-		got, err := run(t, newFakeFiles(), args...)
+		got, err := runModelCommand(t, newFakeFiles(), args...)
 		if err != nil {
 			t.Fatalf("%v: %v", args, err)
 		}
@@ -24,7 +24,7 @@ func TestHelpPrintsUsageForEveryHelpSpelling(t *testing.T) {
 }
 
 func TestUnknownSubcommandErrorNamesItAndTheValidOnes(t *testing.T) {
-	_, err := run(t, newFakeFiles(), "bogus")
+	_, err := runModelCommand(t, newFakeFiles(), "bogus")
 	usageErr, ok := errors.AsType[UsageError](err)
 	if !ok || usageErr.Message != `unknown model subcommand "bogus" (want show|set|unset|resolve)` {
 		t.Fatalf("err = %v", err)
@@ -48,7 +48,7 @@ func TestFlagParsingFailuresAreUsageErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			files := newFakeFiles()
-			_, err := run(t, files, tt.args...)
+			_, err := runModelCommand(t, files, tt.args...)
 			usageErr, ok := errors.AsType[UsageError](err)
 			if !ok || !strings.Contains(usageErr.Message, tt.want) {
 				t.Fatalf("err = %v, want UsageError containing %q", err, tt.want)
@@ -104,7 +104,7 @@ func TestWorkingDirectoryFailureIsAFileErrorForEverySubcommand(t *testing.T) {
 func TestShowTextMarksMissingLocalPathAndSources(t *testing.T) {
 	files := newFakeFiles()
 	files.settings.LocalPath = ""
-	got, err := run(t, files, "show", "--host", "claude")
+	got, err := runModelCommand(t, files, "show", "--host", "claude")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestShowTextMarksMissingLocalPathAndSources(t *testing.T) {
 }
 
 func TestShowWithHostListsOnlyThatHostsRoles(t *testing.T) {
-	got, err := run(t, newFakeFiles(), "show", "--host", "omp", "--json")
+	got, err := runModelCommand(t, newFakeFiles(), "show", "--host", "omp", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestShowWithHostListsOnlyThatHostsRoles(t *testing.T) {
 
 func TestSetStampsTheConfigVersionAndPrintsTextWithWarnings(t *testing.T) {
 	files := newFakeFiles()
-	got, err := run(t, files, "set", "--scope", "global", "--host", "claude", "--role", "research", "--model", "mystery")
+	got, err := runModelCommand(t, files, "set", "--scope", "global", "--host", "claude", "--role", "research", "--model", "mystery")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestSetStampsTheConfigVersionAndPrintsTextWithWarnings(t *testing.T) {
 }
 
 func TestSetWithoutAnyValueIsAUsageError(t *testing.T) {
-	_, err := run(t, newFakeFiles(), "set", "--scope", "global", "--host", "claude", "--role", "implement", "--model", "  ", "--effort", " ")
+	_, err := runModelCommand(t, newFakeFiles(), "set", "--scope", "global", "--host", "claude", "--role", "implement", "--model", "  ", "--effort", " ")
 	usageErr, ok := errors.AsType[UsageError](err)
 	if !ok || !strings.Contains(usageErr.Message, "set needs a model or effort") {
 		t.Fatalf("err = %v", err)
@@ -200,7 +200,7 @@ func TestLocalScopeNeedsAGitRepository(t *testing.T) {
 	} {
 		files := newFakeFiles()
 		files.settings.LocalPath = ""
-		_, err := run(t, files, args...)
+		_, err := runModelCommand(t, files, args...)
 		if err == nil || !strings.Contains(err.Error(), "local settings need a git repository") {
 			t.Fatalf("%v: err = %v", args, err)
 		}
@@ -211,7 +211,7 @@ func TestLocalScopeNeedsAGitRepository(t *testing.T) {
 	files := newFakeFiles()
 	files.settings.LocalPath = ""
 	files.settings.Local = contract.Config{Version: 1, Claude: map[contract.Role]contract.Layer{contract.RoleImplement: {Model: "opus"}}}
-	_, err := run(t, files, "unset", "--scope", "local", "--host", "claude", "--role", "implement")
+	_, err := runModelCommand(t, files, "unset", "--scope", "local", "--host", "claude", "--role", "implement")
 	if err == nil || !strings.Contains(err.Error(), "local settings need a git repository") {
 		t.Fatalf("unset err = %v", err)
 	}
@@ -220,7 +220,7 @@ func TestLocalScopeNeedsAGitRepository(t *testing.T) {
 func TestSetLocalReportsWhetherTheExcludeWasAdded(t *testing.T) {
 	files := newFakeFiles()
 	files.excluded = false
-	got, err := run(t, files, "set", "--scope", "local", "--host", "claude", "--role", "implement", "--model", "opus", "--json")
+	got, err := runModelCommand(t, files, "set", "--scope", "local", "--host", "claude", "--role", "implement", "--model", "opus", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestSetLocalReportsWhetherTheExcludeWasAdded(t *testing.T) {
 		t.Fatalf("excluded = %v (present=%v), want an explicit false", excluded, present)
 	}
 	globalFiles := newFakeFiles()
-	got, err = run(t, globalFiles, "set", "--scope", "global", "--host", "claude", "--role", "implement", "--model", "opus", "--json")
+	got, err = runModelCommand(t, globalFiles, "set", "--scope", "global", "--host", "claude", "--role", "implement", "--model", "opus", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +278,7 @@ func TestUnsetTextReportsWhatWasRemovedOrAbsent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		args := append([]string{"unset", "--scope", "local", "--host", "codex", "--role", "research"}, tt.args...)
-		got, err := run(t, files, args...)
+		got, err := runModelCommand(t, files, args...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +291,7 @@ func TestUnsetTextReportsWhatWasRemovedOrAbsent(t *testing.T) {
 func TestUnsetOfAnAbsentFieldLeavesTheFileUntouched(t *testing.T) {
 	files := newFakeFiles()
 	files.settings.Global = contract.Config{Version: 1, Claude: map[contract.Role]contract.Layer{contract.RoleImplement: {Effort: "high"}}}
-	got, err := run(t, files, "unset", "--scope", "global", "--host", "claude", "--role", "implement", "--field", "model", "--json")
+	got, err := runModelCommand(t, files, "unset", "--scope", "global", "--host", "claude", "--role", "implement", "--field", "model", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func TestUnsetLocalFieldWritesTheRemainderAndReportsExclude(t *testing.T) {
 		contract.RoleImplement: {Model: "opus", Effort: "high"},
 		contract.RoleResearch:  {Model: "haiku"},
 	}}
-	got, err := run(t, files, "unset", "--scope", "local", "--host", "claude", "--role", "implement", "--field", "effort", "--json")
+	got, err := runModelCommand(t, files, "unset", "--scope", "local", "--host", "claude", "--role", "implement", "--field", "effort", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ func TestUnsetLocalFieldWritesTheRemainderAndReportsExclude(t *testing.T) {
 
 func TestResolveTextAndOptionalAgentArguments(t *testing.T) {
 	files := newFakeFiles()
-	got, err := run(t, files, "resolve", "--host", "claude", "--role", "implement", "--model", "sonnet")
+	got, err := runModelCommand(t, files, "resolve", "--host", "claude", "--role", "implement", "--model", "sonnet")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +334,7 @@ func TestResolveTextAndOptionalAgentArguments(t *testing.T) {
 	if files.agentCalls != 0 {
 		t.Fatalf("role-agent arguments rendered without --agents: %d calls", files.agentCalls)
 	}
-	json, err := run(t, files, "resolve", "--host", "claude", "--role", "implement", "--model", "sonnet", "--effort", "high", "--json")
+	json, err := runModelCommand(t, files, "resolve", "--host", "claude", "--role", "implement", "--model", "sonnet", "--effort", "high", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}

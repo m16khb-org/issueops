@@ -816,7 +816,7 @@
       "source_symbol": "func runCommand",
       "responsibility": "policy evaluation must precede bounded execution and denial must have no process effect",
       "target": "internal/application/policy",
-      "target_symbol": "func Service.run",
+      "target_symbol": "func Service.runWithTier",
       "task": "T09",
       "entrypoints": [
         "issueops policy run",

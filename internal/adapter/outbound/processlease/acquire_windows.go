@@ -25,11 +25,11 @@ import (
 // and shares nothing; a shared lease opens read-only and shares only reads.
 
 func Acquire(ctx context.Context, directory, key string) (*Lease, error) {
-	return acquire(ctx, directory, key, true)
+	return acquireLease(ctx, directory, key, true)
 }
 
 func AcquireShared(ctx context.Context, directory, key string) (*SharedLease, error) {
-	lease, err := acquire(ctx, directory, key, false)
+	lease, err := acquireLease(ctx, directory, key, false)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func inherit(cmd *exec.Cmd, file *os.File) {
 	cmd.SysProcAttr.AdditionalInheritedHandles = append(cmd.SysProcAttr.AdditionalInheritedHandles, syscall.Handle(handle))
 }
 
-func acquire(ctx context.Context, directory, key string, exclusive bool) (*Lease, error) {
+func acquireLease(ctx context.Context, directory, key string, exclusive bool) (*Lease, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

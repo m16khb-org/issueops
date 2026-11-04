@@ -34,6 +34,9 @@ const (
 
 var errPrivateRootCleanup = errors.New("private_root_cleanup_failed")
 
+// errEvidenceFileTooLarge reports an evidence file above MaxOutputBytes.
+var errEvidenceFileTooLarge = errors.New("evidence_file_too_large")
+
 type CommandRequest struct {
 	Cwd      string
 	Argv     []string
@@ -315,7 +318,7 @@ func readEpisodeCapture(resultPath string) (episodeCapture, error) {
 		if errors.Is(err, fs.ErrNotExist) {
 			return episodeCapture{}, fmt.Errorf("probe_result_missing")
 		}
-		if err.Error() == "evidence_file_too_large" {
+		if errors.Is(err, errEvidenceFileTooLarge) {
 			return episodeCapture{}, fmt.Errorf("probe_result_too_large")
 		}
 		return episodeCapture{}, fmt.Errorf("probe_result_read_failed")
@@ -362,7 +365,7 @@ func applyMultipleCallMarker(resultPath string, capture *episodeCapture) error {
 		capture.CanonicalValid = false
 		capture.Diagnostics = []toolconformancecontract.Diagnostic{}
 	} else if !errors.Is(markerErr, fs.ErrNotExist) {
-		if markerErr.Error() == "evidence_file_too_large" {
+		if errors.Is(markerErr, errEvidenceFileTooLarge) {
 			return fmt.Errorf("multiple_call_marker_too_large")
 		}
 		return fmt.Errorf("multiple_call_marker_read_failed")
@@ -381,7 +384,7 @@ func readBoundedEvidenceFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	if len(data) > MaxOutputBytes {
-		return nil, fmt.Errorf("evidence_file_too_large")
+		return nil, errEvidenceFileTooLarge
 	}
 	return data, nil
 }
