@@ -23,17 +23,34 @@ import (
 // Provider adapts GitLab via the `glab` CLI.
 type Provider struct{}
 
+// Provider implements the IssueProvider core and every optional capability
+// the callers type-assert for; the compiler fails here if a signature drifts.
+var (
+	_ port.IssueProvider                       = Provider{}
+	_ port.IssueProviderChildCreateRecovery    = Provider{}
+	_ port.IssueProviderIssueCreateReconciler  = Provider{}
+	_ port.IssueProviderRecentIssueLister      = Provider{}
+	_ port.IssueProviderRemoteCreateReconciler = Provider{}
+	_ port.IssueProviderPullRequestCloser      = Provider{}
+	_ port.IssueProviderPullRequestMerger      = Provider{}
+	_ port.IssueProviderPullRequestReadier     = Provider{}
+	_ port.IssueProviderCommenter              = Provider{}
+	_ port.IssueProviderLabeler                = Provider{}
+	_ port.IssueProviderRetitler               = Provider{}
+	_ port.IssueProviderAssigner               = Provider{}
+	_ port.IssueProviderMilestoneSetter        = Provider{}
+	_ port.IssueProviderArtifactBodyReader     = Provider{}
+	_ port.IssueProviderArtifactBodyReplacer   = Provider{}
+	_ port.IssueProviderChildHierarchyVerifier = Provider{}
+)
+
 var glabCapabilityVersionPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|\s)v?(\d+)\.(\d+)\.(\d+)(?:\s|$)`) })
 
 func NewProvider() Provider { return Provider{} }
 
 func (Provider) Name() string { return "gitlab" }
 
-func (Provider) CreateIssue(req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
-	return Provider{}.CreateIssueContext(context.Background(), req)
-}
-
-func (Provider) CreateIssueContext(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return port.IssueProviderCreateIssueResult{OK: false}, fmt.Errorf("issue title is required")
@@ -104,11 +121,7 @@ func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssuePro
 	}, nil
 }
 
-func (Provider) CreatePullRequest(req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
-	return Provider{}.CreatePullRequestContext(context.Background(), req)
-}
-
-func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (Provider) CreatePullRequest(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("MR title is required")
@@ -283,11 +296,7 @@ func compareGitLabMergeRequestAuthority(req port.IssueProviderCreatePullRequestR
 	return nil
 }
 
-func (Provider) ReconcilePullRequest(req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
-	return Provider{}.ReconcilePullRequestContext(context.Background(), req)
-}
-
-func (Provider) ReconcilePullRequestContext(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
+func (Provider) ReconcilePullRequest(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
 	projectURL, err := gitLabProjectURL(req.ProjectKey)
 	if err != nil || projectURL == "" {
 		return port.IssueProviderReconcilePullRequestResult{}, fmt.Errorf("GitLab reconcile requires exact project authority")

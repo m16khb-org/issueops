@@ -33,6 +33,24 @@ func RunBoundedMutationWithOutputLimitContext(ctx context.Context, repo, name st
 	return runBoundedCommandContext(ctx, repo, name, args, providerMutationTimeout, outputLimit)
 }
 
+// RunContext runs name in repo (the current directory when repo is empty) and
+// returns its stdout. Unlike the bounded runners it sets no timeout or output
+// limit. On failure the child's *exec.ExitError carries its stderr; when ctx
+// ended first, RunContext returns ctx.Err() instead, because the killed
+// child's exit status says nothing about the command itself.
+func RunContext(ctx context.Context, repo, name string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	processlease.Attach(ctx, cmd)
+	cmd.Dir = repo
+	out, err := cmd.Output()
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return out, ctxErr
+		}
+	}
+	return out, err
+}
+
 // DryRunPreview renders the command a confirm would run, quoting each word
 // that a shell would split or expand, so a title like `hello.sh --version`
 // does not read as a flag. A --body/--description value is shown as its
@@ -78,7 +96,7 @@ func runBoundedCommandContext(parent context.Context, repo, name string, args []
 	stderr := &boundedBuffer{limit: providerDiagnosticLimit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	if err := cmd.Start(); err != nil {
-		return nil, false, fmt.Errorf("command start failed: %s", boundedDiagnostic(err.Error()))
+		return nil, false, startError{text: boundedDiagnostic(err.Error()), cause: err}
 	}
 	err := cmd.Wait()
 	output := append([]byte(nil), stdout.data...)
@@ -93,6 +111,18 @@ func runBoundedCommandContext(parent context.Context, repo, name string, args []
 	}
 	return output, true, nil
 }
+
+// startError reports a command that never started. Error keeps the bounded,
+// redacted diagnostic; Unwrap keeps the cause so callers can use errors.Is
+// (for example exec.ErrNotFound) instead of matching the message.
+type startError struct {
+	text  string
+	cause error
+}
+
+func (e startError) Error() string { return "command start failed: " + e.text }
+
+func (e startError) Unwrap() error { return e.cause }
 
 type boundedBuffer struct {
 	data      []byte

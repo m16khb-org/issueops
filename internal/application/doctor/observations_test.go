@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"errors"
 	doctorcontract "issueops/internal/contract/doctor"
 	"reflect"
@@ -37,7 +38,7 @@ func TestDoctorObservesInOrderAndSkipsLiveProbesForStaticRequests(t *testing.T) 
 			},
 			LoopContracts: func(string) doctordomain.LoopObservation { record("loop"); return doctordomain.LoopObservation{} },
 			PipeCapacity:  func() (int, error) { record("pipe"); return 0, errors.New("unavailable") },
-			MCPGateways: func(string) doctordomain.GatewayObservation {
+			MCPGateways: func(context.Context, string) doctordomain.GatewayObservation {
 				record("gateway")
 				return doctordomain.GatewayObservation{Home: "/home", Endpoints: []doctordomain.GatewayEndpoint{{Name: "local", URL: "http://localhost:9", Error: errors.New("refused")}}}
 			},
@@ -45,7 +46,7 @@ func TestDoctorObservesInOrderAndSkipsLiveProbesForStaticRequests(t *testing.T) 
 			BinaryDrift:        func(string) doctordomain.BinaryObservation { record("binary"); return doctordomain.BinaryObservation{} },
 			Now:                func() time.Time { return time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC) },
 		}}
-		result, err := service.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: static})
+		result, err := service.Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: static})
 		if err != nil || !result.OK || result.Healthy != static {
 			t.Fatalf("static=%t result=%+v err=%v", static, result, err)
 		}

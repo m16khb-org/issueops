@@ -23,16 +23,16 @@ type fakeAbandonRemote struct {
 }
 
 func (p *fakeAbandonRemote) Name() string { return "github" }
-func (p *fakeAbandonRemote) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p *fakeAbandonRemote) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (p *fakeAbandonRemote) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (p *fakeAbandonRemote) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
-func (p *fakeAbandonRemote) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *fakeAbandonRemote) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
-func (p *fakeAbandonRemote) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p *fakeAbandonRemote) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
 func (p *fakeAbandonRemote) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {

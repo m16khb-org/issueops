@@ -539,16 +539,16 @@ type cleanupStatusProvider struct {
 }
 
 func (p *cleanupStatusProvider) Name() string { return "github" }
-func (p *cleanupStatusProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p *cleanupStatusProvider) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, errors.New("unexpected create issue")
 }
-func (p *cleanupStatusProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (p *cleanupStatusProvider) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, errors.New("unexpected create pull request")
 }
-func (p *cleanupStatusProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *cleanupStatusProvider) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, errors.New("unexpected create child")
 }
-func (p *cleanupStatusProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p *cleanupStatusProvider) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, errors.New("unexpected close child")
 }
 func (p *cleanupStatusProvider) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {

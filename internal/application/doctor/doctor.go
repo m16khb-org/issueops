@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"fmt"
 	doctorcontract "issueops/internal/contract/doctor"
 	operationalhealthcontract "issueops/internal/contract/operationalhealth"
@@ -13,7 +14,7 @@ import (
 	"issueops/internal/domain/operationalhealth"
 )
 
-func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
+func (service Service) Run(ctx context.Context, req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 	root, err := service.Effects.NormalizeRoot(req.RepoRoot)
 	if err != nil {
 		return doctorcontract.HarnessDoctorResult{OK: false, Kind: "harness_doctor", StateDir: service.Effects.StateDir()}, err
@@ -45,7 +46,7 @@ func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontr
 	lifecycleFindings := doctordomain.EvaluateLifecycle(root, lifecycle, err != nil)
 	result.Checks = append(result.Checks, lifecycleFindings.Checks...)
 	result.Issues = append(result.Issues, lifecycleFindings.Issues...)
-	findings := doctordomain.Evaluate(service.observe(req, root))
+	findings := doctordomain.Evaluate(service.observe(ctx, req, root))
 	result.Checks = append(result.Checks, findings.Checks...)
 	result.Issues = append(result.Issues, findings.Issues...)
 	result.PipeCapacityBytes = findings.PipeCapacityBytes
@@ -55,7 +56,7 @@ func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontr
 	return result, nil
 }
 
-func (service Service) observe(req doctorcontract.HarnessDoctorRequest, root string) doctordomain.Observations {
+func (service Service) observe(ctx context.Context, req doctorcontract.HarnessDoctorRequest, root string) doctordomain.Observations {
 	observations := doctordomain.Observations{Root: root}
 	observations.ProjectDocs = service.Effects.ProjectDocs(root)
 	observations.RuntimeState = service.Effects.RuntimeState(root)
@@ -63,7 +64,7 @@ func (service Service) observe(req doctorcontract.HarnessDoctorRequest, root str
 	if !req.StaticOnly {
 		capacity, err := service.Effects.PipeCapacity()
 		observations.Pipe = &doctordomain.PipeObservation{Capacity: capacity, Error: err}
-		gateways := service.Effects.MCPGateways(req.Home)
+		gateways := service.Effects.MCPGateways(ctx, req.Home)
 		observations.Gateways = &gateways
 	}
 	observations.Native = service.Effects.NativeIntegrations(req.Home)

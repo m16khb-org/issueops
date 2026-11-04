@@ -24,7 +24,7 @@ fi
 exit 2
 `)
 			t.Setenv("PATH", bin)
-			got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Confirm: true})
+			got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Confirm: true})
 			if err == nil {
 				t.Fatal("expected ambiguous create error")
 			}
@@ -45,7 +45,7 @@ func TestChildCapabilityFailureNeverCreates(t *testing.T) {
 			bin, repo := t.TempDir(), t.TempDir()
 			writeFakeGh(t, bin, "#!/bin/sh\nif [ \"$3\" = \"--help\" ]; then "+help+"; fi\necho create >> calls\nexit 2\n")
 			t.Setenv("PATH", bin)
-			_, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Confirm: true})
+			_, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Confirm: true})
 			typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
 			if !ok || typed.Invoked {
 				t.Fatalf("not-invoked proof missing: %v", err)

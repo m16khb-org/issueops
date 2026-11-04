@@ -25,14 +25,14 @@ type FinishWorkspaceObservation struct {
 type FinishPreviewer struct {
 	Environment     FinishEnvironment
 	Workspace       func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string)
-	ObserveArtifact func(string) (domain.ArtifactObservation, error)
+	ObserveArtifact func(context.Context, string) (domain.ArtifactObservation, error)
 }
 
 func (s FinishPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 	inventory := domain.CleanupFinishTargets(record)
 	var facts domain.CleanupFinishObservation
 	if !req.Merged {
-		if err := s.verifySupersedingArtifact(record, req.SupersededBy); err != nil {
+		if err := s.verifySupersedingArtifact(ctx, record, req.SupersededBy); err != nil {
 			facts.SupersedeError = err.Error()
 		} else {
 			inventory.SupersededBy = strings.TrimSpace(req.SupersededBy)
@@ -139,12 +139,12 @@ func (s FinishPreviewer) observeRemoteRefs(repo string, withHEAD bool, refs []st
 	return observed
 }
 
-func (s FinishPreviewer) verifySupersedingArtifact(record model.Record, candidate string) error {
+func (s FinishPreviewer) verifySupersedingArtifact(ctx context.Context, record model.Record, candidate string) error {
 	candidate = strings.TrimSpace(candidate)
 	if err := domain.ValidateCleanupSupersedeInput(record, candidate, s.ObserveArtifact != nil); err != nil {
 		return err
 	}
-	replacement, err := s.ObserveArtifact(candidate)
+	replacement, err := s.ObserveArtifact(ctx, candidate)
 	if err != nil {
 		return fmt.Errorf("superseding artifact %s could not be observed: %w", candidate, err)
 	}

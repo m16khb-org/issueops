@@ -24,7 +24,7 @@ type recoveryChildProvider struct {
 	store            *testChildStore
 }
 
-func (p *recoveryChildProvider) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *recoveryChildProvider) CreateChild(_ context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	if !p.store.mu.TryLock() {
 		panic("provider called under record span")
 	}

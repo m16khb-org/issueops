@@ -17,7 +17,7 @@ type CleanupFinishDeps struct {
 	// ObserveArtifact는 원격 artifact의 현재 상태를 provider에서 읽는다.
 	// replacement 증거 검증의 유일한 근거이며, 주입되지 않으면 그 경로는 열리지
 	// 않는다 — 관측 없이 증거를 인정하지 않는다(#283).
-	ObserveArtifact func(url string) (issueopsdomain.ArtifactObservation, error)
+	ObserveArtifact func(_ context.Context, url string) (issueopsdomain.ArtifactObservation, error)
 }
 
 // CleanupFinish is only a fixture for existing integration scenarios. Production

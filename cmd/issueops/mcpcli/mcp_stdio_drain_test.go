@@ -85,7 +85,7 @@ func TestInflightRequestsWaitIdleStopsAtTheLimit(t *testing.T) {
 	inflight.observeInbound([]byte(`{"jsonrpc":"2.0","id":"never","method":"ping"}`))
 	done := make(chan struct{})
 	go func() {
-		inflight.waitIdle(20 * time.Millisecond)
+		inflight.waitIdle(t.Context(), 20*time.Millisecond)
 		close(done)
 	}()
 	select {

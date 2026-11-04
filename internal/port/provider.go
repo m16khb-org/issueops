@@ -13,10 +13,6 @@ type IssueProviderCreateError struct {
 	Err     error
 }
 
-type IssueProviderCreateIssueContexter interface {
-	CreateIssueContext(context.Context, IssueProviderCreateIssueRequest) (IssueProviderCreateIssueResult, error)
-}
-
 type IssueProviderIssueCreateCandidate struct {
 	URL   string
 	Title string
@@ -140,7 +136,7 @@ type IssueProviderReconcilePullRequestResult struct {
 }
 
 type IssueProviderRemoteCreateReconciler interface {
-	ReconcilePullRequest(IssueProviderReconcilePullRequestRequest) (IssueProviderReconcilePullRequestResult, error)
+	ReconcilePullRequest(context.Context, IssueProviderReconcilePullRequestRequest) (IssueProviderReconcilePullRequestResult, error)
 }
 
 // IssueProviderCreateChildRequest describes a provider-native child work item
@@ -336,10 +332,10 @@ type IssueProviderMilestoneSetter interface {
 // is returned.
 type IssueProvider interface {
 	Name() string
-	CreateIssue(req IssueProviderCreateIssueRequest) (IssueProviderCreateIssueResult, error)
-	CreatePullRequest(req IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
-	CreateChild(req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
-	CloseChild(req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
+	CreateIssue(ctx context.Context, req IssueProviderCreateIssueRequest) (IssueProviderCreateIssueResult, error)
+	CreatePullRequest(ctx context.Context, req IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
+	CreateChild(ctx context.Context, req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
+	CloseChild(ctx context.Context, req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
 	CloseIssue(ctx context.Context, req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)
 	UpdateIssueBodySection(ctx context.Context, req IssueProviderUpdateIssueBodySectionRequest) (IssueProviderUpdateIssueBodySectionResult, error)
 }
@@ -350,7 +346,7 @@ type IssueProvider interface {
 // IssueProvider is implemented by every provider fake in the test suite, so
 // widening it would break them all. Callers type-assert and fail closed when an
 // adapter does not implement the capability, which is the same shape the
-// context and reconcile capabilities above already use.
+// reconcile capabilities above already use.
 
 // IssueProviderArtifactBodyRequest reads one remote artifact's current body.
 type IssueProviderArtifactBodyRequest struct {

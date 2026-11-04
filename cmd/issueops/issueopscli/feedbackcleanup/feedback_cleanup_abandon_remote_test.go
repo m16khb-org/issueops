@@ -96,16 +96,16 @@ func TestRunCleanupAbandonWithoutFlagsNeedsNoProvider(t *testing.T) {
 type fakeCleanupAbandonProvider struct{}
 
 func (fakeCleanupAbandonProvider) Name() string { return "github" }
-func (fakeCleanupAbandonProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (fakeCleanupAbandonProvider) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (fakeCleanupAbandonProvider) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (fakeCleanupAbandonProvider) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (fakeCleanupAbandonProvider) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
 func (fakeCleanupAbandonProvider) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {

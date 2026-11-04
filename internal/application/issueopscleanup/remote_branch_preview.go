@@ -20,7 +20,7 @@ type RemoteBranchEnvironment interface {
 type RemoteBranchPreviewer struct {
 	Environment          RemoteBranchEnvironment
 	VerifyMergedArtifact func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
-	ObserveArtifact      func(string) (domain.ArtifactObservation, error)
+	ObserveArtifact      func(context.Context, string) (domain.ArtifactObservation, error)
 }
 
 func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
@@ -37,7 +37,7 @@ func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.Record, re
 			}
 		}
 		if !facts.TipReachedBase {
-			facts.TipSupersedeError = s.verifySuperseding(record, req.SupersededBy)
+			facts.TipSupersedeError = s.verifySuperseding(ctx, record, req.SupersededBy)
 			if facts.TipSupersedeError == nil {
 				facts.TipSupersededBy = strings.TrimSpace(req.SupersededBy)
 			}
@@ -55,7 +55,7 @@ func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record 
 	if facts.MergeConfigured {
 		facts.Head, facts.MergeError = s.VerifyMergedArtifact(*artifact)
 		if facts.MergeError != nil {
-			facts.ArtifactSupersedeError = s.verifySuperseding(record, req.SupersededBy)
+			facts.ArtifactSupersedeError = s.verifySuperseding(ctx, record, req.SupersededBy)
 			if facts.ArtifactSupersedeError == nil {
 				facts.ArtifactSupersededBy = strings.TrimSpace(req.SupersededBy)
 			}
@@ -72,12 +72,12 @@ func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record 
 	facts.IdentityError = err
 }
 
-func (s RemoteBranchPreviewer) verifySuperseding(record model.Record, candidate string) error {
+func (s RemoteBranchPreviewer) verifySuperseding(ctx context.Context, record model.Record, candidate string) error {
 	candidate = strings.TrimSpace(candidate)
 	if err := domain.ValidateCleanupSupersedeInput(record, candidate, s.ObserveArtifact != nil); err != nil {
 		return err
 	}
-	replacement, err := s.ObserveArtifact(candidate)
+	replacement, err := s.ObserveArtifact(ctx, candidate)
 	if err != nil {
 		return fmt.Errorf("superseding artifact %s could not be observed: %w", candidate, err)
 	}

@@ -13,7 +13,7 @@ type contextPullRequestProvider struct {
 	seen context.Context
 }
 
-func (provider *contextPullRequestProvider) CreatePullRequestContext(
+func (provider *contextPullRequestProvider) CreatePullRequest(
 	ctx context.Context,
 	_ port.IssueProviderCreatePullRequestRequest,
 ) (executionissue.IssueProviderCreatePullRequestResult, error) {

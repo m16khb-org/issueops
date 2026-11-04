@@ -203,15 +203,15 @@ type fakeCloseChildProvider struct {
 
 func (p *fakeCloseChildProvider) Name() string { return "github" }
 
-func (p *fakeCloseChildProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p *fakeCloseChildProvider) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (p *fakeCloseChildProvider) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *fakeCloseChildProvider) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
 
@@ -223,7 +223,7 @@ func (p *fakeCloseChildProvider) CloseIssue(context.Context, port.IssueProviderC
 	return port.IssueProviderCloseIssueResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p *fakeCloseChildProvider) CloseChild(_ context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.calls = append(p.calls, req)
@@ -249,7 +249,7 @@ type blockingCloseChildProvider struct {
 	release chan struct{}
 }
 
-func (provider *blockingCloseChildProvider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (provider *blockingCloseChildProvider) CloseChild(_ context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	provider.started <- req.ChildURL
 	<-provider.release
 	return port.IssueProviderCloseChildResult{

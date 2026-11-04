@@ -24,16 +24,16 @@ type fakeCompletionProvider struct {
 }
 
 func (p *fakeCompletionProvider) Name() string { return "github" }
-func (p *fakeCompletionProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p *fakeCompletionProvider) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (p *fakeCompletionProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (p *fakeCompletionProvider) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
-func (p *fakeCompletionProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *fakeCompletionProvider) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
-func (p *fakeCompletionProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p *fakeCompletionProvider) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
 func (p *fakeCompletionProvider) CloseIssue(_ context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {

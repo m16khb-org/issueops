@@ -19,7 +19,7 @@ type issueCreateProvider struct {
 	create func(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error)
 }
 
-func (p issueCreateProvider) CreateIssueContext(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p issueCreateProvider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return p.create(ctx, req)
 }
 

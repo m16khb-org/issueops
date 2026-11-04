@@ -18,7 +18,7 @@ type childCloseFunction struct {
 	close func(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error)
 }
 
-func (p childCloseFunction) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p childCloseFunction) CloseChild(_ context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return p.close(req)
 }
 

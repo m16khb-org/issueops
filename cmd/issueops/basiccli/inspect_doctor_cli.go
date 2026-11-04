@@ -87,7 +87,7 @@ func (command Doctor) Run(args []string) error {
 		observed := command.CollectOperationalHealth(context.Background(), root)
 		snapshot = &observed
 	}
-	result, err := command.Service.Run(doctorcontract.HarnessDoctorRequest{
+	result, err := command.Service.Run(context.Background(), doctorcontract.HarnessDoctorRequest{
 		RepoRoot:            root,
 		IssueOpsRoot:        command.IssueOpsRoot,
 		Home:                command.Home,

@@ -258,7 +258,7 @@ func TestFindIssueCreateCandidatesWrapsGhAndParseFailures(t *testing.T) {
 
 func TestCreateIssueConfirmRequiresProjectAuthorityBeforeInvoking(t *testing.T) {
 	repo := fakeGhRepo(t, "#!/bin/sh\necho called >> calls\n")
-	_, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{Repo: repo, Title: "t", Confirm: true})
+	_, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Repo: repo, Title: "t", Confirm: true})
 	typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
 	if !ok || typed.Invoked {
 		t.Fatalf("err = %v", err)
@@ -269,7 +269,7 @@ func TestCreateIssueConfirmRequiresProjectAuthorityBeforeInvoking(t *testing.T) 
 }
 
 func TestCreateIssueRejectsMalformedProjectKey(t *testing.T) {
-	_, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{Title: "t", ProjectKey: "GitHub.com/Acme/Repo"})
+	_, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Title: "t", ProjectKey: "GitHub.com/Acme/Repo"})
 	if err == nil || !strings.Contains(err.Error(), "malformed") {
 		t.Fatalf("err = %v", err)
 	}
@@ -280,7 +280,7 @@ func TestCreateIssueConfirmReturnsNumberFromCanonicalURL(t *testing.T) {
 printf '%s\n' "$@" > argv
 printf 'https://github.com/acme/repo/issues/77\n'
 `)
-	got, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: " T ", Body: " B ", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Confirm: true})
+	got, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: " T ", Body: " B ", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Confirm: true})
 	if err != nil || !got.OK || got.Number != "77" || got.URL != "https://github.com/acme/repo/issues/77" {
 		t.Fatalf("got %+v err %v", got, err)
 	}
@@ -293,7 +293,7 @@ printf 'https://github.com/acme/repo/issues/77\n'
 
 func TestCreateIssueNonCanonicalURLNeedsReconciliationNotRetry(t *testing.T) {
 	repo := fakeGhRepo(t, "#!/bin/sh\nprintf 'created something\\n'\n")
-	got, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "t", Confirm: true})
+	got, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "t", Confirm: true})
 	typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
 	if got.OK || !ok || !typed.Invoked || !strings.Contains(err.Error(), "needs reconciliation") {
 		t.Fatalf("got %+v err %v", got, err)
@@ -302,7 +302,7 @@ func TestCreateIssueNonCanonicalURLNeedsReconciliationNotRetry(t *testing.T) {
 
 func TestCreateIssueFailureAfterStartKeepsCanonicalURLAndNumber(t *testing.T) {
 	repo := fakeGhRepo(t, "#!/bin/sh\nprintf 'https://github.com/acme/repo/issues/78\\n'\necho 'network lost' >&2\nexit 1\n")
-	got, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "t", Confirm: true})
+	got, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "t", Confirm: true})
 	typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
 	if got.OK || !ok || !typed.Invoked || got.URL != "https://github.com/acme/repo/issues/78" || got.Number != "78" || !strings.Contains(err.Error(), "do not retry") {
 		t.Fatalf("got %+v err %v", got, err)
@@ -314,7 +314,7 @@ func TestCreatePullRequestFailureAfterStartIsNeverRetriedAndCarriesNoURLWhenNonC
 		return port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Confirm: true}
 	}
 	repo := fakeGhRepo(t, "#!/bin/sh\necho x >> calls\nprintf 'garbage\\n'\nexit 1\n")
-	_, err := NewProvider().CreatePullRequest(prReq(repo))
+	_, err := NewProvider().CreatePullRequest(t.Context(), prReq(repo))
 	typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
 	if !ok || !typed.Invoked || !strings.Contains(err.Error(), "outcome unknown; do not retry") {
 		t.Fatalf("err = %v", err)
@@ -325,7 +325,7 @@ func TestCreatePullRequestFailureAfterStartIsNeverRetriedAndCarriesNoURLWhenNonC
 	}
 
 	repo = fakeGhRepo(t, "#!/bin/sh\nprintf 'https://github.com/acme/repo/pull/9\\n'\nexit 1\n")
-	res, err := NewProvider().CreatePullRequest(prReq(repo))
+	res, err := NewProvider().CreatePullRequest(t.Context(), prReq(repo))
 	if err == nil || !strings.Contains(err.Error(), "canonical URL returned separately") || res.OK {
 		t.Fatalf("res %+v err %v", res, err)
 	}
@@ -333,7 +333,7 @@ func TestCreatePullRequestFailureAfterStartIsNeverRetriedAndCarriesNoURLWhenNonC
 
 func TestCreatePullRequestMissingGhIsNotInvoked(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: t.TempDir(), ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Confirm: true})
+	_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: t.TempDir(), ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Confirm: true})
 	typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
 	if !ok || typed.Invoked {
 		t.Fatalf("err = %v", err)

@@ -22,7 +22,7 @@ func (f childRecordReader) Read(ctx context.Context, id string) (model.Record, e
 
 type childProviderFunc func(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
 
-func (f childProviderFunc) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (f childProviderFunc) CreateChild(_ context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return f(req)
 }
 

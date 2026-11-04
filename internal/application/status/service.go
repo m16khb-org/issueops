@@ -17,16 +17,16 @@ import (
 type Service struct {
 	Home, IssueOpsRoot, Version string
 	Inspect                     func(string) inspectcontract.Info
-	Doctor                      func(doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error)
+	Doctor                      func(context.Context, doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error)
 	State                       func() (statecontract.ListResult, error)
 	StateRead                   func(string) (statecontract.Result, error)
 	Workers                     func() (workercontract.ListResult, error)
 	ResolveTarget               func(string) string
 }
 
-func (service Service) Run(repo string) statuscontract.Result {
+func (service Service) Run(ctx context.Context, repo string) statuscontract.Result {
 	inspect := service.Inspect(repo)
-	doctor, doctorErr := service.Doctor(doctorcontract.HarnessDoctorRequest{
+	doctor, doctorErr := service.Doctor(ctx, doctorcontract.HarnessDoctorRequest{
 		RepoRoot: repo, IssueOpsRoot: service.IssueOpsRoot, Home: service.Home, Version: service.Version,
 	})
 	state, stateErr := service.State()
@@ -39,7 +39,7 @@ func (service Service) Run(repo string) statuscontract.Result {
 			StateDir: func() string { return state.StateDir },
 			List:     func() (statecontract.ListResult, error) { return state, nil },
 			Read:     service.StateRead,
-		}).History(context.Background(), "", 1, selfaugmentcontract.HistoryRetentionOptions{})
+		}).History(ctx, "", 1, selfaugmentcontract.HistoryRetentionOptions{})
 		if err != nil {
 			facts.SelfVerifyReadFailed = true
 			facts.SelfVerifyWarnings = append(facts.SelfVerifyWarnings, err.Error())

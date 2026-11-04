@@ -19,18 +19,18 @@ type publicationProviderFake struct {
 }
 
 func (*publicationProviderFake) Name() string { return "github" }
-func (*publicationProviderFake) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (*publicationProviderFake) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (f *publicationProviderFake) CreatePullRequest(request port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (f *publicationProviderFake) CreatePullRequest(_ context.Context, request port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	f.createCalls++
 	f.request = request
 	return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 }
-func (*publicationProviderFake) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (*publicationProviderFake) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
-func (*publicationProviderFake) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (*publicationProviderFake) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
 func (*publicationProviderFake) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
@@ -39,7 +39,7 @@ func (*publicationProviderFake) CloseIssue(context.Context, port.IssueProviderCl
 func (*publicationProviderFake) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
-func (*publicationProviderFake) ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
+func (*publicationProviderFake) ReconcilePullRequest(context.Context, port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
 	return port.IssueProviderReconcilePullRequestResult{}, nil
 }
 

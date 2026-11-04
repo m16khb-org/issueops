@@ -1,6 +1,7 @@
 package statuscli
 
 import (
+	"context"
 	statestore "issueops/internal/adapter/outbound/state"
 	doctorapp "issueops/internal/application/doctor"
 	statusapp "issueops/internal/application/status"
@@ -14,7 +15,7 @@ func testStatusService(diagnostics doctorapp.Service, worker workerapp.Service) 
 	return statusapp.Service{Home: home, IssueOpsRoot: deps.IssueOpsRoot(), Version: deps.Version, Inspect: deps.InspectHarness, Doctor: diagnostics.Run, State: statestore.NewService().List, StateRead: statestore.NewService().Read, Workers: worker.List, ResolveTarget: deps.ResolveTarget}
 }
 func BuildStatus(diagnostics doctorapp.Service, worker workerapp.Service, repo string) statuscontract.Result {
-	return testStatusService(diagnostics, worker).Run(repo)
+	return testStatusService(diagnostics, worker).Run(context.Background(), repo)
 }
 func RunStatus(diagnostics doctorapp.Service, worker workerapp.Service, args []string) error {
 	return (Command{Service: testStatusService(diagnostics, worker)}).Run(args)

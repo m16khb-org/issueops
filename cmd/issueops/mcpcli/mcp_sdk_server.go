@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -381,19 +382,62 @@ func sdkReadResourceResult(content map[string]any) *mcp.ReadResourceResult {
 }
 
 // ServeMCPStreamContextWithDependencies runs both split stdio and a bidirectional stream connection
-// through the official go-sdk IOTransport.
+// through the official go-sdk IOTransport. When ctx ends, it follows the HTTP
+// shutdown (ServeHTTP): in-flight requests get httpShutdownDrain to answer, the
+// rest are canceled, and the call returns nil.
 func ServeMCPStreamContextWithDependencies(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer, deps MCPDependencies) error {
+	return serveMCPStream(ctx, input, output, diagnostics, deps, httpShutdownDrain)
+}
+
+// stdioStuckLimit bounds how long a shutdown waits for the SDK session to close
+// after the remaining requests were canceled. A handler that ignores its context
+// cannot keep the process alive past it.
+const stdioStuckLimit = 2 * time.Second
+
+// serveMCPStream runs one SDK session until the peer closes it or ctx ends.
+//
+// go-sdk's IOTransport does not pass cancellation to request contexts, and Run
+// waits for in-flight requests when it closes, so ctx cannot go to Run: the
+// session would stay until every handler finished. Run gets base instead, which
+// ctx's end cancels only after drain; the receiving middleware ties each
+// request context to base. Input EOF waits on the same in-flight set (the
+// draining reader), so the drain rule is the same before and after EOF.
+func serveMCPStream(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer, deps MCPDependencies, drain time.Duration) error {
 	server := initSDKServerWithDiagnostics(deps, diagnostics)
-	if rwc, ok := input.(io.ReadWriteCloser); ok && io.Writer(rwc) == output {
-		return server.Run(ctx, &mcp.IOTransport{Reader: rwc, Writer: rwc})
-	}
-	// 분리된 stdio는 host가 stdin을 닫아도 이미 받은 요청에 끝까지 응답한다.
+	base, cancelBase := context.WithCancel(context.WithoutCancel(ctx))
+	defer cancelBase()
+	server.AddReceivingMiddleware(cancelWithContext(base))
 	inflight := newInflightRequests()
 	var closer io.Closer
 	if inputCloser, ok := input.(io.Closer); ok {
 		closer = inputCloser
 	}
-	reader := &drainingReader{source: bufio.NewReader(input), closer: closer, inflight: inflight}
+	reader := &drainingReader{ctx: base, source: bufio.NewReader(input), closer: closer, inflight: inflight}
 	writer := &observingWriter{target: output, inflight: inflight}
-	return server.Run(ctx, &mcp.IOTransport{Reader: reader, Writer: writer})
+	done := make(chan error, 1)
+	go func() { done <- server.Run(base, &mcp.IOTransport{Reader: reader, Writer: writer}) }()
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+	}
+	inflight.waitIdle(context.Background(), drain)
+	cancelBase()
+	select {
+	case <-done:
+	case <-time.After(stdioStuckLimit):
+	}
+	return nil
+}
+
+// cancelWithContext ends every request context when base ends.
+func cancelWithContext(base context.Context) mcp.Middleware {
+	return func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			defer context.AfterFunc(base, cancel)()
+			return next(ctx, method, req)
+		}
+	}
 }

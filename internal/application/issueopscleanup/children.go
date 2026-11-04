@@ -51,14 +51,14 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 		if err != nil {
 			return err
 		}
-		basis, err := s.evidenceBasis(record, req)
+		basis, err := s.evidenceBasis(spanCtx, record, req)
 		if err != nil {
 			result.Missing = []string{"merge_evidence"}
 			return err
 		}
 		result.EvidenceBasis = basis
 		indices := childLinkIndices(record)
-		outcomes := s.closeConcurrently(record, indices, req)
+		outcomes := s.closeConcurrently(spanCtx, record, indices, req)
 		changed, firstErr := collectChildOutcomes(&result, outcomes, indices)
 		if firstErr != nil {
 			if req.Confirm {
@@ -128,7 +128,7 @@ type closeChildOutcome struct {
 	err     error
 }
 
-func (s ChildrenCloser) closeConcurrently(record model.Record, indices []int, req model.CloseChildrenRequest) []closeChildOutcome {
+func (s ChildrenCloser) closeConcurrently(ctx context.Context, record model.Record, indices []int, req model.CloseChildrenRequest) []closeChildOutcome {
 	outcomes := make([]closeChildOutcome, len(indices))
 	limit := make(chan struct{}, 4)
 	var workers sync.WaitGroup
@@ -136,7 +136,7 @@ func (s ChildrenCloser) closeConcurrently(record model.Record, indices []int, re
 		workers.Go(func() {
 			limit <- struct{}{}
 			defer func() { <-limit }()
-			result, changed, err := s.closeChild(record, record.IssueLinks[linkIndex], req)
+			result, changed, err := s.closeChild(ctx, record, record.IssueLinks[linkIndex], req)
 			outcomes[index] = closeChildOutcome{result: result, changed: changed, err: err}
 		})
 	}
@@ -144,7 +144,7 @@ func (s ChildrenCloser) closeConcurrently(record model.Record, indices []int, re
 	return outcomes
 }
 
-func (s ChildrenCloser) evidenceBasis(record model.Record, req model.CloseChildrenRequest) (string, error) {
+func (s ChildrenCloser) evidenceBasis(ctx context.Context, record model.Record, req model.CloseChildrenRequest) (string, error) {
 	basis, err := domain.ChildCleanupEvidenceBasis(record, req.Merged)
 	if err != nil || basis != "" {
 		return basis, err
@@ -153,7 +153,7 @@ func (s ChildrenCloser) evidenceBasis(record model.Record, req model.CloseChildr
 		if link.Type != "child" {
 			continue
 		}
-		state, err := s.observeChildState(record, link)
+		state, err := s.observeChildState(ctx, record, link)
 		if err != nil {
 			return "", fmt.Errorf("cannot close child tasks without merge evidence: %w", err)
 		}
@@ -164,7 +164,7 @@ func (s ChildrenCloser) evidenceBasis(record model.Record, req model.CloseChildr
 	return domain.ChildCleanupAlreadyClosed, nil
 }
 
-func (s ChildrenCloser) observeChildState(record model.Record, link model.IssueLink) (string, error) {
+func (s ChildrenCloser) observeChildState(ctx context.Context, record model.Record, link model.IssueLink) (string, error) {
 	providerName := issueopsremote.CleanupChildProvider(link.Provider, link.URL, record.IssueURL)
 	if providerName == "" {
 		return "", fmt.Errorf("cannot determine provider for child %s", link.URL)
@@ -173,14 +173,14 @@ func (s ChildrenCloser) observeChildState(record model.Record, link model.IssueL
 	if err != nil {
 		return "", err
 	}
-	result, err := prov.CloseChild(port.IssueProviderCloseChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: link.URL, Confirm: false})
+	result, err := prov.CloseChild(ctx, port.IssueProviderCloseChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: link.URL, Confirm: false})
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(result.State), nil
 }
 
-func (s ChildrenCloser) closeChild(record model.Record, link model.IssueLink, req model.CloseChildrenRequest) (model.CloseChildResult, bool, error) {
+func (s ChildrenCloser) closeChild(ctx context.Context, record model.Record, link model.IssueLink, req model.CloseChildrenRequest) (model.CloseChildResult, bool, error) {
 	providerName := issueopsremote.CleanupChildProvider(link.Provider, link.URL, record.IssueURL)
 	if providerName == "" {
 		return model.CloseChildResult{URL: link.URL, Error: "cannot determine provider"}, false, fmt.Errorf("cannot determine provider for child %s", link.URL)
@@ -189,7 +189,7 @@ func (s ChildrenCloser) closeChild(record model.Record, link model.IssueLink, re
 	if err != nil {
 		return model.CloseChildResult{URL: link.URL, Provider: providerName, Error: err.Error()}, false, err
 	}
-	providerResult, err := prov.CloseChild(port.IssueProviderCloseChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: link.URL, Confirm: req.Confirm})
+	providerResult, err := prov.CloseChild(ctx, port.IssueProviderCloseChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: link.URL, Confirm: req.Confirm})
 	result := model.CloseChildResult{
 		URL: firstChildValue(providerResult.ChildURL, link.URL), Provider: firstChildValue(providerResult.Provider, providerName),
 		Closed: providerResult.Closed, AlreadyClosed: providerResult.AlreadyClosed, HierarchyVerified: providerResult.HierarchyVerified,

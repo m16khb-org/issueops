@@ -21,7 +21,7 @@ func (t githubChildTarget) subIssuesPath() string {
 	return "repos/" + t.owner + "/" + t.repoName + "/issues/" + t.parentNumber + "/sub_issues"
 }
 
-func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (Provider) CreateChild(ctx context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, fmt.Errorf("child title is required")
@@ -35,7 +35,7 @@ func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.Issu
 	if !req.Confirm {
 		return port.IssueProviderCreateChildResult{OK: true, Provider: "github", Preview: githubChildCreatePreview(createArgs, target)}, nil
 	}
-	help, err := providerutil.RunBoundedReadbackContext(context.Background(), req.Repo, "gh", "issue", "create", "--help")
+	help, err := providerutil.RunBoundedReadbackContext(ctx, req.Repo, "gh", "issue", "create", "--help")
 	if err != nil {
 		return port.IssueProviderCreateChildResult{Provider: "github"}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
@@ -46,11 +46,11 @@ func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.Issu
 	if usedParentFlag {
 		createArgs = append(createArgs, "--parent", parentNumber)
 	}
-	child, err := runGhJSON(createArgs, req.Repo, "issue")
+	child, err := runGhJSONContext(ctx, createArgs, req.Repo, "issue")
 	if err != nil {
 		return port.IssueProviderCreateChildResult{Provider: "github", ChildURL: strings.TrimSpace(child.URL)}, err
 	}
-	return verifyCreatedGitHubChild(req, target, strings.TrimSpace(child.URL), usedParentFlag)
+	return verifyCreatedGitHubChild(ctx, req, target, strings.TrimSpace(child.URL), usedParentFlag)
 }
 
 // githubChildCreateArgs는 `gh issue create`의 --parent 이전 인자를 만든다.
@@ -105,12 +105,12 @@ func githubChildFollowUpFailure(childURL string, err error) (port.IssueProviderC
 
 // verifyCreatedGitHubChild는 생성된 자식의 조회, (필요 시) 부모 연결,
 // 계층·라벨·담당자 검증을 순서대로 수행한다.
-func verifyCreatedGitHubChild(req port.IssueProviderCreateChildRequest, target githubChildTarget, childURL string, usedParentFlag bool) (port.IssueProviderCreateChildResult, error) {
+func verifyCreatedGitHubChild(ctx context.Context, req port.IssueProviderCreateChildRequest, target githubChildTarget, childURL string, usedParentFlag bool) (port.IssueProviderCreateChildResult, error) {
 	_, _, childNumber, err := parseGitHubIssueURL(childURL)
 	if err != nil {
 		return githubChildFollowUpFailure(childURL, fmt.Errorf("parse created child issue URL: %w", err))
 	}
-	childIssue, err := runGhAPIJSON[githubIssue](req.Repo, []string{"repos/" + target.owner + "/" + target.repoName + "/issues/" + childNumber}, "issue lookup")
+	childIssue, err := runGhAPIJSON[githubIssue](ctx, req.Repo, []string{"repos/" + target.owner + "/" + target.repoName + "/issues/" + childNumber}, "issue lookup")
 	if err != nil {
 		return githubChildFollowUpFailure(childURL, err)
 	}
@@ -118,12 +118,12 @@ func verifyCreatedGitHubChild(req port.IssueProviderCreateChildRequest, target g
 		return githubChildFollowUpFailure(childURL, fmt.Errorf("created child issue is missing database id"))
 	}
 	if !usedParentFlag {
-		_, err = runGhAPIJSON[map[string]any](req.Repo, []string{"-X", "POST", target.subIssuesPath(), "-f", "sub_issue_id=" + strconv.FormatInt(childIssue.ID, 10)}, "sub-issue attach")
+		_, err = runGhAPIJSON[map[string]any](ctx, req.Repo, []string{"-X", "POST", target.subIssuesPath(), "-f", "sub_issue_id=" + strconv.FormatInt(childIssue.ID, 10)}, "sub-issue attach")
 		if err != nil {
 			return githubChildFollowUpFailure(childURL, err)
 		}
 	}
-	children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{target.subIssuesPath()}, "sub-issue verification")
+	children, err := runGhAPIJSON[[]githubIssue](ctx, req.Repo, []string{target.subIssuesPath()}, "sub-issue verification")
 	if err != nil {
 		return githubChildFollowUpFailure(childURL, err)
 	}
@@ -149,7 +149,7 @@ func verifyCreatedGitHubChild(req port.IssueProviderCreateChildRequest, target g
 	}, nil
 }
 
-func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (Provider) CloseChild(ctx context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	owner, repoName, parentNumber, err := parseGitHubIssueURL(req.ParentIssueURL)
 	if err != nil {
 		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
@@ -163,9 +163,9 @@ func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueP
 	}
 	target := githubChildTarget{owner: owner, repoName: repoName, parentNumber: parentNumber}
 	if !req.Confirm {
-		return previewCloseGitHubChild(req, target, childNumber), nil
+		return previewCloseGitHubChild(ctx, req, target, childNumber), nil
 	}
-	children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{target.subIssuesPath()}, "sub-issue verification")
+	children, err := runGhAPIJSON[[]githubIssue](ctx, req.Repo, []string{target.subIssuesPath()}, "sub-issue verification")
 	if err != nil {
 		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
 	}
@@ -175,11 +175,11 @@ func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueP
 	}
 	alreadyClosed := strings.EqualFold(childIssue.State, "closed")
 	if !alreadyClosed {
-		if _, err := runGhAPIJSON[githubIssue](req.Repo, []string{"-X", "PATCH", "repos/" + owner + "/" + repoName + "/issues/" + childNumber, "-f", "state=closed", "-f", "state_reason=completed"}, "issue close"); err != nil {
+		if _, err := runGhAPIJSON[githubIssue](ctx, req.Repo, []string{"-X", "PATCH", "repos/" + owner + "/" + repoName + "/issues/" + childNumber, "-f", "state=closed", "-f", "state_reason=completed"}, "issue close"); err != nil {
 			return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
 		}
 	}
-	verified, err := runGhAPIJSON[githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + childNumber}, "issue close verification")
+	verified, err := runGhAPIJSON[githubIssue](ctx, req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + childNumber}, "issue close verification")
 	if err != nil {
 		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
 	}
@@ -207,12 +207,12 @@ func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueP
 // 두고 성공을 돌려준다 — 여기서 오류를 내면 provider 없는 환경의
 // dry-run이 통째로 깨지고, core는 어차피 미상을 통과 근거로 인정하지
 // 않는다.
-func previewCloseGitHubChild(req port.IssueProviderCloseChildRequest, target githubChildTarget, childNumber string) port.IssueProviderCloseChildResult {
+func previewCloseGitHubChild(ctx context.Context, req port.IssueProviderCloseChildRequest, target githubChildTarget, childNumber string) port.IssueProviderCloseChildResult {
 	owner, repoName, parentNumber := target.owner, target.repoName, target.parentNumber
 	preview := fmt.Sprintf("[dry-run] would execute: gh api repos/%s/%s/issues/%s/sub_issues; gh api -X PATCH repos/%s/%s/issues/%s -f state=closed -f state_reason=completed; gh api repos/%s/%s/issues/%s",
 		owner, repoName, parentNumber, owner, repoName, childNumber, owner, repoName, childNumber)
 	result := port.IssueProviderCloseChildResult{OK: true, Provider: "github", ChildURL: strings.TrimSpace(req.ChildURL), Preview: preview}
-	if children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{target.subIssuesPath()}, "sub-issue observation"); err == nil {
+	if children, err := runGhAPIJSON[[]githubIssue](ctx, req.Repo, []string{target.subIssuesPath()}, "sub-issue observation"); err == nil {
 		if childIssue := githubIssueByNumber(children, childNumber); childIssue.Number != 0 {
 			result.HierarchyVerified = true
 			result.State = childIssue.State

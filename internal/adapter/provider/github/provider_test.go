@@ -20,14 +20,14 @@ func TestGitHubProviderName(t *testing.T) {
 }
 
 func TestGitHubCreateIssueRequiresTitle(t *testing.T) {
-	_, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{Title: "  "})
+	_, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Title: "  "})
 	if err == nil {
 		t.Fatal("expected error for empty title")
 	}
 }
 
 func TestGitHubCreateIssueDryRunDoesNotExecute(t *testing.T) {
-	res, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{
+	res, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{
 		ProjectKey: "github.com/acme/repo",
 		Title:      "Fix bug",
 		Body:       "details",
@@ -54,7 +54,7 @@ func TestGitHubCreateIssueDryRunDoesNotExecute(t *testing.T) {
 
 func TestGitHubCreateChildDryRunDoesNotExecute(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	res, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		Title:          "하위 작업",
@@ -80,21 +80,21 @@ func TestGitHubCreateChildDryRunDoesNotExecute(t *testing.T) {
 
 func TestGitHubCreateChildDryRunRedactsSecretArgv(t *testing.T) {
 	secret := "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	res, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{Repo: t.TempDir(), ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Body: "token=" + secret, Labels: []string{"bug"}, Assignees: []string{"octocat"}})
+	res, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{Repo: t.TempDir(), ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Body: "token=" + secret, Labels: []string{"bug"}, Assignees: []string{"octocat"}})
 	if err != nil || strings.Contains(res.Preview, secret) || !strings.Contains(res.Preview, "--body '<body: ") {
 		t.Fatalf("GitHub child preview leaked secret: %q err=%v", res.Preview, err)
 	}
 }
 
 func TestGitHubCreatePullRequestRequiresBranches(t *testing.T) {
-	_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Title: "PR"})
+	_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Title: "PR"})
 	if err == nil {
 		t.Fatal("expected error for missing head/base branches")
 	}
 }
 
 func TestGitHubCreatePullRequestDryRun(t *testing.T) {
-	res, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{
+	res, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{
 		Title:      "Add feature",
 		HeadBranch: "feat/x",
 		BaseBranch: "main",
@@ -110,7 +110,7 @@ func TestGitHubCreatePullRequestDryRun(t *testing.T) {
 
 func TestGitHubCreatePullRequestDryRunRedactsSecretArgv(t *testing.T) {
 	secret := "api_key=opaque-token password=opaque-password Authorization: Bearer opaque-bearer /tmp/secret.pem"
-	res, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Title: "PR", Body: secret, HeadBranch: "feat/x", BaseBranch: "main"})
+	res, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Title: "PR", Body: secret, HeadBranch: "feat/x", BaseBranch: "main"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ if [ "$1 $2" = "pr view" ]; then printf '{"url":"https://github.enterprise/acme/
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.enterprise/acme/repo", Title: "PR", Body: "body", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
+	_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.enterprise/acme/repo", Title: "PR", Body: "body", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ if [ "$1 $2" = "pr list" ]; then printf '[{"url":"https://github.com/acme/repo/p
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", BodySHA256: providerBodySHA256("body"), HeadBranch: "feat/x", BaseBranch: "main", ExpectedHeadSHA: strings.Repeat("a", 40), Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true})
+	result, err := NewProvider().ReconcilePullRequest(t.Context(), port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", BodySHA256: providerBodySHA256("body"), HeadBranch: "feat/x", BaseBranch: "main", ExpectedHeadSHA: strings.Repeat("a", 40), Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true})
 	if err != nil || len(result.Candidates) != 1 || result.AuthoritativeZero || result.Candidates[0].State != "MERGED" {
 		t.Fatalf("GitHub reconcile = %#v, %v", result, err)
 	}
@@ -174,7 +174,7 @@ if [ "$1 $2" = "pr list" ]; then printf '[{"url":"https://github.com/acme/repo/p
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
+	result, err := NewProvider().ReconcilePullRequest(t.Context(), port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
 	if err != nil || len(result.Candidates) != 1 || result.Candidates[0].BaseBranch != "edited-base" {
 		t.Fatalf("GitHub base-drift projection = %#v, %v", result, err)
 	}
@@ -191,7 +191,7 @@ if [ "$1 $2" = "pr list" ]; then printf 'null'; exit 0; fi
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
+	result, err := NewProvider().ReconcilePullRequest(t.Context(), port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
 	if err == nil || result.AuthoritativeZero {
 		t.Fatalf("GitHub null candidate list = %#v, %v, want ambiguous error", result, err)
 	}
@@ -215,7 +215,7 @@ fi
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	if _, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true}); err != nil {
+	if _, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true}); err != nil {
 		t.Fatal(err)
 	}
 	argv, err := os.ReadFile(filepath.Join(repo, "gh.argv"))
@@ -242,7 +242,7 @@ exit 2
 			script = strings.ReplaceAll(strings.ReplaceAll(script, "LABELS", tc.labels), "ASSIGNEES", tc.assignees)
 			writeFakeGh(t, binDir, script)
 			t.Setenv("PATH", binDir)
-			_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, Confirm: true})
+			_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, Confirm: true})
 			if err == nil || !strings.Contains(err.Error(), "exactly match") {
 				t.Fatalf("extra readback authority error = %v", err)
 			}
@@ -258,7 +258,7 @@ if [ "$1 $2" = "pr view" ]; then printf '{"url":"https://github.com/acme/repo/pu
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
+	_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"octocat"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
 	if err == nil || !strings.Contains(err.Error(), "source project") {
 		t.Fatalf("fork-origin readback = %v, want source-project rejection", err)
 	}
@@ -276,12 +276,12 @@ exit 2
 	base := port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Confirm: true}
 	exact := base
 	exact.Assignees = []string{"@me"}
-	if _, err := NewProvider().CreatePullRequest(exact); err != nil {
+	if _, err := NewProvider().CreatePullRequest(t.Context(), exact); err != nil {
 		t.Fatalf("exact @me placeholder failed: %v", err)
 	}
 	alias := base
 	alias.Assignees = []string{"me"}
-	if _, err := NewProvider().CreatePullRequest(alias); err == nil || !strings.Contains(err.Error(), "exactly match") {
+	if _, err := NewProvider().CreatePullRequest(t.Context(), alias); err == nil || !strings.Contains(err.Error(), "exactly match") {
 		t.Fatalf("arbitrary self alias = %v, want exact rejection", err)
 	}
 }
@@ -294,7 +294,7 @@ if [ "$1 $2" = "pr view" ]; then printf 'view\n' >> gh.calls; printf '{"url":"ht
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
+	result, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
 	if err == nil || result.URL != "https://github.com/acme/repo/pull/16" || strings.Contains(err.Error(), result.URL) || !strings.Contains(err.Error(), "needs reconciliation") {
 		t.Fatalf("GitHub mismatch result=%+v err=%v", result, err)
 	}
@@ -320,7 +320,7 @@ printf 'view\n' >> gh.calls
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
+	result, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "PR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
 	if err == nil || result.URL != "" || !strings.Contains(err.Error(), "needs reconciliation") || strings.Contains(err.Error(), "abcdefghijklmnopqrstuvwxyz123456") {
 		t.Fatalf("unsafe GitHub URL result=%+v err=%v", result, err)
 	}
@@ -359,7 +359,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		Title:          "하위 작업",
@@ -430,7 +430,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		Title:          "하위 작업",
@@ -479,7 +479,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	_, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	_, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		Title:          "하위 작업",
@@ -497,7 +497,7 @@ exit 2
 
 func TestGitHubCloseChildDryRunDoesNotExecute(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	res, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		ChildURL:       "https://github.com/acme/repo/issues/34",
@@ -538,7 +538,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		ChildURL:       "https://github.com/acme/repo/issues/34",
@@ -578,7 +578,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	_, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	_, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		ChildURL:       "https://github.com/acme/repo/issues/34",
@@ -613,7 +613,7 @@ func TestParseGhOutput(t *testing.T) {
 
 func TestRunGhJSONReportsMissingCLI(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	_, err := runGhJSON([]string{"issue", "create"}, "", "issue")
+	_, err := runGhJSONContext(t.Context(), []string{"issue", "create"}, "", "issue")
 	if err == nil || !strings.Contains(err.Error(), "gh CLI is not installed") {
 		t.Fatalf("error=%v, want missing gh CLI", err)
 	}
@@ -629,7 +629,7 @@ printf 'https://github.com/o/r/issues/12\n'
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := runGhJSON([]string{"issue", "create", "--title", "Fix"}, repo, "issue")
+	got, err := runGhJSONContext(t.Context(), []string{"issue", "create", "--title", "Fix"}, repo, "issue")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -653,7 +653,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	_, err := runGhJSON([]string{"pr", "create"}, "", "pr")
+	_, err := runGhJSONContext(t.Context(), []string{"pr", "create"}, "", "pr")
 	if err == nil || !strings.Contains(err.Error(), "gh pr create failed: provider rejected request") {
 		t.Fatalf("error=%v, want stderr failure", err)
 	}

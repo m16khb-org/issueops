@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -44,11 +45,11 @@ const maxConcurrentGatewayProbes = 8
 // injected so tests stay hermetic. CountFDs counts every port's listener FDs in
 // one call.
 type Gateways struct {
-	Probe    func(string) error
-	CountFDs func([]int) map[int]GatewayFDResult
+	Probe    func(context.Context, string) error
+	CountFDs func(context.Context, []int) map[int]GatewayFDResult
 }
 
-func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
+func (gateways Gateways) Observe(ctx context.Context, home string) doctordomain.GatewayObservation {
 	observation := doctordomain.GatewayObservation{Home: home}
 	if home == "" {
 		return observation
@@ -61,8 +62,8 @@ func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
 	ports := uniqueMCPGatewayPorts(endpoints)
 	var fdResults []GatewayFDResult
 	var fds sync.WaitGroup
-	fds.Go(func() { fdResults = gateways.countFDs(ports) })
-	observation.Endpoints = gateways.probeEndpoints(endpoints)
+	fds.Go(func() { fdResults = gateways.countFDs(ctx, ports) })
+	observation.Endpoints = gateways.probeEndpoints(ctx, endpoints)
 	fds.Wait()
 	for i, port := range ports {
 		observation.FDs = append(observation.FDs, doctordomain.GatewayFD{Port: port, Count: fdResults[i].Count, Available: fdResults[i].Err == nil})
@@ -72,7 +73,7 @@ func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
 
 // probeEndpoints probes the endpoints concurrently, at most
 // maxConcurrentGatewayProbes at a time, and returns them in endpoint order.
-func (gateways Gateways) probeEndpoints(endpoints []mcpGatewayEndpoint) []doctordomain.GatewayEndpoint {
+func (gateways Gateways) probeEndpoints(ctx context.Context, endpoints []mcpGatewayEndpoint) []doctordomain.GatewayEndpoint {
 	var observed []doctordomain.GatewayEndpoint
 	if len(endpoints) == 0 {
 		return observed
@@ -85,7 +86,7 @@ func (gateways Gateways) probeEndpoints(endpoints []mcpGatewayEndpoint) []doctor
 		probes.Go(func() {
 			defer func() { <-slots }()
 			target := endpoint.URL.String()
-			observed[i] = doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: gateways.Probe(target)}
+			observed[i] = doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: gateways.Probe(ctx, target)}
 		})
 	}
 	probes.Wait()
@@ -93,12 +94,12 @@ func (gateways Gateways) probeEndpoints(endpoints []mcpGatewayEndpoint) []doctor
 }
 
 // countFDs returns one result per port, in port order.
-func (gateways Gateways) countFDs(ports []int) []GatewayFDResult {
+func (gateways Gateways) countFDs(ctx context.Context, ports []int) []GatewayFDResult {
 	results := make([]GatewayFDResult, len(ports))
 	if len(ports) == 0 {
 		return results
 	}
-	counted := gateways.CountFDs(ports)
+	counted := gateways.CountFDs(ctx, ports)
 	for i, port := range ports {
 		result, ok := counted[port]
 		if !ok {

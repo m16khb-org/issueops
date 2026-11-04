@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	statestore "issueops/internal/adapter/outbound/state"
 	qualityapp "issueops/internal/application/quality"
 	qualitycontract "issueops/internal/contract/quality"
@@ -31,7 +32,7 @@ func runQualityInspectWithDeps(args []string, deps qualityapp.InspectDeps) error
 }
 
 func buildHarnessStatus(repo string) statuscontract.Result {
-	return newStatusService().Run(repo)
+	return newStatusService().Run(context.Background(), repo)
 }
 
 func buildVerifyWork(repo string, all bool, argv []string) verifyworkcontract.Result {

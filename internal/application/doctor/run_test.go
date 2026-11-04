@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -22,11 +23,13 @@ func baseService(stateDoctor func() (statecontract.DoctorResult, error)) Service
 		ValidateLifecycle: func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 			return lifecyclecontract.ProjectLifecycleStatePlan{Exists: true, NamespaceValid: true}, nil
 		},
-		ProjectDocs:        func(string) doctordomain.ProjectDocsObservation { return doctordomain.ProjectDocsObservation{} },
-		RuntimeState:       func(string) doctordomain.RuntimeStateObservation { return doctordomain.RuntimeStateObservation{} },
-		LoopContracts:      func(string) doctordomain.LoopObservation { return doctordomain.LoopObservation{} },
-		PipeCapacity:       func() (int, error) { return 0, nil },
-		MCPGateways:        func(string) doctordomain.GatewayObservation { return doctordomain.GatewayObservation{} },
+		ProjectDocs:   func(string) doctordomain.ProjectDocsObservation { return doctordomain.ProjectDocsObservation{} },
+		RuntimeState:  func(string) doctordomain.RuntimeStateObservation { return doctordomain.RuntimeStateObservation{} },
+		LoopContracts: func(string) doctordomain.LoopObservation { return doctordomain.LoopObservation{} },
+		PipeCapacity:  func() (int, error) { return 0, nil },
+		MCPGateways: func(context.Context, string) doctordomain.GatewayObservation {
+			return doctordomain.GatewayObservation{}
+		},
 		NativeIntegrations: func(string) doctordomain.NativeObservation { return doctordomain.NativeObservation{} },
 		BinaryDrift:        func(string) doctordomain.BinaryObservation { return doctordomain.BinaryObservation{} },
 		Now:                func() time.Time { return time.Date(2026, 9, 29, 1, 2, 3, 0, time.UTC) },
@@ -36,7 +39,7 @@ func baseService(stateDoctor func() (statecontract.DoctorResult, error)) Service
 func TestRunReportsNormalizeRootFailureWithStateDir(t *testing.T) {
 	service := baseService(nil)
 	service.Effects.NormalizeRoot = func(string) (string, error) { return "", errors.New("bad root") }
-	result, err := service.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "x"})
+	result, err := service.Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: "x"})
 	if err == nil || err.Error() != "bad root" || result.OK || result.Kind != "harness_doctor" || result.StateDir != "/state" {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -46,7 +49,7 @@ func TestRunTurnsStateDoctorFailureIntoErrorIssue(t *testing.T) {
 	service := baseService(func() (statecontract.DoctorResult, error) {
 		return statecontract.DoctorResult{}, errors.New("denied")
 	})
-	result, err := service.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
+	result, err := service.Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
 	if err != nil || !result.OK || result.Healthy {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -78,7 +81,7 @@ func TestRunSortsIssuesBySeverityThenCodeThenPath(t *testing.T) {
 			{Code: "alpha", Severity: "error", Path: "/a", Message: "m"},
 		}}, nil
 	})
-	result, err := service.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
+	result, err := service.Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +113,7 @@ func TestRunProjectsUnexpectedStateArtifactsAsResidueWithoutMutatingCallerSnapsh
 	artifacts := make([]operationalhealthcontract.StateArtifact, 1, 4)
 	artifacts[0] = operationalhealthcontract.StateArtifact{Path: "/state/seed", Code: "unexpected_file"}
 	snapshot := operationalhealth.Snapshot{StateArtifacts: artifacts}
-	result, err := service.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true, OperationalSnapshot: &snapshot})
+	result, err := service.Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true, OperationalSnapshot: &snapshot})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +140,7 @@ func TestRunReportsLifecycleStateOnlyWhenValidationSucceeds(t *testing.T) {
 		return statecontract.DoctorResult{Healthy: true}, nil
 	})
 	ok.Effects.ValidateLifecycle = func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error) { return plan, nil }
-	result, err := ok.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
+	result, err := ok.Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
 	if err != nil || result.LifecycleState.RepoID != "repo-1" {
 		t.Fatalf("lifecycle=%+v err=%v", result.LifecycleState, err)
 	}
@@ -148,7 +151,7 @@ func TestRunReportsLifecycleStateOnlyWhenValidationSucceeds(t *testing.T) {
 	failing.Effects.ValidateLifecycle = func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 		return plan, errors.New("lifecycle invalid")
 	}
-	result, err = failing.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
+	result, err = failing.Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
 	if err != nil || !reflect.DeepEqual(result.LifecycleState, lifecyclecontract.ProjectLifecycleStatePlan{}) {
 		t.Fatalf("lifecycle must stay empty on validation error: %+v err=%v", result.LifecycleState, err)
 	}
@@ -164,7 +167,7 @@ func TestRunPrefixesOperationalFindingSummaryWithResourceIdentity(t *testing.T) 
 			{Code: "probe_failed", Detail: "boom"},
 		},
 	}
-	result, err := service.Run(doctorcontract.HarnessDoctorRequest{
+	result, err := service.Run(t.Context(), doctorcontract.HarnessDoctorRequest{
 		RepoRoot: "/repo", StaticOnly: true, OperationalSnapshot: &snapshot,
 		OperationalOptions: operationalhealth.Options{Now: time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)},
 	})

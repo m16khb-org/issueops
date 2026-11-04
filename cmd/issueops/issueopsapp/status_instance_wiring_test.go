@@ -33,7 +33,7 @@ func TestStatusInstancesKeepCapturedStoresAndInspectionContext(t *testing.T) {
 		services[i] = newStatusService()
 	}
 	for i, service := range services {
-		got := service.Run(roots[i])
+		got := service.Run(t.Context(), roots[i])
 		if got.Inspect.IssueOpsRoot != roots[i] || got.Inspect.Integration.CodexSkillPath != filepath.Join(roots[i], "home", ".codex", "skills", skillName) {
 			t.Fatalf("inspection context leaked for %d: %+v", i, got.Inspect)
 		}

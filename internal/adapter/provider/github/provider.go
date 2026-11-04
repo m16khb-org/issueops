@@ -23,15 +23,32 @@ import (
 // Provider adapts GitHub via the `gh` CLI.
 type Provider struct{}
 
+// Provider implements the IssueProvider core and every optional capability
+// the callers type-assert for; the compiler fails here if a signature drifts.
+var (
+	_ port.IssueProvider                       = Provider{}
+	_ port.IssueProviderChildCreateRecovery    = Provider{}
+	_ port.IssueProviderIssueCreateReconciler  = Provider{}
+	_ port.IssueProviderRecentIssueLister      = Provider{}
+	_ port.IssueProviderRemoteCreateReconciler = Provider{}
+	_ port.IssueProviderPullRequestCloser      = Provider{}
+	_ port.IssueProviderPullRequestMerger      = Provider{}
+	_ port.IssueProviderPullRequestReadier     = Provider{}
+	_ port.IssueProviderCommenter              = Provider{}
+	_ port.IssueProviderLabeler                = Provider{}
+	_ port.IssueProviderRetitler               = Provider{}
+	_ port.IssueProviderAssigner               = Provider{}
+	_ port.IssueProviderMilestoneSetter        = Provider{}
+	_ port.IssueProviderArtifactBodyReader     = Provider{}
+	_ port.IssueProviderArtifactBodyReplacer   = Provider{}
+	_ port.IssueProviderChildHierarchyVerifier = Provider{}
+)
+
 func NewProvider() Provider { return Provider{} }
 
 func (Provider) Name() string { return "github" }
 
-func (Provider) CreateIssue(req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
-	return Provider{}.CreateIssueContext(context.Background(), req)
-}
-
-func (Provider) CreateIssueContext(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return port.IssueProviderCreateIssueResult{OK: false}, fmt.Errorf("issue title is required")
@@ -118,11 +135,7 @@ func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssuePro
 	}, nil
 }
 
-func (Provider) CreatePullRequest(req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
-	return Provider{}.CreatePullRequestContext(context.Background(), req)
-}
-
-func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (Provider) CreatePullRequest(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("PR title is required")
@@ -374,11 +387,7 @@ func githubReadbackAssignees(ctx context.Context, repo string, requested []strin
 	return resolved, nil
 }
 
-func (Provider) ReconcilePullRequest(req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
-	return Provider{}.ReconcilePullRequestContext(context.Background(), req)
-}
-
-func (Provider) ReconcilePullRequestContext(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
+func (Provider) ReconcilePullRequest(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
 	selector, err := githubProjectSelector(req.ProjectKey)
 	if err != nil || selector == "" {
 		return port.IssueProviderReconcilePullRequestResult{}, fmt.Errorf("GitHub reconcile requires exact project authority")
@@ -422,10 +431,6 @@ type ghResult struct {
 	URL string `json:"url"`
 }
 
-func runGhJSON(args []string, repo string, kind string) (ghResult, error) {
-	return runGhJSONContext(context.Background(), args, repo, kind)
-}
-
 func runGhJSONContext(ctx context.Context, args []string, repo string, kind string) (ghResult, error) {
 	out, invoked, err := providerutil.RunBoundedMutationContext(ctx, repo, "gh", args...)
 	result := parseGhOutput(string(out))
@@ -434,7 +439,7 @@ func runGhJSONContext(ctx context.Context, args []string, repo string, kind stri
 	}
 	if !invoked {
 		cause := err
-		if strings.Contains(err.Error(), "executable file not found") {
+		if errors.Is(err, exec.ErrNotFound) {
 			cause = fmt.Errorf("gh CLI is not installed; install it from https://cli.github.com")
 		}
 		return ghResult{}, &port.IssueProviderCreateError{Invoked: false, Err: cause}
@@ -453,17 +458,12 @@ func parseGhOutput(out string) ghResult {
 	return ghResult{URL: strings.TrimSpace(out)}
 }
 
-func runGhAPIJSON[T any](repo string, args []string, kind string) (T, error) {
+func runGhAPIJSON[T any](ctx context.Context, repo string, args []string, kind string) (T, error) {
 	var zero T
 	if _, err := exec.LookPath("gh"); err != nil {
 		return zero, fmt.Errorf("gh CLI is not installed; install it from https://cli.github.com")
 	}
-	cmdArgs := append([]string{"api"}, args...)
-	cmd := exec.Command("gh", cmdArgs...)
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	out, err := cmd.Output()
+	out, err := providerutil.RunContext(ctx, repo, "gh", append([]string{"api"}, args...)...)
 	if err != nil {
 		stderr := err.Error()
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {

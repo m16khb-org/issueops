@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"time"
 
 	lifecyclecontract "issueops/internal/contract/lifecycle"
@@ -17,7 +18,7 @@ type Effects struct {
 	RuntimeState       func(string) doctordomain.RuntimeStateObservation
 	LoopContracts      func(string) doctordomain.LoopObservation
 	PipeCapacity       func() (int, error)
-	MCPGateways        func(string) doctordomain.GatewayObservation
+	MCPGateways        func(context.Context, string) doctordomain.GatewayObservation
 	NativeIntegrations func(string) doctordomain.NativeObservation
 	BinaryDrift        func(string) doctordomain.BinaryObservation
 	Now                func() time.Time

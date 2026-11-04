@@ -20,7 +20,7 @@ type posterFake struct {
 	calls []string
 }
 
-func (p *posterFake) Post(provider, issueURL, body string) (string, error) {
+func (p *posterFake) Post(_ context.Context, provider, issueURL, body string) (string, error) {
 	p.calls = append(p.calls, provider+"|"+issueURL+"|"+body)
 	return p.url, p.err
 }

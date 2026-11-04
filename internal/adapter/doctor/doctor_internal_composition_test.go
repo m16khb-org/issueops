@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	doctorcontract "issueops/internal/contract/doctor"
 	"path/filepath"
 	"time"
@@ -34,5 +35,5 @@ var probeMCPGateway = ProbeGatewayHTTP
 var countMCPGatewayFDs = CountGatewayFDsViaLsof
 
 func HarnessDoctor(req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
-	return testDoctorService().Run(req)
+	return testDoctorService().Run(context.Background(), req)
 }

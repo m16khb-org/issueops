@@ -117,30 +117,31 @@ func firstNonEmptyString(values ...string) string {
 
 // ChildCreator is the provider capability that creates a child issue.
 type ChildCreator interface {
-	CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
+	CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
 }
 
 // LockedChildCreator holds the issue-create lifetime lock for a confirmed
 // child create, so a crash settlement can tell a running create from a dead
-// one (the provider call has no context, so an orphaned gh child is covered
-// by the process scan instead of the inherited lock).
+// one. The lock-bearing context goes to the provider call, so every gh child
+// inherits the lock; the process scan still covers an orphan that outlives it.
 type LockedChildCreator struct {
 	Inner     ChildCreator
 	StateRoot string
 }
 
-func (c LockedChildCreator) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (c LockedChildCreator) CreateChild(ctx context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	if req.Confirm {
 		if c.StateRoot == "" {
 			return port.IssueProviderCreateChildResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("child create needs the state root for its lifetime lock")}
 		}
-		_, release, err := HoldIssueCreate(context.Background(), c.StateRoot, req.Repo, req.Title)
+		held, release, err := HoldIssueCreate(ctx, c.StateRoot, req.Repo, req.Title)
 		if err != nil {
 			return port.IssueProviderCreateChildResult{OK: false}, err
 		}
 		defer release()
+		ctx = held
 	}
-	return c.Inner.CreateChild(req)
+	return c.Inner.CreateChild(ctx, req)
 }
 
 // providerReadRow is a reconcile read that carries the marker but writes

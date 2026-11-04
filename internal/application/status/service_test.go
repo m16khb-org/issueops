@@ -1,6 +1,7 @@
 package status
 
 import (
+	"context"
 	"errors"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
@@ -18,7 +19,7 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 			calls = append(calls, "inspect:"+repo)
 			return inspectcontract.Info{Version: "observed"}
 		},
-		Doctor: func(req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
+		Doctor: func(_ context.Context, req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 			calls = append(calls, "doctor:"+req.RepoRoot)
 			if req.RepoRoot != "raw/../repo" || req.Home != "home" || req.IssueOpsRoot != "harness" || req.Version != "version" {
 				t.Fatalf("doctor request: %+v", req)
@@ -35,7 +36,7 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 		},
 		ResolveTarget: func(repo string) string { calls = append(calls, "resolve:"+repo); return "resolved" },
 	}
-	got := service.Run("raw/../repo")
+	got := service.Run(t.Context(), "raw/../repo")
 	wantCalls := []string{"inspect:raw/../repo", "doctor:raw/../repo", "state", "workers", "resolve:raw/../repo"}
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("calls: %v", calls)
@@ -48,14 +49,14 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 func TestRunOKDoesNotRequireHealth(t *testing.T) {
 	service := Service{
 		Inspect: func(string) inspectcontract.Info { return inspectcontract.Info{} },
-		Doctor: func(doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
+		Doctor: func(context.Context, doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 			return doctorcontract.HarnessDoctorResult{OK: true, Healthy: false}, nil
 		},
 		State:         func() (statecontract.ListResult, error) { return statecontract.ListResult{OK: true}, nil },
 		Workers:       func() (workercontract.ListResult, error) { return workercontract.ListResult{OK: true}, nil },
 		ResolveTarget: func(s string) string { return s },
 	}
-	if got := service.Run("repo"); !got.OK || got.Doctor.Healthy {
+	if got := service.Run(t.Context(), "repo"); !got.OK || got.Doctor.Healthy {
 		t.Fatalf("health replaced observation OK: %+v", got)
 	}
 }

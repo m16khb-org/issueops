@@ -23,7 +23,7 @@ import (
 // that the provider itself accepts.
 const gitLabCommandOutputLimit = 2 * 1024 * 1024
 
-func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (Provider) CreateChild(ctx context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return gitlabChildFailure(""), fmt.Errorf("child title is required")
@@ -36,15 +36,15 @@ func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.Issu
 		preview := gitlabChildDryRunPreview(req, hostname, projectPath, parentIID, title)
 		return port.IssueProviderCreateChildResult{OK: true, Provider: "gitlab", Preview: preview}, nil
 	}
-	child, err := createGitLabChildWorkItem(req, hostname, projectPath, title)
+	child, err := createGitLabChildWorkItem(ctx, req, hostname, projectPath, title)
 	if err != nil {
 		return gitlabChildFailure(strings.TrimSpace(child.WebURL)), err
 	}
 	childURL := strings.TrimSpace(child.WebURL)
-	if err := attachGitLabChildToParent(req.Repo, hostname, projectPath, parentIID, child, childURL); err != nil {
+	if err := attachGitLabChildToParent(ctx, req.Repo, hostname, projectPath, parentIID, child, childURL); err != nil {
 		return gitlabChildFailure(childURL), err
 	}
-	return verifyGitLabCreatedChild(req, hostname, child, childURL)
+	return verifyGitLabCreatedChild(ctx, req, hostname, child, childURL)
 }
 
 func gitlabChildFailure(childURL string) port.IssueProviderCreateChildResult {
@@ -64,21 +64,21 @@ func gitlabChildDryRunPreview(req port.IssueProviderCreateChildRequest, hostname
 
 // createGitLabChildWorkItem는 Task 유형·라벨·담당자 ID를 해석한 뒤 workItemCreate를 호출한다.
 // 실패 시 반환된 work item의 WebURL이 비어 있지 않을 수 있다.
-func createGitLabChildWorkItem(req port.IssueProviderCreateChildRequest, hostname, projectPath, title string) (gitlabWorkItem, error) {
-	taskTypeID, err := resolveGitLabTaskTypeID(req.Repo, hostname, projectPath)
+func createGitLabChildWorkItem(ctx context.Context, req port.IssueProviderCreateChildRequest, hostname, projectPath, title string) (gitlabWorkItem, error) {
+	taskTypeID, err := resolveGitLabTaskTypeID(ctx, req.Repo, hostname, projectPath)
 	if err != nil {
 		return gitlabWorkItem{}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
-	labelIDs, err := resolveGitLabLabelIDs(req.Repo, hostname, projectPath, req.Labels)
+	labelIDs, err := resolveGitLabLabelIDs(ctx, req.Repo, hostname, projectPath, req.Labels)
 	if err != nil {
 		return gitlabWorkItem{}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
-	assigneeIDs, err := resolveGitLabAssigneeIDs(req.Repo, hostname, req.Assignees)
+	assigneeIDs, err := resolveGitLabAssigneeIDs(ctx, req.Repo, hostname, req.Assignees)
 	if err != nil {
 		return gitlabWorkItem{}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
 	createQuery := buildGitLabWorkItemCreateQuery(projectPath, title, strings.TrimSpace(req.Body), taskTypeID, labelIDs, assigneeIDs)
-	create, err := runGlabGraphQL[gitlabWorkItemCreateResponse](req.Repo, hostname, createQuery, map[string]string{
+	create, err := runGlabGraphQLContext[gitlabWorkItemCreateResponse](ctx, req.Repo, hostname, createQuery, map[string]string{
 		"operation": "workItemCreate",
 	})
 	child := create.Data.WorkItemCreate.WorkItem
@@ -96,8 +96,8 @@ func createGitLabChildWorkItem(req port.IssueProviderCreateChildRequest, hostnam
 
 // attachGitLabChildToParent는 부모 work item ID를 조회해 자식을 연결하고 계층을 확인한다.
 // 실패 오류는 이미 생성된 자식 URL을 담은 gitlabCreatedChildError로 감싸 반환한다.
-func attachGitLabChildToParent(repo, hostname, projectPath, parentIID string, child gitlabWorkItem, childURL string) error {
-	parent, err := runGlabGraphQL[gitlabParentIssueResponse](repo, hostname, gitlabParentIssueQuery, map[string]string{
+func attachGitLabChildToParent(ctx context.Context, repo, hostname, projectPath, parentIID string, child gitlabWorkItem, childURL string) error {
+	parent, err := runGlabGraphQLContext[gitlabParentIssueResponse](ctx, repo, hostname, gitlabParentIssueQuery, map[string]string{
 		"projectPath": projectPath,
 		"parentIid":   parentIID,
 	})
@@ -108,7 +108,7 @@ func attachGitLabChildToParent(repo, hostname, projectPath, parentIID string, ch
 	if parentID == "" {
 		return gitlabCreatedChildError(childURL, fmt.Errorf("gitlab parent issue lookup did not return work item id"))
 	}
-	attach, err := runGlabGraphQL[gitlabHierarchyAddResponse](repo, hostname, gitlabHierarchyAddQuery, map[string]string{
+	attach, err := runGlabGraphQLContext[gitlabHierarchyAddResponse](ctx, repo, hostname, gitlabHierarchyAddQuery, map[string]string{
 		"parentId": parentID,
 		"childId":  child.ID,
 	})
@@ -118,7 +118,7 @@ func attachGitLabChildToParent(repo, hostname, projectPath, parentIID string, ch
 	if len(attach.Data.WorkItemHierarchyAddChildrenItems.Errors) > 0 {
 		return gitlabCreatedChildError(childURL, fmt.Errorf("gitlab hierarchy attach failed: %s", strings.Join(attach.Data.WorkItemHierarchyAddChildrenItems.Errors, ", ")))
 	}
-	children, err := runGlabGraphQL[gitlabHierarchyChildrenResponse](repo, hostname, gitlabHierarchyChildrenQuery, map[string]string{
+	children, err := runGlabGraphQLContext[gitlabHierarchyChildrenResponse](ctx, repo, hostname, gitlabHierarchyChildrenQuery, map[string]string{
 		"parentId": parentID,
 	})
 	if err != nil {
@@ -131,8 +131,8 @@ func attachGitLabChildToParent(repo, hostname, projectPath, parentIID string, ch
 }
 
 // verifyGitLabCreatedChild는 생성된 자식 work item을 다시 읽어 라벨·담당자가 요청과 일치하는지 확인한다.
-func verifyGitLabCreatedChild(req port.IssueProviderCreateChildRequest, hostname string, child gitlabWorkItem, childURL string) (port.IssueProviderCreateChildResult, error) {
-	verify, err := runGlabGraphQL[gitlabChildVerifyResponse](req.Repo, hostname, gitlabChildVerifyQuery, map[string]string{
+func verifyGitLabCreatedChild(ctx context.Context, req port.IssueProviderCreateChildRequest, hostname string, child gitlabWorkItem, childURL string) (port.IssueProviderCreateChildResult, error) {
+	verify, err := runGlabGraphQLContext[gitlabChildVerifyResponse](ctx, req.Repo, hostname, gitlabChildVerifyQuery, map[string]string{
 		"childId":     child.ID,
 		"childVerify": "true",
 	})
@@ -170,15 +170,15 @@ func gitlabAssigneeUsernamesFromRequest(assignees []string) []string {
 	return usernames
 }
 
-func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (Provider) CloseChild(ctx context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	hostname, projectPath, parentIID, childIID, err := parseGitLabCloseChildTarget(req)
 	if err != nil {
 		return port.IssueProviderCloseChildResult{OK: false, Provider: "gitlab"}, err
 	}
 	if !req.Confirm {
-		return previewCloseGitLabChild(req, hostname, projectPath, parentIID, childIID), nil
+		return previewCloseGitLabChild(ctx, req, hostname, projectPath, parentIID, childIID), nil
 	}
-	return closeConfirmedGitLabChild(req, hostname, projectPath, parentIID, childIID)
+	return closeConfirmedGitLabChild(ctx, req, hostname, projectPath, parentIID, childIID)
 }
 
 // parseGitLabCloseChildTarget는 부모와 자식 URL을 파싱하고 같은 프로젝트인지 확인한다.
@@ -197,8 +197,8 @@ func parseGitLabCloseChildTarget(req port.IssueProviderCloseChildRequest) (hostn
 	return hostname, projectPath, parentIID, childIID, nil
 }
 
-func closeConfirmedGitLabChild(req port.IssueProviderCloseChildRequest, hostname, projectPath, parentIID, childIID string) (port.IssueProviderCloseChildResult, error) {
-	parent, err := runGlabGraphQL[gitlabParentIssueResponse](req.Repo, hostname, gitlabParentIssueQuery, map[string]string{
+func closeConfirmedGitLabChild(ctx context.Context, req port.IssueProviderCloseChildRequest, hostname, projectPath, parentIID, childIID string) (port.IssueProviderCloseChildResult, error) {
+	parent, err := runGlabGraphQLContext[gitlabParentIssueResponse](ctx, req.Repo, hostname, gitlabParentIssueQuery, map[string]string{
 		"projectPath": projectPath,
 		"parentIid":   parentIID,
 	})
@@ -209,7 +209,7 @@ func closeConfirmedGitLabChild(req port.IssueProviderCloseChildRequest, hostname
 	if parentID == "" {
 		return port.IssueProviderCloseChildResult{OK: false, Provider: "gitlab"}, fmt.Errorf("gitlab parent issue lookup did not return work item id")
 	}
-	children, err := runGlabGraphQL[gitlabHierarchyChildrenResponse](req.Repo, hostname, gitlabHierarchyChildrenQuery, map[string]string{
+	children, err := runGlabGraphQLContext[gitlabHierarchyChildrenResponse](ctx, req.Repo, hostname, gitlabHierarchyChildrenQuery, map[string]string{
 		"parentId": parentID,
 	})
 	if err != nil {
@@ -221,11 +221,11 @@ func closeConfirmedGitLabChild(req port.IssueProviderCloseChildRequest, hostname
 	}
 	alreadyClosed := strings.EqualFold(child.State, "CLOSED")
 	if !alreadyClosed {
-		if err := closeGitLabChildWorkItem(req.Repo, hostname, child.ID); err != nil {
+		if err := closeGitLabChildWorkItem(ctx, req.Repo, hostname, child.ID); err != nil {
 			return port.IssueProviderCloseChildResult{OK: false, Provider: "gitlab"}, err
 		}
 	}
-	verify, err := runGlabGraphQL[gitlabChildCloseVerifyResponse](req.Repo, hostname, gitlabChildCloseVerifyQuery, map[string]string{
+	verify, err := runGlabGraphQLContext[gitlabChildCloseVerifyResponse](ctx, req.Repo, hostname, gitlabChildCloseVerifyQuery, map[string]string{
 		"childId":          child.ID,
 		"childCloseVerify": "true",
 	})
@@ -248,7 +248,7 @@ func closeConfirmedGitLabChild(req port.IssueProviderCloseChildRequest, hostname
 }
 
 // previewCloseGitLabChild는 close를 실행하지 않고 dry-run 미리보기를 만든다.
-func previewCloseGitLabChild(req port.IssueProviderCloseChildRequest, hostname, projectPath, parentIID, childIID string) port.IssueProviderCloseChildResult {
+func previewCloseGitLabChild(ctx context.Context, req port.IssueProviderCloseChildRequest, hostname, projectPath, parentIID, childIID string) port.IssueProviderCloseChildResult {
 	preview := fmt.Sprintf("[dry-run] would execute: glab api graphql --hostname %s parentIid=%s children verify work_items/%s; workItemUpdate stateEvent: CLOSE; childCloseVerify",
 		hostname, parentIID, childIID)
 	result := port.IssueProviderCloseChildResult{OK: true, Provider: "gitlab", ChildURL: strings.TrimSpace(req.ChildURL), Preview: preview}
@@ -256,7 +256,7 @@ func previewCloseGitLabChild(req port.IssueProviderCloseChildRequest, hostname, 
 	// 관측한다. cleanup close-children이 부모 머지 증거 없이 정리해도
 	// 되는지 판정하는 근거다(#129). 읽기 전용이고 best-effort이므로 glab
 	// 부재나 조회 실패는 상태 미상으로 남기고 성공을 돌려준다.
-	if child, ok := observeGitLabChild(req.Repo, hostname, projectPath, parentIID, childIID); ok {
+	if child, ok := observeGitLabChild(ctx, req.Repo, hostname, projectPath, parentIID, childIID); ok {
 		result.HierarchyVerified = true
 		result.State = child.State
 		result.AlreadyClosed = strings.EqualFold(child.State, "CLOSED")
@@ -266,8 +266,8 @@ func previewCloseGitLabChild(req port.IssueProviderCloseChildRequest, hostname, 
 }
 
 // closeGitLabChildWorkItem는 workItemUpdate로 자식 work item을 닫고 응답 오류를 에러로 돌려준다.
-func closeGitLabChildWorkItem(repo, hostname, childID string) error {
-	closeResp, err := runGlabGraphQL[gitlabWorkItemUpdateResponse](repo, hostname, gitlabWorkItemCloseMutation, map[string]string{
+func closeGitLabChildWorkItem(ctx context.Context, repo, hostname, childID string) error {
+	closeResp, err := runGlabGraphQLContext[gitlabWorkItemUpdateResponse](ctx, repo, hostname, gitlabWorkItemCloseMutation, map[string]string{
 		"childId": childID,
 	})
 	if err != nil {
@@ -430,7 +430,7 @@ func runGlabJSONContext(ctx context.Context, args []string, repo string) (port.I
 	}
 	if !invoked {
 		cause := err
-		if strings.Contains(err.Error(), "executable file not found") {
+		if errors.Is(err, exec.ErrNotFound) {
 			cause = fmt.Errorf("glab CLI is not installed; install it from https://gitlab.com/gitlab-org/cli")
 		}
 		return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: cause}
@@ -491,8 +491,8 @@ func gitLabCreatedIID(raw string) string {
 	return remoteparse.SplitGitLabMRPath(parsed.EscapedPath()).IID
 }
 
-func resolveGitLabTaskTypeID(repo, hostname, projectPath string) (string, error) {
-	result, err := runGlabGraphQL[gitlabTaskTypeResponse](repo, hostname, gitlabTaskTypeQuery, map[string]string{
+func resolveGitLabTaskTypeID(ctx context.Context, repo, hostname, projectPath string) (string, error) {
+	result, err := runGlabGraphQLContext[gitlabTaskTypeResponse](ctx, repo, hostname, gitlabTaskTypeQuery, map[string]string{
 		"namespacePath": projectPath,
 	})
 	if err != nil {
@@ -506,14 +506,14 @@ func resolveGitLabTaskTypeID(repo, hostname, projectPath string) (string, error)
 	return "", fmt.Errorf("gitlab Task work item type is not available for namespace %s", projectPath)
 }
 
-func resolveGitLabLabelIDs(repo, hostname, projectPath string, labels []string) ([]string, error) {
+func resolveGitLabLabelIDs(ctx context.Context, repo, hostname, projectPath string, labels []string) ([]string, error) {
 	ids := make([]string, 0, len(labels))
 	for _, label := range labels {
 		label = strings.TrimSpace(label)
 		if label == "" {
 			continue
 		}
-		result, err := runGlabGraphQL[gitlabLabelLookupResponse](repo, hostname, gitlabLabelLookupQuery, map[string]string{
+		result, err := runGlabGraphQLContext[gitlabLabelLookupResponse](ctx, repo, hostname, gitlabLabelLookupQuery, map[string]string{
 			"projectPath": projectPath,
 			"title":       label,
 		})
@@ -535,14 +535,14 @@ func resolveGitLabLabelIDs(repo, hostname, projectPath string, labels []string) 
 	return ids, nil
 }
 
-func resolveGitLabAssigneeIDs(repo, hostname string, assignees []string) ([]string, error) {
+func resolveGitLabAssigneeIDs(ctx context.Context, repo, hostname string, assignees []string) ([]string, error) {
 	ids := make([]string, 0, len(assignees))
 	for _, assignee := range assignees {
 		assignee = strings.TrimPrefix(strings.TrimSpace(assignee), "@")
 		if assignee == "" {
 			continue
 		}
-		result, err := runGlabGraphQL[gitlabUserLookupResponse](repo, hostname, gitlabUserLookupQuery, map[string]string{
+		result, err := runGlabGraphQLContext[gitlabUserLookupResponse](ctx, repo, hostname, gitlabUserLookupQuery, map[string]string{
 			"username": assignee,
 		})
 		if err != nil {
@@ -581,10 +581,6 @@ func graphqlStringList(values []string) string {
 		}
 	}
 	return "[" + strings.Join(quoted, ", ") + "]"
-}
-
-func runGlabGraphQL[T any](repo, hostname, query string, fields map[string]string) (T, error) {
-	return runGlabGraphQLContext[T](context.Background(), repo, hostname, query, fields)
 }
 
 func runGlabGraphQLContext[T any](ctx context.Context, repo, hostname, query string, fields map[string]string) (T, error) {
@@ -701,8 +697,8 @@ func gitlabChildrenContain(widgets []gitlabWorkItemWidget, id, iid string) bool 
 // observeGitLabChild는 부모 work item 계층에서 자식의 현재 상태를 읽는다.
 // 확인된 계층 소속일 때만 true다. 조회 실패는 오류가 아니라 미관측이다 —
 // preview에서만 쓰이며 호출자가 미상을 통과 근거로 인정하지 않는다.
-func observeGitLabChild(repo, hostname, projectPath, parentIID, childIID string) (gitlabWorkItem, bool) {
-	parent, err := runGlabGraphQL[gitlabParentIssueResponse](repo, hostname, gitlabParentIssueQuery, map[string]string{
+func observeGitLabChild(ctx context.Context, repo, hostname, projectPath, parentIID, childIID string) (gitlabWorkItem, bool) {
+	parent, err := runGlabGraphQLContext[gitlabParentIssueResponse](ctx, repo, hostname, gitlabParentIssueQuery, map[string]string{
 		"projectPath": projectPath,
 		"parentIid":   parentIID,
 	})
@@ -713,7 +709,7 @@ func observeGitLabChild(repo, hostname, projectPath, parentIID, childIID string)
 	if parentID == "" {
 		return gitlabWorkItem{}, false
 	}
-	children, err := runGlabGraphQL[gitlabHierarchyChildrenResponse](repo, hostname, gitlabHierarchyChildrenQuery, map[string]string{
+	children, err := runGlabGraphQLContext[gitlabHierarchyChildrenResponse](ctx, repo, hostname, gitlabHierarchyChildrenQuery, map[string]string{
 		"parentId": parentID,
 	})
 	if err != nil {

@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -78,9 +79,9 @@ func uniqueMCPGatewayPorts(endpoints []mcpGatewayEndpoint) []int {
 	return ports
 }
 
-func ProbeGatewayHTTP(target string) error {
+func ProbeGatewayHTTP(ctx context.Context, target string) error {
 	body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"issueops-doctor","version":"0"}}}`
-	req, err := http.NewRequest(http.MethodPost, target, strings.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, strings.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -107,20 +108,20 @@ type GatewayFDResult struct {
 // calls in total, one listener scan and one FD listing over every listener pid,
 // instead of two calls per port. The first listener pid wins for a port with
 // several listeners.
-func CountGatewayFDsViaLsof(ports []int) map[int]GatewayFDResult {
-	return countGatewayFDsBatch(ports, runLsof)
+func CountGatewayFDsViaLsof(ctx context.Context, ports []int) map[int]GatewayFDResult {
+	return countGatewayFDsBatch(ctx, ports, runLsof)
 }
 
-func runLsof(args ...string) ([]byte, error) {
-	return exec.Command("lsof", args...).Output()
+func runLsof(ctx context.Context, args ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, "lsof", args...).Output()
 }
 
-func countGatewayFDsBatch(ports []int, run func(args ...string) ([]byte, error)) map[int]GatewayFDResult {
+func countGatewayFDsBatch(ctx context.Context, ports []int, run func(ctx context.Context, args ...string) ([]byte, error)) map[int]GatewayFDResult {
 	results := make(map[int]GatewayFDResult, len(ports))
 	if len(ports) == 0 {
 		return results
 	}
-	listenOut, err := run("-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn")
+	listenOut, err := run(ctx, "-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn")
 	if err != nil && len(listenOut) == 0 {
 		for _, port := range ports {
 			results[port] = GatewayFDResult{Err: fmt.Errorf("listener pid lookup failed: %w", err)}
@@ -132,7 +133,7 @@ func countGatewayFDsBatch(ports []int, run func(args ...string) ([]byte, error))
 	if len(pids) == 0 {
 		return results
 	}
-	fdOut, err := run("-p", strings.Join(pids, ","), "-Fpf")
+	fdOut, err := run(ctx, "-p", strings.Join(pids, ","), "-Fpf")
 	if err != nil && len(fdOut) == 0 {
 		for port, pid := range pidByPort {
 			results[port] = GatewayFDResult{Err: fmt.Errorf("fd listing failed for pid %d: %w", pid, err)}

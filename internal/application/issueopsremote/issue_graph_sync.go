@@ -7,7 +7,7 @@ import (
 )
 
 type IssueGraphPoster interface {
-	Post(provider, issueURL, body string) (string, error)
+	Post(ctx context.Context, provider, issueURL, body string) (string, error)
 }
 
 type IssueGraphSyncService struct {
@@ -34,7 +34,7 @@ func (s *IssueGraphSyncService) Sync(ctx context.Context, id string, confirm boo
 	if plan.Noop {
 		return map[string]any{"ok": true, "synced": false, "message": plan.Message}, nil
 	}
-	url, err := s.poster.Post(plan.Provider, plan.URL, plan.Body)
+	url, err := s.poster.Post(ctx, plan.Provider, plan.URL, plan.Body)
 	if err != nil {
 		return nil, err
 	}

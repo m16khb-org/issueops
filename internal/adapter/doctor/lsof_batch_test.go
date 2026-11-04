@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"errors"
 	"net"
 	"os/exec"
@@ -61,7 +62,7 @@ func TestParseLsofFDCountsCountsFilesPerPidAndOmitsUnlistedPids(t *testing.T) {
 
 func TestCountGatewayFDsBatchCallsLsofTwiceForAnyNumberOfPorts(t *testing.T) {
 	var calls [][]string
-	run := func(args ...string) ([]byte, error) {
+	run := func(_ context.Context, args ...string) ([]byte, error) {
 		calls = append(calls, args)
 		if slices.Contains(args, "-sTCP:LISTEN") {
 			return []byte(lsofListenersFixture), nil
@@ -70,7 +71,7 @@ func TestCountGatewayFDsBatchCallsLsofTwiceForAnyNumberOfPorts(t *testing.T) {
 		// which lsof also reports with exit status 1 next to partial output.
 		return []byte("p912\nf1\nf2\nf3\n"), errors.New("exit status 1")
 	}
-	got := countGatewayFDsBatch([]int{5000, 7000, 7335, 9999}, run)
+	got := countGatewayFDsBatch(t.Context(), []int{5000, 7000, 7335, 9999}, run)
 	if len(calls) != 2 {
 		t.Fatalf("lsof calls = %v, want one listener scan and one fd listing", calls)
 	}
@@ -89,26 +90,26 @@ func TestCountGatewayFDsBatchCallsLsofTwiceForAnyNumberOfPorts(t *testing.T) {
 }
 
 func TestCountGatewayFDsBatchDegradesEveryPortWhenLsofFails(t *testing.T) {
-	failing := func(...string) ([]byte, error) { return nil, errors.New("lsof: not found") }
-	got := countGatewayFDsBatch([]int{7001, 7002}, failing)
+	failing := func(context.Context, ...string) ([]byte, error) { return nil, errors.New("lsof: not found") }
+	got := countGatewayFDsBatch(t.Context(), []int{7001, 7002}, failing)
 	for _, port := range []int{7001, 7002} {
 		if got[port].Err == nil || got[port].Count != 0 || !strings.Contains(got[port].Err.Error(), "listener pid lookup failed") {
 			t.Fatalf("port %d = %+v, want unavailable", port, got[port])
 		}
 	}
-	run := func(args ...string) ([]byte, error) {
+	run := func(_ context.Context, args ...string) ([]byte, error) {
 		if slices.Contains(args, "-sTCP:LISTEN") {
 			return []byte(lsofListenersFixture), nil
 		}
 		return nil, errors.New("exit status 1")
 	}
-	got = countGatewayFDsBatch([]int{7335, 5000}, run)
+	got = countGatewayFDsBatch(t.Context(), []int{7335, 5000}, run)
 	for _, port := range []int{7335, 5000} {
 		if got[port].Err == nil || !strings.Contains(got[port].Err.Error(), "fd listing failed") {
 			t.Fatalf("port %d = %+v, want fd listing failure", port, got[port])
 		}
 	}
-	if got := countGatewayFDsBatch(nil, failing); len(got) != 0 {
+	if got := countGatewayFDsBatch(t.Context(), nil, failing); len(got) != 0 {
 		t.Fatalf("no ports must not call lsof: %v", got)
 	}
 }
@@ -123,7 +124,7 @@ func TestCountGatewayFDsViaLsofSeesThisProcessListener(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = listener.Close() })
 	port := listener.Addr().(*net.TCPAddr).Port
-	got := CountGatewayFDsViaLsof([]int{port})[port]
+	got := CountGatewayFDsViaLsof(t.Context(), []int{port})[port]
 	if got.Err != nil || got.Count < 3 {
 		t.Fatalf("own listener = %+v, want a listener with at least stdio and the socket", got)
 	}

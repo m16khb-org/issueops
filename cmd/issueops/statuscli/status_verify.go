@@ -1,6 +1,7 @@
 package statuscli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -21,7 +22,7 @@ func (command Command) Run(args []string) error {
 	if positional != "" {
 		*repo = positional
 	}
-	status := command.Service.Run(*repo)
+	status := command.Service.Run(context.Background(), *repo)
 	if *jsonOut {
 		return printJSON(status)
 	}

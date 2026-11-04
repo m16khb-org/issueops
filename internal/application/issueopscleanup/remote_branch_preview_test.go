@@ -63,8 +63,8 @@ func newPreviewBranchEnv() *previewBranchEnv {
 	return &previewBranchEnv{origin: "git@github.com:acme/repo.git", remoteOID: "tip"}
 }
 
-func mergedReplacement(body string) func(string) (domain.ArtifactObservation, error) {
-	return func(url string) (domain.ArtifactObservation, error) {
+func mergedReplacement(body string) func(context.Context, string) (domain.ArtifactObservation, error) {
+	return func(_ context.Context, url string) (domain.ArtifactObservation, error) {
 		return domain.ArtifactObservation{URL: url, Provider: "github", Merged: true, State: "MERGED", Body: body}, nil
 	}
 }
@@ -88,15 +88,15 @@ func TestRemoteBranchPreviewerRejectsUnprovableSupersede(t *testing.T) {
 	cases := []struct {
 		name         string
 		supersededBy string
-		observe      func(string) (domain.ArtifactObservation, error)
+		observe      func(context.Context, string) (domain.ArtifactObservation, error)
 		wantErr      string
 	}{
 		{name: "none provided", observe: mergedReplacement("Supersedes #1"), wantErr: "no superseding artifact was provided"},
 		{name: "observation not configured", supersededBy: replacementPR, wantErr: "provider observation is not configured"},
-		{name: "observation fails", supersededBy: replacementPR, observe: func(string) (domain.ArtifactObservation, error) {
+		{name: "observation fails", supersededBy: replacementPR, observe: func(context.Context, string) (domain.ArtifactObservation, error) {
 			return domain.ArtifactObservation{}, errors.New("timeout")
 		}, wantErr: "could not be observed: timeout"},
-		{name: "replacement not merged", supersededBy: replacementPR, observe: func(url string) (domain.ArtifactObservation, error) {
+		{name: "replacement not merged", supersededBy: replacementPR, observe: func(_ context.Context, url string) (domain.ArtifactObservation, error) {
 			return domain.ArtifactObservation{URL: url, State: "OPEN", Body: "Supersedes #1"}, nil
 		}, wantErr: "is not merged"},
 		{name: "replacement does not declare supersede", supersededBy: replacementPR, observe: mergedReplacement("unrelated change"), wantErr: "does not declare that it supersedes"},

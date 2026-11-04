@@ -85,7 +85,7 @@ func (Provider) ReplaceArtifactBody(ctx context.Context, req port.IssueProviderR
 
 // VerifyChildHierarchy asks GitHub whether the child issue is attached to the
 // parent as a sub-issue, using the same listing CreateChild verifies against.
-func (Provider) VerifyChildHierarchy(_ context.Context, req port.IssueProviderChildHierarchyRequest) (port.IssueProviderChildHierarchyResult, error) {
+func (Provider) VerifyChildHierarchy(ctx context.Context, req port.IssueProviderChildHierarchyRequest) (port.IssueProviderChildHierarchyResult, error) {
 	owner, repoName, parentNumber, err := parseGitHubIssueURL(req.ParentIssueURL)
 	if err != nil {
 		return port.IssueProviderChildHierarchyResult{Provider: "github"}, err
@@ -94,7 +94,7 @@ func (Provider) VerifyChildHierarchy(_ context.Context, req port.IssueProviderCh
 	if err != nil {
 		return port.IssueProviderChildHierarchyResult{Provider: "github"}, fmt.Errorf("child_url must be a GitHub issue URL")
 	}
-	children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues"}, "sub-issue verification")
+	children, err := runGhAPIJSON[[]githubIssue](ctx, req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues"}, "sub-issue verification")
 	if err != nil {
 		return port.IssueProviderChildHierarchyResult{Provider: "github"}, err
 	}

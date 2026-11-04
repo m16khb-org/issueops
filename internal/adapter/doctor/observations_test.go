@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -132,10 +133,10 @@ func TestObserveBinaryDriftTracksNewestGoSourceAgainstBinary(t *testing.T) {
 
 func TestGatewaysObserveProbesLoopbackEndpointsAndCountsFDsPerUniquePort(t *testing.T) {
 	home := t.TempDir()
-	if got := (Gateways{}).Observe(""); got.Home != "" || got.ConfigError != nil || len(got.Endpoints) != 0 {
+	if got := (Gateways{}).Observe(t.Context(), ""); got.Home != "" || got.ConfigError != nil || len(got.Endpoints) != 0 {
 		t.Fatalf("empty home observation = %+v", got)
 	}
-	if got := (Gateways{}).Observe(home); got.ConfigError != nil || len(got.Endpoints) != 0 || len(got.FDs) != 0 {
+	if got := (Gateways{}).Observe(t.Context(), home); got.ConfigError != nil || len(got.Endpoints) != 0 || len(got.FDs) != 0 {
 		t.Fatalf("home without config = %+v", got)
 	}
 	writeFileForTest(t, filepath.Join(home, ".claude.json"), `{"mcpServers":{
@@ -149,7 +150,7 @@ func TestGatewaysObserveProbesLoopbackEndpointsAndCountsFDsPerUniquePort(t *test
 	var probed []string
 	var counted []int
 	gateways := Gateways{
-		Probe: func(target string) error {
+		Probe: func(_ context.Context, target string) error {
 			mu.Lock()
 			probed = append(probed, target)
 			mu.Unlock()
@@ -158,14 +159,14 @@ func TestGatewaysObserveProbesLoopbackEndpointsAndCountsFDsPerUniquePort(t *test
 			}
 			return nil
 		},
-		CountFDs: func(ports []int) map[int]GatewayFDResult {
+		CountFDs: func(_ context.Context, ports []int) map[int]GatewayFDResult {
 			mu.Lock()
 			counted = append(counted, ports...)
 			mu.Unlock()
 			return map[int]GatewayFDResult{7001: {Count: 12}, 7002: {Err: errors.New("no lsof")}}
 		},
 	}
-	got := gateways.Observe(home)
+	got := gateways.Observe(t.Context(), home)
 	if len(got.Endpoints) != 3 || got.Endpoints[0].Name != "a" || got.Endpoints[1].Name != "b" || got.Endpoints[2].Name != "c" {
 		t.Fatalf("endpoints = %+v, want loopback a,b,c in name order", got.Endpoints)
 	}
@@ -195,7 +196,7 @@ func TestGatewaysObserveProbesEndpointsConcurrentlyInEndpointOrder(t *testing.T)
 	var inFlight sync.WaitGroup
 	inFlight.Add(3)
 	gateways := Gateways{
-		Probe: func(target string) error {
+		Probe: func(_ context.Context, target string) error {
 			inFlight.Done()
 			done := make(chan struct{})
 			go func() { inFlight.Wait(); close(done) }()
@@ -209,9 +210,9 @@ func TestGatewaysObserveProbesEndpointsConcurrentlyInEndpointOrder(t *testing.T)
 			}
 			return nil
 		},
-		CountFDs: func(ports []int) map[int]GatewayFDResult { return map[int]GatewayFDResult{} },
+		CountFDs: func(_ context.Context, ports []int) map[int]GatewayFDResult { return map[int]GatewayFDResult{} },
 	}
-	got := gateways.Observe(home)
+	got := gateways.Observe(t.Context(), home)
 	if len(got.Endpoints) != 3 {
 		t.Fatalf("endpoints = %+v", got.Endpoints)
 	}
@@ -233,13 +234,13 @@ func TestGatewaysObserveCountsFDsOnceForAllPorts(t *testing.T) {
 		"c":{"type":"http","url":"http://127.0.0.1:7003/mcp"}}}`)
 	var batches [][]int
 	gateways := Gateways{
-		Probe: func(string) error { return nil },
-		CountFDs: func(ports []int) map[int]GatewayFDResult {
+		Probe: func(context.Context, string) error { return nil },
+		CountFDs: func(_ context.Context, ports []int) map[int]GatewayFDResult {
 			batches = append(batches, slices.Clone(ports))
 			return map[int]GatewayFDResult{7001: {Count: 5}, 7002: {Err: errors.New("no listener")}}
 		},
 	}
-	got := gateways.Observe(home)
+	got := gateways.Observe(t.Context(), home)
 	if len(batches) != 1 || !slices.Equal(batches[0], []int{7001, 7002, 7003}) {
 		t.Fatalf("batch calls = %v, want one call with every unique port in order", batches)
 	}
@@ -253,10 +254,13 @@ func TestGatewaysObserveReportsUnparsableConfigWithoutProbing(t *testing.T) {
 	home := t.TempDir()
 	writeFileForTest(t, filepath.Join(home, ".claude.json"), "{not json")
 	gateways := Gateways{
-		Probe:    func(string) error { t.Error("probed despite a broken config"); return nil },
-		CountFDs: func([]int) map[int]GatewayFDResult { t.Error("counted despite a broken config"); return nil },
+		Probe: func(context.Context, string) error { t.Error("probed despite a broken config"); return nil },
+		CountFDs: func(context.Context, []int) map[int]GatewayFDResult {
+			t.Error("counted despite a broken config")
+			return nil
+		},
 	}
-	got := gateways.Observe(home)
+	got := gateways.Observe(t.Context(), home)
 	if got.ConfigError == nil || len(got.Endpoints) != 0 {
 		t.Fatalf("observation = %+v", got)
 	}
@@ -312,7 +316,7 @@ func TestProbeGatewayHTTPAcceptsAnyHTTPStatusButNotTransportFailure(t *testing.T
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 	defer server.Close()
-	if err := ProbeGatewayHTTP(server.URL); err != nil {
+	if err := ProbeGatewayHTTP(t.Context(), server.URL); err != nil {
 		t.Fatalf("an HTTP 401 proves the listener answers: %v", err)
 	}
 	if gotMethod != http.MethodPost || !strings.Contains(gotAccept, "text/event-stream") || !strings.Contains(gotBody, `"method":"initialize"`) {
@@ -320,10 +324,10 @@ func TestProbeGatewayHTTPAcceptsAnyHTTPStatusButNotTransportFailure(t *testing.T
 	}
 	address := server.Listener.Addr().String()
 	server.Close()
-	if err := ProbeGatewayHTTP("http://" + address); err == nil {
+	if err := ProbeGatewayHTTP(t.Context(), "http://"+address); err == nil {
 		t.Fatal("refused connection reported healthy")
 	}
-	if err := ProbeGatewayHTTP("http://bad host/"); err == nil {
+	if err := ProbeGatewayHTTP(t.Context(), "http://bad host/"); err == nil {
 		t.Fatal("malformed URL reported healthy")
 	}
 }

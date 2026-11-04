@@ -24,7 +24,7 @@ type ChildCreateCommand struct {
 }
 
 type ChildProvider interface {
-	CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
+	CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
 }
 
 type ChildCreator struct {
@@ -75,7 +75,7 @@ func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observ
 			return result, nil
 		}
 	}
-	result.IssueProviderCreateChildResult, err = plan.provider.CreateChild(port.IssueProviderCreateChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, Title: cmd.Title, Body: body, Labels: plan.labels, Assignees: plan.assignees, Confirm: cmd.Confirm})
+	result.IssueProviderCreateChildResult, err = plan.provider.CreateChild(ctx, port.IssueProviderCreateChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, Title: cmd.Title, Body: body, Labels: plan.labels, Assignees: plan.assignees, Confirm: cmd.Confirm})
 	if err != nil {
 		if cmd.Confirm {
 			err = s.recordCreateChildFailure(ctx, record, operation, actor, result.ChildURL, err)

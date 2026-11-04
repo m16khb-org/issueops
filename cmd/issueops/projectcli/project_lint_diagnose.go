@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/jsonout"
 	app "issueops/internal/application/lintdiagnose"
 	lintdiagnosecontract "issueops/internal/contract/lintdiagnose"
 )
@@ -38,11 +39,16 @@ func runProjectLintDiagnose(service app.Service, args []string) error {
 
 	if result.Failed {
 		fmt.Fprintf(os.Stderr, "\n--- Host-Agent Diagnostic Prompt ---\n%s\n------------------------------------\n", result.Prompt)
-		// Exit with the original exit code
-		os.Exit(result.ExitCode)
-	} else {
-		fmt.Println("Command completed successfully. No failure detected.")
+		// The prompt is the whole report; Reported keeps the root command from
+		// adding an error line, and the root maps ExitCodeError to the exit status.
+		return jsonout.Reported(ExitCodeError{Code: result.ExitCode})
 	}
-
+	fmt.Println("Command completed successfully. No failure detected.")
 	return nil
 }
+
+// ExitCodeError reports that the diagnosed command failed with exit status Code
+// and that the process must end with the same status.
+type ExitCodeError struct{ Code int }
+
+func (e ExitCodeError) Error() string { return fmt.Sprintf("command exited %d", e.Code) }
