@@ -30,8 +30,11 @@ type dddArtifactEntry struct {
 	Task  string `json:"task"`
 }
 
+// dddInventory is the collected responsibility view. The committed ledger holds
+// only Artifacts and Policies: source owners and symbols derive from paths and
+// declarations on every run, so recording them added churn without review value.
 type dddInventory struct {
-	Sources   []dddSource        `json:"sources"`
+	Sources   []dddSource        `json:"sources,omitempty"`
 	Artifacts []dddArtifactEntry `json:"artifacts"`
 	Policies  []dddPolicy        `json:"policies"`
 }
@@ -68,19 +71,21 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 	if err := json.Unmarshal(data, &want); err != nil {
 		t.Fatal(err)
 	}
-	got.Policies = want.Policies
+	if len(want.Sources) != 0 && !*updateDDDInventory {
+		t.Fatal("responsibility inventory records derived sources; regenerate it with -update-ddd-inventory")
+	}
 	if *updateDDDInventory {
-		data, err := json.MarshalIndent(got, "", "  ")
+		data, err := json.MarshalIndent(dddInventory{Artifacts: got.Artifacts, Policies: want.Policies}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		want = got
+		want.Artifacts = got.Artifacts
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatal("production file or symbol has no recorded responsibility; review the change and update the inventory")
+	if !reflect.DeepEqual(got.Artifacts, want.Artifacts) {
+		t.Fatal("non-Go artifact ownership changed; review the change and update the inventory")
 	}
 	if len(want.Policies) == 0 {
 		t.Fatal("business policy ownership ledger is empty")
@@ -90,8 +95,11 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 			t.Errorf("unassigned non-Go artifact: %s", artifact.Path)
 		}
 	}
-	byPath := make(map[string]dddSource, len(want.Sources))
-	for _, source := range want.Sources {
+	byPath := make(map[string]dddSource, len(got.Sources))
+	for _, source := range got.Sources {
+		if source.Owner == "inbound" && !strings.HasPrefix(source.Path, "cmd/") && !strings.HasPrefix(source.Path, "internal/testsupport/") {
+			t.Errorf("production source %s is outside every responsibility layer; route it in dddOwner", source.Path)
+		}
 		byPath[source.Path] = source
 	}
 	testNames := collectDDDTestNames(t, root)
@@ -134,7 +142,7 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 				t.Errorf("%s migrated policy remains in %s", policy.ID, policy.SourcePath)
 			}
 			found := false
-			for _, source := range want.Sources {
+			for _, source := range got.Sources {
 				if strings.HasPrefix(source.Path, policy.Target+"/") && slicesContains(source.Symbols, policy.TargetSymbol) {
 					found = true
 					break
