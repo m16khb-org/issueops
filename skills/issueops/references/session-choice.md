@@ -37,6 +37,7 @@ herdr pane run --help
 # Herdr 앱
 command -v herdr-app hc
 herdr-app status
+herdr-app ls
 hc server status
 hc get "$HC_TERMINAL_ID" --json
 ```
@@ -50,8 +51,11 @@ Herdr 터미널은 실행 중인 서버가 있고 client/server endpoint가 호�
 별도 세션/socket 환경을 쓰면 모든 명령에 같은 대상을 유지한다.
 
 Herdr 앱은 `herdr-app status`가 `errors` 없이 열린 창을 보고하고, `hc server status`가 실행 중인
-core를 보고하고, `hc get`의 `labels."herdr.space"`로 이 세션이 그 창의 space에 표시됨을 확인하고,
-**현재 native host** 실행 파일이 있을 때 `new-session`을 선택한다. 인자 없는 `herdr-app`은 창을 열거나
+core를 보고하고, `hc get`의 `labels."herdr.space"` 값이 `herdr-app ls`의 `spaces[].id` 중 하나이고,
+**현재 native host** 실행 파일이 있을 때 `new-session`을 선택한다. `herdr-app ls`는 창의 spaces
+목록 전체이고, `herdr-app status`의 `space`는 사용자가 지금 보고 있는 space 하나다. 사용자가 다른
+space를 보고 있어도 이 세션의 space는 목록에 있으므로 `status`의 `space`와 비교하지 않는다.
+인자 없는 `herdr-app`은 창을 열거나
 앞으로 가져오므로 확인에 쓰지 않는다. `herdr worktree open`은 Herdr 터미널 서버만 대상으로 하므로
 Herdr 앱 창에 space를 만들지 않는다.
 
