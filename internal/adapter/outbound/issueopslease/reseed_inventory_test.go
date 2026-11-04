@@ -1,7 +1,6 @@
 package issueopslease
 
 import (
-	"crypto/sha256"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,56 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/outbound/osfile"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
-
-func TestReseedWriteFingerprintFileRejectsChangedUntrackedFile(t *testing.T) {
-	tests := []struct {
-		name   string
-		change func(t *testing.T, path string)
-	}{
-		{
-			name: "replaced",
-			change: func(t *testing.T, path string) {
-				replacement := path + ".replacement"
-				if err := os.WriteFile(replacement, []byte("same"), 0o600); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.Rename(replacement, path); err != nil {
-					t.Fatal(err)
-				}
-			},
-		},
-		{
-			name: "resized",
-			change: func(t *testing.T, path string) {
-				if err := os.WriteFile(path, []byte("different-size"), 0o600); err != nil {
-					t.Fatal(err)
-				}
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "untracked")
-			if err := os.WriteFile(path, []byte("same"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			entry, err := os.Lstat(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			identity, known := osfile.PathIdentity(path, entry)
-			test.change(t, path)
-
-			err = reseedWriteFingerprintFile(sha256.New(), path, entry, identity, known)
-			if err == nil || !strings.Contains(err.Error(), "untracked file changed while snapshotting") {
-				t.Fatalf("error = %v", err)
-			}
-		})
-	}
-}
 
 func TestReseedWorkspaceSnapshotStreamsLargeUntrackedFiles(t *testing.T) {
 	root := t.TempDir()

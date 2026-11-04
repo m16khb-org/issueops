@@ -146,10 +146,6 @@ func TestReseedGitOutputReportsFailureWithCommandAndStderr(t *testing.T) {
 	if _, err := reseedGitOutput(root, "rev-parse", "--verify", "refs/heads/does-not-exist"); err == nil || !strings.Contains(err.Error(), "git rev-parse --verify refs/heads/does-not-exist") {
 		t.Fatalf("failure err=%v", err)
 	}
-	code, _, stderr := reseedGitRaw(filepath.Join(root, "missing-dir"), "status")
-	if code == 0 || stderr == "" {
-		t.Fatalf("missing dir code=%d stderr=%q", code, stderr)
-	}
 }
 
 func guardReseedRecord(root string) leasecontract.Record {

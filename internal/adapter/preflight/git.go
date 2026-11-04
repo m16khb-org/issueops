@@ -1,12 +1,9 @@
 package preflight
 
 import (
-	"bytes"
-	"errors"
-	"os/exec"
 	"strings"
 
-	"issueops/internal/adapter/outbound/gitbin"
+	"issueops/internal/adapter/outbound/gitraw"
 )
 
 func GitCmd(dir string, args ...string) (int, string, string) {
@@ -17,19 +14,7 @@ func GitCmd(dir string, args ...string) (int, string, string) {
 // GitCmdRaw preserves stdout byte-for-byte for machine-delimited Git output
 // such as -z path lists. Human-facing callers should continue using GitCmd.
 func GitCmdRaw(dir string, args ...string) (int, string, string) {
-	cmd := exec.Command(gitbin.Path(), args...)
-	cmd.Dir = dir
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err == nil {
-		return 0, stdout.String(), stderr.String()
-	}
-	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-		return exitErr.ExitCode(), stdout.String(), stderr.String()
-	}
-	return 1, stdout.String(), err.Error()
+	return gitraw.Run(dir, args...)
 }
 
 func GitOut(dir string, args ...string) string {

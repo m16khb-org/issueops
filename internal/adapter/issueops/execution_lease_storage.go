@@ -4,18 +4,15 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 
 	"issueops/internal/adapter/outbound/gitexclude"
 	"issueops/internal/adapter/outbound/osfile"
+	"issueops/internal/adapter/outbound/workspacefingerprint"
 	"issueops/internal/contract/issueops"
 )
 
@@ -51,24 +48,14 @@ func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (str
 	if err != nil {
 		return "", err
 	}
-	tracked, staged, untracked, err := reader.workspaceDiffs(workspace.Root)
+	tracked, staged, untracked, err := workspacefingerprint.ReadDiffs(reader.GitCmdRaw, workspace.Root)
 	if err != nil {
 		return "", err
 	}
-	hash := sha256.New()
-	writeFingerprintPart(hash, workspace.Root)
-	writeFingerprintPart(hash, identity.commonDir)
-	writeFingerprintPart(hash, identity.branch)
-	writeFingerprintPart(hash, identity.head)
-	writeFingerprintBytes(hash, indexBytes)
-	writeFingerprintPart(hash, tracked)
-	writeFingerprintPart(hash, staged)
-	for _, relative := range untracked {
-		if err := writeUntrackedFingerprint(hash, workspace.Root, relative); err != nil {
-			return "", err
-		}
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return workspacefingerprint.Digest(workspacefingerprint.Inputs{
+		Root: workspace.Root, CommonDir: identity.commonDir, Branch: identity.branch, Head: identity.head,
+		Index: indexBytes, Tracked: tracked, Staged: staged, Untracked: untracked,
+	})
 }
 
 // workspaceIndexBytes는 Git index 파일 내용을 읽는다. index가 없으면 nil이다.
@@ -77,14 +64,7 @@ func (reader LeaseWorkspaceSnapshot) workspaceIndexBytes(root string) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
-	if !filepath.IsAbs(indexPath) {
-		indexPath = filepath.Join(root, indexPath)
-	}
-	indexBytes, err := os.ReadFile(indexPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	}
-	return indexBytes, nil
+	return workspacefingerprint.ReadIndex(root, indexPath)
 }
 
 type workspaceGitIdentity struct{ branch, head, commonDir string }
@@ -110,103 +90,12 @@ func (reader LeaseWorkspaceSnapshot) workspaceGitIdentity(workspace issueops.Wor
 	return workspaceGitIdentity{branch: branch, head: head, commonDir: commonDir}, nil
 }
 
-// workspaceDiffs는 tracked/staged diff와 정렬된 untracked 파일 목록을 읽는다.
-func (reader LeaseWorkspaceSnapshot) workspaceDiffs(root string) (tracked, staged string, untracked []string, err error) {
-	code, tracked, stderr := reader.GitCmdRaw(root, "diff", "--binary", "--no-ext-diff", "--")
-	if code != 0 {
-		return "", "", nil, fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))
-	}
-	code, staged, stderr = reader.GitCmdRaw(root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
-	if code != 0 {
-		return "", "", nil, fmt.Errorf("read staged diff: %s", strings.TrimSpace(stderr))
-	}
-	code, untrackedRaw, stderr := reader.GitCmdRaw(root, "ls-files", "--others", "--exclude-standard", "-z")
-	if code != 0 {
-		return "", "", nil, fmt.Errorf("list untracked files: %s", strings.TrimSpace(stderr))
-	}
-	untracked = strings.Split(strings.TrimSuffix(untrackedRaw, "\x00"), "\x00")
-	if len(untracked) == 1 && untracked[0] == "" {
-		untracked = nil
-	}
-	sort.Strings(untracked)
-	return tracked, staged, untracked, nil
-}
-
-// writeUntrackedFingerprint는 안전한 일반 파일 하나를 fingerprint에 반영한다.
-func writeUntrackedFingerprint(hash fingerprintWriter, root, relative string) error {
-	if filepath.IsAbs(relative) || strings.HasPrefix(filepath.Clean(relative), ".."+string(filepath.Separator)) {
-		return fmt.Errorf("unsafe untracked path %q", relative)
-	}
-	path := filepath.Join(root, filepath.FromSlash(relative))
-	entry, err := os.Lstat(path)
-	if err != nil || entry.Mode()&os.ModeSymlink != 0 || !entry.Mode().IsRegular() {
-		return fmt.Errorf("untracked path must be a regular file: %s", relative)
-	}
-	listed, listedKnown := osfile.PathIdentity(path, entry)
-	writeFingerprintPart(hash, relative)
-	writeFingerprintPart(hash, entry.Mode().String())
-	return writeFingerprintFile(hash, path, entry, listed, listedKnown)
-}
-
 func (reader LeaseWorkspaceSnapshot) gitOutput(root string, args ...string) (string, error) {
 	code, stdout, stderr := reader.GitCmd(root, args...)
 	if code != 0 {
 		return "", fmt.Errorf("git %s: %s", strings.Join(args, " "), stderr)
 	}
 	return strings.TrimSpace(stdout), nil
-}
-
-type fingerprintWriter interface {
-	Write([]byte) (int, error)
-}
-
-func writeFingerprintPart(hash fingerprintWriter, value string) {
-	writeFingerprintBytes(hash, []byte(value))
-}
-
-func writeFingerprintBytes(hash fingerprintWriter, value []byte) {
-	_, _ = hash.Write([]byte(strconv.Itoa(len(value))))
-	_, _ = hash.Write([]byte{0})
-	_, _ = hash.Write(value)
-	_, _ = hash.Write([]byte{0})
-}
-
-// listed is the identity of the entry when it was listed. Unix reads it from
-// entry; Windows os.FileInfo resolves file identity lazily by path, so only an
-// identity captured at listing time can tell a replaced file from the listed one.
-func writeFingerprintFile(hash fingerprintWriter, path string, entry os.FileInfo, listed osfile.Identity, listedKnown bool) (err error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if closeErr := file.Close(); err == nil {
-			err = closeErr
-		}
-	}()
-	opened, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	if !os.SameFile(entry, opened) || !opened.Mode().IsRegular() || opened.Size() != entry.Size() {
-		return fmt.Errorf("untracked file changed while snapshotting: %s", path)
-	}
-	if listedKnown {
-		if current, ok := osfile.FileIdentity(file, opened); !ok || current.Device != listed.Device || current.Inode != listed.Inode {
-			return fmt.Errorf("untracked file changed while snapshotting: %s", path)
-		}
-	}
-	_, _ = hash.Write([]byte(strconv.FormatInt(opened.Size(), 10)))
-	_, _ = hash.Write([]byte{0})
-	if _, err := io.CopyN(hash, file, opened.Size()); err != nil {
-		return err
-	}
-	var extra [1]byte
-	if n, err := file.Read(extra[:]); n != 0 || (err != nil && !errors.Is(err, io.EOF)) {
-		return fmt.Errorf("untracked file changed while snapshotting: %s", path)
-	}
-	_, _ = hash.Write([]byte{0})
-	return nil
 }
 
 func claimTokenPath(record issueops.IssueOpsRecord) string {
@@ -345,11 +234,7 @@ func secureMkdirStep(current string) error {
 // 결속해 봉인한다. 서로 다른 부재가 같은 값을 내면 다른 lifecycle의 증거를
 // 재사용할 수 있으므로 경로와 branch를 함께 넣는다.
 func workspaceAbsenceSnapshot(workspace issueops.Workspace) string {
-	hash := sha256.New()
-	writeFingerprintPart(hash, "workspace-absent")
-	writeFingerprintPart(hash, workspace.Root)
-	writeFingerprintPart(hash, workspace.Branch)
-	return hex.EncodeToString(hash.Sum(nil))
+	return workspacefingerprint.Absent(workspace.Root, workspace.Branch)
 }
 
 // workspaceRootAbsent는 canonical worktree가 사라졌는지 보고한다. symlink나

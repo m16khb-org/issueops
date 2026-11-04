@@ -1,24 +1,16 @@
 package issueopslease
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 
-	"issueops/internal/adapter/outbound/gitbin"
-	"issueops/internal/adapter/outbound/osfile"
+	"issueops/internal/adapter/outbound/gitraw"
+	"issueops/internal/adapter/outbound/workspacefingerprint"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -88,28 +80,14 @@ func reseedWorkspaceSnapshot(workspace leasecontract.Workspace) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	tracked, staged, err := reseedGitDiffs(workspace.Root)
+	tracked, staged, untracked, err := workspacefingerprint.ReadDiffs(gitraw.Run, workspace.Root)
 	if err != nil {
 		return "", err
 	}
-	untracked, err := reseedUntrackedFiles(workspace.Root)
-	if err != nil {
-		return "", err
-	}
-	hash := sha256.New()
-	reseedWriteFingerprintPart(hash, workspace.Root)
-	reseedWriteFingerprintPart(hash, commonDir)
-	reseedWriteFingerprintPart(hash, workspace.Branch)
-	reseedWriteFingerprintPart(hash, head)
-	reseedWriteFingerprintBytes(hash, indexBytes)
-	reseedWriteFingerprintPart(hash, tracked)
-	reseedWriteFingerprintPart(hash, staged)
-	for _, relative := range untracked {
-		if err := reseedWriteUntrackedFingerprint(hash, workspace.Root, relative); err != nil {
-			return "", err
-		}
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return workspacefingerprint.Digest(workspacefingerprint.Inputs{
+		Root: workspace.Root, CommonDir: commonDir, Branch: workspace.Branch, Head: head,
+		Index: indexBytes, Tracked: tracked, Staged: staged, Untracked: untracked,
+	})
 }
 
 // reseedRequireCanonicalWorktree는 작업공간 루트가 실제 디렉터리이고 Git top-level 및 현재 브랜치와 일치하는지 확인한다.
@@ -135,127 +113,13 @@ func reseedIndexBytes(root string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !filepath.IsAbs(indexPath) {
-		indexPath = filepath.Join(root, indexPath)
-	}
-	indexBytes, err := os.ReadFile(indexPath)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, err
-	}
-	return indexBytes, nil
-}
-
-// reseedGitDiffs는 추적 파일의 작업 트리 diff와 staged diff를 순서대로 읽는다.
-func reseedGitDiffs(root string) (tracked, staged string, err error) {
-	code, tracked, stderr := reseedGitRaw(root, "diff", "--binary", "--no-ext-diff", "--")
-	if code != 0 {
-		return "", "", fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))
-	}
-	code, staged, stderr = reseedGitRaw(root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
-	if code != 0 {
-		return "", "", fmt.Errorf("read staged diff: %s", strings.TrimSpace(stderr))
-	}
-	return tracked, staged, nil
-}
-
-// reseedUntrackedFiles는 추적되지 않은 파일의 상대 경로를 정렬해 돌려준다. 없으면 nil이다.
-func reseedUntrackedFiles(root string) ([]string, error) {
-	code, untrackedRaw, stderr := reseedGitRaw(root, "ls-files", "--others", "--exclude-standard", "-z")
-	if code != 0 {
-		return nil, fmt.Errorf("list untracked files: %s", strings.TrimSpace(stderr))
-	}
-	untracked := strings.Split(strings.TrimSuffix(untrackedRaw, "\x00"), "\x00")
-	if len(untracked) == 1 && untracked[0] == "" {
-		untracked = nil
-	}
-	sort.Strings(untracked)
-	return untracked, nil
-}
-
-// reseedWriteUntrackedFingerprint는 추적되지 않은 일반 파일 하나의 경로, 모드, 내용을 지문에 기록한다.
-func reseedWriteUntrackedFingerprint(hash io.Writer, root, relative string) error {
-	if filepath.IsAbs(relative) || strings.HasPrefix(filepath.Clean(relative), ".."+string(filepath.Separator)) {
-		return fmt.Errorf("unsafe untracked path %q", relative)
-	}
-	path := filepath.Join(root, filepath.FromSlash(relative))
-	entry, err := os.Lstat(path)
-	if err != nil || entry.Mode()&os.ModeSymlink != 0 || !entry.Mode().IsRegular() {
-		return fmt.Errorf("untracked path must be a regular file: %s", relative)
-	}
-	reseedWriteFingerprintPart(hash, relative)
-	reseedWriteFingerprintPart(hash, entry.Mode().String())
-	identity, known := osfile.PathIdentity(path, entry)
-	return reseedWriteFingerprintFile(hash, path, entry, identity, known)
+	return workspacefingerprint.ReadIndex(root, indexPath)
 }
 
 func reseedGitOutput(root string, args ...string) (string, error) {
-	code, stdout, stderr := reseedGitRaw(root, args...)
+	code, stdout, stderr := gitraw.Run(root, args...)
 	if code != 0 {
 		return "", fmt.Errorf("git %s: %s", strings.Join(args, " "), stderr)
 	}
 	return strings.TrimSpace(stdout), nil
-}
-
-func reseedGitRaw(root string, args ...string) (int, string, string) {
-	command := exec.Command(gitbin.Path(), args...)
-	command.Dir = root
-	var stdout, stderr bytes.Buffer
-	command.Stdout = &stdout
-	command.Stderr = &stderr
-	err := command.Run()
-	if err == nil {
-		return 0, stdout.String(), stderr.String()
-	}
-	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-		return exitErr.ExitCode(), stdout.String(), stderr.String()
-	}
-	return 1, stdout.String(), err.Error()
-}
-
-func reseedWriteFingerprintPart(hash interface{ Write([]byte) (int, error) }, value string) {
-	reseedWriteFingerprintBytes(hash, []byte(value))
-}
-
-func reseedWriteFingerprintBytes(hash interface{ Write([]byte) (int, error) }, value []byte) {
-	_, _ = hash.Write([]byte(strconv.Itoa(len(value))))
-	_, _ = hash.Write([]byte{0})
-	_, _ = hash.Write(value)
-	_, _ = hash.Write([]byte{0})
-}
-
-func reseedWriteFingerprintFile(hash interface{ Write([]byte) (int, error) }, path string, entry os.FileInfo, identity osfile.Identity, known bool) (err error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if closeErr := file.Close(); err == nil {
-			err = closeErr
-		}
-	}()
-	opened, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	// SameFile alone cannot prove the path was not replaced: Windows resolves a
-	// Lstat result's file identity lazily, from the path as it is now, so the
-	// identity taken at Lstat time is compared as well.
-	if openedIdentity, openedKnown := osfile.FileIdentity(file, opened); known && openedKnown &&
-		(openedIdentity.Device != identity.Device || openedIdentity.Inode != identity.Inode) {
-		return fmt.Errorf("untracked file changed while snapshotting: %s", path)
-	}
-	if !os.SameFile(entry, opened) || !opened.Mode().IsRegular() || opened.Size() != entry.Size() {
-		return fmt.Errorf("untracked file changed while snapshotting: %s", path)
-	}
-	_, _ = hash.Write([]byte(strconv.FormatInt(opened.Size(), 10)))
-	_, _ = hash.Write([]byte{0})
-	if _, err := io.CopyN(hash, file, opened.Size()); err != nil {
-		return err
-	}
-	var extra [1]byte
-	if n, err := file.Read(extra[:]); n != 0 || (err != nil && !errors.Is(err, io.EOF)) {
-		return fmt.Errorf("untracked file changed while snapshotting: %s", path)
-	}
-	_, _ = hash.Write([]byte{0})
-	return nil
 }

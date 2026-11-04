@@ -204,6 +204,65 @@ func TestForbiddenEdgesExcludeMigratedInboundAdapters(t *testing.T) {
 	}
 }
 
+// gitraw and workspacefingerprint merge code that two capabilities used to keep
+// separately. Only the named consumers may import them, no other capability may
+// reach them, and they must not depend on a project capability themselves.
+var sharedGitPrimitiveConsumers = map[string][]string{
+	"internal/adapter/outbound/gitraw": {
+		"internal/adapter/preflight", "internal/adapter/outbound/issueopslease",
+	},
+	"internal/adapter/outbound/workspacefingerprint": {
+		"internal/adapter/issueops", "internal/adapter/outbound/issueopslease",
+	},
+}
+
+func TestSharedGitPrimitivesHaveNarrowConsumers(t *testing.T) {
+	others := []string{
+		"internal/adapter/provider/github",
+		"internal/adapter/outbound/state",
+		"internal/adapter/outbound/issueopscompletion",
+		"internal/adapter/inbound/issueopslease",
+		"internal/adapter/issueops/unrelated",
+		"internal/application/issueopslease",
+		"internal/domain/issueopslease",
+		"cmd/issueops/issueopscli",
+	}
+	for primitive, importers := range sharedGitPrimitiveConsumers {
+		for _, importer := range importers {
+			edge := dependencyEdge{importer, primitive}
+			if got := forbiddenEdges([]dependencyEdge{edge}); len(got) != 0 {
+				t.Errorf("named consumer lost access: %s", formatEdge(edge))
+			}
+		}
+		for _, importer := range others {
+			edge := dependencyEdge{importer, primitive}
+			if got := forbiddenEdges([]dependencyEdge{edge}); len(got) != 1 {
+				t.Errorf("unrelated importer gained access: %s", formatEdge(edge))
+			}
+		}
+	}
+}
+
+func TestSharedGitPrimitiveExceptionsDoNotCrossOver(t *testing.T) {
+	for _, edge := range []dependencyEdge{
+		{"internal/adapter/preflight", "internal/adapter/outbound/workspacefingerprint"},
+		{"internal/adapter/issueops", "internal/adapter/outbound/gitraw"},
+	} {
+		if got := forbiddenEdges([]dependencyEdge{edge}); len(got) != 1 {
+			t.Errorf("exception widened beyond its named consumers: %s", formatEdge(edge))
+		}
+	}
+}
+
+func TestSharedGitPrimitivesDependOnNoProjectCapability(t *testing.T) {
+	for _, edge := range loadProductionEdges(t) {
+		if _, isPrimitive := sharedGitPrimitiveConsumers[edge.importer]; isPrimitive && strings.HasPrefix(edge.imported, "internal/") &&
+			!isGitBinaryEdge(edge.imported) && !isOSPrimitiveEdge(edge.imported) {
+			t.Errorf("shared git primitive depends on a project capability: %s", formatEdge(edge))
+		}
+	}
+}
+
 func TestForbiddenInfrastructureIncludesNetAndSyscall(t *testing.T) {
 	edges := []dependencyEdge{
 		{"internal/core/issueops", "syscall"},
@@ -1125,13 +1184,22 @@ func forbiddenEdges(edges []dependencyEdge) []dependencyEdge {
 	for _, edge := range edges {
 		if (isCore(edge.importer) && isForbiddenCoreInfrastructure(edge.imported)) ||
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
-			(isAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
-				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported) &&
-				!isGitExcludeEdge(edge.importer, edge.imported) && !isGitBinaryEdge(edge.imported) && !isOSPrimitiveEdge(edge.imported)) {
+			(isAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isPermittedAdapterEdge(edge.importer, edge.imported)) {
 			forbidden = append(forbidden, edge)
 		}
 	}
 	return sortedEdges(forbidden)
+}
+
+// isPermittedAdapterEdge lists every adapter-to-adapter edge the ratchet allows
+// outside the composition root: same-capability packages and the policy-free
+// shared primitives, each limited to its named importers.
+func isPermittedAdapterEdge(importer, imported string) bool {
+	return isSameCapabilityAdapter(importer, imported) ||
+		isSharedStorageEngineEdge(importer, imported) || isProcessLifetimeEdge(importer, imported) ||
+		isGitExcludeEdge(importer, imported) || isGitRawEdge(importer, imported) ||
+		isWorkspaceFingerprintEdge(importer, imported) ||
+		isGitBinaryEdge(imported) || isOSPrimitiveEdge(imported)
 }
 
 func normalizeImport(path string) string {
@@ -1269,6 +1337,38 @@ func isGitExcludeEdge(importer, imported string) bool {
 // spawns git may import it.
 func isGitBinaryEdge(imported string) bool {
 	return imported == "internal/adapter/outbound/gitbin"
+}
+
+// gitraw runs one git command and returns its raw exit code and output. The
+// preflight git helpers and the reseed inventory share it instead of each
+// keeping a copy of the spawn-and-classify-exit code. It holds no policy and no
+// state, and its only project import is gitbin.
+func isGitRawEdge(importer, imported string) bool {
+	if imported != "internal/adapter/outbound/gitraw" {
+		return false
+	}
+	switch importer {
+	case "internal/adapter/preflight", "internal/adapter/outbound/issueopslease":
+		return true
+	default:
+		return false
+	}
+}
+
+// workspacefingerprint is the one writer of the worktree quiescence fingerprint
+// that the lease replacement snapshot and the reseed inventory seal and compare.
+// Both must agree on every byte, so neither keeps its own copy of the format.
+// It runs no git and holds no policy or state; callers inject the git runner.
+func isWorkspaceFingerprintEdge(importer, imported string) bool {
+	if imported != "internal/adapter/outbound/workspacefingerprint" {
+		return false
+	}
+	switch importer {
+	case "internal/adapter/issueops", "internal/adapter/outbound/issueopslease":
+		return true
+	default:
+		return false
+	}
 }
 
 // osfile and osprocess report OS file permission/identity and process facts
