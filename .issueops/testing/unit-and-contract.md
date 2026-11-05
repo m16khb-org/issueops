@@ -28,7 +28,7 @@ test/race/self-verify 결과를 표시하지 않으므로, 로컬 검증 게이�
 
 `go vet`은 harness의 기본 정적 분석 게이트이며, CI는 `.golangci.yml` 설정에 따라 그 위에
 golangci-lint v2.12.2도 실행한다. linter 집합은 결함, 죽은 코드, 불필요한 추상화, 표준 대체가
-있는 옛 관용구를 잡는 것만 고른다.
+있는 옛 관용구, exported API의 문서 누락을 잡는 것만 고른다.
 
 - 결함: asasalint, bidichk, bodyclose, durationcheck, errcheck, errorlint, fatcontext,
   govet(fieldalignment·shadow를 뺀 전체 analyzer), makezero, nilnesserr, reassign,
@@ -37,13 +37,17 @@ golangci-lint v2.12.2도 실행한다. linter 집합은 결함, 죽은 코드, �
   unused, wastedassign
 - 옛 관용구: copyloopvar, intrange, modernize, usestdlibvars, usetesting
 - 위생: misspell, nolintlint(`//nolint`에 linter 이름과 사유를 모두 적는다)
+- 문서: revive의 `exported`(exported 식별자는 이름으로 시작하는 doc comment를 갖고, 이름이 패키지
+  이름을 반복하지 않는다)와 `package-comments`(패키지마다 package comment 하나) 규칙만 켠다.
+  테스트 파일은 제외한다. 이 두 규칙을 숨기는 `comments` 제외 preset은 쓰지 않는다
+  ([2026-11-05 ADR](../adr/2026-11-05-gate-exported-api-doc-comments-with-revive.md)).
 
-문체·미세 성능 linter(revive, gocritic, perfsprint, predeclared, stylecheck(ST),
+revive의 나머지 규칙과 다른 문체·미세 성능 linter(gocritic, perfsprint, predeclared, stylecheck(ST),
 quickfix(QF))는 버그를 잡지 않고 코드만 흔들어서 켜지 않는다. unconvert는
 `syscall.Stat_t` 필드 타입이 darwin과 linux에서 달라 한쪽에 필요한 변환을 다른 쪽에서 지적하므로
 켜지 않는다. 테스트 파일에서는 errorlint와 unparam을 끈다. 테스트는 오류 동일성을 일부러
 `==`로 비교하고, fake는 주입 시그니처를 따라야 하기 때문이다. 의도한 예외는 설정을 넓히지 않고
-해당 줄에 사유를 붙인 `//nolint:<linter> // <사유>`로 남긴다. 기존 제외 preset과 전체 issue
+해당 줄에 사유를 붙인 `//nolint:<linter> // <사유>`로 남긴다. 나머지 제외 preset과 전체 issue
 출력 설정은 유지한다. 로컬 린터는 CI와 같은 `scripts/lint-local.sh`로 실행한다. 이 스크립트가
 버전(v2.12.2)을 고정하고 `go.mod`의 toolchain(`GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')"`)으로
 `golangci-lint run ./...`을 실행한다. CI runner가 Linux이므로 Linux가 아닌 머신에서는 `GOOS=linux`

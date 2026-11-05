@@ -1,9 +1,12 @@
 # golangci-lint v2 configuration.
 #
-# The linter set targets real defects, dead code, and needless abstraction.
-# Pure style and micro-performance linters (revive, gocritic, perfsprint,
-# predeclared, stylecheck, quickfix) stay off: they churn code without
-# catching bugs. unconvert stays off because syscall.Stat_t field types differ
+# The linter set targets real defects, dead code, needless abstraction, and
+# missing documentation of the exported API. Pure style and micro-performance
+# linters (gocritic, perfsprint, predeclared, stylecheck, quickfix) stay off:
+# they churn code without catching bugs. revive runs only its exported and
+# package-comments rules, so every exported identifier and every package keeps
+# a doc comment (ADR 2026-11-05); its other style rules stay off.
+# unconvert stays off because syscall.Stat_t field types differ
 # between darwin and linux, so a conversion needed on one is flagged on the other.
 # golangci-lint is a CI/developer gate; it is not part of the harness
 # install/update/self-verify readiness path (AGENTS.md §10: "issueops는 그 설치를
@@ -45,6 +48,8 @@ linters:
     # Hygiene
     - misspell
     - nolintlint
+    # Documentation of the exported API
+    - revive
   settings:
     govet:
       enable-all: true
@@ -58,6 +63,13 @@ linters:
         # opaque check stays off: injected constructors return the interface
         # their fakes also satisfy.
         - identical
+    revive:
+      rules:
+        # Exported identifiers need a doc comment that starts with their name,
+        # and a name must not repeat its package name.
+        - name: exported
+        # Every package needs exactly one package comment.
+        - name: package-comments
     nolintlint:
       require-explanation: true
       require-specific: true
@@ -81,9 +93,13 @@ linters:
       - path: _test\.go
         linters:
           - unparam
+      # Test helpers are not API; their names document themselves.
+      - path: _test\.go
+        linters:
+          - revive
     generated: lax
     presets:
-      - comments
+      # The comments preset would hide the revive doc-comment findings above.
       - common-false-positives
       - legacy
       - std-error-handling

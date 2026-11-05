@@ -21,7 +21,7 @@
 - 대소문자만 다른 이름 쌍(`Run`/`run`, `Apply`/`apply`)을 한 패키지에 두지 않는다. 한 줄 위임만 하는 쌍은 하나로 합치고, 다른 일을 하면 비공개 쪽 이름에 역할을 드러낸다.
 - 같은 패키지가 만든 에러는 문자열이 아니라 sentinel과 `errors.Is`로 비교한다. 외부 명령 시작 실패처럼 원인을 감싼 에러는 `Unwrap`으로 원인을 돌려준다.
 - provider port(`port.IssueProvider`)와 외부 명령·HTTP 호출은 첫 인자로 `context.Context`를 받아 `exec.CommandContext`·`http.NewRequestWithContext`에 넘긴다. 호출자의 취소가 외부 명령까지 닿아야 한다.
-- 이 규칙은 revive·staticcheck(ST)를 켠 측정 설정(`.issueops/issues/572/effective-go-lint.yml`, `golangci-lint run -c <설정> ./...`)으로 확인한다. 이 린터는 `.golangci.yml`에 켜지 않는다(`../testing/unit-and-contract.md`).
+- 문서 주석과 stutter 규칙은 `.golangci.yml`의 revive `exported`·`package-comments` 규칙이 CI와 `scripts/lint-local.sh`에서 막는다. 나머지 규칙(대소문자 쌍, 에러 비교 등)은 revive·staticcheck(ST)를 켠 측정 설정(`.issueops/issues/572/effective-go-lint.yml`, `golangci-lint run -c <설정> ./...`)으로 확인하며 저장소 게이트에는 켜지 않는다(`../testing/unit-and-contract.md`).
 - 테스트 파일은 대상 파일 가까이에 `*_test.go`로 둔다.
 - CLI 명령의 들여쓴 JSON 출력은 leaf 패키지 `cmd/issueops/jsonout`(`Print`, `PrintTo`)을 쓴다. 명령 패키지마다 `json.Encoder`를 다시 만들지 않는다.
 - 파일이 없는지 판정할 때는 `errors.Is(err, fs.ErrNotExist)`를 쓴다. `os.IsNotExist`는 `%w`로 감싼 에러를 풀지 못한다(#550에서 production 호출을 모두 바꿨다).
