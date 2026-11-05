@@ -101,7 +101,7 @@ def main():
                 continue
             for m in word.finditer(line):
                 hits.append(f"{rel}:{number}: {m.group(1)} -> {names[m.group(1)]}")
-    changed = subprocess.run(["git", "diff", "--name-only", BASE, "--", *[d.rstrip("/") + ("*" if not d.endswith("/") else "") for d in DATED]], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
+    changed = subprocess.run(["git", "diff", "--name-only", "--diff-filter=MDR", BASE, "--", *[d.rstrip("/") + ("*" if not d.endswith("/") else "") for d in DATED]], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
     changed = [p for p in changed if not p.startswith(".issueops/issues/572/")]
     for p in changed:
         hits.append(f"{p}: dated record changed since base")
