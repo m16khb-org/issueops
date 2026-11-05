@@ -47,7 +47,7 @@
 - [x] G8: response-contract golden이 갱신 없이 통과하고 testdata diff가 없다
   CHECK: python3 -B -c "import subprocess;subprocess.run(['go','test','./cmd/issueops/contractgolden','./cmd/issueops/issueopsapp','-run','Golden','-count=1'],check=True);d=subprocess.run(['git','diff','--name-only','7714640b0b40b4b03e64ad1405140d47d26e9c84','--','cmd/issueops/testdata','internal/adapter/testdata'],capture_output=True,text=True,check=True).stdout.strip();print(d or 'golden-unchanged')"
   EXPECT: golden-unchanged
-  EVIDENCE: ok  	issueops/cmd/issueops/issueopsapp	4.526s | golden-unchanged
+  EVIDENCE: ok  	issueops/cmd/issueops/issueopsapp	4.279s | golden-unchanged
 - [x] G9: 현행 문서와 코드에 옛 이름이 없고 dated 기록은 바뀌지 않았다
   CHECK: python3 -B .issueops/issues/572/check_renames.py
   EXPECT: renames-clean
@@ -55,15 +55,15 @@
 - [x] G10: 저장소 신호가 이름 변경 뒤에도 참이다
   CHECK: go test ./internal/adapter/augmentation -run TestCollectSignalsHoldOnThisRepository -count=1 -v
   EXPECT: --- PASS: TestCollectSignalsHoldOnThisRepository
-  EVIDENCE: --- PASS: TestCollectSignalsHoldOnThisRepository (1.08s) | PASS | ok  	issueops/internal/adapter/augmentation	1.191s
+  EVIDENCE: --- PASS: TestCollectSignalsHoldOnThisRepository (0.89s) | PASS | ok  	issueops/internal/adapter/augmentation	1.018s
 - [x] G11: provider 시작 실패 에러가 원인을 보존한다
   CHECK: go test ./internal/adapter/provider/providerutil -run TestBoundedCommandStartErrorUnwrapsCause -count=1 -v
   EXPECT: --- PASS: TestBoundedCommandStartErrorUnwrapsCause
-  EVIDENCE: --- PASS: TestBoundedCommandStartErrorUnwrapsCause (0.00s) | PASS | ok  	issueops/internal/adapter/provider/providerutil	0.118s
+  EVIDENCE: --- PASS: TestBoundedCommandStartErrorUnwrapsCause (0.00s) | PASS | ok  	issueops/internal/adapter/provider/providerutil	0.155s
 - [x] G12: stdio MCP가 종료 ctx에서 처리 중인 요청과 EOF 대기를 끝낸다
   CHECK: go test ./cmd/issueops/mcpcli -run TestServeMCPStream -count=1 -v
   EXPECT: --- PASS: TestServeMCPStreamCancelsInFlightRequestOnShutdown
-  EVIDENCE: --- PASS: TestServeMCPStreamCancelsInFlightRequestOnShutdown (0.10s) | PASS | ok  	issueops/cmd/issueops/mcpcli	2.621s
+  EVIDENCE: --- PASS: TestServeMCPStreamCancelsInFlightRequestOnShutdown (0.10s) | PASS | ok  	issueops/cmd/issueops/mcpcli	2.630s
 - [x] G14: 실제 `issueops mcp` stdio 프로세스가 `channel_recv` 대기 중 SIGTERM에 drain 상한 안에 종료 코드 0으로 끝난다
   CHECK: python3 -B .issueops/issues/572/stdio_signal_smoke.py
   EXPECT: stdio-signal-ok
@@ -71,4 +71,4 @@
 - [x] G13: provider 패키지가 processlease를 직접 import하지 않는다
   CHECK: go test ./internal/architecture -run TestProductionGraphHasNoForbiddenAdapterEdges -count=1 -v
   EXPECT: --- PASS: TestProductionGraphHasNoForbiddenAdapterEdges
-  EVIDENCE: --- PASS: TestProductionGraphHasNoForbiddenAdapterEdges (3.79s) | PASS | ok  	issueops/internal/architecture	3.930s
+  EVIDENCE: --- PASS: TestProductionGraphHasNoForbiddenAdapterEdges (4.55s) | PASS | ok  	issueops/internal/architecture	4.706s
