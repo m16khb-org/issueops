@@ -118,6 +118,14 @@ Effective Go 관례에 맞춰 Go 코드를 고친다. 이름(package clause·stu
 - 3라운드(같은 모델, `xhigh`, 3라운드부터 상향 규칙): `pass`. 2라운드 결함이 해결됐고, 이전 delta의 Go 주석 57쌍과 문서 10쌍을 선언된 이름과 하나씩 대조해 반대 방향 잘못된 치환이 더 없다고 판정했다.
 - 비차단 메모: 단일 연결(rwc) stdio 경로에서 클라이언트가 응답 전에 연결을 닫으면 EOF 대기가 길어질 수 있지만 production은 분리 stdio만 쓴다. 신호 종료 때 go-sdk가 `server run cancelled`를 stderr에 남긴다. `RunContext`는 `gh api` 자식이 create 잠금을 상속한다(상한이 없는 기존 동작). G9는 비공개 전환 이름 중 CamelCase 8자 이상이고 어디에도 선언되지 않은 304개만 검사한다. `domain-responsibilities.md`의 `ResumeHandler`는 base에도 선언이 없다(기존).
 
+## PR 리뷰 1라운드 반영(R-1)
+
+- 결함: 최종 head에서 `python3 -B .issueops/issues/572/check_renames.py`가 새 ADR을 "dated record changed since base"로 거부했다(exit 1). `git diff --name-only BASE`가 untracked 파일을 보지 않아 ADR 커밋 전 gates check에서는 통과했고 커밋 뒤에는 실패했다. 그래서 앞선 완료 기록의 18/18이 최종 head에서 재현되지 않았다.
+- 수정: dated 검사를 `git diff --name-only --diff-filter=MDR`로 한정했다(금지 대상은 기존 dated 기록의 수정이다: `.issueops/cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md:13` "날짜가 붙은 기록 문서는 고치지 않고"). 제품 코드 변경은 없다.
+- 확인: 커밋한 상태에서 `check_renames.py` → `renames-clean`. 기존 dated ADR에 한 줄을 덧붙이면 exit 1이고 되돌렸다. 원장을 초기화하고 최종 커밋 뒤 `issueops gates check --env HOME,PATH,LANG,GOPATH,GOMODCACHE,GOCACHE --timeout-seconds 900`을 한 번에 실행해 18/18 met(약 8분).
+- 독립 리뷰(`omp -p --model anthropic/claude-opus-5-5 --thinking high`, delta): `pass`. 비차단 메모: `--diff-filter`가 파일 종류 변경(T)을 빼지만 base 이후 DATED 경로에 T·M·D·R·C는 0건이다.
+- 이번 재봉인에서 `go test`·`self-verify`는 다시 돌리지 않았다. 제품 코드·테스트가 바뀌지 않았고(변경은 이슈 폴더의 검사 스크립트와 원장뿐), 해당 결과는 앞 절의 head(`d63280f1a`)에서 얻었다.
+
 ## side effect
 
 - 파일: Go 소스 2,163개와 `internal/architecture/testdata` JSON 2개, 현행 문서 5개, `scripts/autoresearch` 픽스처 1개, `.issueops/issues/572/` 추적 사본·원장·측정 설정·검증 스크립트·이 보고서.
