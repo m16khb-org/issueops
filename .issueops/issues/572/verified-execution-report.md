@@ -123,7 +123,7 @@ Effective Go 관례에 맞춰 Go 코드를 고친다. 이름(package clause·stu
 - 파일: Go 소스 2,163개와 `internal/architecture/testdata` JSON 2개, 현행 문서 5개, `scripts/autoresearch` 픽스처 1개, `.issueops/issues/572/` 추적 사본·원장·측정 설정·검증 스크립트·이 보고서.
 - 사용자 영향: `issueops mcp` stdio 프로세스가 SIGINT·SIGTERM을 받으면 최대 10초 뒤 종료 코드 0으로 끝난다(이전에는 신호 종료 상태). `issueops update`의 고아 MCP 정리는 종료를 기다리지 않으므로 보고 내용이 같다.
 - 호환성: CLI/MCP 이름, JSON 필드, record schema, golden은 그대로다. `internal/` 아래 Go 소스 이름은 바뀐다(저장소 밖 소비자 없음).
-- 원격: 이 단계에서 원격 쓰기는 없다. 8~9단계의 브랜치 push와 draft PR이 승인 범위다.
+- 원격: 브랜치 push와 draft PR https://github.com/m16khb-org/issueops/pull/576 을 만들었다. `remote create-pr`이 GitHub 장애(Pull Requests partial_outage)의 HTTP 502로 결과 불명이 됐고, 재시도 한도(`remote_reconcile_retry_exhausted`)를 소진했다. 장애 해소 뒤 PR이 없음을 `gh pr list`와 compare API로 확인하고, 사용자 허락(scope 결정 기록)을 받아 `gh pr create --draft`로 같은 제목·본문·label·assignee에 pending intent의 marker를 붙여 만들었다. 본문을 의도의 body sha256과 정확히 맞춘 뒤 `execution reconcile --confirm`이 `remote_reconcile_adopted`로 채택했고 `remote verify-artifact`가 통과했다.
 - 검증 산출물은 워크트리 밖 `/tmp/io572/`(측정 출력, 이름 변경·비공개 전환·주석 검사 도구)와 ignore되는 `.issueops/issues/572/review/`에 두었다.
 
 ## 의도 대조
