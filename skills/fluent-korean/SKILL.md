@@ -1,7 +1,7 @@
 ---
 name: fluent-korean
 description: 'MUST USE whenever writing, revising, or reviewing Korean text or replying in Korean: clear, natural Korean that keeps code conventions and technical terms and removes AI-style patterns (AI티/slop).'
-license: MIT
+license: GPL-3.0-or-later
 metadata:
   source: https://github.com/snflkd/fluent-korean
   slop_patterns: https://github.com/limleesol/stop-slop-ko
