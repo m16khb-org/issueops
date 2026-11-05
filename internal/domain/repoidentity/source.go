@@ -1,3 +1,5 @@
+// Package repoidentity holds the domain rules that identify a repository's
+// primary checkout from its paths.
 package repoidentity
 
 import (

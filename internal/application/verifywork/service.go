@@ -1,3 +1,5 @@
+// Package verifywork is the application service that verifies a unit of work
+// by combining git status, preflight, guard and command evidence into one result.
 package verifywork
 
 import (
@@ -9,15 +11,21 @@ import (
 	verifyworkdomain "issueops/internal/domain/verifywork"
 )
 
+// Service verifies a unit of work in a repository by gathering git status,
+// preflight, guard and optional command results. Every function field is required.
 type Service struct {
 	ResolveTarget  func(string) string
 	GitStatus      func(string) (string, error)
-	Preflight      func(string) preflightcontract.PreflightResult
-	Guard          func(guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult
+	Preflight      func(string) preflightcontract.Result
+	Guard          func(guardcontract.CheckRequest) guardcontract.CheckResult
 	RunCommand     func(policycontract.CommandPolicyRequest) policycontract.CommandRunResult
 	ProjectSignals func(string) projectdocdomain.ProjectSignals
 }
 
+// Run gathers git status, preflight and guard results for repo (all changes
+// when all is true, otherwise staged ones), optionally runs argv under the
+// command policy with a 30s timeout, and returns the evidence-backed verdict.
+// Failures of the individual checks are reported in the result, not as errors.
 func (service Service) Run(repo string, all bool, argv []string) verifyworkcontract.Result {
 	root := service.ResolveTarget(repo)
 	status, err := service.GitStatus(root)
@@ -27,7 +35,7 @@ func (service Service) Run(repo string, all bool, argv []string) verifyworkcontr
 		facts.GitError = err.Error()
 	}
 	preflight := service.Preflight(root)
-	guard := service.Guard(guardcontract.GuardCheckRequest{RepoRoot: root, Staged: !all, All: all})
+	guard := service.Guard(guardcontract.CheckRequest{RepoRoot: root, Staged: !all, All: all})
 	var command *policycontract.CommandRunResult
 	if len(argv) > 0 {
 		result := service.RunCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: argv, Timeout: "30s"})

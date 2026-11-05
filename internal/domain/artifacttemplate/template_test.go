@@ -50,7 +50,7 @@ func TestPullRequestContractRequiresFourSections(t *testing.T) {
 func TestImplementationIssueContractRequiresFiveSections(t *testing.T) {
 	result := Render(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactIssue,
-		Template: IssueOpsTemplateImplementationTask,
+		Template: issueOpsTemplateImplementationTask,
 		Provider: "github",
 		Title:    "본문 계약 강화",
 		Fields: map[string]string{
@@ -72,7 +72,7 @@ func TestImplementationIssueContractRequiresFiveSections(t *testing.T) {
 
 	missingScope := Render(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactIssue,
-		Template: IssueOpsTemplateImplementationTask,
+		Template: issueOpsTemplateImplementationTask,
 		Provider: "github",
 		Title:    "본문 계약 강화",
 		Fields: map[string]string{
@@ -93,7 +93,7 @@ func TestImplementationIssueContractRequiresFiveSections(t *testing.T) {
 func TestBugContractRequiresReproductionAndExpectedActual(t *testing.T) {
 	result := Render(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactIssue,
-		Template: IssueOpsTemplateBug,
+		Template: issueOpsTemplateBug,
 		Provider: "github",
 		Title:    "로그인 실패",
 		Fields: map[string]string{
@@ -114,7 +114,7 @@ func TestBugContractRequiresReproductionAndExpectedActual(t *testing.T) {
 
 	missing := Render(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactIssue,
-		Template: IssueOpsTemplateBug,
+		Template: issueOpsTemplateBug,
 		Provider: "github",
 		Title:    "로그인 실패",
 		Fields: map[string]string{
@@ -134,7 +134,7 @@ func TestBugContractRequiresReproductionAndExpectedActual(t *testing.T) {
 func TestProposalContractRequiresAlternativesAndScope(t *testing.T) {
 	result := Render(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactIssue,
-		Template: IssueOpsTemplateProposal,
+		Template: issueOpsTemplateProposal,
 		Provider: "github",
 		Title:    "본문 계약 재설계 제안",
 		Fields: map[string]string{
@@ -266,7 +266,7 @@ func TestValidateRejectsPlaceholderRequiredSection(t *testing.T) {
 func TestValidateRejectsPlanLinkAndGitLabRelatedIssuesSection(t *testing.T) {
 	validation := Validate(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactIssue,
-		Template: IssueOpsTemplateImplementationTask,
+		Template: issueOpsTemplateImplementationTask,
 		Provider: "gitlab",
 		Title:    "본문 검증",
 		Body:     "## 요약\n\n본문\n\n## Related Issues\n\n#1\n\n## Plan Link\n\n/path/to/plan.md",
@@ -286,7 +286,7 @@ func TestValidateRejectsPlanLinkAndGitLabRelatedIssuesSection(t *testing.T) {
 func TestValidateRejectsUnsupportedArtifactKindAndTemplate(t *testing.T) {
 	validation := Validate(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactKind("mr"),
-		Template: IssueOpsTemplateFeature,
+		Template: issueOpsTemplateFeature,
 		Title:    "잘못된 artifact kind",
 		Body:     "본문",
 	})
@@ -303,7 +303,7 @@ func TestValidateRejectsUnsupportedArtifactKindAndTemplate(t *testing.T) {
 
 	validation = Validate(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactPR,
-		Template: IssueOpsTemplateFeature,
+		Template: issueOpsTemplateFeature,
 		Title:    "PR template 조합 오류",
 		Body:     "본문",
 	})
@@ -352,10 +352,10 @@ func TestInferTemplateKind(t *testing.T) {
 		body string
 		want IssueOpsTemplateKind
 	}{
-		{IssueOpsArtifactIssue, "## 요약\n\n버그\n\n## 재현 절차\n\n1. 실행", IssueOpsTemplateBug},
-		{IssueOpsArtifactIssue, "## 요약\n\n제안\n\n## 제안\n\n바꾸자", IssueOpsTemplateProposal},
-		{IssueOpsArtifactIssue, "## 요약\n\n구현\n\n## 배경\n\n이유", IssueOpsTemplateImplementationTask},
-		{IssueOpsArtifactIssue, "## 요약\n\n구현\n\n```\n## 재현 절차\n```", IssueOpsTemplateImplementationTask},
+		{IssueOpsArtifactIssue, "## 요약\n\n버그\n\n## 재현 절차\n\n1. 실행", issueOpsTemplateBug},
+		{IssueOpsArtifactIssue, "## 요약\n\n제안\n\n## 제안\n\n바꾸자", issueOpsTemplateProposal},
+		{IssueOpsArtifactIssue, "## 요약\n\n구현\n\n## 배경\n\n이유", issueOpsTemplateImplementationTask},
+		{IssueOpsArtifactIssue, "## 요약\n\n구현\n\n```\n## 재현 절차\n```", issueOpsTemplateImplementationTask},
 		{IssueOpsArtifactChild, "## 재현 절차", IssueOpsTemplateChildTask},
 		{IssueOpsArtifactPR, "## 제안", IssueOpsTemplatePullRequest},
 	}

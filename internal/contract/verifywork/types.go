@@ -1,3 +1,5 @@
+// Package verifywork defines the result DTOs of the verify-work evidence
+// matrix. It sits in the contract layer.
 package verifywork
 
 import (
@@ -6,19 +8,23 @@ import (
 	preflightcontract "issueops/internal/contract/preflight"
 )
 
+// Result is the verify-work report: git preflight, guard findings, an optional
+// command run, the evidence matrix, and suggested follow-up commands.
 type Result struct {
-	OK                bool                              `json:"ok"`
-	Kind              string                            `json:"kind"`
-	Repo              string                            `json:"repo"`
-	GitStatus         string                            `json:"git_status,omitempty"`
-	Preflight         preflightcontract.PreflightResult `json:"preflight"`
-	Guard             guardcontract.GuardCheckResult    `json:"guard"`
-	Command           *policydomain.CommandRunResult    `json:"command,omitempty"`
-	EvidenceMatrix    []EvidenceItem                    `json:"evidence_matrix"`
-	SuggestedCommands []SuggestedCommand                `json:"suggested_commands"`
-	Warnings          []string                          `json:"warnings"`
+	OK                bool                           `json:"ok"`
+	Kind              string                         `json:"kind"`
+	Repo              string                         `json:"repo"`
+	GitStatus         string                         `json:"git_status,omitempty"`
+	Preflight         preflightcontract.Result       `json:"preflight"`
+	Guard             guardcontract.CheckResult      `json:"guard"`
+	Command           *policydomain.CommandRunResult `json:"command,omitempty"`
+	EvidenceMatrix    []EvidenceItem                 `json:"evidence_matrix"`
+	SuggestedCommands []SuggestedCommand             `json:"suggested_commands"`
+	Warnings          []string                       `json:"warnings"`
 }
 
+// EvidenceItem is one row of the evidence matrix, with its status and the
+// command that produced it when there is one.
 type EvidenceItem struct {
 	Name    string `json:"name"`
 	OK      bool   `json:"ok"`
@@ -27,6 +33,7 @@ type EvidenceItem struct {
 	Command string `json:"command,omitempty"`
 }
 
+// SuggestedCommand is a follow-up command argv with the reason to run it.
 type SuggestedCommand struct {
 	Name    string   `json:"name"`
 	Command []string `json:"command"`

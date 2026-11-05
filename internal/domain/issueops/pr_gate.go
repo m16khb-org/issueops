@@ -8,16 +8,25 @@ import (
 	"strings"
 )
 
+// NeedsPRGateRead reports whether moving to phase to requires reading the PR
+// gate readiness, which holds only for the pr phase.
 func NeedsPRGateRead(to string) bool {
-	return model.IssueOpsPhase(strings.TrimSpace(to)) == model.IssueOpsPhasePR
+	return model.Phase(strings.TrimSpace(to)) == model.PhasePR
 }
-func PRGateError(ready model.IssueOpsReadiness) error {
+
+// PRGateError returns nil for a ready record and otherwise an error listing
+// the gates that block entering the pr phase.
+func PRGateError(ready model.Readiness) error {
 	if ready.Ready {
 		return nil
 	}
 	return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(ready.Missing, ", "))
 }
-func MergeGateReadiness(ready model.IssueOpsReadiness, missing, warnings []string) model.IssueOpsReadiness {
+
+// MergeGateReadiness adds the extra missing gates and warnings to ready. The
+// merged missing list is sorted and deduplicated, and Ready becomes true only
+// when none remain. It returns ready unchanged when there is nothing to add.
+func MergeGateReadiness(ready model.Readiness, missing, warnings []string) model.Readiness {
 	if len(missing) == 0 && len(warnings) == 0 {
 		return ready
 	}

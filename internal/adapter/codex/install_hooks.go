@@ -72,11 +72,11 @@ func (installer Installer) hookDriftMessages(config map[string]any, binPath stri
 }
 
 // HooksConfig is the hook catalog this OS installs for binPath.
-func HooksConfig(binPath string) map[string]any { return hooksConfig(binPath, runtime.GOOS) }
+func HooksConfig(binPath string) map[string]any { return hooksConfigFor(binPath, runtime.GOOS) }
 
-// hooksConfig builds the catalog for goos; the tracked template passes ""
+// hooksConfigFor builds the catalog for goos; the tracked template passes ""
 // so it stays the same whichever OS regenerates it.
-func hooksConfig(binPath, goos string) map[string]any {
+func hooksConfigFor(binPath, goos string) map[string]any {
 	hooks := map[string]any{}
 	for _, spec := range codexLifecycleHookSpecs(binPath, goos) {
 		hooks[spec.Event] = []any{codexHookGroup(spec)}

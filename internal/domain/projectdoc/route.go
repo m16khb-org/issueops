@@ -6,8 +6,10 @@ import (
 	"unicode"
 )
 
+// RouteDoc is one document a task should read, with the Reason it was routed.
 type RouteDoc struct{ Rel, Reason string }
 
+// NormalizeRouteTask lowercases and trims a task description for routing and returns "general" when it is blank.
 func NormalizeRouteTask(task string) string {
 	task = strings.ToLower(strings.TrimSpace(task))
 	if task == "" {

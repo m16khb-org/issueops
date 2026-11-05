@@ -9,8 +9,11 @@ import (
 	"os/exec"
 )
 
+// ErrBusy reports that an execution lifetime lock is still held by a live process.
 var ErrBusy = errors.New("execution lifetime is still active")
 
+// Lease is an exclusive hold on the lifetime lock file for one execution key. Its open
+// descriptor is inherited by subprocesses so the lock outlives only while any of them runs.
 type Lease struct {
 	file      *os.File
 	directory string
@@ -21,10 +24,13 @@ type Lease struct {
 // drainage: reacquiring a shared lock cannot prove another shared holder exited.
 type SharedLease struct{ file *os.File }
 
+// Close releases the shared lease by closing its file descriptor.
 func (l *SharedLease) Close() error { return l.file.Close() }
 
 type contextKey struct{}
 
+// Context returns a child of ctx that carries the lease descriptor so Attach can pass it
+// to subprocesses started with that context.
 func (l *Lease) Context(ctx context.Context) context.Context {
 	return context.WithValue(ctx, contextKey{}, l.file)
 }

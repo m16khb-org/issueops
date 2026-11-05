@@ -10,29 +10,36 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-type FinishEnvironment interface {
+type finishEnvironment interface {
 	Git(string, ...string) (int, string)
 	Directory(string) (bool, error)
 	SamePath(string, string) bool
 	PathWithin(string, string) bool
 }
 
+// FinishWorkspaceObservation lists the processes occupying a worktree and the
+// receipts that bind them to the preview.
 type FinishWorkspaceObservation struct {
 	Occupants []model.CleanupWorkspaceProcess
 	Receipts  []model.NativeProcessReceipt
 }
 
+// FinishPreviewer builds the read-only finish inventory and preview result
+// from git, workspace and artifact observations without mutating anything.
 type FinishPreviewer struct {
-	Environment     FinishEnvironment
-	Workspace       func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string)
-	ObserveArtifact func(string) (domain.ArtifactObservation, error)
+	Environment     finishEnvironment
+	Workspace       func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string)
+	ObserveArtifact func(context.Context, string) (domain.ArtifactObservation, error)
 }
 
-func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, req model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
+// Plan observes the worktree, branch and remote refs and returns the finish
+// inventory with the domain-built preview. A superseding artifact is verified
+// only when the merge was not already observed.
+func (s FinishPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 	inventory := domain.CleanupFinishTargets(record)
 	var facts domain.CleanupFinishObservation
 	if !req.Merged {
-		if err := s.verifySupersedingArtifact(record, req.SupersededBy); err != nil {
+		if err := s.verifySupersedingArtifact(ctx, record, req.SupersededBy); err != nil {
 			facts.SupersedeError = err.Error()
 		} else {
 			inventory.SupersededBy = strings.TrimSpace(req.SupersededBy)
@@ -64,7 +71,7 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 
 // observeWorktree는 연결된 worktree의 정체성, 존재, 점유, 청결을 관찰해
 // inventory와 facts에 기록한다.
-func (s FinishPreviewer) observeWorktree(ctx context.Context, record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory *model.CleanupFinishInventory, facts *domain.CleanupFinishObservation) {
+func (s FinishPreviewer) observeWorktree(ctx context.Context, record model.Record, req model.CleanupFinishRequest, inventory *model.CleanupFinishInventory, facts *domain.CleanupFinishObservation) {
 	if linked := strings.TrimSpace(record.WorktreePath); linked != "" {
 		facts.WorktreeIdentityConflict = !s.Environment.SamePath(inventory.WorktreeRoot, linked)
 	}
@@ -139,12 +146,12 @@ func (s FinishPreviewer) observeRemoteRefs(repo string, withHEAD bool, refs []st
 	return observed
 }
 
-func (s FinishPreviewer) verifySupersedingArtifact(record model.IssueOpsRecord, candidate string) error {
+func (s FinishPreviewer) verifySupersedingArtifact(ctx context.Context, record model.Record, candidate string) error {
 	candidate = strings.TrimSpace(candidate)
 	if err := domain.ValidateCleanupSupersedeInput(record, candidate, s.ObserveArtifact != nil); err != nil {
 		return err
 	}
-	replacement, err := s.ObserveArtifact(candidate)
+	replacement, err := s.ObserveArtifact(ctx, candidate)
 	if err != nil {
 		return fmt.Errorf("superseding artifact %s could not be observed: %w", candidate, err)
 	}

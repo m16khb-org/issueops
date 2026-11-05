@@ -1,3 +1,6 @@
+// Package quality is the application layer for the repository quality inspection: it runs
+// the evidence collectors, applies the domain quality policy, and manages the code SNR
+// trend baseline.
 package quality
 
 import (
@@ -9,6 +12,9 @@ import (
 	policy "issueops/internal/domain/quality"
 )
 
+// InspectDeps holds the collectors Inspect uses. Now stamps the report; the remaining
+// functions take the issueops root and gather coverage, branch complexity, audit items,
+// open self-augment/self-verify counts, catalog candidates, code SNR, and pioneer coverage.
 type InspectDeps struct {
 	Now                  func() string
 	Coverage             func(string) (string, error)
@@ -156,6 +162,9 @@ func (e inspectEvidence) signals(lowCoverage []contract.CoveragePackage, branchC
 	}
 }
 
+// Inspect collects quality evidence under root through deps and applies the quality policy
+// to produce the findings, signals, and collection, health, and gate statuses. Collector
+// failures are reported as warnings in the result rather than returned as errors.
 func Inspect(root string, deps InspectDeps) contract.InspectResult {
 	evidence := collectInspectEvidence(root, deps)
 	warnings := evidence.warnings()
@@ -165,7 +174,7 @@ func Inspect(root string, deps InspectDeps) contract.InspectResult {
 	branchCandidateCount, highBranchCount := countBranchFunctions(branchFunctions)
 	signals := evidence.signals(lowCoverage, branchCandidateCount, highBranchCount)
 	findings := policy.CollectQualityFindings(warnings, lowCoverage, branchFunctions, auditItems, evidence.pioneer.value)
-	collectionStatus, healthStatus, gateStatus := policy.QualityStatuses(warnings, findings)
+	collectionStatus, healthStatus, gateStatus := policy.Statuses(warnings, findings)
 	return contract.InspectResult{
 		OK:               collectionStatus == contract.CollectionStatusOK,
 		CollectionStatus: collectionStatus,

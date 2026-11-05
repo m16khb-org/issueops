@@ -7,6 +7,9 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ValidatePreparationNames checks the branch and base_branch flags of branch
+// prepare: both are required, the branch must satisfy ValidateBranch, and the
+// base must be a valid git ref name that does not start with a dash.
 func ValidatePreparationNames(branch, base string) error {
 	if branch == "" {
 		return fmt.Errorf("branch is required (--branch <issue number>-<slug>)")
@@ -27,6 +30,9 @@ func ValidatePreparationNames(branch, base string) error {
 	return nil
 }
 
+// ValidatePreparationParentPath fails when the parent_worktree path is not
+// absolute. The caller resolves absoluteness because the domain layer does no
+// filesystem or path work.
 func ValidatePreparationParentPath(absolute bool) error {
 	if !absolute {
 		return fmt.Errorf("parent_worktree must be an absolute path")
@@ -35,22 +41,26 @@ func ValidatePreparationParentPath(absolute bool) error {
 }
 
 // AdoptPreparedBranch binds a branchless cycle only after confirming its issue.
-func AdoptPreparedBranch(record model.IssueOpsRecord, issueURL, branch string) (model.IssueOpsRecord, error) {
+func AdoptPreparedBranch(record model.Record, issueURL, branch string) (model.Record, error) {
 	if strings.TrimSpace(record.IssueURL) == "" {
-		return model.IssueOpsRecord{}, fmt.Errorf("issue must be linked before branch prepare")
+		return model.Record{}, fmt.Errorf("issue must be linked before branch prepare")
 	}
 	if record.IssueURL != issueURL {
-		return model.IssueOpsRecord{}, fmt.Errorf("issue_url does not match linked IssueOps issue")
+		return model.Record{}, fmt.Errorf("issue_url does not match linked IssueOps issue")
 	}
 	if strings.TrimSpace(record.Branch) == "" {
 		record.Branch = branch
 	} else if record.Branch != branch {
-		return model.IssueOpsRecord{}, fmt.Errorf("branch does not match IssueOps record branch")
+		return model.Record{}, fmt.Errorf("branch does not match IssueOps record branch")
 	}
 	return record, nil
 }
 
-func ValidatePreparationUmbrella(umbrella model.IssueOpsRecord, branch, base string) error {
+// ValidatePreparationUmbrella requires a child cycle to fork from and merge
+// into its umbrella cycle branch. It passes when the umbrella has no branch
+// or base already equals it, and otherwise returns an error naming the branch
+// to use.
+func ValidatePreparationUmbrella(umbrella model.Record, branch, base string) error {
 	expected := strings.TrimSpace(umbrella.Branch)
 	if expected == "" || expected == strings.TrimSpace(base) {
 		return nil
@@ -59,8 +69,12 @@ func ValidatePreparationUmbrella(umbrella model.IssueOpsRecord, branch, base str
 		"base_branch %q 대신 %s로 다시 준비하라", strings.TrimSpace(branch), umbrella.ID, expected, strings.TrimSpace(base), expected)
 }
 
-func ApplyBranchPreparation(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest, codeProject string, steps []model.IssueOpsBranchPrepareStep, createdAt, updatedAt string) model.IssueOpsRecord {
-	record.BranchPrepare = &model.IssueOpsBranchPrepare{
+// ApplyBranchPreparation returns record with a new BranchPrepare built from
+// req, the resolved codeProject key, and the recorded steps. It stamps
+// createdAt on the preparation and updatedAt on the record, replacing any
+// earlier preparation.
+func ApplyBranchPreparation(record model.Record, req model.BranchPrepareRequest, codeProject string, steps []model.BranchPrepareStep, createdAt, updatedAt string) model.Record {
+	record.BranchPrepare = &model.BranchPrepare{
 		Provider: req.Provider, IssueURL: req.IssueURL, Branch: req.Branch, BaseBranch: req.BaseBranch,
 		BaseSHA: req.BaseSHA, ParentWorktree: req.ParentWorktree, RemoteBranchURL: req.RemoteBranchURL,
 		CodeProjectKey: codeProject, LinkVerified: req.LinkVerified, Steps: steps, CreatedAt: createdAt,
@@ -74,7 +88,7 @@ func ApplyBranchPreparation(record model.IssueOpsRecord, req model.IssueOpsBranc
 // parent worktree, remote branch URL, project key). A re-prepare replaces the
 // whole preparation, so an omitted flag erases that fact (QA: a re-prepare
 // with only --base-branch dropped base_sha and link_verified).
-func BaseRerecordCommand(record model.IssueOpsRecord, newBase string) string {
+func BaseRerecordCommand(record model.Record, newBase string) string {
 	prior := record.BranchPrepare
 	if prior == nil {
 		return ""
@@ -98,7 +112,7 @@ func BaseRerecordCommand(record model.IssueOpsRecord, newBase string) string {
 // that would drop the sealed base or the link verification: the worktree
 // branch was cut from that base and its link was read back, and neither
 // changed.
-func RequireSealedPreparationKept(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) error {
+func RequireSealedPreparationKept(record model.Record, req model.BranchPrepareRequest) error {
 	prior := record.BranchPrepare
 	if record.Execution == nil || prior == nil || req.Branch != prior.Branch {
 		return nil

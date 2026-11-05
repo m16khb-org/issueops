@@ -60,11 +60,11 @@ func TestInstanceLockIsExclusiveAcrossProcessesAndObservable(t *testing.T) {
 		t.Fatal("helper lock timeout")
 	}
 
-	if _, err := AcquireInstance(state); !errors.Is(err, ErrInstanceConflict) {
+	if _, err := AcquireInstance(state); !errors.Is(err, errInstanceConflict) {
 		t.Fatalf("second instance err = %v, want conflict", err)
 	}
 	lockPath := filepath.Join(httpDir(state), lockFileName)
-	if holder, err := LockHolder(lockPath); err != nil || holder != helper.Process.Pid {
+	if holder, err := lockHolder(lockPath); err != nil || holder != helper.Process.Pid {
 		t.Fatalf("holder = %d, %v; want %d", holder, err, helper.Process.Pid)
 	}
 
@@ -74,7 +74,7 @@ func TestInstanceLockIsExclusiveAcrossProcessesAndObservable(t *testing.T) {
 	if err := helper.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	if holder, err := LockHolder(lockPath); err != nil || holder != 0 {
+	if holder, err := lockHolder(lockPath); err != nil || holder != 0 {
 		t.Fatalf("holder after exit = %d, %v", holder, err)
 	}
 	instance, err := AcquireInstance(state)
@@ -88,17 +88,17 @@ func TestInstanceLockIsExclusiveAcrossProcessesAndObservable(t *testing.T) {
 
 func TestLockHolderIsZeroForMissingFileAndErrorsOnUnopenableOne(t *testing.T) {
 	dir := t.TempDir()
-	if pid, err := LockHolder(filepath.Join(dir, "absent.lock")); err != nil || pid != 0 {
+	if pid, err := lockHolder(filepath.Join(dir, "absent.lock")); err != nil || pid != 0 {
 		t.Fatalf("missing lock file: pid=%d err=%v", pid, err)
 	}
 	blocker := filepath.Join(dir, "plain")
 	if err := os.WriteFile(blocker, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := LockHolder(filepath.Join(blocker, "server.lock")); err == nil {
+	if _, err := lockHolder(filepath.Join(blocker, "server.lock")); err == nil {
 		t.Fatal("a lock path under a regular file did not error")
 	}
-	if pid, err := LockHolder(blocker); err != nil || pid != 0 {
+	if pid, err := lockHolder(blocker); err != nil || pid != 0 {
 		t.Fatalf("unlocked existing file: pid=%d err=%v", pid, err)
 	}
 }

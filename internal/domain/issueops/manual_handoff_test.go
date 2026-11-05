@@ -7,24 +7,24 @@ import (
 )
 
 func TestManualHandoffAuthorityRejectsEveryClaimFieldBeforeAppend(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-manual", Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
-	observation := model.IssueOpsHandoffDeliveryObservation{LifecycleID: record.ID, SourceGeneration: 3, AttemptID: "manual-direct:io-manual:3:attempt", LineageID: "manual-direct:lineage", Launcher: model.IssueOpsHandoffDeliveryLauncher{Name: "cmux"}, OwnerClaimed: model.IssueOpsHandoffDeliveryState{Status: model.IssueOpsHandoffDeliveryStateNotObserved}}
+	record := model.Record{ID: "io-manual", Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
+	observation := model.HandoffDeliveryObservation{LifecycleID: record.ID, SourceGeneration: 3, AttemptID: "manual-direct:io-manual:3:attempt", LineageID: "manual-direct:lineage", Launcher: model.HandoffDeliveryLauncher{Name: "cmux"}, OwnerClaimed: model.HandoffDeliveryState{Status: model.HandoffDeliveryStateNotObserved}}
 	if err := ValidateManualHandoffDeliveryObservation(record, observation); err != nil {
 		t.Fatal(err)
 	}
-	for name, mutate := range map[string]func(*model.IssueOpsHandoffDeliveryObservation){
-		"actor":      func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerActor = &model.NativeActor{} },
-		"state":      func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerClaimed.Status = "" },
-		"claimed":    func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerClaim.Claimed = true },
-		"generation": func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerClaim.Generation = 1 },
-		"time":       func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerClaim.ClaimedAt = "x" },
-		"host":       func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerClaim.Actor.Host = "codex" },
-		"session":    func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerClaim.Actor.SessionID = "x" },
-		"agent":      func(o *model.IssueOpsHandoffDeliveryObservation) { o.OwnerClaim.Actor.AgentID = "x" },
-		"process": func(o *model.IssueOpsHandoffDeliveryObservation) {
+	for name, mutate := range map[string]func(*model.HandoffDeliveryObservation){
+		"actor":      func(o *model.HandoffDeliveryObservation) { o.OwnerActor = &model.NativeActor{} },
+		"state":      func(o *model.HandoffDeliveryObservation) { o.OwnerClaimed.Status = "" },
+		"claimed":    func(o *model.HandoffDeliveryObservation) { o.OwnerClaim.Claimed = true },
+		"generation": func(o *model.HandoffDeliveryObservation) { o.OwnerClaim.Generation = 1 },
+		"time":       func(o *model.HandoffDeliveryObservation) { o.OwnerClaim.ClaimedAt = "x" },
+		"host":       func(o *model.HandoffDeliveryObservation) { o.OwnerClaim.Actor.Host = "codex" },
+		"session":    func(o *model.HandoffDeliveryObservation) { o.OwnerClaim.Actor.SessionID = "x" },
+		"agent":      func(o *model.HandoffDeliveryObservation) { o.OwnerClaim.Actor.AgentID = "x" },
+		"process": func(o *model.HandoffDeliveryObservation) {
 			o.OwnerClaim.Actor.SessionProcess = &model.NativeProcessReceipt{}
 		},
-		"ancestry": func(o *model.IssueOpsHandoffDeliveryObservation) {
+		"ancestry": func(o *model.HandoffDeliveryObservation) {
 			o.OwnerClaim.Actor.ProcessAncestry = []model.NativeProcessReceipt{{}}
 		},
 	} {
@@ -39,8 +39,8 @@ func TestManualHandoffAuthorityRejectsEveryClaimFieldBeforeAppend(t *testing.T) 
 }
 
 func TestManualHandoffAuthorityPreservesRefusalOrder(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-manual", Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
-	observation := model.IssueOpsHandoffDeliveryObservation{LifecycleID: record.ID, SourceGeneration: 2, AttemptID: "wrong", LineageID: "wrong", Launcher: model.IssueOpsHandoffDeliveryLauncher{Name: "wrong"}, OwnerActor: &model.NativeActor{}}
+	record := model.Record{ID: "io-manual", Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
+	observation := model.HandoffDeliveryObservation{LifecycleID: record.ID, SourceGeneration: 2, AttemptID: "wrong", LineageID: "wrong", Launcher: model.HandoffDeliveryLauncher{Name: "wrong"}, OwnerActor: &model.NativeActor{}}
 	checks := []struct {
 		fix  func()
 		want string

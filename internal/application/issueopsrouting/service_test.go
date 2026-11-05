@@ -11,7 +11,7 @@ import (
 
 func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 	repository := &fakeRepository{
-		record: issueopscontract.IssueOpsRecord{
+		record: issueopscontract.Record{
 			OK: true,
 			ID: "io-routing01",
 		},
@@ -29,7 +29,7 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 		"io-routing01",
 		" plan ",
 		" database-schema-architecture ",
-		issueopscontract.IssueOpsActor{},
+		issueopscontract.Actor{},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 		"io-routing01",
 		"PLAN",
 		"DATABASE-SCHEMA-ARCHITECTURE",
-		issueopscontract.IssueOpsActor{},
+		issueopscontract.Actor{},
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -73,11 +73,11 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 }
 
 type fakeRepository struct {
-	record issueopscontract.IssueOpsRecord
+	record issueopscontract.Record
 	writes int
 }
 
-func (repository *fakeRepository) Read(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
+func (repository *fakeRepository) Read(context.Context, string, string) (issueopscontract.Record, error) {
 	return repository.record, nil
 }
 
@@ -85,8 +85,8 @@ func (repository *fakeRepository) Update(
 	_ context.Context,
 	_ string,
 	_ string,
-	mutate func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error),
-) (issueopscontract.IssueOpsRecord, error) {
+	mutate func(issueopscontract.Record) (issueopscontract.Record, bool, error),
+) (issueopscontract.Record, error) {
 	next, changed, err := mutate(repository.record)
 	if err != nil {
 		return next, err

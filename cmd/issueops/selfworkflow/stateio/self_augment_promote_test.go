@@ -11,8 +11,8 @@ import (
 func TestPromoteSelfAugmentBaseline(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	summary := augmentcontract.SelfAugmentSummary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 20, TerminationEligible: true, StepLabels: []string{"go test"}}
-	source := augmentcontract.SelfAugmentStateSnapshot{
+	summary := augmentcontract.Summary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 20, TerminationEligible: true, StepLabels: []string{"go test"}}
+	source := augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,

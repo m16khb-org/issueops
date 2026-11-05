@@ -59,11 +59,11 @@ func TestLoadFailureNamesTheCommandAndItsOutput(t *testing.T) {
 	exit := errors.New("exit status 1")
 	for _, tc := range []struct {
 		name    string
-		sup     func(Runner) supervisor
+		sup     func(runner) supervisor
 		failing string
 	}{
-		{"systemd", func(run Runner) supervisor { return systemd{run: run, unit: "issueops-mcp.service", home: "/home/u"} }, "systemctl --user daemon-reload"},
-		{"launchd", func(run Runner) supervisor {
+		{"systemd", func(run runner) supervisor { return systemd{run: run, unit: "issueops-mcp.service", home: "/home/u"} }, "systemctl --user daemon-reload"},
+		{"launchd", func(run runner) supervisor {
 			return launchd{run: run, label: "io.issueops.mcp", uid: 501, home: "/Users/u"}
 		}, "launchctl bootstrap gui/501 " + filepath.Join("/Users/u", "Library", "LaunchAgents", "io.issueops.mcp.plist")},
 	} {
@@ -155,7 +155,7 @@ func TestSystemdSupervisedDistinguishesStatesAndBadMainPID(t *testing.T) {
 func TestUnloadTargetsTheJobAndPropagatesFailure(t *testing.T) {
 	boom := errors.New("boom")
 	var commands []string
-	run := func(err error) Runner {
+	run := func(err error) runner {
 		return func(_ context.Context, name string, args ...string) ([]byte, error) {
 			commands = append(commands, name+" "+strings.Join(args, " "))
 			return nil, err

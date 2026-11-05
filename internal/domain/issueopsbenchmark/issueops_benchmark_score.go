@@ -8,10 +8,17 @@ import (
 	issueopscontract "issueops/internal/contract/issueopsbenchmark"
 )
 
-func ScoreArtifact(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) issueopscontract.IssueOpsBenchmarkScore {
+// ScoreArtifact scores artifact against fixture on every benchmark dimension
+// using deterministic checks; routingComplete states whether the recorded
+// routing trace met the fixture's expectation. A passed check scores 100 and
+// a failed one 0 with its failure recorded; dimensions a fixture does not
+// exercise are marked not applicable and excluded from the average and
+// minimum. The score passes only with no critical or deterministic failures
+// and a minimum of 100.
+func ScoreArtifact(fixture issueopscontract.Fixture, artifact issueopscontract.Artifact, routingComplete bool) issueopscontract.Score {
 	checks := issueOpsBenchmarkChecks(fixture, artifact, routingComplete)
 
-	score := issueopscontract.IssueOpsBenchmarkScore{OK: true, FixtureID: fixture.ID}
+	score := issueopscontract.Score{OK: true, FixtureID: fixture.ID}
 	for _, dimension := range dimensions {
 		if reason := issueOpsDimensionNotApplicable(dimension, fixture); reason != "" {
 			// Honest N/A: recorded but excluded from average/minimum/Passed so a
@@ -40,7 +47,7 @@ func ScoreArtifact(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact i
 			Evidence:  evidence,
 		})
 	}
-	score.AverageScore, score.MinimumScore = SummarizeDimensionScores(score.DimensionScores)
+	score.AverageScore, score.MinimumScore = summarizeDimensionScores(score.DimensionScores)
 	score.CriticalFailures = append(score.CriticalFailures, detectIssueOpsCriticalFailures(fixture, artifact, routingComplete)...)
 	score.Passed = len(score.CriticalFailures) == 0 && len(score.DeterministicFailures) == 0 && score.MinimumScore >= 100.0
 	score.OK = score.Passed
@@ -51,7 +58,7 @@ func ScoreArtifact(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact i
 // does not exercise a metadata-conditional dimension, so the dimension is
 // recorded but excluded from average/minimum/Passed. Keep every conditional
 // dimension here rather than hardcoding one name in the scoring loop.
-func issueOpsDimensionNotApplicable(dimension string, fixture issueopscontract.IssueOpsBenchmarkFixture) string {
+func issueOpsDimensionNotApplicable(dimension string, fixture issueopscontract.Fixture) string {
 	switch dimension {
 	case "pioneer_skill_contribution":
 		if strings.TrimSpace(fixture.PioneerSkillTarget) == "" {
@@ -72,13 +79,13 @@ type issueOpsBenchmarkCheck struct {
 }
 
 // issueOpsBenchmarkChecks evaluates every scoring dimension for the artifact.
-func issueOpsBenchmarkChecks(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) map[string]issueOpsBenchmarkCheck {
+func issueOpsBenchmarkChecks(fixture issueopscontract.Fixture, artifact issueopscontract.Artifact, routingComplete bool) map[string]issueOpsBenchmarkCheck {
 	checks := issueOpsDraftAndPlanChecks(artifact)
 	maps.Copy(checks, issueOpsExecutionChecks(fixture, artifact, routingComplete))
 	return checks
 }
 
-func issueOpsDraftAndPlanChecks(artifact issueopscontract.IssueOpsBenchmarkArtifact) map[string]issueOpsBenchmarkCheck {
+func issueOpsDraftAndPlanChecks(artifact issueopscontract.Artifact) map[string]issueOpsBenchmarkCheck {
 	return map[string]issueOpsBenchmarkCheck{
 		"intent_understanding": {
 			ok:       intentUnderstood(artifact),
@@ -113,7 +120,7 @@ func issueOpsDraftAndPlanChecks(artifact issueopscontract.IssueOpsBenchmarkArtif
 	}
 }
 
-func issueOpsExecutionChecks(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) map[string]issueOpsBenchmarkCheck {
+func issueOpsExecutionChecks(fixture issueopscontract.Fixture, artifact issueopscontract.Artifact, routingComplete bool) map[string]issueOpsBenchmarkCheck {
 	return map[string]issueOpsBenchmarkCheck{
 		"task_decomposition": {
 			ok:       taskDecompositionComplete(artifact),
@@ -183,38 +190,38 @@ func issueOpsExecutionChecks(fixture issueopscontract.IssueOpsBenchmarkFixture, 
 	}
 }
 
-func intentUnderstood(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func intentUnderstood(artifact issueopscontract.Artifact) bool {
 	return strings.TrimSpace(artifact.ProblemSummary) != "" || strings.TrimSpace(artifact.IssueDraft) != ""
 }
 
-func issueDraftQualityComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueDraftQualityComplete(artifact issueopscontract.Artifact) bool {
 	return hasAllIssueOpsConcepts(artifact.IssueDraft, issueOpsIssueSectionConcepts) && containsHangul(artifact.IssueDraft) && hasIssueOpsGuidelineRef(artifact) && issueOpsLabelDecisionEvidenceComplete(artifact)
 }
 
-func taskDecompositionComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func taskDecompositionComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.TaskBreakdown, "owns") && containsAnyFold(artifact.TaskBreakdown, "worker", "task") && issueOpsHierarchyEvidenceComplete(artifact)
 }
 
-func tddPlanComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func tddPlanComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.TDDPlan, "failing", "test") && containsAnyFold(artifact.TDDPlan, "before", "first")
 }
 
-func subagentOrchestrationComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func subagentOrchestrationComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.SubagentPrompts, "not alone", "do not revert", "own") && containsAnyFold(artifact.SubagentPrompts, "expected output", "report") && workerPromptHasContextGate(artifact) && reviewPromptIsBounded(artifact)
 }
 
-func implementationReady(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func implementationReady(artifact issueopscontract.Artifact) bool {
 	return strings.TrimSpace(artifact.BranchName) != "" && strings.TrimSpace(artifact.WorktreePath) != ""
 }
 
-func prDraftQualityComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func prDraftQualityComplete(artifact issueopscontract.Artifact) bool {
 	return hasAllIssueOpsConcepts(artifact.PRDraft, issueOpsPRSectionConcepts) && containsAnyFold(artifact.PRDraft, "issue:", "fixes", "closes", "이슈:") && containsHangul(artifact.PRDraft) && hasIssueOpsGuidelineRef(artifact)
 }
 
-func branchWorktreeGateComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func branchWorktreeGateComplete(artifact issueopscontract.Artifact) bool {
 	return strings.HasPrefix(artifact.BranchName, "feature/") && strings.Contains(filepath.ToSlash(artifact.WorktreePath), ".worktrees/")
 }
 
-func worktreeCleanupComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func worktreeCleanupComplete(artifact issueopscontract.Artifact) bool {
 	return containsAnyFold(artifact.WorktreeCleanup, "clean") && containsAnyFold(artifact.WorktreeCleanup, "cleanup", "remove") && containsAnyFold(artifact.WorktreeCleanup, "choice", "offered", "present")
 }

@@ -2,11 +2,13 @@ package selfverify
 
 import "strings"
 
+// MergeEnvOverrides merges KEY=VALUE entries from base and overrides, keeping the first position of each
+// key and letting later entries replace earlier values. Entries without a key are dropped.
 func MergeEnvOverrides(base []string, overrides []string) []string {
 	result := make([]string, 0, len(base)+len(overrides))
 	indexByKey := map[string]int{}
 	for _, entry := range base {
-		key, ok := EnvEntryKey(entry)
+		key, ok := envEntryKey(entry)
 		if !ok {
 			continue
 		}
@@ -18,7 +20,7 @@ func MergeEnvOverrides(base []string, overrides []string) []string {
 		result = append(result, entry)
 	}
 	for _, entry := range overrides {
-		key, ok := EnvEntryKey(entry)
+		key, ok := envEntryKey(entry)
 		if !ok {
 			continue
 		}
@@ -32,7 +34,7 @@ func MergeEnvOverrides(base []string, overrides []string) []string {
 	return result
 }
 
-func EnvEntryKey(entry string) (string, bool) {
+func envEntryKey(entry string) (string, bool) {
 	idx := strings.IndexByte(entry, '=')
 	if idx <= 0 {
 		return "", false

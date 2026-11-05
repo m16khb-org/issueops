@@ -101,10 +101,10 @@ func TestReadAndFoldHandoffDeliveryAuditObservations(t *testing.T) {
 
 	first := auditDeliveryObservationFixture()
 	second := auditDeliveryObservationFixture()
-	second.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{
-		Status:     issueopscontract.IssueOpsHandoffDeliveryStateObserved,
+	second.InputAccepted = issueopscontract.HandoffDeliveryState{
+		Status:     issueopscontract.HandoffDeliveryStateObserved,
 		ObservedAt: "2026-09-20T10:01:00Z",
-		Evidence:   issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt,
+		Evidence:   issueopscontract.HandoffDeliveryEvidenceLauncherReceipt,
 	}
 	if _, err := store.Append(first); err != nil {
 		t.Fatal(err)
@@ -128,7 +128,7 @@ func TestReadAndFoldHandoffDeliveryAuditObservations(t *testing.T) {
 		t.Fatalf("decisions=%+v", decisions)
 	}
 	got := folded["io-delivery\x00lineage-1"]
-	if got.InputAccepted.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
+	if got.InputAccepted.Status != issueopscontract.HandoffDeliveryStateObserved {
 		t.Fatalf("folded observation did not merge accepted input: %+v", got)
 	}
 }
@@ -334,21 +334,21 @@ func TestHandoffDeliveryAuditFailsClosedOnUnsafeLogFile(t *testing.T) {
 	}
 }
 
-func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObservation {
-	return issueopscontract.IssueOpsHandoffDeliveryObservation{
-		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
+func auditDeliveryObservationFixture() issueopscontract.HandoffDeliveryObservation {
+	return issueopscontract.HandoffDeliveryObservation{
+		SchemaVersion:  issueopscontract.HandoffDeliverySchemaVersion,
 		AttemptID:      "attempt-1",
 		LineageID:      "lineage-1",
 		LifecycleID:    "io-delivery",
 		PromptSHA256:   strings.Repeat("a", 64),
 		MaterialSHA256: strings.Repeat("e", 64),
-		Request: issueopscontract.IssueOpsHandoffDeliveryRequest{
+		Request: issueopscontract.HandoffDeliveryRequest{
 			DurableID: "request-1",
 		},
-		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
+		Launcher: issueopscontract.HandoffDeliveryLauncher{
 			Name: "herdr", Version: "1.4.200", Path: "/usr/local/bin/herdr", RuntimeID: "runtime-1", MachineID: "machine-1", ServerID: "server-1",
 		},
-		Target: issueopscontract.IssueOpsHandoffDeliveryTarget{
+		Target: issueopscontract.HandoffDeliveryTarget{
 			TerminalID: "term-1", PaneID: "pane-1", ProcessIncarnation: "incarnation-1", Process: &issueopscontract.NativeProcessReceipt{
 				PID: 8080, StartedAt: "2026-09-20T10:00:00Z", Executable: "/usr/local/bin/codex",
 			},
@@ -356,15 +356,15 @@ func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryO
 		SourceGeneration: 7,
 		CreatedAt:        "2026-09-20T10:00:01Z",
 		UpdatedAt:        "2026-09-20T10:05:00Z",
-		Receipt: issueopscontract.IssueOpsHandoffDeliveryReceipt{
+		Receipt: issueopscontract.HandoffDeliveryReceipt{
 			Location: "audit/herdr/receipt-1.json", Digest: strings.Repeat("d", 64),
 		},
-		InputAccepted: issueopscontract.IssueOpsHandoffDeliveryState{
-			Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: "2026-09-20T10:01:00Z", Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt,
+		InputAccepted: issueopscontract.HandoffDeliveryState{
+			Status: issueopscontract.HandoffDeliveryStateObserved, ObservedAt: "2026-09-20T10:01:00Z", Evidence: issueopscontract.HandoffDeliveryEvidenceLauncherReceipt,
 		},
-		NativeTurnObserved: issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
-		OwnerClaimed:       issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
-		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		NativeTurnObserved: issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved},
+		OwnerClaimed:       issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved},
+		Ambiguous:          issueopscontract.HandoffDeliveryState{Status: issueopscontract.HandoffDeliveryStateNotObserved},
 	}
 }
 

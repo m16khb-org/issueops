@@ -53,7 +53,7 @@ func TestSaveSelfVerificationSummaryWritesDefaultKeyAndRejectsInvalidKey(t *test
 	if err != nil {
 		t.Fatalf("read saved summary: %v", err)
 	}
-	var snapshot augmentcontract.SelfAugmentStateSnapshot
+	var snapshot augmentcontract.StateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("decode saved summary: %v\n%s", err, state.Record.Content)
 	}
@@ -78,13 +78,13 @@ func TestSaveSelfVerificationSummaryWritesDefaultKeyAndRejectsInvalidKey(t *test
 func TestSaveSelfAugmentSummary(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	result := augmentcontract.SelfAugmentResult{
+	result := augmentcontract.Result{
 		OK:           true,
 		Iterations:   10,
 		BaseSeed:     300,
 		ElapsedMS:    1234,
 		IssueOpsRoot: "/tmp/harness",
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			TotalRuns:   1,
 			TotalSteps:  1,
 			PassedSteps: 1,
@@ -104,7 +104,7 @@ func TestSaveSelfAugmentSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
-	var snapshot augmentcontract.SelfAugmentStateSnapshot
+	var snapshot augmentcontract.StateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("unmarshal saved snapshot: %v", err)
 	}
@@ -113,8 +113,8 @@ func TestSaveSelfAugmentSummary(t *testing.T) {
 	}
 }
 
-func selfVerificationSummaryResultForSaveTest() augmentcontract.SelfAugmentResult {
-	return augmentcontract.SelfAugmentResult{
+func selfVerificationSummaryResultForSaveTest() augmentcontract.Result {
+	return augmentcontract.Result{
 		OK:           true,
 		LoopKind:     "self_verification",
 		KoreanName:   augmentcontract.SelfVerificationKoreanName,
@@ -123,7 +123,7 @@ func selfVerificationSummaryResultForSaveTest() augmentcontract.SelfAugmentResul
 		TargetScore:  95,
 		ElapsedMS:    456,
 		IssueOpsRoot: "/tmp/harness",
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			TotalRuns:   10,
 			TotalSteps:  20,
 			PassedSteps: 20,

@@ -1,3 +1,6 @@
+// Package detection detects a repository's frameworks, monorepo layout, and
+// project types for project docs bootstrap. It is an adapter-layer package that
+// reads manifests under the repository root.
 package detection
 
 import (
@@ -54,6 +57,9 @@ var packageDependencyFrameworks = map[string]string{
 	"@tauri-apps/cli": "Tauri",
 }
 
+// Frameworks detects the frameworks a repository uses from config file names
+// in files and from go.mod and package.json dependencies under root. It reports
+// each match through addEvidence and returns names without duplicates.
 func Frameworks(root string, files []string, addEvidence func(string)) []string {
 	frameworks := []string{}
 	addFramework := func(name, evidence string) {
@@ -95,6 +101,9 @@ func addPackageDependencyFrameworks(deps map[string]bool, addFramework func(name
 	}
 }
 
+// Monorepo reports whether the repository is a monorepo: a workspace tool
+// config, a nested package manifest, or package.json workspaces. The first
+// match is reported through addEvidence.
 func Monorepo(root string, files []string, addEvidence func(string)) bool {
 	for _, rel := range files {
 		switch rel {
@@ -114,6 +123,9 @@ func Monorepo(root string, files []string, addEvidence func(string)) bool {
 	return false
 }
 
+// ProjectTypes classifies the repository (monorepo, frontend, desktop-client,
+// backend, fullstack, cli, library) from its languages, frameworks, and layout
+// under root. It reports evidence for the cli type through addEvidence.
 func ProjectTypes(root string, languages, frameworks []string, monorepo bool, addEvidence func(string)) []string {
 	types := []string{}
 	addType := func(v, evidence string) {

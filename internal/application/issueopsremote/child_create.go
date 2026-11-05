@@ -10,35 +10,38 @@ import (
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/artifacttemplate"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
+// ChildCreateCommand 타입은 부모 이슈 아래 자식 이슈를 만드는 명령의 입력이다. Confirm이 false이면 미리보기만 한다.
 type ChildCreateCommand struct {
 	ID, Provider, Title, Body, BodyFile, Template, ScoreFile string
 	OperationID                                              string
 	Fields, Labels, Assignees                                []string
 	Confirm                                                  bool
-	Actor                                                    model.IssueOpsActor
+	Actor                                                    model.Actor
 }
 
+// ChildProvider 타입은 provider에 자식 이슈를 만드는 포트다.
 type ChildProvider interface {
-	CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
+	CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
 }
 
+// ChildCreator 타입은 부모 기록을 검증하고 본문을 해석해 자식 이슈를 만든다. 확정 생성은 durable 의도 기록을 거쳐 재시도 안전하다.
 type ChildCreator struct {
-	Records        IssueRecordReader
+	Records        issueRecordReader
 	Resolve        func(string) (ChildProvider, error)
 	Bodies         TemplateBodyResolver
-	Authorize      func(context.Context, string, model.IssueOpsActor) error
+	Authorize      func(context.Context, string, model.Actor) error
 	Intents        *ChildCreateIntents
 	NewOperationID func() (string, error)
 }
 
 // childCreatePlan은 Create가 provider 호출 전에 확정한 입력이다.
 type childCreatePlan struct {
-	record       model.IssueOpsRecord
+	record       model.Record
 	providerName string
 	provider     ChildProvider
 	body         string
@@ -46,6 +49,7 @@ type childCreatePlan struct {
 	assignees    []string
 }
 
+// Create 메서드는 자식 이슈 생성을 준비·권한 확인·실행하고 결과를 돌려준다. 오류가 있으면 result.OK는 false다.
 func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observe AncestryObserver) (result ChildCreateResult, resultErr error) {
 	defer func() {
 		if resultErr != nil {
@@ -75,7 +79,7 @@ func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observ
 			return result, nil
 		}
 	}
-	result.IssueProviderCreateChildResult, err = plan.provider.CreateChild(port.IssueProviderCreateChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, Title: cmd.Title, Body: body, Labels: plan.labels, Assignees: plan.assignees, Confirm: cmd.Confirm})
+	result.IssueProviderCreateChildResult, err = plan.provider.CreateChild(ctx, port.IssueProviderCreateChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, Title: cmd.Title, Body: body, Labels: plan.labels, Assignees: plan.assignees, Confirm: cmd.Confirm})
 	if err != nil {
 		if cmd.Confirm {
 			err = s.recordCreateChildFailure(ctx, record, operation, actor, result.ChildURL, err)
@@ -94,7 +98,7 @@ func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observ
 // prepareChildCreate는 기록 조회, 입력 검증, provider 결정, 본문 해석을 순서대로 수행한다.
 func (s ChildCreator) prepareChildCreate(ctx context.Context, cmd ChildCreateCommand, result *ChildCreateResult) (childCreatePlan, error) {
 	var plan childCreatePlan
-	plan.labels, plan.assignees = remote.CleanValues(cmd.Labels), remote.CleanValues(cmd.Assignees)
+	plan.labels, plan.assignees = issueopsremote.CleanValues(cmd.Labels), issueopsremote.CleanValues(cmd.Assignees)
 	record, err := s.Records.Read(ctx, cmd.ID)
 	if err != nil {
 		return plan, err
@@ -103,7 +107,7 @@ func (s ChildCreator) prepareChildCreate(ctx context.Context, cmd ChildCreateCom
 	if err := domain.ValidateChildCreation(record, cmd.Title, plan.labels, plan.assignees); err != nil {
 		return plan, err
 	}
-	if err := remote.ValidateProviderTitleLength("child", cmd.Title); err != nil {
+	if err := issueopsremote.ValidateProviderTitleLength("child", cmd.Title); err != nil {
 		return plan, err
 	}
 	plan.providerName = firstNonEmpty(cmd.Provider, domain.ResolveRecordProvider(record))
@@ -114,21 +118,21 @@ func (s ChildCreator) prepareChildCreate(ctx context.Context, cmd ChildCreateCom
 	if err != nil {
 		return plan, err
 	}
-	resolved, err := s.Bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Template: cmd.Template, Provider: plan.providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
+	resolved, err := s.Bodies.Resolve(templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Template: cmd.Template, Provider: plan.providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
 	if err != nil {
 		return plan, err
 	}
 	plan.body = resolved.Body
 	result.Readability = resolved.Readability
-	if err := remote.ValidateProviderBodyLength(plan.providerName, "child", plan.body); err != nil {
+	if err := issueopsremote.ValidateProviderBodyLength(plan.providerName, "child", plan.body); err != nil {
 		return plan, err
 	}
 	return plan, policy.ValidateRemoteCreateInputs("child create", cmd.Title, plan.body, plan.labels, plan.assignees)
 }
 
 // authorizeConfirmedCreate는 확정 생성 시 실행 lease가 있는 기록에 대해서만 조상 프로세스를 관찰하고 권한을 확인한다.
-func (s ChildCreator) authorizeConfirmedCreate(ctx context.Context, cmd ChildCreateCommand, record model.IssueOpsRecord, observe AncestryObserver) (model.IssueOpsActor, error) {
-	var actor model.IssueOpsActor
+func (s ChildCreator) authorizeConfirmedCreate(ctx context.Context, cmd ChildCreateCommand, record model.Record, observe AncestryObserver) (model.Actor, error) {
+	var actor model.Actor
 	if !cmd.Confirm || record.Execution == nil {
 		return actor, nil
 	}
@@ -143,7 +147,7 @@ func (s ChildCreator) authorizeConfirmedCreate(ctx context.Context, cmd ChildCre
 
 // beginConfirmedCreate는 작업을 봉인해 durable 저장소에 시작을 기록하고 provider에 보낼 본문을 돌려준다.
 // invoke가 false이면 이미 완료된 작업이므로 result를 완료 상태로 채운다.
-func (s ChildCreator) beginConfirmedCreate(ctx context.Context, cmd ChildCreateCommand, plan childCreatePlan, actor model.IssueOpsActor, result *ChildCreateResult) (model.ChildCreateOperation, string, bool, error) {
+func (s ChildCreator) beginConfirmedCreate(ctx context.Context, cmd ChildCreateCommand, plan childCreatePlan, actor model.Actor, result *ChildCreateResult) (model.ChildCreateOperation, string, bool, error) {
 	record := plan.record
 	if s.Intents == nil {
 		return model.ChildCreateOperation{}, "", false, fmt.Errorf("child create durable store is required")
@@ -155,7 +159,7 @@ func (s ChildCreator) beginConfirmedCreate(ctx context.Context, cmd ChildCreateC
 	operation, invoke, err := s.Intents.Begin(ctx, record.ID, operation, strings.TrimSpace(cmd.OperationID), actor)
 	result.OperationID = operation.OperationID
 	result.ChildURL = operation.CanonicalURL
-	result.RecoveryCommand = ChildRecoveryCommand(record.ID, operation.OperationID, actor)
+	result.RecoveryCommand = childRecoveryCommand(record.ID, operation.OperationID, actor)
 	if err != nil {
 		return operation, "", false, err
 	}
@@ -167,13 +171,13 @@ func (s ChildCreator) beginConfirmedCreate(ctx context.Context, cmd ChildCreateC
 	body := strings.TrimSpace(plan.body) + "\n\n" + operation.Marker
 	if fmt.Sprintf("%x", sha256.Sum256([]byte(body))) != operation.BodySHA256 {
 		err = fmt.Errorf("selected child operation body digest mismatch")
-		return operation, "", false, errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentNotInvoked, "", remote.IssueCreateFailure(err), actor))
+		return operation, "", false, errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentNotInvoked, "", issueopsremote.IssueCreateFailure(err), actor))
 	}
 	return operation, body, true, nil
 }
 
 // sealChildOperation은 명시 또는 암묵 operation id를 정해 요청 본문을 봉인한다.
-func (s ChildCreator) sealChildOperation(record model.IssueOpsRecord, cmd ChildCreateCommand, plan childCreatePlan) (model.ChildCreateOperation, error) {
+func (s ChildCreator) sealChildOperation(record model.Record, cmd ChildCreateCommand, plan childCreatePlan) (model.ChildCreateOperation, error) {
 	digest := domain.ChildRequestDigest(plan.providerName, record.IssueURL, cmd.Title, plan.body, plan.labels, plan.assignees)
 	id, origin := strings.TrimSpace(cmd.OperationID), "explicit"
 	if id == "" {
@@ -193,23 +197,23 @@ func (s ChildCreator) sealChildOperation(record model.IssueOpsRecord, cmd ChildC
 }
 
 // recordCreateChildFailure는 provider 생성 실패를 durable 저장소에 기록하고 두 오류를 합친다.
-func (s ChildCreator) recordCreateChildFailure(ctx context.Context, record model.IssueOpsRecord, operation model.ChildCreateOperation, actor model.IssueOpsActor, childURL string, err error) error {
+func (s ChildCreator) recordCreateChildFailure(ctx context.Context, record model.Record, operation model.ChildCreateOperation, actor model.Actor, childURL string, err error) error {
 	createErr, typed := errors.AsType[*port.IssueProviderCreateError](err)
-	return errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && childURL == "", childURL), childURL, remote.IssueCreateFailure(err), actor))
+	return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && childURL == "", childURL), childURL, issueopsremote.IssueCreateFailure(err), actor))
 }
 
 // finalizeCreatedChild는 생성된 자식의 계층을 검증하고 완료 영수증을 기록한다. 실패는 outcome으로 남긴다.
-func (s ChildCreator) finalizeCreatedChild(ctx context.Context, record model.IssueOpsRecord, operation model.ChildCreateOperation, actor model.IssueOpsActor, childURL string, hierarchyVerified bool) error {
+func (s ChildCreator) finalizeCreatedChild(ctx context.Context, record model.Record, operation model.ChildCreateOperation, actor model.Actor, childURL string, hierarchyVerified bool) error {
 	if err := domain.ValidateCreatedChild(hierarchyVerified, childURL); err != nil {
-		return errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentVerificationFailed, childURL, remote.IssueCreateFailure(err), actor))
+		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentVerificationFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
 	}
 	if err := s.Intents.Complete(context.WithoutCancel(ctx), record, operation, childURL, actor, false); err != nil {
-		return errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentReceiptFailed, childURL, remote.IssueCreateFailure(err), actor))
+		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentReceiptFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
 	}
 	return nil
 }
 
-func ChildRecoveryCommand(id, operation string, actors ...model.IssueOpsActor) string {
+func childRecoveryCommand(id, operation string, actors ...model.Actor) string {
 	quote := func(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'" }
 	command := "issueops remote reconcile-child --id " + quote(id) + " --operation-id " + quote(operation)
 	if len(actors) > 0 && actors[0].Host != "" {

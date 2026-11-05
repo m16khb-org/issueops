@@ -68,6 +68,9 @@ type omoAuthSnapshot struct {
 	data    []byte
 }
 
+// NewOmoRunner returns an OmoRunner that serves the probe through harnessBinary and loads lifecycleExtension in the session.
+// canonicalExtension maps the extension path to its canonical form for validation.
+// Nil members of deps are replaced by the real process, clock, and filesystem implementations.
 func NewOmoRunner(harnessBinary, lifecycleExtension string, deps Dependencies, canonicalExtension func(string) string) OmoRunner {
 	return OmoRunner{canonicalExtension: canonicalExtension,
 		harnessBinary:      harnessBinary,
@@ -76,8 +79,10 @@ func NewOmoRunner(harnessBinary, lifecycleExtension string, deps Dependencies, c
 	}
 }
 
+// Name returns the host name, "omo", used in reports and evidence sources.
 func (OmoRunner) Name() string { return "omo" }
 
+// Preflight reports whether the omo executable is installed, its auth can be copied, and a version probe succeeds in an isolated environment.
 func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest) (result port.HostProbePreflight) {
 	result = port.HostProbePreflight{
 		Host:           r.Name(),
@@ -117,10 +122,10 @@ func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest)
 		result.Code = "episode_prepare_failed"
 		return result
 	}
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Argv:    []string{executable, "--version"},
 		Env:     isolatedOmoEnv(r.deps, root),
-		Timeout: VersionTimeout,
+		Timeout: versionTimeout,
 	})
 	if err != nil || output.ExitCode != 0 {
 		result.Cause = "harness_environment"
@@ -157,6 +162,9 @@ func (r OmoRunner) resolveExecutable() (string, error) {
 	return executable, nil
 }
 
+// Run executes one probe episode in a private temporary root with a copied auth snapshot and returns the observed call as a HostProbeResult.
+// It requires a harness binary, a valid lifecycle extension, and an explicit model; any failure becomes a failed result with a cause and code, not an error.
+// The private root is removed afterwards.
 func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	if r.harnessBinary == "" {
@@ -202,11 +210,11 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 	if err := prepareOmoEpisode(root, r.lifecycleExtension, targetTool, request, resultPath); err != nil {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_prepare_failed")
 	}
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Cwd:      root,
 		Argv:     omoArgv(executable, root, targetTool, request),
 		Env:      isolatedOmoEnv(r.deps, root),
-		Timeout:  EpisodeTimeout,
+		Timeout:  episodeTimeout,
 		OmoJSONL: true,
 	})
 	return omoEpisodeFinish{
@@ -282,7 +290,7 @@ func resolveOmoAuth(deps Dependencies) (omoAuthSnapshot, error) {
 		return omoAuthSnapshot{}, fmt.Errorf("omo_agent_dir_invalid")
 	}
 	source := filepath.Join(sourceAgentDir, "auth.json")
-	data, err := readOmoAuthFile(source, MaxOutputBytes)
+	data, err := readOmoAuthFile(source, maxOutputBytes)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return omoAuthSnapshot{}, nil
@@ -383,7 +391,7 @@ type omoStreamState struct {
 }
 
 func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, error) {
-	if len(data) == 0 || len(data) > MaxOutputBytes {
+	if len(data) == 0 || len(data) > maxOutputBytes {
 		return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))

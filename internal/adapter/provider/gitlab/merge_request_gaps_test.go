@@ -49,7 +49,7 @@ func TestGitLabCreatePullRequestRejectsInvalidRequestsBeforeAnyCall(t *testing.T
 		t.Run(tt.name, func(t *testing.T) {
 			req := base
 			tt.mutate(&req)
-			if _, err := NewProvider().CreatePullRequest(req); err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+			if _, err := NewProvider().CreatePullRequest(t.Context(), req); err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}
 		})
@@ -59,14 +59,14 @@ func TestGitLabCreatePullRequestRejectsInvalidRequestsBeforeAnyCall(t *testing.T
 func TestGitLabCreatePullRequestClassifiesGlabFailures(t *testing.T) {
 	t.Run("missing glab is not invoked", func(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
-		_, err := NewProvider().CreatePullRequest(gapMRRequest(t.TempDir()))
+		_, err := NewProvider().CreatePullRequest(t.Context(), gapMRRequest(t.TempDir()))
 		if cerr, ok := errors.AsType[*port.IssueProviderCreateError](err); !ok || cerr.Invoked {
 			t.Fatalf("error = %v", err)
 		}
 	})
 	t.Run("failure with a canonical URL keeps it", func(t *testing.T) {
 		repo := installGlab(t, "printf '"+gapMRURL+"\\n'\necho timeout >&2\nexit 1\n")
-		got, err := NewProvider().CreatePullRequest(gapMRRequest(repo))
+		got, err := NewProvider().CreatePullRequest(t.Context(), gapMRRequest(repo))
 		cerr, ok := errors.AsType[*port.IssueProviderCreateError](err)
 		if !ok || !cerr.Invoked || got.URL != gapMRURL || !strings.Contains(err.Error(), "outcome unknown with a canonical URL returned separately; do not retry") {
 			t.Fatalf("got=%+v err=%v", got, err)
@@ -77,7 +77,7 @@ func TestGitLabCreatePullRequestClassifiesGlabFailures(t *testing.T) {
 	})
 	t.Run("failure with a non-canonical URL drops it", func(t *testing.T) {
 		repo := installGlab(t, "printf 'https://gitlab.com/acme/repo/-/merge_requests/16?x=1\\n'\necho timeout >&2\nexit 1\n")
-		got, err := NewProvider().CreatePullRequest(gapMRRequest(repo))
+		got, err := NewProvider().CreatePullRequest(t.Context(), gapMRRequest(repo))
 		cerr, ok := errors.AsType[*port.IssueProviderCreateError](err)
 		if !ok || !cerr.Invoked || got.URL != "" || got.OK || !strings.Contains(err.Error(), "outcome unknown; do not retry") {
 			t.Fatalf("got=%+v err=%v", got, err)
@@ -85,7 +85,7 @@ func TestGitLabCreatePullRequestClassifiesGlabFailures(t *testing.T) {
 	})
 	t.Run("success without a canonical URL needs reconciliation and no readback", func(t *testing.T) {
 		repo := installGlab(t, "printf 'created\\n'\n")
-		_, err := NewProvider().CreatePullRequest(gapMRRequest(repo))
+		_, err := NewProvider().CreatePullRequest(t.Context(), gapMRRequest(repo))
 		if err == nil || !strings.Contains(err.Error(), "created artifact URL unavailable; needs reconciliation; not retried") {
 			t.Fatalf("error = %v", err)
 		}
@@ -108,7 +108,7 @@ func TestGitLabCreatePullRequestReadbackFailuresNeedReconciliation(t *testing.T)
 esac
 exit 2
 `)
-			got, err := NewProvider().CreatePullRequest(gapMRRequest(repo))
+			got, err := NewProvider().CreatePullRequest(t.Context(), gapMRRequest(repo))
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) || !strings.Contains(err.Error(), "needs reconciliation") || got.OK || got.URL != gapMRURL {
 				t.Fatalf("got=%+v err=%v", got, err)
 			}
@@ -146,7 +146,7 @@ exit 2
 			if tt.mutate != nil {
 				tt.mutate(&req)
 			}
-			_, err := NewProvider().CreatePullRequest(req)
+			_, err := NewProvider().CreatePullRequest(t.Context(), req)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) || !strings.Contains(err.Error(), "needs reconciliation") {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}
@@ -165,7 +165,7 @@ exit 2
 `)
 	req := gapMRRequest(repo)
 	req.ProjectKey, req.ExpectedHeadSHA = "", ""
-	got, err := NewProvider().CreatePullRequest(req)
+	got, err := NewProvider().CreatePullRequest(t.Context(), req)
 	if err != nil || !got.OK || got.URL != gapMRURL {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
@@ -180,7 +180,7 @@ func TestGitLabReconcilePullRequestRejectsUnusableInputsAndResponses(t *testing.
 		t.Setenv("PATH", t.TempDir())
 		r := req
 		r.ProjectKey = ""
-		if _, err := NewProvider().ReconcilePullRequest(r); err == nil || !strings.Contains(err.Error(), "requires exact project authority") {
+		if _, err := NewProvider().ReconcilePullRequest(t.Context(), r); err == nil || !strings.Contains(err.Error(), "requires exact project authority") {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -188,7 +188,7 @@ func TestGitLabReconcilePullRequestRejectsUnusableInputsAndResponses(t *testing.
 		t.Setenv("PATH", t.TempDir())
 		r := req
 		r.ProjectKey = "gitlab.com/acme"
-		if _, err := NewProvider().ReconcilePullRequest(r); err == nil || !strings.Contains(err.Error(), "requires exact project authority") {
+		if _, err := NewProvider().ReconcilePullRequest(t.Context(), r); err == nil || !strings.Contains(err.Error(), "requires exact project authority") {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -200,7 +200,7 @@ func TestGitLabReconcilePullRequestRejectsUnusableInputsAndResponses(t *testing.
 		t.Run(name, func(t *testing.T) {
 			r := req
 			r.Repo = installGlab(t, tt.body+"\n")
-			if _, err := NewProvider().ReconcilePullRequest(r); err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+			if _, err := NewProvider().ReconcilePullRequest(t.Context(), r); err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}
 		})
@@ -212,7 +212,7 @@ func TestGitLabReconcilePullRequestReportsAuthoritativeZeroAndProjectsCandidates
 	t.Run("empty array is authoritative zero", func(t *testing.T) {
 		r := r
 		r.Repo = installGlab(t, "printf '[]'\n")
-		got, err := NewProvider().ReconcilePullRequest(r)
+		got, err := NewProvider().ReconcilePullRequest(t.Context(), r)
 		if err != nil || !got.AuthoritativeZero || len(got.Candidates) != 0 {
 			t.Fatalf("got=%+v err=%v", got, err)
 		}
@@ -223,7 +223,7 @@ func TestGitLabReconcilePullRequestReportsAuthoritativeZeroAndProjectsCandidates
 	t.Run("candidate projection normalises project and flags forks", func(t *testing.T) {
 		r := r
 		r.Repo = installGlab(t, `printf '%s' '[{"web_url":"https://GitLab.com/Acme/Repo/-/merge_requests/3","title":" T ","description":"b","source_branch":"feat/x","target_branch":"main","state":" opened ","sha":"s","labels":["l"],"assignees":[{"username":"u"},{"username":" "}],"source_project_id":1,"target_project_id":2},{"web_url":"not a url %zz","source_project_id":5,"target_project_id":5}]'`+"\n")
-		got, err := NewProvider().ReconcilePullRequest(r)
+		got, err := NewProvider().ReconcilePullRequest(t.Context(), r)
 		if err != nil || got.AuthoritativeZero || len(got.Candidates) != 2 {
 			t.Fatalf("got=%+v err=%v", got, err)
 		}
@@ -296,7 +296,7 @@ exit 2
 `)
 			req := gapMRRequest(repo)
 			req.Draft = tc.draft
-			_, err := NewProvider().CreatePullRequest(req)
+			_, err := NewProvider().CreatePullRequest(t.Context(), req)
 			if tc.wantErr == "" && err != nil || tc.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tc.wantErr)) {
 				t.Fatalf("err = %v, want %q", err, tc.wantErr)
 			}

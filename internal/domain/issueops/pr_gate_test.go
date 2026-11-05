@@ -10,7 +10,7 @@ func TestPRGateAdmissionAndReadinessPreserveContract(t *testing.T) {
 	if !NeedsPRGateRead(" pr ") || NeedsPRGateRead("feedback") {
 		t.Fatal("wrong PR gate admission")
 	}
-	ready := model.IssueOpsReadiness{Ready: true, Missing: []string{"base"}, Warnings: []string{"existing"}}
+	ready := model.Readiness{Ready: true, Missing: []string{"base"}, Warnings: []string{"existing"}}
 	if got := MergeGateReadiness(ready, nil, nil); !reflect.DeepEqual(got, ready) {
 		t.Fatalf("unchanged=%+v", got)
 	}
@@ -21,7 +21,7 @@ func TestPRGateAdmissionAndReadinessPreserveContract(t *testing.T) {
 	if err := PRGateError(got); err == nil || err.Error() != "cannot enter pr phase: missing base, loop_active" {
 		t.Fatalf("err=%v", err)
 	}
-	if err := PRGateError(model.IssueOpsReadiness{Ready: true}); err != nil {
+	if err := PRGateError(model.Readiness{Ready: true}); err != nil {
 		t.Fatal(err)
 	}
 }

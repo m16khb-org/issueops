@@ -17,10 +17,10 @@ func TestGlobalPath(t *testing.T) {
 	xdg := testsupport.AbsPath("xdg")
 	home := testsupport.AbsPath("home", "u")
 	env := map[string]string{"XDG_CONFIG_HOME": xdg}
-	if got, want := GlobalPath(func(k string) string { return env[k] }, home), filepath.Join(xdg, "issueops", "agent-models.json"); got != want {
+	if got, want := globalPath(func(k string) string { return env[k] }, home), filepath.Join(xdg, "issueops", "agent-models.json"); got != want {
 		t.Fatalf("GlobalPath = %s, want %s", got, want)
 	}
-	if got, want := GlobalPath(func(string) string { return "" }, home), filepath.Join(home, ".config", "issueops", "agent-models.json"); got != want {
+	if got, want := globalPath(func(string) string { return "" }, home), filepath.Join(home, ".config", "issueops", "agent-models.json"); got != want {
 		t.Fatalf("GlobalPath fallback = %s, want %s", got, want)
 	}
 }
@@ -69,13 +69,13 @@ func TestEnsureExcludeIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err := EnsureExcluded(local.CommonDir)
+	first, err := ensureExcluded(local.CommonDir)
 	if err != nil || !first {
-		t.Fatalf("first EnsureExcluded = %v, %v", first, err)
+		t.Fatalf("first ensureExcluded = %v, %v", first, err)
 	}
-	second, err := EnsureExcluded(local.CommonDir)
+	second, err := ensureExcluded(local.CommonDir)
 	if err != nil || second {
-		t.Fatalf("second EnsureExcluded = %v, %v", second, err)
+		t.Fatalf("second ensureExcluded = %v, %v", second, err)
 	}
 	data, _ := os.ReadFile(filepath.Join(local.CommonDir, "info", "exclude"))
 	if strings.Count(string(data), excludeLine) != 1 {
@@ -85,13 +85,13 @@ func TestEnsureExcludeIdempotent(t *testing.T) {
 
 func TestReadRejectsUnknownField(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "agent-models.json")
-	write(t, path, `{"version":1,"claude":{"implement":{"modle":"x"}}}`) //nolint:misspell // the typo is the unknown field under test
+	writeFixture(t, path, `{"version":1,"claude":{"implement":{"modle":"x"}}}`) //nolint:misspell // the typo is the unknown field under test
 	_, err := Read(path)
 	if err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), `unknown field "modle"`) { //nolint:misspell // the typo is the unknown field under test
 		t.Fatalf("Read err = %v", err)
 	}
 	for _, body := range []string{`{"version":2}`, `{"version":1,"claude":{"reviewer":{"model":"opus"}}}`, `{"version":1,"gemini":{}}`, `{"version":1} {}`} {
-		write(t, path, body)
+		writeFixture(t, path, body)
 		if _, err := Read(path); err == nil || !strings.Contains(err.Error(), path) {
 			t.Fatalf("Read(%s) err = %v", body, err)
 		}
@@ -127,11 +127,11 @@ func TestCodexCatalog(t *testing.T) {
 	if got := CodexCatalog(env, "/nowhere"); got != nil {
 		t.Fatalf("absent catalog = %v", got)
 	}
-	write(t, filepath.Join(home, "models_cache.json"), `{"models":[{"slug":"gpt-6-luna"},{"slug":"gpt-6-astra"},{"slug":""}]}`)
+	writeFixture(t, filepath.Join(home, "models_cache.json"), `{"models":[{"slug":"gpt-6-luna"},{"slug":"gpt-6-astra"},{"slug":""}]}`)
 	if got := CodexCatalog(env, "/nowhere"); !reflect.DeepEqual(got, []string{"gpt-6-luna", "gpt-6-astra"}) {
 		t.Fatalf("catalog = %v", got)
 	}
-	write(t, filepath.Join(home, "models_cache.json"), `not json`)
+	writeFixture(t, filepath.Join(home, "models_cache.json"), `not json`)
 	if got := CodexCatalog(env, "/nowhere"); got != nil {
 		t.Fatalf("broken catalog = %v", got)
 	}
@@ -178,7 +178,7 @@ func git(t *testing.T, dir string, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
-func write(t *testing.T, path, body string) {
+func writeFixture(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
@@ -206,13 +206,13 @@ func TestLoadNamesTheBrokenFile(t *testing.T) {
 		}
 		return ""
 	}
-	write(t, filepath.Join(xdg, "issueops", "agent-models.json"), `{"version":1,"codex":{"research":{"model":"gpt-6-luna"}}}`)
-	write(t, filepath.Join(main, ".issueops", "agent-models.local.json"), `{"version":1,"codex":{"research":{"effort":"low"}}}`)
+	writeFixture(t, filepath.Join(xdg, "issueops", "agent-models.json"), `{"version":1,"codex":{"research":{"model":"gpt-6-luna"}}}`)
+	writeFixture(t, filepath.Join(main, ".issueops", "agent-models.local.json"), `{"version":1,"codex":{"research":{"effort":"low"}}}`)
 	files, err := Load(context.Background(), linked, env, "/nowhere")
 	if err != nil || files.Global.Codex[contract.RoleResearch].Model != "gpt-6-luna" || files.Local.Codex[contract.RoleResearch].Effort != "low" {
 		t.Fatalf("Load = %+v, %v", files, err)
 	}
-	write(t, filepath.Join(main, ".issueops", "agent-models.local.json"), `{"version":2}`)
+	writeFixture(t, filepath.Join(main, ".issueops", "agent-models.local.json"), `{"version":2}`)
 	if _, err := Load(context.Background(), linked, env, "/nowhere"); err == nil || !strings.Contains(err.Error(), "agent-models.local.json") {
 		t.Fatalf("broken local err = %v", err)
 	}

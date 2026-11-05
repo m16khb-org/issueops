@@ -29,7 +29,7 @@ func (cli command) runIssueOpsDomainReview(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsDomainReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDomainReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsDomainReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.DomainReviewRequest{
 		Terminology:       terminology,
 		ModelFit:          *modelFit,
 		Risks:             risks,

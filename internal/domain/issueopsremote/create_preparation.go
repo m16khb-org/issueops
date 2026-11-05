@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"encoding/hex"
@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// CreateAuthority holds the cycle facts remote create checks before it may write: provider, whether the phase is pr, whether an artifact already exists, whether the call confirms, whether an execution lease exists, and the current and expected lease generation.
 type CreateAuthority struct {
 	Provider           string
 	PhasePR            bool
@@ -16,6 +17,7 @@ type CreateAuthority struct {
 	ExpectedGeneration uint64
 }
 
+// ValidateCreateAuthority returns the normalized provider and artifact kind (pr for github, mr for gitlab). It errors when the provider is unsupported, the cycle already has an artifact, the phase is not pr, or, when confirming, there is no execution lease or the lease generation is stale.
 func ValidateCreateAuthority(facts CreateAuthority) (string, string, error) {
 	provider := strings.ToLower(strings.TrimSpace(facts.Provider))
 	kind := "pr"
@@ -44,6 +46,7 @@ func ValidateCreateAuthority(facts CreateAuthority) (string, string, error) {
 	return provider, kind, nil
 }
 
+// ValidateCreatePending refuses create while an earlier external intent is pending; execution reconcile must settle it first.
 func ValidateCreatePending(pending bool) error {
 	if pending {
 		return fmt.Errorf("external intent is already pending; run execution reconcile")
@@ -51,6 +54,7 @@ func ValidateCreatePending(pending bool) error {
 	return nil
 }
 
+// ValidateCreateReview requires a passing implementation review before create. missing carries the reason no review qualifies (id is used in the remediation hint), and a sealed cycle without a current fingerprint cannot prove the review is fresh.
 func ValidateCreateReview(id, missing, currentFingerprint string, sealed bool) error {
 	if missing != "" {
 		return fmt.Errorf("remote create requires a pass implementation review (%s); record it with `issueops implementation-review record --id %s ...`", missing, id)
@@ -61,6 +65,7 @@ func ValidateCreateReview(id, missing, currentFingerprint string, sealed bool) e
 	return nil
 }
 
+// CreateBranchAuthority is the sealed branch-preparation authority a create request must match: whether preparation ran, provider, workspace and base branches, linked issue URL, and code project key.
 type CreateBranchAuthority struct {
 	Prepared        bool
 	Provider        string
@@ -70,6 +75,7 @@ type CreateBranchAuthority struct {
 	CodeProjectKey  string
 }
 
+// CreateRequest is a PR/MR create request: provider, project key, head and base branches, title, body, labels, and assignees.
 type CreateRequest struct {
 	Provider   string
 	ProjectKey string
@@ -81,6 +87,7 @@ type CreateRequest struct {
 	Assignees  []string
 }
 
+// PrepareCreateRequest normalizes request against authority and returns it with the project key resolved. It requires prior branch preparation, provider, head and base matching the authority, a title and a body within provider limits that are not secretLike, and non-empty labels and non-placeholder assignees.
 func PrepareCreateRequest(authority CreateBranchAuthority, request CreateRequest, secretLike bool) (CreateRequest, error) {
 	if !authority.Prepared {
 		return CreateRequest{}, fmt.Errorf("remote create requires branch preparation")
@@ -98,7 +105,7 @@ func PrepareCreateRequest(authority CreateBranchAuthority, request CreateRequest
 	if len(request.Labels) == 0 || len(request.Assignees) == 0 {
 		return CreateRequest{}, fmt.Errorf("remote create requires canonical labels and assignees")
 	}
-	if invalid := InvalidAssignee(request.Assignees); invalid != "" {
+	if invalid := invalidAssignee(request.Assignees); invalid != "" {
 		return CreateRequest{}, fmt.Errorf("remote create assignee must not be placeholder %q", invalid)
 	}
 	return request, nil
@@ -120,6 +127,7 @@ func validateCreateContent(request CreateRequest, secretLike bool) error {
 	return nil
 }
 
+// ValidateCreateHead requires head to be a full hex commit ID (40 or 64 characters).
 func ValidateCreateHead(head string) error {
 	if len(head) == 40 || len(head) == 64 {
 		if _, err := hex.DecodeString(head); err == nil {

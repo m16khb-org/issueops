@@ -14,16 +14,16 @@ func VerifyGitHubIssueLive(url string) error {
 	return (Reader{}).GitHubChild(context.Background(), url)
 }
 func VerifyGitLabIssueLive(url *url.URL) error { return testService().Child(url.String()) }
-func VerifyRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+func VerifyRemoteArtifactLive(req issueopscontract.RemoteArtifactVerificationRequest) error {
 	return testService().Verify(req)
 }
-func VerifyRemoteArtifactLiveContext(ctx context.Context, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+func VerifyRemoteArtifactLiveContext(ctx context.Context, req issueopscontract.RemoteArtifactVerificationRequest) error {
 	return testService().VerifyContext(ctx, req)
 }
-func VerifyRemoteArtifactMergedLive(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) error {
+func VerifyRemoteArtifactMergedLive(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) error {
 	return testService().Merged(ctx, artifact)
 }
-func VerifyRemoteArtifactMergedHeadLive(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+func VerifyRemoteArtifactMergedHeadLive(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 	return testService().MergedHead(ctx, artifact)
 }
 func fetchGitLabIssueArtifact(url string) (model.Artifact, error) {

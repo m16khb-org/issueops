@@ -17,9 +17,9 @@ func snapshotStore() application.SnapshotStore {
 	}, Now: time.Now}
 }
 
-func ReadSelfAugmentStateSnapshot(key string) (augmentcontract.SelfAugmentStateSnapshot, error) {
+func ReadSelfAugmentStateSnapshot(key string) (augmentcontract.StateSnapshot, error) {
 	return snapshotStore().Read(key)
 }
-func WriteSelfAugmentSnapshotRecord(dir, key string, snapshot augmentcontract.SelfAugmentStateSnapshot) error {
+func WriteSelfAugmentSnapshotRecord(dir, key string, snapshot augmentcontract.StateSnapshot) error {
 	return snapshotStore().Write(dir, key, snapshot)
 }

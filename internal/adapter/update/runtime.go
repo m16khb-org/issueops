@@ -1,3 +1,8 @@
+// Package update is the adapter behind the update command: it supplies the
+// process inventory, process termination, and native install steps that the
+// update application service orchestrates. It is the only layer that shells out
+// to ps or the install script; unix and windows builds implement Runtime.Install
+// separately.
 package update
 
 import (
@@ -15,12 +20,15 @@ import (
 	"syscall"
 )
 
+// ProcessTable runs the external process-listing command (ps on unix) for Runtime.
+// A non-nil PathError means the command could not be resolved and is returned from every Read.
 type ProcessTable struct {
 	Path        string
 	PathError   error
 	Environment []string
 }
 
+// Read runs the process-listing command with args in Environment and returns its stdout.
 func (p ProcessTable) Read(args ...string) ([]byte, error) {
 	if p.PathError != nil {
 		return nil, p.PathError
@@ -30,6 +38,9 @@ func (p ProcessTable) Read(args ...string) ([]byte, error) {
 	return command.Output()
 }
 
+// Runtime is the host-side implementation of the update service's runtime port.
+// Root is the issueops installation root; Input, Output and Diagnostics are wired
+// to the install step's standard streams; InspectProcess verifies the identity of a listed MCP proxy process.
 type Runtime struct {
 	Root                string
 	Environment         []string
@@ -39,8 +50,13 @@ type Runtime struct {
 	InspectProcess      func(int) (processidentity.Identity, error)
 }
 
-func (Runtime) CurrentPID() int                 { return os.Getpid() }
+// CurrentPID returns the PID of the running process.
+func (Runtime) CurrentPID() int { return os.Getpid() }
+
+// SupportsOrphanTermination reports whether orphaned MCP proxies can be terminated on this OS (darwin only).
 func (Runtime) SupportsOrphanTermination() bool { return runtime.GOOS == "darwin" }
+
+// Terminate asks the process with the given PID to exit by sending SIGTERM.
 func (Runtime) Terminate(pid int) error {
 	process, err := os.FindProcess(pid)
 	if err != nil {
@@ -49,6 +65,9 @@ func (Runtime) Terminate(pid int) error {
 	return process.Signal(syscall.SIGTERM)
 }
 
+// List returns the MCP proxy processes ("<root>/bin/issueops mcp") currently running.
+// It fails when the process table cannot be read or the installed binary cannot be resolved.
+// IdentityVerified is set only when the inspected executable matches the canonical installed binary.
 func (r Runtime) List() ([]contract.MCPProxyProcess, error) {
 	out, err := r.processRows()
 	if err != nil {
@@ -76,6 +95,8 @@ func (r Runtime) List() ([]contract.MCPProxyProcess, error) {
 	return processes, nil
 }
 
+// ParseMCPProxyProcessSnapshot parses one "pid ppid command..." process-table row.
+// It returns false unless the command is exactly the canonical binary followed by "mcp" and both ids are valid.
 func ParseMCPProxyProcessSnapshot(line, binary string) (contract.MCPProxyProcess, bool) {
 	line = strings.TrimSpace(line)
 	fields := strings.Fields(line)

@@ -8,10 +8,13 @@ import (
 
 const stepBudgetMinRegressionMS int64 = 25
 
-func CompareSlowestStepRegressions(baseline, candidate []contract.SelfAugmentSlowStep, maxRegressionPct float64) []contract.SelfAugmentSlowStepRegression {
+// CompareSlowestStepRegressions reports labels whose slowest observed duration grew by more than
+// maxRegressionPct from baseline to candidate. Labels absent from baseline or with a non-positive
+// baseline are ignored; the result is ordered by descending growth, then label.
+func CompareSlowestStepRegressions(baseline, candidate []contract.SlowStep, maxRegressionPct float64) []contract.SlowStepRegression {
 	baselineByLabel := MaxSlowStepDurationByLabel(baseline)
 	candidateByLabel := MaxSlowStepDurationByLabel(candidate)
-	regressions := []contract.SelfAugmentSlowStepRegression{}
+	regressions := []contract.SlowStepRegression{}
 	for label, candidateDuration := range candidateByLabel {
 		baselineDuration, ok := baselineByLabel[label]
 		if !ok || baselineDuration <= 0 {
@@ -25,7 +28,7 @@ func CompareSlowestStepRegressions(baseline, candidate []contract.SelfAugmentSlo
 		if deltaPct <= maxRegressionPct {
 			continue
 		}
-		regressions = append(regressions, contract.SelfAugmentSlowStepRegression{
+		regressions = append(regressions, contract.SlowStepRegression{
 			Label:               label,
 			BaselineDurationMS:  baselineDuration,
 			CandidateDurationMS: candidateDuration,
@@ -42,10 +45,13 @@ func CompareSlowestStepRegressions(baseline, candidate []contract.SelfAugmentSlo
 	return regressions
 }
 
-func CompareStepBudgetRegressions(baseline, candidate []contract.SelfAugmentStepDurationStat, maxRegressionPct float64) []contract.SelfAugmentStepBudgetRegression {
+// CompareStepBudgetRegressions reports labels whose p95 duration grew by more than maxRegressionPct
+// and at least 25 ms from baseline to candidate. Labels without a positive baseline p95 are
+// ignored; the result is ordered by descending growth, then label.
+func CompareStepBudgetRegressions(baseline, candidate []contract.StepDurationStat, maxRegressionPct float64) []contract.StepBudgetRegression {
 	baselineByLabel := StepDurationStatByLabel(baseline)
 	candidateByLabel := StepDurationStatByLabel(candidate)
-	regressions := []contract.SelfAugmentStepBudgetRegression{}
+	regressions := []contract.StepBudgetRegression{}
 	for label, candidateStat := range candidateByLabel {
 		baselineStat, ok := baselineByLabel[label]
 		if !ok || baselineStat.P95DurationMS <= 0 {
@@ -62,7 +68,7 @@ func CompareStepBudgetRegressions(baseline, candidate []contract.SelfAugmentStep
 		if deltaPct <= maxRegressionPct {
 			continue
 		}
-		regressions = append(regressions, contract.SelfAugmentStepBudgetRegression{
+		regressions = append(regressions, contract.StepBudgetRegression{
 			Label:               label,
 			Metric:              "p95_duration_ms",
 			BaselineDurationMS:  baselineStat.P95DurationMS,
@@ -82,6 +88,7 @@ func CompareStepBudgetRegressions(baseline, candidate []contract.SelfAugmentStep
 	return regressions
 }
 
+// MissingStrings returns the sorted entries of want that are absent from have.
 func MissingStrings(want, have []string) []string {
 	haveSet := map[string]bool{}
 	for _, item := range have {

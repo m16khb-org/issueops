@@ -1,3 +1,8 @@
+// Package gitlab is the outbound issue-provider adapter for GitLab. It drives
+// the `glab` CLI and the GitLab REST and GraphQL APIs (issues, merge requests,
+// work-item children, labels, assignees, milestones, merges) behind the
+// port.IssueProvider interfaces, returning dry-run previews unless the request
+// is confirmed.
 package gitlab
 
 import (
@@ -23,17 +28,39 @@ import (
 // Provider adapts GitLab via the `glab` CLI.
 type Provider struct{}
 
+// Provider implements the IssueProvider core and every optional capability
+// the callers type-assert for; the compiler fails here if a signature drifts.
+var (
+	_ port.IssueProvider                       = Provider{}
+	_ port.IssueProviderChildCreateRecovery    = Provider{}
+	_ port.IssueProviderIssueCreateReconciler  = Provider{}
+	_ port.IssueProviderRecentIssueLister      = Provider{}
+	_ port.IssueProviderRemoteCreateReconciler = Provider{}
+	_ port.IssueProviderPullRequestCloser      = Provider{}
+	_ port.IssueProviderPullRequestMerger      = Provider{}
+	_ port.IssueProviderPullRequestReadier     = Provider{}
+	_ port.IssueProviderCommenter              = Provider{}
+	_ port.IssueProviderLabeler                = Provider{}
+	_ port.IssueProviderRetitler               = Provider{}
+	_ port.IssueProviderAssigner               = Provider{}
+	_ port.IssueProviderMilestoneSetter        = Provider{}
+	_ port.IssueProviderArtifactBodyReader     = Provider{}
+	_ port.IssueProviderArtifactBodyReplacer   = Provider{}
+	_ port.IssueProviderChildHierarchyVerifier = Provider{}
+)
+
 var glabCapabilityVersionPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|\s)v?(\d+)\.(\d+)\.(\d+)(?:\s|$)`) })
 
+// NewProvider returns the stateless GitLab Provider.
 func NewProvider() Provider { return Provider{} }
 
+// Name returns the provider identifier "gitlab".
 func (Provider) Name() string { return "gitlab" }
 
-func (Provider) CreateIssue(req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
-	return Provider{}.CreateIssueContext(context.Background(), req)
-}
-
-func (Provider) CreateIssueContext(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+// CreateIssue creates an issue with `glab issue create`. Without Confirm it
+// only returns a dry-run preview; a confirmed create needs an exact project
+// authority and fails with a not-invoked IssueProviderCreateError otherwise.
+func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return port.IssueProviderCreateIssueResult{OK: false}, fmt.Errorf("issue title is required")
@@ -68,6 +95,10 @@ func (Provider) CreateIssueContext(ctx context.Context, req port.IssueProviderCr
 	return runGlabJSONContext(ctx, args, req.Repo)
 }
 
+// FindIssueCreateCandidates searches the project's issues (up to 100, any
+// scope) for descriptions containing req.Marker, so a caller can reconcile an
+// issue create whose outcome is unknown. Truncated reports that the search hit
+// the limit. ProjectAuthority must be "<host>/<project path>".
 func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssueProviderFindIssueCreateCandidatesRequest) (port.IssueProviderFindIssueCreateCandidatesResult, error) {
 	const searchLimit = 100
 	authority := strings.TrimSpace(req.ProjectAuthority)
@@ -104,11 +135,12 @@ func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssuePro
 	}, nil
 }
 
-func (Provider) CreatePullRequest(req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
-	return Provider{}.CreatePullRequestContext(context.Background(), req)
-}
-
-func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+// CreatePullRequest creates a merge request with `glab mr create` and verifies
+// the result by readback. Without Confirm it returns a dry-run preview. A
+// custom web authority needs a proven glab >= 1.82.0. After a confirmed create
+// a non-canonical URL or a failed readback is an error that asks for
+// reconciliation, not a retry.
+func (Provider) CreatePullRequest(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("MR title is required")
@@ -283,11 +315,11 @@ func compareGitLabMergeRequestAuthority(req port.IssueProviderCreatePullRequestR
 	return nil
 }
 
-func (Provider) ReconcilePullRequest(req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
-	return Provider{}.ReconcilePullRequestContext(context.Background(), req)
-}
-
-func (Provider) ReconcilePullRequestContext(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
+// ReconcilePullRequest lists at most two merge requests whose source branch is
+// req.HeadBranch in the exact project and returns them as candidates with a
+// description hash. AuthoritativeZero is set only when the response is an
+// authoritative empty array; a null or oversized response is an error.
+func (Provider) ReconcilePullRequest(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
 	projectURL, err := gitLabProjectURL(req.ProjectKey)
 	if err != nil || projectURL == "" {
 		return port.IssueProviderReconcilePullRequestResult{}, fmt.Errorf("GitLab reconcile requires exact project authority")

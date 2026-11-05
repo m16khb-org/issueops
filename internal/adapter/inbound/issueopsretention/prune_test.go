@@ -37,7 +37,7 @@ type fixedClock struct{ now time.Time }
 
 func (clock fixedClock) Now() time.Time { return clock.now }
 
-func newPruneHandler(store *fakeRetentionStore) func(string, time.Duration, bool) (issueopsretentioncontract.Result, error) {
+func newFakePruneHandler(store *fakeRetentionStore) func(string, time.Duration, bool) (issueopsretentioncontract.Result, error) {
 	return NewPruneHandler(issueopsretentionapplication.NewService(
 		store,
 		fixedClock{now: time.Date(2026, 8, 25, 8, 0, 0, 0, time.UTC)},
@@ -46,7 +46,7 @@ func newPruneHandler(store *fakeRetentionStore) func(string, time.Duration, bool
 
 func TestPruneHandlerReportsDryRunByDefault(t *testing.T) {
 	store := &fakeRetentionStore{}
-	handler := newPruneHandler(store)
+	handler := newFakePruneHandler(store)
 
 	result, err := handler("/state", 24*time.Hour, false)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestPruneHandlerReportsDryRunByDefault(t *testing.T) {
 
 func TestPruneHandlerSwitchesToConfirmedMode(t *testing.T) {
 	store := &fakeRetentionStore{}
-	handler := newPruneHandler(store)
+	handler := newFakePruneHandler(store)
 
 	result, err := handler("/state", time.Hour, true)
 	if err != nil {
@@ -78,7 +78,7 @@ func TestPruneHandlerSwitchesToConfirmedMode(t *testing.T) {
 
 func TestPruneHandlerRejectsNonPositiveMaxAge(t *testing.T) {
 	store := &fakeRetentionStore{}
-	handler := newPruneHandler(store)
+	handler := newFakePruneHandler(store)
 
 	if _, err := handler("/state", 0, false); err == nil {
 		t.Fatal("non-positive max age must fail")
@@ -90,7 +90,7 @@ func TestPruneHandlerRejectsNonPositiveMaxAge(t *testing.T) {
 
 func TestPruneHandlerPropagatesListError(t *testing.T) {
 	store := &fakeRetentionStore{err: errors.New("lock held")}
-	handler := newPruneHandler(store)
+	handler := newFakePruneHandler(store)
 
 	if _, err := handler("/state", time.Hour, false); err == nil {
 		t.Fatal("list ids failure must surface through handler")

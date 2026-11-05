@@ -13,7 +13,7 @@ func TestMergeEnvOverridesReplacesExistingKeys(t *testing.T) {
 	values := map[string]string{}
 	counts := map[string]int{}
 	for _, entry := range env {
-		key, ok := EnvEntryKey(entry)
+		key, ok := envEntryKey(entry)
 		if !ok {
 			t.Fatalf("invalid env entry remained: %q", entry)
 		}
@@ -37,7 +37,7 @@ func TestMergeEnvOverridesDropsEntriesWithoutKeyAndAcceptsMoreOverridesThanBase(
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got=%v want=%v", got, want)
 	}
-	if key, ok := EnvEntryKey("=x"); ok || key != "" {
+	if key, ok := envEntryKey("=x"); ok || key != "" {
 		t.Fatalf("empty key must be rejected: %q %v", key, ok)
 	}
 }

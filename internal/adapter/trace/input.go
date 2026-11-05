@@ -1,3 +1,6 @@
+// Package trace reads and decodes trace input from files, stdin, state
+// records, and host usage logs into the domain trace model. It is an
+// adapter-layer package.
 package trace
 
 import (
@@ -10,11 +13,18 @@ import (
 	"strings"
 )
 
+// Source loads raw trace input. ReadState reads a state record by key; Stdin,
+// when set, replaces os.Stdin for host-format input.
 type Source struct {
-	ReadState func(string) (statecontract.StateResult, error)
+	ReadState func(string) (statecontract.Result, error)
 	Stdin     io.Reader
 }
 
+// Load reads trace input and returns where it came from ("stdin", "file", or
+// "state"), its bytes, and whether host input was truncated at the size limit.
+// Host formats read from a file or stdin. Otherwise input "-" is stdin, an
+// existing file is read, and a bare name without a path separator is looked up
+// as a state key.
 func (source Source) Load(input, format string) (string, []byte, bool, error) {
 	if isHostFormat(format) {
 		return source.loadHost(input)

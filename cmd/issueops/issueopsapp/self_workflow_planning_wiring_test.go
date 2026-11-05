@@ -96,7 +96,7 @@ func TestSelfPlanningInstancesKeepRootsAndLessonStateSeparate(t *testing.T) {
 		}
 	}
 	absent := filepath.Join(t.TempDir(), "absent")
-	if _, err := newSelfWorkflowPlanning(roots[0], absent, "test").SaveLesson(context.Background(), contract.SelfAugmentLessonRequest{CandidateID: "candidate", Lesson: "", NextAction: "next"}); err == nil {
+	if _, err := newSelfWorkflowPlanning(roots[0], absent, "test").SaveLesson(context.Background(), contract.LessonRequest{CandidateID: "candidate", Lesson: "", NextAction: "next"}); err == nil {
 		t.Fatal("invalid lesson accepted")
 	}
 	if _, err := os.Stat(absent); !os.IsNotExist(err) {

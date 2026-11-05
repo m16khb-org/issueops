@@ -1,3 +1,5 @@
+// Package testsupport provides shared helpers for tests: stdout/stderr capture,
+// git config and environment isolation, and platform checks.
 package testsupport
 
 import (

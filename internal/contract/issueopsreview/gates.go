@@ -8,6 +8,8 @@ type ReviewGateEvidence struct {
 	ReviewedFingerprint string
 }
 
+// SchemaGateEvidence 타입은 저장된 스키마 검토 중 게시 게이트가 필요로 하는
+// 부분이다. 면제 여부와 사유, 측정과 근거 수, 검토한 지문을 담는다.
 type SchemaGateEvidence struct {
 	Present             bool
 	Waived              bool

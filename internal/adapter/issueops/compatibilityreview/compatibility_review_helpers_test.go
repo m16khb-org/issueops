@@ -10,7 +10,7 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func Record(store reviewport.CompatibilityStore, stateRoot, id string, req reviewcontract.CompatibilityReviewRequest) (model.IssueOpsRecord, error) {
+func Record(store reviewport.CompatibilityStore, stateRoot, id string, req reviewcontract.CompatibilityReviewRequest) (model.Record, error) {
 	return reviewapp.RecordCompatibilityReview(store, stateRoot, id, req, time.Now().UTC().Format(time.RFC3339Nano))
 }
 

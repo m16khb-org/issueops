@@ -1,9 +1,14 @@
+// Package issueopsinventory holds the domain rules that project issueops
+// cycle records into inventory list entries.
 package issueopsinventory
 
 import (
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
 
+// ProjectEntry projects a cycle Record onto the flat ListEntry shown in
+// inventory listings, including lease, pending, failure, cleanup, and remote
+// completion state when present.
 func ProjectEntry(record issueopsinventorycontract.Record) issueopsinventorycontract.ListEntry {
 	entry := issueopsinventorycontract.ListEntry{
 		ID:        record.ID,

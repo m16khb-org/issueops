@@ -15,8 +15,8 @@ func covIZActor(agent string) model.NativeActor {
 }
 
 func TestValidateReplacementGenerationBindsToCurrentLease(t *testing.T) {
-	record := model.IssueOpsRecord{Execution: &model.Execution{Lease: model.WriteLease{Generation: 3}}}
-	if err := ValidateReplacementGeneration(model.IssueOpsRecord{}, 3, false); err == nil || !strings.Contains(err.Error(), "not prepared") {
+	record := model.Record{Execution: &model.Execution{Lease: model.WriteLease{Generation: 3}}}
+	if err := ValidateReplacementGeneration(model.Record{}, 3, false); err == nil || !strings.Contains(err.Error(), "not prepared") {
 		t.Fatalf("no execution: %v", err)
 	}
 	if err := ValidateReplacementGeneration(record, 3, false); err != nil {
@@ -89,13 +89,13 @@ func TestFinalizeReplacementReleasesWhenWorkspaceIsAbsent(t *testing.T) {
 }
 
 func TestCompletedReplacementBaseRequiresStampedGenerationAndBaseBranch(t *testing.T) {
-	completed := func(status model.LeaseStatus, generation uint64) model.IssueOpsRecord {
-		return model.IssueOpsRecord{
+	completed := func(status model.LeaseStatus, generation uint64) model.Record {
+		return model.Record{
 			Execution:     &model.Execution{Lease: model.WriteLease{Status: status}, Completion: &model.ExecutionCompletion{Generation: generation}},
-			BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "main"},
+			BranchPrepare: &model.BranchPrepare{BaseBranch: "main"},
 		}
 	}
-	for name, record := range map[string]model.IssueOpsRecord{
+	for name, record := range map[string]model.Record{
 		"no execution":  {},
 		"no completion": {Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased}}},
 		"active lease":  completed(model.LeaseStatusActive, 3),

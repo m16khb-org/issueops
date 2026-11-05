@@ -14,7 +14,7 @@ import (
 	"issueops/internal/domain/shelltoken"
 )
 
-// Readiness는 주입된 게이트 판정이다. adapter의 IssueOpsReadiness에서 이
+// Readiness 타입은 주입된 게이트 판정이다. adapter의 IssueOpsReadiness에서 이
 // 분류기가 쓰는 두 필드만 남긴 것이다.
 type Readiness struct {
 	Ready   bool
@@ -24,6 +24,8 @@ type Readiness struct {
 	Warnings []string
 }
 
+// Input 타입은 분류에 필요한 모든 관측을 담는다. 분류기는 I/O를 하지 않으므로
+// 파일시스템, git, 프로세스 관측은 호출자가 미리 채워 넣어야 한다.
 type Input struct {
 	Record issueopsnextcontract.Record
 	// Completion은 phase별 완료 판정이다(adapter IssueOpsPhaseCompletion).
@@ -69,6 +71,8 @@ type Input struct {
 	ChildGateMissing []string
 }
 
+// Decision 타입은 사이클의 현재 단계와 그 단계를 진행시킬 다음 명령, 막힌
+// 게이트(Missing), 비차단 경고를 담는 분류 결과다.
 type Decision struct {
 	Stage           issueopsnextcontract.Stage
 	Lease           issueopsnextcontract.Lease
@@ -107,7 +111,7 @@ var verifyLocalKeys = []string{
 // 푸시가 해소하므로 검증 단계로 되돌릴 이유가 없다.
 var commitPushLocalKeys = []string{"worktree_clean", "upstream"}
 
-// Classify는 규칙을 위에서 아래로 본다. 먼저 맞은 규칙이 결과를 결정한다.
+// Classify 함수는 규칙을 위에서 아래로 본다. 먼저 맞은 규칙이 결과를 결정한다.
 func Classify(in Input) Decision {
 	decision := Decision{Lease: leaseView(in)}
 	if strings.TrimSpace(in.Record.ID) == "" {
@@ -167,7 +171,7 @@ func classifyBlockedExecution(in Input, decision Decision, index int) (Decision,
 		decision.NextCommand = "issueops execution reconcile --id " + in.Record.ID + " --preview $ACTOR_FLAGS --json"
 		return decision, true
 	}
-	if execution == nil && issueopsdomain.IssueOpsPhaseRank(in.Record.Phase) >= issueopsdomain.IssueOpsPhaseRank(issueopsnextcontract.PhasePlan) &&
+	if execution == nil && issueopsdomain.PhaseRank(in.Record.Phase) >= issueopsdomain.PhaseRank(issueopsnextcontract.PhasePlan) &&
 		strings.TrimSpace(in.RootConflictID) != "" {
 		decision.Stage = stage(issueopsnextcontract.StageBlockedRoot, 3)
 		decision.NextCommand = "issueops list --repo " + placeholder(in.SourceRoot, "<source_root>") + " --json"
@@ -271,13 +275,13 @@ func classifyPreparation(in Input, decision Decision) (Decision, bool) {
 	if key := architectureGate(in); key != "" {
 		decision.Stage = stage(issueopsnextcontract.StagePlanArchitecture, 3)
 		decision.Missing = []string{key}
-		decision.NextCommand = OwnerCommand(id, key)
+		decision.NextCommand = ownerCommand(id, key)
 		return decision, true
 	}
 	if !in.StagedPlan {
 		decision.Stage = stage(issueopsnextcontract.StagePlanWrite, 3)
 		decision.Missing = []string{"plan_artifact"}
-		decision.NextCommand = OwnerCommand(id, "plan_artifact")
+		decision.NextCommand = ownerCommand(id, "plan_artifact")
 		return decision, true
 	}
 	if devilsAdvocateMissing := devilsAdvocateGate(in); devilsAdvocateMissing != "" {
@@ -318,7 +322,7 @@ func classifyIssueMissing(in Input, decision Decision) (Decision, bool) {
 	}
 	decision.Stage = stage(issueopsnextcontract.StageIssue, 1)
 	decision.Missing = stageOneMissing(in)
-	decision.NextCommand = OwnerCommand(record.ID, firstOr(decision.Missing, "intent_contract"))
+	decision.NextCommand = ownerCommand(record.ID, firstOr(decision.Missing, "intent_contract"))
 	// QA (lost create response): after "outcome unknown; do not retry", next
 	// still offered create-issue, which could open a duplicate issue. An
 	// unsettled create intent goes to the read-only reconcile preview first.
@@ -374,7 +378,7 @@ func classifyBranchPrepare(in Input, decision Decision) (Decision, bool) {
 	}
 	key := branchEvidenceKey(record)
 	decision.Missing = []string{key}
-	decision.NextCommand = OwnerCommand(record.ID, key)
+	decision.NextCommand = ownerCommand(record.ID, key)
 	return decision, true
 }
 
@@ -405,7 +409,7 @@ func classifyImplementation(in Input, decision Decision) (Decision, bool) {
 		if missing := intersect(in.Completion(issueopsnextcontract.PhaseAISlopClean).Missing, cleanCompletionKeys); len(missing) > 0 {
 			decision.Stage = stage(issueopsnextcontract.StageClean, 5)
 			decision.Missing = missing
-			decision.NextCommand = OwnerCommand(id, missing[0])
+			decision.NextCommand = ownerCommand(id, missing[0])
 			return decision, true
 		}
 	}
@@ -429,7 +433,7 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 			key := branchEvidenceKey(record)
 			decision.Stage = stage(issueopsnextcontract.StagePrepare, 2)
 			decision.Missing = []string{key}
-			decision.NextCommand = OwnerCommand(id, key)
+			decision.NextCommand = ownerCommand(id, key)
 		case strings.TrimSpace(record.PlanPath) == "":
 			decision.Missing = []string{"plan_path"}
 			decision.NextCommand = linkPlanCommand(record)
@@ -447,7 +451,7 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 			decision.Warnings = append(decision.Warnings, revisePlanAfterPrepareWarning)
 		case record.CompatibilityReview == nil || !record.CompatibilityReview.Approved:
 			decision.Missing = []string{"compatibility_review"}
-			decision.NextCommand = OwnerCommand(id, "compatibility_review")
+			decision.NextCommand = ownerCommand(id, "compatibility_review")
 		default:
 			decision.NextCommand = "issueops phase --id " + id + " --to implement $RECORD_ACTOR_FLAGS --json"
 		}
@@ -481,13 +485,13 @@ func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
 	if missing := intersect(local, cleanLocalKeys); len(missing) > 0 {
 		decision.Stage = stage(issueopsnextcontract.StageClean, 5)
 		decision.Missing = missing
-		decision.NextCommand = OwnerCommand(id, missing[0])
+		decision.NextCommand = ownerCommand(id, missing[0])
 		return decision, true
 	}
 	if missing := intersect(local, docsLocalKeys); len(missing) > 0 {
 		decision.Stage = stage(issueopsnextcontract.StageDocs, 6)
 		decision.Missing = missing
-		decision.NextCommand = OwnerCommand(id, missing[0])
+		decision.NextCommand = ownerCommand(id, missing[0])
 		return decision, true
 	}
 	verify := intersect(local, verifyLocalKeys)
@@ -495,7 +499,7 @@ func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
 	if len(verify) > 0 {
 		decision.Stage = stage(issueopsnextcontract.StageVerify, 7)
 		decision.Missing = verify
-		decision.NextCommand = OwnerCommand(id, verify[0])
+		decision.NextCommand = ownerCommand(id, verify[0])
 		return decision, true
 	}
 	if subset(local, commitPushLocalKeys) {
@@ -825,7 +829,7 @@ func warnings(in Input) []string {
 func childCreateWarnings(in Input) []string {
 	var out []string
 	for _, op := range in.Record.ChildCreateOperations {
-		if issueCreateUnsettled(&op.IssueOpsIssueCreateIntent) {
+		if issueCreateUnsettled(&op.IssueCreateIntent) {
 			out = append(out, "child create "+op.OperationID+" is unsettled ("+op.Status+"); before any create-child run: issueops remote reconcile-child --id "+in.Record.ID+" --operation-id "+op.OperationID+" $RECORD_ACTOR_FLAGS --json")
 		}
 	}
@@ -984,7 +988,7 @@ func devilsAdvocateCommand(in Input) string {
 	if review != nil && strings.EqualFold(strings.TrimSpace(review.Verdict), "stop") && !review.Waived {
 		return "issueops regress --id " + in.Record.ID + " --reason <TEXT>"
 	}
-	return OwnerCommand(in.Record.ID, "devils_advocate_review")
+	return ownerCommand(in.Record.ID, "devils_advocate_review")
 }
 
 func intersect(list, keys []string) []string {

@@ -11,14 +11,19 @@ import (
 
 // PathTransaction and HostTransaction preserve the installation's rollback boundaries.
 // Their implementations own filesystem snapshots and writes.
+//
+// PathTransaction applies, rolls back, or finalizes the command-path (installed binary link) changes of one install.
 type PathTransaction interface {
 	Apply(*port.NativeInstallResult) error
 	Rollback(*port.NativeInstallResult) error
 	Finalize(*port.NativeInstallResult) error
 }
 
+// HostTransaction undoes the host-config writes of one install; RollbackHosts restores the pre-install state.
 type HostTransaction interface{ RollbackHosts() error }
 
+// TransactionEffects is the set of side effects RunTransaction sequences: preparing path and host
+// transactions, running the installer, planning shell changes, and recording upstream and retired-state results.
 type TransactionEffects interface {
 	PreparePath(*port.NativeInstallResult, port.NativeInstallRequest, string, string) (PathTransaction, error)
 	Install(port.NativeInstallRequest) (port.NativeInstallResult, error)
@@ -30,12 +35,15 @@ type TransactionEffects interface {
 	RemoveRetiredState(*port.NativeInstallResult, bool)
 }
 
-type Activation interface {
+type activation interface {
 	Begin(context.Context, activationcontract.Request) (activationcontract.Result, error)
 	Seal(context.Context, activationcontract.Request) (activationcontract.Result, error)
 	Abort(context.Context, activationcontract.Request) (activationcontract.Result, error)
 }
 
+// TransactionRequest describes one install transaction. PathMode is "auto", "manual", or "skip";
+// Step selects the activation phase ("begin", "seal", "abort", or empty for the whole flow);
+// TransitionID carries the id of a previously begun activation for seal and abort.
 type TransactionRequest struct {
 	Install       port.NativeInstallRequest
 	CandidatePath string
@@ -45,12 +53,16 @@ type TransactionRequest struct {
 	Activation    activationcontract.Request
 }
 
+// TransactionOutcome reports what a transaction produced: the install result, the native activation result, or both.
 type TransactionOutcome struct {
 	Install    *port.NativeInstallResult
 	Activation *activationcontract.Result
 }
 
-func RunTransaction(ctx context.Context, request TransactionRequest, effects TransactionEffects, activation Activation) (TransactionOutcome, error) {
+// RunTransaction executes the install as one transaction: path preflight, host dry-run preflight, native activation
+// begin, apply, and commit, rolling back path and host changes and aborting the activation when a later step fails.
+// A dry run reports the plan without writing; Step "abort" only aborts the named activation.
+func RunTransaction(ctx context.Context, request TransactionRequest, effects TransactionEffects, activation activation) (TransactionOutcome, error) {
 	if request.Step == "abort" {
 		return abortActivation(ctx, request, activation)
 	}
@@ -72,7 +84,7 @@ func RunTransaction(ctx context.Context, request TransactionRequest, effects Tra
 	return applyAndCommit(ctx, request, effects, activation, preflight, pathTransaction, hostTransaction)
 }
 
-func abortActivation(ctx context.Context, request TransactionRequest, activation Activation) (TransactionOutcome, error) {
+func abortActivation(ctx context.Context, request TransactionRequest, activation activation) (TransactionOutcome, error) {
 	request.Activation.TransitionID = request.TransitionID
 	aborted, err := activation.Abort(ctx, request.Activation)
 	if err != nil {
@@ -116,7 +128,7 @@ func prepareHostTransaction(request TransactionRequest, effects TransactionEffec
 
 // advanceActivation sets the transition id on request (seal reuses the caller's id,
 // other steps begin a new one). done reports that the step ends here with outcome/err.
-func advanceActivation(ctx context.Context, request *TransactionRequest, activation Activation) (outcome TransactionOutcome, done bool, err error) {
+func advanceActivation(ctx context.Context, request *TransactionRequest, activation activation) (outcome TransactionOutcome, done bool, err error) {
 	if request.Step == "seal" {
 		request.Activation.TransitionID = request.TransitionID
 		return TransactionOutcome{}, false, nil
@@ -132,7 +144,7 @@ func advanceActivation(ctx context.Context, request *TransactionRequest, activat
 	return TransactionOutcome{}, false, nil
 }
 
-func applyAndCommit(ctx context.Context, request TransactionRequest, effects TransactionEffects, activation Activation, preflight port.NativeInstallResult, pathTransaction PathTransaction, hostTransaction HostTransaction) (TransactionOutcome, error) {
+func applyAndCommit(ctx context.Context, request TransactionRequest, effects TransactionEffects, activation activation, preflight port.NativeInstallResult, pathTransaction PathTransaction, hostTransaction HostTransaction) (TransactionOutcome, error) {
 	result := preflight
 	result.TransitionID = request.Activation.TransitionID
 	if applyErr := pathTransaction.Apply(&result); applyErr != nil {
@@ -189,7 +201,7 @@ func hostPreflightFailure(result port.NativeInstallResult, cause error, prefligh
 	return TransactionOutcome{Install: &result}, cause
 }
 
-func failedInstall(ctx context.Context, result port.NativeInstallResult, cause error, request TransactionRequest, path PathTransaction, host HostTransaction, activation Activation) (TransactionOutcome, error) {
+func failedInstall(ctx context.Context, result port.NativeInstallResult, cause error, request TransactionRequest, path PathTransaction, host HostTransaction, activation activation) (TransactionOutcome, error) {
 	result.OK = false
 	if cause == nil {
 		cause = fmt.Errorf("native installer reported ok=false")

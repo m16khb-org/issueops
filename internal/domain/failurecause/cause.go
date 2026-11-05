@@ -1,3 +1,5 @@
+// Package failurecause 패키지는 실패 증거를 모델, 하네스 환경, 전송, 계약 입력 같은
+// 원인으로 분류하는 도메인 규칙을 둔다.
 package failurecause
 
 import (
@@ -12,6 +14,9 @@ import (
 // causePriority는 증거에 여러 원인이 섞여 있을 때 먼저 채택할 원인 순서다.
 var causePriority = []failurecausecontract.Cause{failurecausecontract.Transport, failurecausecontract.HarnessEnvironment, failurecausecontract.ContractInput, failurecausecontract.Model}
 
+// Classify 함수는 실패한 실행의 증거에서 원인(Cause)을 하나 고른다. failed가 false면
+// None을 돌려주고, 타입이 있는 증거가 없으면 Unknown이다. 여러 원인이 섞이면
+// causePriority 순서로 채택하며 증거는 정렬된 사본으로 돌려준다.
 func Classify(failed bool, items []failurecausecontract.Evidence) failurecausecontract.Result {
 	if !failed {
 		return failurecausecontract.Result{Cause: failurecausecontract.None, Reason: "no_failed_steps", Evidence: []failurecausecontract.Evidence{}}

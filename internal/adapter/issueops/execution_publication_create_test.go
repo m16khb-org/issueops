@@ -53,10 +53,10 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 			}
 			actor := executionActor("codex", "publication-creator")
 			record := fixture.record
-			record.Phase = model.IssueOpsPhasePR
+			record.Phase = model.PhasePR
 			record.IssueURL = "https://github.com/example/issueops/issues/69"
 			record.Execution.Lease = model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &actor, ClaimedAt: "2026-09-28T00:00:00Z"}
-			record.ImplementationReview = &model.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: testChangeReader().ChangeFingerprint(record)}
+			record.ImplementationReview = &model.ImplementationReview{Verdict: "pass", ReviewedFingerprint: testChangeReader().ChangeFingerprint(record)}
 			if record.ImplementationReview.ReviewedFingerprint == "" {
 				t.Fatal("fixture fingerprint is missing")
 			}
@@ -110,7 +110,7 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 			}
 			provider := &publicationCreateProvider{t: t, root: root, id: record.ID}
 			verified := 0
-			verifier := remoteapp.NewPublicationVerifier(RemotePublicationStore{StateRoot: root}, func(req model.IssueOpsRemoteArtifactVerificationRequest) error {
+			verifier := remoteapp.NewPublicationVerifier(RemotePublicationStore{StateRoot: root}, func(req model.RemoteArtifactVerificationRequest) error {
 				verified++
 				if req.URL != "https://github.com/example/issueops/pull/197" {
 					t.Fatalf("wrong verification: %+v", req)

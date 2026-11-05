@@ -19,6 +19,9 @@ type Validator struct {
 	VerifyHookConfigActivation func(map[string]any, map[string]any) (string, error)
 }
 
+// Validate checks the native host integration files and configs under root
+// and the user's home using the Validator's injected resolvers. Failures are
+// reported in the returned StepResult rather than as an error.
 func (v Validator) Validate(root string) selfverify.StepResult {
 	return validateNativeIntegrationWithDeps(root, nativeIntegrationValidationDeps{Validator: v})
 }

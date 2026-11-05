@@ -10,6 +10,9 @@ import (
 
 const aggregateOutputBudgetBytes = 8 * 1024
 
+// MCPValidationDeps are the effects of the MCP smoke check: temp directory
+// creation and removal, and the SDK smoke run. Nil fields default to the real
+// implementations.
 type MCPValidationDeps struct {
 	MkdirTemp   func(string, string) (string, error)
 	RemoveAll   func(string) error

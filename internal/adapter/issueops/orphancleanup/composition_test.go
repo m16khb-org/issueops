@@ -12,7 +12,7 @@ import (
 
 type Dependencies struct {
 	Collect      func(context.Context, string) (health.Snapshot, error)
-	VerifyMerged func(model.IssueOpsRemoteArtifactVerification) error
+	VerifyMerged func(model.RemoteArtifactVerification) error
 }
 
 func cleaner(deps Dependencies) app.OrphanCleaner {
@@ -21,7 +21,7 @@ func cleaner(deps Dependencies) app.OrphanCleaner {
 	environment.LocalInventory = func(ctx context.Context, repo string) (health.Snapshot, error) {
 		return collector.CollectLocal(ctx, repo), nil
 	}
-	return app.OrphanCleaner{Environment: environment, Collect: deps.Collect, VerifyMerged: func(ctx context.Context, artifact model.IssueOpsRemoteArtifactVerification) error {
+	return app.OrphanCleaner{Environment: environment, Collect: deps.Collect, VerifyMerged: func(ctx context.Context, artifact model.RemoteArtifactVerification) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}

@@ -4,6 +4,9 @@ import policycontract "issueops/internal/contract/policy"
 
 import "sort"
 
+// ResolveTier maps the capabilities requested in request to a policy tier. The
+// broadest capability wins (shell, then network, then write, else read-only), and
+// the granted capabilities are listed in sorted order.
 func ResolveTier(request policycontract.Request) policycontract.Tier {
 	capabilities := []string{}
 	if request.WriteAllowed {
@@ -28,6 +31,8 @@ func ResolveTier(request policycontract.Request) policycontract.Tier {
 	return policycontract.Tier{Name: name, GrantedCapabilities: capabilities, Rationale: Rationale(name)}
 }
 
+// Rationale returns the human-readable reason for the named tier. An unknown name
+// gets the read-only rationale.
 func Rationale(name string) string {
 	switch name {
 	case policycontract.TierShellException:

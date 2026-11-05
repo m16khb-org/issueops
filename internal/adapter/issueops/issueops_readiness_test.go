@@ -15,11 +15,11 @@ func TestIssueOpsDoneRequiresPRPhase(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseDone)); err == nil || !strings.Contains(err.Error(), "before pr phase") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhaseDone)); err == nil || !strings.Contains(err.Error(), "before pr phase") {
 		t.Fatalf("done before pr should fail, got %v", err)
 	}
 }
@@ -27,7 +27,7 @@ func TestIssueOpsDoneRequiresPRPhase(t *testing.T) {
 func TestIssueOpsImplementationReadinessRejectsPersistedWeakArchitectureReview(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		OK:                 true,
 		Repo:               "/repo/example",
 		Branch:             "1-demo",
@@ -36,7 +36,7 @@ func TestIssueOpsImplementationReadinessRejectsPersistedWeakArchitectureReview(t
 		WorktreePath:       "/repo/example.worktrees/1-demo",
 		Intent:             issueOpsIntentContractForTest(),
 		ArchitectureReview: issueOpsWeakApprovedArchitectureReviewForTest(),
-		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
+		BranchPrepare:      &issueops.BranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
 	}
 
 	ready := IssueOpsImplementationReadiness(record)
@@ -59,7 +59,7 @@ func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
 	planPath := filepath.Join(worktree, "plans/demo.md")
 	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     record.IssueURL,
 		Branch:       record.Branch,
@@ -97,11 +97,11 @@ func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
 	if !ready.Ready {
 		t.Fatalf("implementation should be ready without CodeGraph when other gates pass: %+v", ready)
 	}
-	advanced, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
+	advanced, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.PhaseImplement), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatalf("AdvanceIssueOpsPhase to implement should not require CodeGraph: %v", err)
 	}
-	if advanced.Phase != issueops.IssueOpsPhaseImplement {
+	if advanced.Phase != issueops.PhaseImplement {
 		t.Fatalf("expected implement phase, got %s", advanced.Phase)
 	}
 }
@@ -110,7 +110,7 @@ func TestIssueOpsStrictPRReadinessRequiresCleanSyncedRepo(t *testing.T) {
 	t.Parallel()
 
 	repo := initIssueOpsRepo(t)
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		OK:                 true,
 		Repo:               repo,
 		Branch:             "main",
@@ -119,10 +119,10 @@ func TestIssueOpsStrictPRReadinessRequiresCleanSyncedRepo(t *testing.T) {
 		WorktreePath:       repo,
 		Intent:             issueOpsIntentContractForTest(),
 		ArchitectureReview: issueOpsArchitectureReviewForTest(),
-		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
+		BranchPrepare:      &issueops.BranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
 		AISlopCleanAt:      "2026-06-05T00:00:00Z",
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
-		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
+		ProjectDocsReview: &issueops.ProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 
 	ready := IssueOpsStrictPRReadiness(record)
@@ -160,7 +160,7 @@ func TestIssueOpsStrictPRReadinessUsesLinkedWorktree(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "source-dirty.txt"), []byte("dirty source\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		OK:                 true,
 		Repo:               repo,
 		Branch:             branch,
@@ -169,10 +169,10 @@ func TestIssueOpsStrictPRReadinessUsesLinkedWorktree(t *testing.T) {
 		WorktreePath:       worktree,
 		Intent:             issueOpsIntentContractForTest(),
 		ArchitectureReview: issueOpsArchitectureReviewForTest(),
-		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/2", Branch: branch, BaseBranch: "main", LinkVerified: true},
+		BranchPrepare:      &issueops.BranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/2", Branch: branch, BaseBranch: "main", LinkVerified: true},
 		AISlopCleanAt:      "2026-06-05T00:00:00Z",
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
-		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
+		ProjectDocsReview: &issueops.ProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 
 	ready := IssueOpsStrictPRReadiness(record)
@@ -200,7 +200,7 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 	if code, _, stderr := preflight.GitCmd(repo, "worktree", "add", "-q", worktree, branch); code != 0 {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     record.IssueURL,
 		Branch:       branch,
@@ -231,7 +231,7 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.PhaseAISlopClean), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +277,7 @@ func TestIssueOpsImplementationEvidenceHelpersParsePorcelainAndIgnorePlanPath(t 
 
 	worktree := t.TempDir()
 	plan := filepath.Join(worktree, "plans", "demo.md")
-	record := issueops.IssueOpsRecord{PlanPath: plan}
+	record := issueops.Record{PlanPath: plan}
 
 	for line, want := range map[string]string{
 		" M internal/demo.go":                    "internal/demo.go",
@@ -293,7 +293,7 @@ func TestIssueOpsImplementationEvidenceHelpersParsePorcelainAndIgnorePlanPath(t 
 	if !implementation.PathMatchesPlan(record, worktree, plan) {
 		t.Fatalf("absolute plan path should match itself")
 	}
-	if !implementation.PathMatchesPlan(issueops.IssueOpsRecord{PlanPath: "plans/demo.md"}, worktree, "plans/demo.md") {
+	if !implementation.PathMatchesPlan(issueops.Record{PlanPath: "plans/demo.md"}, worktree, "plans/demo.md") {
 		t.Fatalf("relative plan path should match relative porcelain path")
 	}
 	if implementation.PathMatchesPlan(record, worktree, filepath.Join(worktree, "internal", "demo.go")) {

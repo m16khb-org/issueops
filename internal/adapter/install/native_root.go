@@ -67,9 +67,9 @@ func resolveLinkedWorktreeRoot(root, gitPath string) (string, error) {
 	return filepath.Dir(commondir), nil
 }
 
-// ValidateStableNativeRuntime requires hooks to execute the installer-owned
+// validateStableNativeRuntime requires hooks to execute the installer-owned
 // binary under the stable source checkout.
-func ValidateStableNativeRuntime(root, binPath string) error {
+func validateStableNativeRuntime(root, binPath string) error {
 	stableRoot, err := ResolveStableNativeRoot(root)
 	if err != nil {
 		return err

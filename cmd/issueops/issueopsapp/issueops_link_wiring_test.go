@@ -14,7 +14,7 @@ import (
 func TestIssueLinkCompositionPreservesConcurrentRelationsAndRefusedState(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := issueOpsStateRoot()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "63-links"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: makeGitRepoForContract(t), Branch: "63-links"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func TestIssueLinkCompositionPreservesConcurrentRelationsAndRefusedState(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.IssueURL != "https://github.com/acme/repo/issues/63" || record.Phase != model.IssueOpsPhaseProblem {
+	if record.IssueURL != "https://github.com/acme/repo/issues/63" || record.Phase != model.PhaseProblem {
 		t.Fatalf("unexpected link result: %+v", record)
 	}
 	var wg sync.WaitGroup
@@ -57,14 +57,14 @@ func TestIssueLinkCompositionPreservesConcurrentRelationsAndRefusedState(t *test
 	if len(seen) != 12 {
 		t.Fatalf("concurrent links lost: %d", len(seen))
 	}
-	for _, call := range []func() (model.IssueOpsRecord, error){
-		func() (model.IssueOpsRecord, error) {
+	for _, call := range []func() (model.Record, error){
+		func() (model.Record, error) {
 			return service.Related(context.Background(), record.ID, "blocks", "https://github.com/acme/repo/issues/100", "duplicate", nil)
 		},
-		func() (model.IssueOpsRecord, error) {
+		func() (model.Record, error) {
 			return service.Child(context.Background(), record.ID, "https://github.com/acme/other/issues/1", "wrong project", nil)
 		},
-		func() (model.IssueOpsRecord, error) {
+		func() (model.Record, error) {
 			return service.Issue(context.Background(), record.ID, "not-a-url", nil)
 		},
 	} {

@@ -13,7 +13,7 @@ type planSourceStub struct {
 	staged                   map[string]string
 }
 
-func (s *planSourceStub) LinkedDigest(model.IssueOpsRecord) (string, error) {
+func (s *planSourceStub) LinkedDigest(model.Record) (string, error) {
 	s.linkedCalls++
 	return "linked digest", s.linkedErr
 }
@@ -25,7 +25,7 @@ func (s *planSourceStub) StagedPlans(string, string) (map[string]string, error) 
 func TestReviewPlanBindingDoesNotFallBackFromBrokenLinkedPlan(t *testing.T) {
 	source := &planSourceStub{staged: map[string]string{"plan": "abc"}}
 	resolver := NewPlanDigestResolver(source)
-	record := model.IssueOpsRecord{ID: "io-plan", PlanPath: " plan.md "}
+	record := model.Record{ID: "io-plan", PlanPath: " plan.md "}
 	got, err := resolver.Digest("state", record)
 	if err != nil || got != "linked digest" || source.linkedCalls != 1 || source.stagedCalls != 0 {
 		t.Fatalf("digest=%s err=%v source=%+v", got, err, source)

@@ -12,7 +12,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func startChildWithActorForTest(root string, req model.IssueOpsChildStartRequest, actor model.IssueOpsActor) (model.IssueOpsChildStartResult, error) {
+func startChildWithActorForTest(root string, req model.ChildStartRequest, actor model.Actor) (model.ChildStartResult, error) {
 	starter := delegationapp.ChildStarter{
 		Records:   core.ChildCycleStore{CycleRecordStore: core.CycleRecordStore{StateRoot: root}},
 		Identity:  core.CycleStartIdentity{RunGit: branchpreflight.GitCmd},
@@ -23,7 +23,7 @@ func startChildWithActorForTest(root string, req model.IssueOpsChildStartRequest
 	return starter.Start(context.Background(), req, &actor)
 }
 
-func childStatusWithActorForTest(root, id string, repair bool, actor model.IssueOpsActor) (model.IssueOpsChildStatusResult, error) {
+func childStatusWithActorForTest(root, id string, repair bool, actor model.Actor) (model.ChildStatusResult, error) {
 	service := delegationapp.StatusService{
 		Records:   core.ChildCycleStore{CycleRecordStore: core.CycleRecordStore{StateRoot: root}},
 		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()),
@@ -35,12 +35,12 @@ func childStatusWithActorForTest(root, id string, repair bool, actor model.Issue
 func childValidatorForTest(root string) delegationapp.Validator {
 	return delegationapp.Validator{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Now: time.Now}
 }
-func acceptChildWithActorForTest(root, parentID, childID string, evidence []string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func acceptChildWithActorForTest(root, parentID, childID string, evidence []string, actor model.Actor) (model.ChildValidationResult, error) {
 	return childValidatorForTest(root).Accept(context.Background(), parentID, childID, evidence, &actor)
 }
-func rejectChildWithActorForTest(root, parentID, childID, reason string, evidence []string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func rejectChildWithActorForTest(root, parentID, childID, reason string, evidence []string, actor model.Actor) (model.ChildValidationResult, error) {
 	return childValidatorForTest(root).Reject(context.Background(), parentID, childID, reason, evidence, &actor)
 }
-func dropChildWithActorForTest(root, parentID, childID, reason string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func dropChildWithActorForTest(root, parentID, childID, reason string, actor model.Actor) (model.ChildValidationResult, error) {
 	return childValidatorForTest(root).Drop(context.Background(), parentID, childID, reason, &actor)
 }

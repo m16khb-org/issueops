@@ -23,6 +23,10 @@ func ReplacementClaimCommandAs(id string, generation uint64, actor issueops.Nati
 	return ReplacementClaimCommand(id, generation) + replacementActorFlags(actor, root)
 }
 
+// ReplacementReseedCommand returns the exact reseed command for the
+// replacement chain, bound to the inventory fingerprint and carrying the
+// actor session flags and cwd. A non-zero completionGeneration is passed
+// through.
 func ReplacementReseedCommand(id string, generation, completionGeneration uint64, fingerprint string, actor issueops.NativeActor, cwd string) string {
 	process := actor.SessionProcess
 	command := "issueops execution replace --id " + quoteReplacementArg(id) +
@@ -43,9 +47,8 @@ func ReplacementReseedCommand(id string, generation, completionGeneration uint64
 	return command
 }
 
-// ReplacementRevokeCommand는 인수 체인의 revoke 단계를 렌더한다. reseed와 달리
-// `--reason`은 사람이 채워야 하므로 자리표시자로 남는다 — 그래서 이 명령은
-// 그대로 실행하는 exact가 아니라 값을 채우는 template이다.
+// ReplacementRevokeCommand 함수는 인수 체인의 revoke 단계를 렌더한다. reseed와 달리 `--reason`은
+// 사람이 채워야 하므로 자리표시자로 남는다. 그래서 이 명령은 그대로 실행하는 exact가 아니라 값을 채우는 template이다.
 func ReplacementRevokeCommand(id string, generation uint64, fingerprint string, actor issueops.NativeActor, cwd string) string {
 	return "issueops execution replace --id " + quoteReplacementArg(id) +
 		" --expected-generation " + strconv.FormatUint(generation, 10) +
@@ -53,8 +56,8 @@ func ReplacementRevokeCommand(id string, generation uint64, fingerprint string, 
 		replacementActorFlags(actor, cwd) + " --confirm"
 }
 
-// ReplacementFinalizeCommand는 finalize-preview가 관측한 quiescence fingerprint로
-// 인수 체인의 finalize 단계를 렌더한다. 채울 값이 없으므로 exact다.
+// ReplacementFinalizeCommand 함수는 finalize-preview가 관측한 quiescence
+// fingerprint로 인수 체인의 finalize 단계를 렌더한다. 채울 값이 없으므로 exact다.
 func ReplacementFinalizeCommand(id string, generation uint64, quiescenceFingerprint string, actor issueops.NativeActor, cwd string) string {
 	return "issueops execution replace --id " + quoteReplacementArg(id) +
 		" --expected-generation " + strconv.FormatUint(generation, 10) +

@@ -14,7 +14,7 @@ import (
 func TestSaveSelfAugmentLesson(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
+	result, err := SaveSelfAugmentLesson(augmentcontract.LessonRequest{
 		CandidateID: "reflexion-state-memory",
 		Lesson:      "실패 교훈은 다음 cycle에서 재사용 가능해야 한다.",
 		NextAction:  "다음 자가 증강 후보 선택 전에 저장된 lesson을 확인한다.",
@@ -32,7 +32,7 @@ func TestSaveSelfAugmentLesson(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
-	var snapshot augmentcontract.SelfAugmentLessonStateSnapshot
+	var snapshot augmentcontract.LessonStateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("unmarshal saved lesson snapshot: %v", err)
 	}
@@ -51,11 +51,11 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 		t.Fatalf("read old lesson: %v", err)
 	}
 	old.Record.UpdatedAt = "2000-01-01T00:00:00Z"
-	if _, err := statestore.WriteStateRecord(context.Background(), statestore.StateDir(), "self-augment-lesson-old", old.Record); err != nil {
+	if _, err := statestore.WriteStateRecord(context.Background(), statestore.Dir(), "self-augment-lesson-old", old.Record); err != nil {
 		t.Fatalf("rewrite old lesson: %v", err)
 	}
 
-	if _, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
+	if _, err := SaveSelfAugmentLesson(augmentcontract.LessonRequest{
 		CandidateID: "candidate-one",
 		Lesson:      "old lessons should not grow forever",
 		NextAction:  "keep only recent lesson state",
@@ -72,10 +72,10 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 func TestSaveSelfAugmentLessonRejectsMissingRequiredFields(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 
-	if result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{CandidateID: "candidate-one"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "lesson is required") || result.OK {
+	if result, err := SaveSelfAugmentLesson(augmentcontract.LessonRequest{CandidateID: "candidate-one"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "lesson is required") || result.OK {
 		t.Fatalf("expected missing lesson error, result=%#v err=%v", result, err)
 	}
-	if result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{CandidateID: "candidate-one", Lesson: "learned"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "next-action is required") || result.OK {
+	if result, err := SaveSelfAugmentLesson(augmentcontract.LessonRequest{CandidateID: "candidate-one", Lesson: "learned"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "next-action is required") || result.OK {
 		t.Fatalf("expected missing next-action error, result=%#v err=%v", result, err)
 	}
 }
@@ -105,8 +105,8 @@ func TestStateKeySlugNormalizesUnsafeText(t *testing.T) {
 
 func TestSaveSelfAugmentLessonAcceptsFreeSlugWhenCurriculumIsExhausted(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	deps := lessonTestDeps{SelectCandidate: func() *augmentcontract.SelfAugmentCandidate { return nil }}
-	result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
+	deps := lessonTestDeps{SelectCandidate: func() *augmentcontract.Candidate { return nil }}
+	result, err := SaveSelfAugmentLesson(augmentcontract.LessonRequest{
 		CandidateID: "issueops-whoami-record-flags",
 		Lesson:      "whoami must advertise both actor flag vectors",
 		NextAction:  "rerun lifecycle dogfood",
@@ -121,9 +121,9 @@ func TestSaveSelfAugmentLessonAcceptsFreeSlugWhenCurriculumIsExhausted(t *testin
 
 func TestSaveSelfAugmentLessonRejectsInvalidFreeSlug(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	deps := lessonTestDeps{SelectCandidate: func() *augmentcontract.SelfAugmentCandidate { return nil }}
+	deps := lessonTestDeps{SelectCandidate: func() *augmentcontract.Candidate { return nil }}
 	for _, candidateID := range []string{"IssueOps Whoami", "issueops/whoami", "whoami:record"} {
-		if result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
+		if result, err := SaveSelfAugmentLesson(augmentcontract.LessonRequest{
 			CandidateID: candidateID, Lesson: "l", NextAction: "n",
 		}, deps); err == nil || result.OK {
 			t.Fatalf("candidate id %q must be rejected, result=%#v err=%v", candidateID, result, err)

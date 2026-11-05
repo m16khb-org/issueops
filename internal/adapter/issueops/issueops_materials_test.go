@@ -27,7 +27,7 @@ func trackedCopy(t *testing.T, worktree, issue, name string) string {
 	return string(data)
 }
 
-func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, string) {
+func materialsCycleForTest(t *testing.T) (string, issueops.Record, string) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
@@ -41,7 +41,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 	if code, _, stderr := preflight.GitCmd(repo, "worktree", "add", "-q", worktree, branch); code != 0 {
 		t.Fatalf("git worktree add: %s", stderr)
 	}
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 	if _, err = LinkIssueOpsIssue(stateRoot, record.ID, "https://github.com/example/repo/issues/13"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if _, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider: "github", IssueURL: "https://github.com/example/repo/issues/13", Branch: branch, BaseBranch: "main", LinkVerified: true,
 	}); err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 	t.Parallel()
 
 	stateRoot, record, worktree := materialsCycleForTest(t)
-	_, materials, err := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree)).AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement))
+	_, materials, err := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree)).AdvanceReport(stateRoot, record.ID, string(issueops.PhaseImplement))
 	if err != nil {
 		t.Fatalf("implement: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 	review := trackedCopy(t, worktree, "13", "plan-review.md")
 
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
-	_, again, err := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree)).AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean))
+	_, again, err := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree)).AdvanceReport(stateRoot, record.ID, string(issueops.PhaseAISlopClean))
 	if err != nil {
 		t.Fatalf("ai-slop-clean: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestTrackedPlanCopySkipsAPlanOutsideTheSealedDirectory(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		IssueURL:  "https://github.com/example/repo/issues/13",
 		PlanPath:  filepath.Join(root, ".issueops", "issues", "13", "plan.md"),
 		Execution: &issueops.Execution{Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/13/artifact"}},
@@ -135,7 +135,7 @@ func TestTrackedPlanCopySkipsAPlanOutsideTheSealedDirectory(t *testing.T) {
 		t.Fatalf("a tracked plan must not be overwritten: %q %+v", got, materials)
 	}
 
-	noIssue := (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write(issueops.IssueOpsRecord{Execution: &issueops.Execution{Workspace: issueops.Workspace{Root: root}}})
+	noIssue := (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write(issueops.Record{Execution: &issueops.Execution{Workspace: issueops.Workspace{Root: root}}})
 	if len(noIssue.Written) != 0 || len(noIssue.Warnings) != 1 || !strings.Contains(noIssue.Warnings[0], "tracked_materials_skipped") {
 		t.Fatalf("without an issue number nothing is written and the skip is reported: %+v", noIssue)
 	}
@@ -144,7 +144,7 @@ func TestTrackedPlanCopySkipsAPlanOutsideTheSealedDirectory(t *testing.T) {
 // 이 변경 전에 구현에 들어간 사이클은 사본이 없다. 정리 단계가 그 사실을 알린다.
 func TestTrackedMaterialsMissingWarning(t *testing.T) {
 	stateRoot, record, worktree := finishTestRecord(t, true)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.Execution.Workspace.ArtifactDir = ".issueops/issues/80/artifact"
 	})
 	writeIssueOpsFile(t, worktree, ".issueops/issues/80/artifact/plan.md", "봉인 계획\n")
@@ -158,7 +158,7 @@ func TestTrackedMaterialsMissingWarning(t *testing.T) {
 
 	stateRoot2, record2 := completionTestRecord(t)
 	root := t.TempDir()
-	mutateFinishRecord(t, stateRoot2, record2.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot2, record2.ID, func(rec *issueops.Record) {
 		rec.Execution = &issueops.Execution{
 			Workspace: issueops.Workspace{SourceRoot: rec.Repo, Root: root, Branch: "81-completion", BaseHead: "deadbeef", LinkedAt: "2026-07-24T00:00:00Z", ArtifactDir: ".issueops/issues/81/artifact"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
@@ -174,7 +174,7 @@ func TestTrackedMaterialsMissingWarning(t *testing.T) {
 	}
 }
 
-func issueOpsActorPointerForMaterialsTest(root string) *issueops.IssueOpsActor {
+func issueOpsActorPointerForMaterialsTest(root string) *issueops.Actor {
 	actor := issueOpsActorForTest(root)
 	return &actor
 }
@@ -205,7 +205,7 @@ func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree))
-	_, materials, err := service.AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement))
+	_, materials, err := service.AdvanceReport(stateRoot, record.ID, string(issueops.PhaseImplement))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
-	_, regenerated, err := service.AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean))
+	_, regenerated, err := service.AdvanceReport(stateRoot, record.ID, string(issueops.PhaseAISlopClean))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,11 +256,11 @@ func TestTrackedMaterialsFallbackAndReviewPaths(t *testing.T) {
 
 	root := t.TempDir()
 	const source = "/workspace/source"
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		Repo: source, IssueURL: "https://github.com/example/repo/issues/13",
-		Intent:               &issueops.IssueOpsIntentContract{RawRequest: "source `" + source + "/a` home `/home/synthetic/.config` work `" + root + "/b`"},
+		Intent:               &issueops.IntentContract{RawRequest: "source `" + source + "/a` home `/home/synthetic/.config` work `" + root + "/b`"},
 		Execution:            &issueops.Execution{Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/13/artifact"}},
-		DevilsAdvocateReview: &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"source `" + source + "/a` work `" + root + "/b` URL https://host.test/home/synthetic/a"}},
+		DevilsAdvocateReview: &issueops.DevilsAdvocateReview{Verdict: "pass", Findings: []string{"source `" + source + "/a` work `" + root + "/b` URL https://host.test/home/synthetic/a"}},
 	}
 	files := materialapp.TrackedMaterials{Files: MaterialFiles{}}
 	if got := files.Write(record); len(got.Warnings) > 0 {

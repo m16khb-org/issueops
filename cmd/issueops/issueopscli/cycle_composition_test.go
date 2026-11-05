@@ -26,11 +26,11 @@ func testCycleReadiness() cycle.Readiness {
 		ObserveChanges: observer.Observe, ChangedPaths: changes.ChangedPaths,
 		ChildMissing: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).PRMissing}
 }
-func testCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {
+func testCyclePhaseService(actor *model.Actor) cycle.PhaseService {
 	store := core.NewReviewMutationStore(actor)
 	return cycle.PhaseService{WriteMaterials: (materialapp.TrackedMaterials{Files: core.MaterialFiles{}}).Write, Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: testCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: testReadinessGit().Head, Fingerprint: testChangeReader().ChangeFingerprint}}
 }
 
-func recordAISlopEvidenceForTest(root, id string, categories, verification []string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func recordAISlopEvidenceForTest(root, id string, categories, verification []string, actor model.Actor) (model.Record, error) {
 	return review.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{ReviewMutationStore: core.NewReviewMutationStore(&actor), Refresh: testCyclePhaseService(&actor).Refresh}, root, id, categories, verification)
 }

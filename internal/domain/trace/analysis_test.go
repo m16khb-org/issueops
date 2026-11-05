@@ -1,7 +1,7 @@
 package trace
 
 import (
-	classification "issueops/internal/domain/traceclassification"
+	"issueops/internal/domain/traceclassification"
 	"slices"
 	"strings"
 	"testing"
@@ -120,7 +120,7 @@ func TestAnalyzeSummaryFindingDefaults(t *testing.T) {
 		t.Errorf("zero summary must yield nothing: %+v", none)
 	}
 	plain := Analyze(Input{Document: &Document{Summary: Summary{FailedStep: "policy check"}}}).Findings[0]
-	if plain.VerificationCommand != classification.DefaultVerificationCommand("policy check") {
+	if plain.VerificationCommand != traceclassification.DefaultVerificationCommand("policy check") {
 		t.Errorf("default verification command = %q", plain.VerificationCommand)
 	}
 }

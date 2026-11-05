@@ -22,7 +22,7 @@ func (f *fakeEffects) Run(string, []string) (string, int, bool) {
 
 func TestDiagnoseRejectsEmptyArgvBeforeRun(t *testing.T) {
 	f := &fakeEffects{}
-	result, err := (Service{Effects: f}).Diagnose(lintdiagnosecontract.LintDiagnoseRequest{})
+	result, err := (Service{Effects: f}).Diagnose(lintdiagnosecontract.Request{})
 	if err == nil || result.OK || f.called {
 		t.Fatalf("result=%+v called=%v err=%v", result, f.called, err)
 	}
@@ -30,7 +30,7 @@ func TestDiagnoseRejectsEmptyArgvBeforeRun(t *testing.T) {
 
 func TestDiagnoseKeepsOnlyLast150Lines(t *testing.T) {
 	f := &fakeEffects{output: "old-marker\n" + strings.Repeat("line\n", 151), exitCode: 3, failed: true}
-	result, err := (Service{Effects: f}).Diagnose(lintdiagnosecontract.LintDiagnoseRequest{CommandArgv: []string{"lint"}})
+	result, err := (Service{Effects: f}).Diagnose(lintdiagnosecontract.Request{CommandArgv: []string{"lint"}})
 	if err != nil || !result.Failed || result.ExitCode != 3 || strings.Contains(result.Prompt, "old-marker") || !strings.Contains(result.Prompt, "line") {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}

@@ -18,7 +18,7 @@ func TestStateDoctorDetectsCorruptRecords(t *testing.T) {
 	writeRawStateRow(t, dir, "badbytes", `{"key":"badbytes","content":"abc","updated_at":"2000-01-01T00:00:00Z","bytes":999}`+"\n")
 	writeRawStateRow(t, dir, "badtime", `{"key":"badtime","content":"abc","updated_at":"not-a-time","bytes":3}`+"\n")
 
-	result, err := Doctor(StateDir())
+	result, err := Doctor(Dir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestStateDoctorDetectsCorruptRecords(t *testing.T) {
 
 func TestStateDoctorEmptyDirIsHealthy(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	result, err := Doctor(StateDir())
+	result, err := Doctor(Dir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestStateDoctorProjectsInvalidExistingRecords(t *testing.T) {
 	} {
 		writeRawStateRow(t, dir, name, raw)
 	}
-	result, err := Doctor(StateDir())
+	result, err := Doctor(Dir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestStateDoctorAcceptsCurrentIssueOpsDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Doctor(StateDir())
+	result, err := Doctor(Dir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Doctor(StateDir())
+	result, err := Doctor(Dir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}

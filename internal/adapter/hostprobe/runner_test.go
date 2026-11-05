@@ -163,7 +163,7 @@ func TestRunnersRequirePrivateSessionStartReceipt(t *testing.T) {
 			if host == "claude" {
 				request = claudeProbeRequest()
 			}
-			deps := Dependencies{Getenv: sealedHome(t.TempDir()), LookPath: func(string) (string, error) { return "/test/" + host, nil }, Process: &codexFakeProcess{run: func(_ context.Context, cmd CommandRequest) (CommandOutput, error) {
+			deps := Dependencies{Getenv: sealedHome(t.TempDir()), LookPath: func(string) (string, error) { return "/test/" + host, nil }, Process: &codexFakeProcess{run: func(_ context.Context, cmd commandRequest) (CommandOutput, error) {
 				var stream []byte
 				if host == "codex" {
 					writeCodexCapture(t, filepath.Join(cmd.Cwd, "result.json"), request.RunToken)

@@ -1,11 +1,17 @@
+// Package trace 패키지는 self-verify 요약, guard 규칙, 문서 관리(upkeep) 이벤트,
+// 호스트 사용량 관측을 입력으로 받아 반복 실패 패턴 finding을 만드는 순수 domain
+// 규칙이다. W3C traceparent 파싱도 여기서 맡고, 입력 수집과 출력은 어댑터가 담당한다.
 package trace
 
 import (
 	"fmt"
 	"issueops/internal/domain/policy"
-	classification "issueops/internal/domain/traceclassification"
+	"issueops/internal/domain/traceclassification"
 )
 
+// Analyze 함수는 input의 구조화 Document(없으면 Lines의 JSONL 줄들)에서 실패
+// 분류, 원인, 반복 패턴, 제안 knob이 담긴 Finding을 만들어 중복을 제거해 돌려준다.
+// 지원하는 finding이 없고 Usage도 없으면 no_supported_trace_findings 경고를 붙인다.
 func Analyze(input Input) Analysis {
 	findings := []Finding{}
 	types := []string{}
@@ -50,7 +56,7 @@ func analyzeLines(lines []Document) ([]Finding, []string) {
 	findings := []Finding{}
 	findings = append(findings, docUpkeepFindings(events)...)
 	for _, step := range traceSortedIntKeys(failedSteps) {
-		findings = append(findings, Finding{FailureClass: "self_verify_progress_failure", RecurringPattern: fmt.Sprintf("%s failed %d time(s)", policy.RedactFreeform(step), failedSteps[step]), ProposedKnob: classification.ProposedKnobForStep(step), OverfitRisk: "medium: progress JSONL may capture one run; rerun before changing harness behavior", VerificationCommand: classification.DefaultVerificationCommand(step)})
+		findings = append(findings, Finding{FailureClass: "self_verify_progress_failure", RecurringPattern: fmt.Sprintf("%s failed %d time(s)", policy.RedactFreeform(step), failedSteps[step]), ProposedKnob: traceclassification.ProposedKnobForStep(step), OverfitRisk: "medium: progress JSONL may capture one run; rerun before changing harness behavior", VerificationCommand: traceclassification.DefaultVerificationCommand(step)})
 	}
 	return findings, types
 }

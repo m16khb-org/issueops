@@ -75,7 +75,7 @@ func TestGitLabCreateChildFailsBeforeCreatingWhenPrerequisitesAreMissing(t *test
 			if tt.req != nil {
 				tt.req(&req)
 			}
-			got, err := NewProvider().CreateChild(req)
+			got, err := NewProvider().CreateChild(t.Context(), req)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}
@@ -105,7 +105,7 @@ func TestGitLabCreateChildReportsCreateFailures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := installChildFlowGlab(t, tt.overrides)
-			got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child", Confirm: true})
+			got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child", Confirm: true})
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) || got.OK {
 				t.Fatalf("got=%+v err=%v, want %q", got, err, tt.wantErr)
 			}
@@ -135,7 +135,7 @@ func TestGitLabCreateChildReportsFollowUpFailuresWithTheCreatedChildURL(t *testi
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := installChildFlowGlab(t, tt.overrides)
-			got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+			got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 				Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child",
 				Labels: []string{"bug"}, Assignees: []string{"sample"}, Confirm: true,
 			})
@@ -157,17 +157,17 @@ func TestGitLabCreateChildReportsFollowUpFailuresWithTheCreatedChildURL(t *testi
 
 func TestGitLabCreateChildRejectsBadRequestsBeforeAnyCall(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	if _, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{ParentIssueURL: gapParentURL, Title: "  ", Confirm: true}); err == nil || !strings.Contains(err.Error(), "child title is required") {
+	if _, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{ParentIssueURL: gapParentURL, Title: "  ", Confirm: true}); err == nil || !strings.Contains(err.Error(), "child title is required") {
 		t.Fatalf("title error = %v", err)
 	}
-	if _, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{ParentIssueURL: "https://example.com/x", Title: "t", Confirm: true}); err == nil || !strings.Contains(err.Error(), "GitLab issue URL") {
+	if _, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{ParentIssueURL: "https://example.com/x", Title: "t", Confirm: true}); err == nil || !strings.Contains(err.Error(), "GitLab issue URL") {
 		t.Fatalf("parent error = %v", err)
 	}
 }
 
 func TestGitLabCreateChildBlankLabelsAndAssigneesAreSkipped(t *testing.T) {
 	repo := installChildFlowGlab(t, nil)
-	got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child",
 		Labels: []string{" ", "bug"}, Assignees: []string{"  ", "sample"}, Confirm: true,
 	})
@@ -185,7 +185,7 @@ func TestGitLabCreateChildBlankLabelsAndAssigneesAreSkipped(t *testing.T) {
 
 func TestGitLabCloseChildClosesOpenChildAndPropagatesState(t *testing.T) {
 	repo := installChildFlowGlab(t, nil)
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", ChildURL: gapChildWebURL, Confirm: true,
 	})
 	if err != nil {
@@ -209,7 +209,7 @@ func TestGitLabCloseChildRejectsMismatchedURLsBeforeAnyCall(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{ParentIssueURL: tt.parent, ChildURL: tt.child, Confirm: true})
+			got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{ParentIssueURL: tt.parent, ChildURL: tt.child, Confirm: true})
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) || got.OK {
 				t.Fatalf("got=%+v err=%v, want %q", got, err, tt.wantErr)
 			}
@@ -236,7 +236,7 @@ func TestGitLabCloseChildFailurePaths(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := installChildFlowGlab(t, tt.overrides)
-			got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+			got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 				Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", ChildURL: gapChildWebURL, Confirm: true,
 			})
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) || got.OK || got.Closed {
@@ -258,7 +258,7 @@ func TestGitLabCloseChildPreviewStaysUnobservedWhenHierarchyCannotBeRead(t *test
 	} {
 		t.Run(name, func(t *testing.T) {
 			repo := installChildFlowGlab(t, overrides)
-			got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+			got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 				Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", ChildURL: gapChildWebURL,
 			})
 			if err != nil || !got.OK || got.Preview == "" {
@@ -273,7 +273,7 @@ func TestGitLabCloseChildPreviewStaysUnobservedWhenHierarchyCannotBeRead(t *test
 
 func TestGitLabCreateChildAcceptsAtPrefixedAssigneeVerifiedByBareUsername(t *testing.T) {
 	repo := installChildFlowGlab(t, nil)
-	got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child",
 		Assignees: []string{"@sample"}, Confirm: true,
 	})
@@ -290,7 +290,7 @@ func TestGitLabCreateChildAcceptsAtPrefixedAssigneeVerifiedByBareUsername(t *tes
 
 func TestGitLabCreateChildSendsResolvedLabelAndAssigneeIDsInCreateMutation(t *testing.T) {
 	repo := installChildFlowGlab(t, nil)
-	if _, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	if _, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child",
 		Labels: []string{"bug"}, Assignees: []string{"sample"}, Confirm: true,
 	}); err != nil {

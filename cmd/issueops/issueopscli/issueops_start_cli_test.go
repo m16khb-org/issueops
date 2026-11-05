@@ -10,12 +10,12 @@ import (
 func TestRunIssueOpsStartNewCreatesIndependentBranchlessCycles(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	start := func() issueopscontract.IssueOpsRecord {
+	start := func() issueopscontract.Record {
 		t.Helper()
 		output := captureStdoutForContract(t, func() error {
 			return runIssueOps([]string{"start", "--repo", repo, "--new", "--json"})
 		})
-		var record issueopscontract.IssueOpsRecord
+		var record issueopscontract.Record
 		if err := json.Unmarshal([]byte(output), &record); err != nil {
 			t.Fatalf("decode start output %q: %v", output, err)
 		}

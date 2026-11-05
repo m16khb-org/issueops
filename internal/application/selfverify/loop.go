@@ -1,3 +1,7 @@
+// Package selfverify is the application layer of the self-verification loop: it runs the planned QA
+// steps in order, summarizes their results into goal scores and failure classification, optionally
+// applies the LLM evaluation gate, and saves summaries and candidate exports to state. Process,
+// filesystem and state access is injected through the Deps structs.
 package selfverify
 
 import (
@@ -10,14 +14,19 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
+// ErrSelfVerificationGateFailed is wrapped by the error ExecuteLoop returns when a planned step
+// fails.
 var ErrSelfVerificationGateFailed = errors.New("self-verification quality gate failed")
 
+// ProgressReporter receives structured progress events as the loop starts, runs steps and ends.
 type ProgressReporter interface {
 	SetStarted(time.Time)
 	Emit(selfverifycontract.ProgressEvent)
 	EmitStepEnd(string, int, int, int64, int, int, selfverifycontract.StepResult)
 }
 
+// LoopRequest configures one ExecuteLoop run: the base ref and seed, the target score, verbose
+// printing, an optional progress reporter, and whether to keep running steps after a failure.
 type LoopRequest struct {
 	BaseRef         string
 	BaseSeed        int64
@@ -27,21 +36,25 @@ type LoopRequest struct {
 	CollectAllSteps bool
 }
 
+// LoopDeps injects the root lookup, step dependencies, printing, summarizing, temp directory
+// handling and clock that ExecuteLoop uses.
 type LoopDeps struct {
 	IssueOpsRoot   func() string
-	StepDeps       SelfVerifyStepDeps
+	StepDeps       StepDeps
 	FailedStep     func(string, error) selfverifycontract.StepResult
 	PrintStep      func(selfverifycontract.StepResult)
 	Printf         func(string, ...any) (int, error)
-	Summarize      func(selfaugmentcontract.SelfAugmentResult, float64) selfaugmentcontract.SelfAugmentSummary
+	Summarize      func(selfaugmentcontract.Result, float64) selfaugmentcontract.Summary
 	MkdirTemp      func() (string, error)
 	RemoveAll      func(string) error
 	TempBinaryPath func(string) string
 	Now            func() time.Time
 }
 
-func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root string) selfaugmentcontract.SelfAugmentResult {
-	return selfaugmentcontract.SelfAugmentResult{
+// NewLoopResult returns the empty result of a self-verification loop with its identity fields and
+// the loop contract text filled in.
+func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root string) selfaugmentcontract.Result {
+	return selfaugmentcontract.Result{
 		LoopKind:     "self_verification",
 		KoreanName:   selfaugmentcontract.SelfVerificationKoreanName,
 		Iterations:   iterations,
@@ -61,7 +74,11 @@ func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root str
 	}
 }
 
-func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAugmentResult, error) {
+// ExecuteLoop runs one deterministic self-verification evidence pass: it builds the planned steps
+// against a temporary binary, runs them in order, and summarizes the outcome. A failed step returns
+// the result together with an error wrapping ErrSelfVerificationGateFailed; later steps still run
+// when CollectAllSteps is set, but termination is not granted.
+func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.Result, error) {
 	const iterations = 1
 	started := deps.Now()
 	result := NewLoopResult(iterations, request.BaseSeed, request.TargetScore, deps.IssueOpsRoot())
@@ -75,7 +92,7 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 	if request.Verbose {
 		_, _ = deps.Printf("\n=== Self-verification evidence pass seed=%d ===\n", seed)
 	}
-	run := selfaugmentcontract.SelfAugmentIteration{Iteration: iteration, Seed: seed}
+	run := selfaugmentcontract.Iteration{Iteration: iteration, Seed: seed}
 	tempDir, err := deps.MkdirTemp()
 	if err != nil {
 		run.Steps = append(run.Steps, deps.FailedStep("create temp workspace", err))
@@ -120,7 +137,7 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 }
 
 // runPlannedSteps executes the planned steps in order, appending each result to run.Steps, and reports whether any step failed and the first failure.
-func runPlannedSteps(request LoopRequest, deps LoopDeps, loopKind string, plannedSteps []SelfVerifyPlannedStep, seed int64, iterations, iteration int, run *selfaugmentcontract.SelfAugmentIteration) (bool, selfverifycontract.StepResult) {
+func runPlannedSteps(request LoopRequest, deps LoopDeps, loopKind string, plannedSteps []PlannedStep, seed int64, iterations, iteration int, run *selfaugmentcontract.Iteration) (bool, selfverifycontract.StepResult) {
 	failed := false
 	var firstFailure selfverifycontract.StepResult
 	for index, plannedStep := range plannedSteps {

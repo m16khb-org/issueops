@@ -10,27 +10,27 @@ import (
 // 리뷰 지표는 record가 이미 들고 있는 원자료(devil's-advocate history, regress
 // 이벤트, phase ledger)에서 파생된다. 새 상태를 만들지 않고 읽기만 한다.
 func TestReviewMetricsForRecordCountsRoundsVerdictsAndDurations(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID:    "io-metrics",
-		Phase: issueopscontract.IssueOpsPhaseImplement,
-		DevilsAdvocateReview: &issueopscontract.IssueOpsDevilsAdvocateReview{
+		Phase: issueopscontract.PhaseImplement,
+		DevilsAdvocateReview: &issueopscontract.DevilsAdvocateReview{
 			Verdict: "pass", RecordedAt: "2026-09-08T00:10:00Z",
-			History: []issueopscontract.IssueOpsDevilsAdvocateRound{
+			History: []issueopscontract.DevilsAdvocateRound{
 				{Verdict: "revise", RecordedAt: "2026-09-08T00:00:00Z"},
 				{Verdict: "revise", RecordedAt: "2026-09-08T00:04:00Z"},
 			},
 		},
-		RegressEvents:        []issueopscontract.IssueOpsRegressEvent{{Reason: "stop", FromPhase: issueopscontract.IssueOpsPhasePlan, At: "2026-09-08T00:05:00Z"}},
-		ImplementationReview: &issueopscontract.IssueOpsImplementationReview{Verdict: "pass"},
-		PhaseLedger: issueopscontract.IssueOpsPhaseLedger{
-			issueopscontract.IssueOpsPhasePlan: {
-				Phase:       issueopscontract.IssueOpsPhasePlan,
+		RegressEvents:        []issueopscontract.RegressEvent{{Reason: "stop", FromPhase: issueopscontract.PhasePlan, At: "2026-09-08T00:05:00Z"}},
+		ImplementationReview: &issueopscontract.ImplementationReview{Verdict: "pass"},
+		PhaseLedger: issueopscontract.PhaseLedger{
+			issueopscontract.PhasePlan: {
+				Phase:       issueopscontract.PhasePlan,
 				EnteredAt:   "2026-09-08T00:00:00Z",
 				CompletedAt: "2026-09-08T00:01:00Z",
 			},
 			// 완료되지 않은 phase는 소요를 만들지 않는다.
-			issueopscontract.IssueOpsPhaseImplement: {
-				Phase:     issueopscontract.IssueOpsPhaseImplement,
+			issueopscontract.PhaseImplement: {
+				Phase:     issueopscontract.PhaseImplement,
 				EnteredAt: "2026-09-08T00:01:00Z",
 			},
 		},
@@ -40,7 +40,7 @@ func TestReviewMetricsForRecordCountsRoundsVerdictsAndDurations(t *testing.T) {
 	if len(warnings) != 0 {
 		t.Fatalf("parseable record must not warn: %v", warnings)
 	}
-	if got.ID != "io-metrics" || got.Phase != string(issueopscontract.IssueOpsPhaseImplement) {
+	if got.ID != "io-metrics" || got.Phase != string(issueopscontract.PhaseImplement) {
 		t.Fatalf("identity must round-trip: %+v", got)
 	}
 	if got.DevilsAdvocateRounds != 3 {
@@ -64,7 +64,7 @@ func TestReviewMetricsForRecordCountsRoundsVerdictsAndDurations(t *testing.T) {
 }
 
 func TestReviewMetricsForRecordWithoutReviewReportsZeroRounds(t *testing.T) {
-	got, warnings := ReviewMetricsForRecord(issueopscontract.IssueOpsRecord{ID: "io-bare", Phase: issueopscontract.IssueOpsPhasePlan})
+	got, warnings := ReviewMetricsForRecord(issueopscontract.Record{ID: "io-bare", Phase: issueopscontract.PhasePlan})
 	if len(warnings) != 0 {
 		t.Fatalf("bare record must not warn: %v", warnings)
 	}
@@ -79,14 +79,14 @@ func TestReviewMetricsForRecordWithoutReviewReportsZeroRounds(t *testing.T) {
 // 파싱할 수 없는 시각은 해당 항목만 건너뛰고 warning으로 남긴다. 지표 하나가
 // 깨졌다고 전체 사이클을 버리면 측정 자체가 불가능해진다.
 func TestReviewMetricsForRecordWarnsOnUnparsableTimestamps(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		ID: "io-bad-time",
-		DevilsAdvocateReview: &issueopscontract.IssueOpsDevilsAdvocateReview{
+		DevilsAdvocateReview: &issueopscontract.DevilsAdvocateReview{
 			Verdict: "pass", RecordedAt: "not-a-time",
-			History: []issueopscontract.IssueOpsDevilsAdvocateRound{{Verdict: "revise", RecordedAt: "2026-09-08T00:00:00Z"}},
+			History: []issueopscontract.DevilsAdvocateRound{{Verdict: "revise", RecordedAt: "2026-09-08T00:00:00Z"}},
 		},
-		PhaseLedger: issueopscontract.IssueOpsPhaseLedger{
-			issueopscontract.IssueOpsPhasePlan: {Phase: issueopscontract.IssueOpsPhasePlan, EnteredAt: "2026-09-08T00:00:00Z", CompletedAt: "nope"},
+		PhaseLedger: issueopscontract.PhaseLedger{
+			issueopscontract.PhasePlan: {Phase: issueopscontract.PhasePlan, EnteredAt: "2026-09-08T00:00:00Z", CompletedAt: "nope"},
 		},
 	}
 	got, warnings := ReviewMetricsForRecord(record)
@@ -102,7 +102,7 @@ func TestReviewMetricsForRecordWarnsOnUnparsableTimestamps(t *testing.T) {
 }
 
 func TestAggregateReviewMetricsComputesVerdictRatios(t *testing.T) {
-	cycles := []issueopscontract.IssueOpsReviewMetricsCycle{
+	cycles := []issueopscontract.ReviewMetricsCycle{
 		{DevilsAdvocateRounds: 3, DevilsAdvocateVerdicts: []string{"revise", "revise", "pass"}},
 		{DevilsAdvocateRounds: 1, DevilsAdvocateVerdicts: []string{"stop"}},
 		{DevilsAdvocateRounds: 0},

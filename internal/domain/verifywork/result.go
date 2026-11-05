@@ -1,3 +1,5 @@
+// Package verifywork evaluates the verify-work evidence matrix from observed
+// git, guard, and command facts. It is pure decision logic in the domain layer.
 package verifywork
 
 import (
@@ -7,6 +9,9 @@ import (
 	"strings"
 )
 
+// Observation holds the facts verify-work gathered: git preflight and guard
+// outcomes, the optional read-only command, and the project signals used to
+// suggest commands.
 type Observation struct {
 	GitFailed      bool
 	GitError       string
@@ -20,6 +25,8 @@ type Observation struct {
 	Signals        projectdocdomain.ProjectSignals
 }
 
+// Decision is the overall verdict with its evidence matrix, suggested
+// commands, and the warnings that explain a failure.
 type Decision struct {
 	OK                bool
 	EvidenceMatrix    []verifyworkcontract.EvidenceItem
@@ -27,6 +34,8 @@ type Decision struct {
 	Warnings          []string
 }
 
+// Evaluate turns facts into a Decision. OK requires passing preflight and
+// guard, no warnings, and a passing command when one was run.
 func Evaluate(facts Observation) Decision {
 	warnings := []string{}
 	evidenceMatrix := []verifyworkcontract.EvidenceItem{}

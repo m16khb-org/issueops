@@ -9,19 +9,23 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func RecordSchemaEvidence(store reviewport.EvidenceReviewStore, stateRoot, id string, req model.IssueOpsSchemaEvidenceRequest) (model.IssueOpsRecord, error) {
+// RecordSchemaEvidence stores the schema evidence of record id: measurements and
+// sources, or an explicit waiver with a rationale. The evidence is bound to the
+// local change fingerprint observed before the lock and is rejected when the
+// change set moved by commit time.
+func RecordSchemaEvidence(store reviewport.EvidenceReviewStore, stateRoot, id string, req model.SchemaEvidenceRequest) (model.Record, error) {
 	measurements := cleanReviewValues(req.Measurements)
 	sources := cleanReviewValues(req.Sources)
 	rationale := strings.TrimSpace(req.WaiverRationale)
 	if err := reviewdomain.ValidateSchemaEvidenceRecord(req.Waive, rationale, len(measurements), len(sources)); err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	observed, err := store.Read(stateRoot, id)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	fingerprint := store.Fingerprint(observed)
-	var result model.IssueOpsRecord
+	var result model.Record
 	err = store.WithLock(stateRoot, id, func() error {
 		current, err := store.Read(stateRoot, id)
 		if err != nil {
@@ -37,7 +41,7 @@ func RecordSchemaEvidence(store reviewport.EvidenceReviewStore, stateRoot, id st
 			return err
 		}
 		now := store.Now()
-		current.SchemaEvidence = &model.IssueOpsSchemaEvidence{
+		current.SchemaEvidence = &model.SchemaEvidence{
 			Measurements: measurements, Sources: sources,
 			Waived: req.Waive, WaiverRationale: strings.Join(cleanReviewValues([]string{rationale}), ""),
 			ReviewedFingerprint: fingerprint, RecordedAt: now,
@@ -47,7 +51,7 @@ func RecordSchemaEvidence(store reviewport.EvidenceReviewStore, stateRoot, id st
 		return err
 	})
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	return result, nil
 }

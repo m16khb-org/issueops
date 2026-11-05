@@ -26,7 +26,7 @@ func (r readerFixture) GitLabChild(ctx context.Context, t model.ChildTarget, met
 }
 
 func TestVerificationUsesOneReadbackAndPreservesUnknownMerge(t *testing.T) {
-	request := issueopscontract.IssueOpsRemoteArtifactVerification{Provider: " GitHub ", Kind: "pull_request", URL: " https://github.com/acme/repo/pull/7 "}
+	request := issueopscontract.RemoteArtifactVerification{Provider: " GitHub ", Kind: "pull_request", URL: " https://github.com/acme/repo/pull/7 "}
 	calls := 0
 	unavailable := errors.New("provider unavailable")
 	live := model.Artifact{Merged: true, HeadRefName: " feature ", HeadRefOID: " abc123 ", BaseRefName: " main "}
@@ -67,7 +67,7 @@ func TestVerificationUsesOneReadbackAndPreservesUnknownMerge(t *testing.T) {
 }
 
 func TestVerificationChecksEvidenceBeforeSuccess(t *testing.T) {
-	req := issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "issue", URL: "https://github.com/acme/repo/issues/7", Labels: []string{"bug"}, Assignees: []string{"alice"}}
+	req := issueopscontract.RemoteArtifactVerificationRequest{Provider: "github", Kind: "issue", URL: "https://github.com/acme/repo/issues/7", Labels: []string{"bug"}, Assignees: []string{"alice"}}
 	for _, tc := range []struct {
 		name string
 		live model.Artifact

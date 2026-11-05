@@ -54,7 +54,7 @@ func (service *Service) nextSelected(
 
 // invalidSelectionResult marks an explicitly selected cycle that is missing or
 // belongs to another repository, and points at the command that still works.
-func invalidSelectionResult(result issueopsnextcontract.Result, record issueopscontract.IssueOpsRecord, id, sourceRoot string, fromEnv bool) issueopsnextcontract.Result {
+func invalidSelectionResult(result issueopsnextcontract.Result, record issueopscontract.Record, id, sourceRoot string, fromEnv bool) issueopsnextcontract.Result {
 	result.Selected = entryOf(issueopsinventorycontract.ListEntry{ID: id, Invalid: true})
 	result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageInvalid}
 	result.NextCommand = "issueops status --id " + id + " --json"
@@ -85,11 +85,11 @@ func scanRootConflict(
 	ctx context.Context,
 	ports Ports,
 	stateRoot, sourceRoot string,
-	record issueopscontract.IssueOpsRecord,
+	record issueopscontract.Record,
 	input *issueopsnextdomain.Input,
 	normalize func(string) string,
 ) error {
-	return ports.ScanRecords(ctx, stateRoot, func(candidate issueopscontract.IssueOpsRecord) error {
+	return ports.ScanRecords(ctx, stateRoot, func(candidate issueopscontract.Record) error {
 		if input.RootConflictID != "" || candidate.ID == record.ID || candidate.Execution == nil {
 			return nil
 		}

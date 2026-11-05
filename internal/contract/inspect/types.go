@@ -1,10 +1,11 @@
-// Package inspect는 inspect capability의 DTO를 소유한다.
+// Package inspect 패키지는 inspect capability의 DTO를 소유한다.
 //
 // 값을 만들어내는 쪽은 I/O를 하지만, 결과를 읽고 전달하는 쪽은 그 구현을
 // 알 필요가 없다.
 package inspect
 
-type InspectInfo struct {
+// Info 타입은 inspect 결과 전체다. 설치된 skill, 문서, 각 host 통합 상태를 한 번에 담는다.
+type Info struct {
 	OK           bool              `json:"ok"`
 	Version      string            `json:"version"`
 	IssueOpsRoot string            `json:"issueops_root"`
@@ -15,7 +16,7 @@ type InspectInfo struct {
 	GeneratedAt  string            `json:"generated_at"`
 }
 
-// Options는 inspect 호출마다 달라지는 입력이다. 빈 값은 기본 동작이다.
+// Options 타입은 inspect 호출마다 달라지는 입력이다. 빈 값은 기본 동작이다.
 type Options struct {
 	// CodexHome은 Codex 설정 디렉터리다. 비어 있으면 <home>/.codex다.
 	CodexHome string
@@ -23,6 +24,8 @@ type Options struct {
 	HostReceipts string
 }
 
+// IntegrationStatus 타입은 host별 skill·MCP 설정의 설치 상태다.
+// 앞쪽 평면 필드는 이전 출력과 호환되는 Codex/Claude 요약이고, Hosts가 host별 상세 관측이다.
 type IntegrationStatus struct {
 	CodexSkillPath         string `json:"codex_skill_path"`
 	CodexSkillInstalled    bool   `json:"codex_skill_installed"`
@@ -57,10 +60,10 @@ const (
 	HostOpencode = "opencode"
 )
 
-// HostReceiptsSchemaVersion은 --host-receipts 파일이 지원하는 유일한 schema다.
+// HostReceiptsSchemaVersion 상수는 --host-receipts 파일이 지원하는 유일한 schema다.
 const HostReceiptsSchemaVersion = 1
 
-// HostIntegration은 한 host의 여섯 관측이다. Installed·Linked·Configured는
+// HostIntegration 타입은 한 host의 여섯 관측이다. Installed·Linked·Configured는
 // 파일/파싱, Discovered·Connected·Protocol은 host receipt가 있을 때만 판정한다.
 type HostIntegration struct {
 	Host       string      `json:"host"`
@@ -75,7 +78,7 @@ type HostIntegration struct {
 	Protocol   Observation `json:"protocol"`
 }
 
-// Observation은 증거와 함께 남기는 단일 관측이다. ConfigSHA256은 비밀을 제거한
+// Observation 타입은 증거와 함께 남기는 단일 관측이다. ConfigSHA256은 비밀을 제거한
 // issueops entry의 canonical JSON hash이며 receipt의 신선도 검사에 쓴다.
 type Observation struct {
 	Status             string   `json:"status"`
@@ -89,12 +92,13 @@ type Observation struct {
 	Features           []string `json:"features"`
 }
 
-// HostReceipts는 `inspect --host-receipts FILE`이 읽는 파일 형식이다.
+// HostReceipts 타입은 `inspect --host-receipts FILE`이 읽는 파일 형식이다.
 type HostReceipts struct {
 	SchemaVersion int               `json:"schema_version"`
 	Hosts         []HostIntegration `json:"hosts"`
 }
 
+// SkillInfo 타입은 설치 대상 skill 디렉터리 하나의 이름, 경로, SKILL.md와 openai.yaml 존재 여부다.
 type SkillInfo struct {
 	Name       string `json:"name"`
 	Path       string `json:"path"`

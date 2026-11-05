@@ -19,6 +19,6 @@ func newChannelService(stateRoot string) channelapp.Service {
 	}}
 }
 func channelDependencies() channelcli.Dependencies {
-	service := newChannelService(statestore.StateDir())
+	service := newChannelService(statestore.Dir())
 	return channelcli.Dependencies{Send: service.Send, Recv: service.Recv}
 }

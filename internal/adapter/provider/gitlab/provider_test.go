@@ -21,14 +21,14 @@ func TestGitLabProviderName(t *testing.T) {
 }
 
 func TestGitLabCreateIssueRequiresTitle(t *testing.T) {
-	_, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{Title: ""})
+	_, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Title: ""})
 	if err == nil {
 		t.Fatal("expected error for empty title")
 	}
 }
 
 func TestGitLabCreateIssueDryRun(t *testing.T) {
-	res, err := NewProvider().CreateIssue(port.IssueProviderCreateIssueRequest{
+	res, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{
 		ProjectKey: "gitlab.com/acme/repo",
 		Title:      "Fix bug",
 		Body:       "details",
@@ -48,7 +48,7 @@ func TestGitLabCreateIssueDryRun(t *testing.T) {
 
 func TestGitLabCreateChildDryRunDoesNotExecute(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	res, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		Title:          "하위 작업",
@@ -74,21 +74,21 @@ func TestGitLabCreateChildDryRunDoesNotExecute(t *testing.T) {
 
 func TestGitLabCreateChildDryRunRedactsSecretArgv(t *testing.T) {
 	secret := "glpat-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	res, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{Repo: t.TempDir(), ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12", Title: "child", Body: "token=" + secret, Labels: []string{"bug"}, Assignees: []string{"sample"}})
+	res, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{Repo: t.TempDir(), ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12", Title: "child", Body: "token=" + secret, Labels: []string{"bug"}, Assignees: []string{"sample"}})
 	if err != nil || strings.Contains(res.Preview, secret) || !strings.Contains(res.Preview, "<redacted>") {
 		t.Fatalf("GitLab child preview leaked secret: %q err=%v", res.Preview, err)
 	}
 }
 
 func TestGitLabCreateMRRequiresBranches(t *testing.T) {
-	_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Title: "MR"})
+	_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Title: "MR"})
 	if err == nil {
 		t.Fatal("expected error for missing source/target branches")
 	}
 }
 
 func TestGitLabCreateMRDryRun(t *testing.T) {
-	res, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{
+	res, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{
 		Title:      "Add feature",
 		HeadBranch: "feat/x",
 		BaseBranch: "main",
@@ -107,7 +107,7 @@ func TestGitLabCreateMRDryRun(t *testing.T) {
 
 func TestGitLabCreateMRDryRunRedactsSecretArgv(t *testing.T) {
 	secret := "api_key=opaque-token password=opaque-password Authorization: Bearer opaque-bearer /tmp/secret.pem"
-	res, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Title: "MR", Body: secret, HeadBranch: "feat/x", BaseBranch: "main"})
+	res, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Title: "MR", Body: secret, HeadBranch: "feat/x", BaseBranch: "main"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ if [ "$1 $2" = "mr view" ]; then printf '{"web_url":"https://gitlab.example:8443
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example:8443/group/sub/repo", Title: "MR", Body: "body", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
+	_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example:8443/group/sub/repo", Title: "MR", Body: "body", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ exit 2
 `, capability.version, createMarker, authority.mrURL, authority.mrURL)
 				writeFakeGlab(t, binDir, script)
 				t.Setenv("PATH", binDir)
-				_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: authority.projectKey, Title: "MR", Body: "body", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
+				_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: authority.projectKey, Title: "MR", Body: "body", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
 				_, createErr := os.Stat(createMarker)
 				if capability.accept {
 					if err != nil || createErr != nil {
@@ -198,7 +198,7 @@ if [ "$1 $2" = "mr list" ]; then printf '[{"web_url":"https://gitlab.example:844
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example:8443/group/sub/repo", Title: "MR", BodySHA256: gitLabBodySHA256("body"), HeadBranch: "feat/x", BaseBranch: "main", ExpectedHeadSHA: strings.Repeat("a", 40), Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true})
+	result, err := NewProvider().ReconcilePullRequest(t.Context(), port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example:8443/group/sub/repo", Title: "MR", BodySHA256: gitLabBodySHA256("body"), HeadBranch: "feat/x", BaseBranch: "main", ExpectedHeadSHA: strings.Repeat("a", 40), Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true})
 	if err != nil || len(result.Candidates) != 1 || result.AuthoritativeZero || result.Candidates[0].State != "merged" {
 		t.Fatalf("GitLab reconcile = %#v, %v", result, err)
 	}
@@ -220,7 +220,7 @@ if [ "$1 $2" = "mr list" ]; then printf '[{"web_url":"https://gitlab.com/acme/re
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
+	result, err := NewProvider().ReconcilePullRequest(t.Context(), port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
 	if err != nil || len(result.Candidates) != 1 || result.Candidates[0].BaseBranch != "edited-base" {
 		t.Fatalf("GitLab base-drift projection = %#v, %v", result, err)
 	}
@@ -237,7 +237,7 @@ if [ "$1 $2" = "mr list" ]; then printf 'null'; exit 0; fi
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
+	result, err := NewProvider().ReconcilePullRequest(t.Context(), port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", HeadBranch: "feat/x", BaseBranch: "main"})
 	if err == nil || result.AuthoritativeZero {
 		t.Fatalf("GitLab null candidate list = %#v, %v, want ambiguous error", result, err)
 	}
@@ -251,7 +251,7 @@ if [ "$1 $2" = "mr view" ]; then printf '{"web_url":"https://gitlab.example/acme
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example/acme/repo", Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
+	_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example/acme/repo", Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true})
 	if err == nil || !strings.Contains(err.Error(), "source project") {
 		t.Fatalf("GitLab source-project mismatch = %v, want rejection", err)
 	}
@@ -265,7 +265,7 @@ printf 'unexpected\n' >> glab.calls
 exit 0
 `)
 	t.Setenv("PATH", binDir)
-	_, err := NewProvider().ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example:8443/group/sub/repo", HeadBranch: "feat/x", BaseBranch: "main"})
+	_, err := NewProvider().ReconcilePullRequest(t.Context(), port.IssueProviderReconcilePullRequestRequest{Repo: repo, ProjectKey: "gitlab.example:8443/group/sub/repo", HeadBranch: "feat/x", BaseBranch: "main"})
 	if err == nil || !strings.Contains(err.Error(), "1.82.0") {
 		t.Fatalf("glab 1.81 custom-port reconcile error = %v", err)
 	}
@@ -293,7 +293,7 @@ fi
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	if _, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true}); err != nil {
+	if _, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, ExpectedHeadSHA: strings.Repeat("a", 40), Confirm: true}); err != nil {
 		t.Fatal(err)
 	}
 	argv, err := os.ReadFile(filepath.Join(repo, "glab.argv"))
@@ -325,7 +325,7 @@ exit 2
 			script = strings.ReplaceAll(strings.ReplaceAll(script, "LABELS", tc.labels), "ASSIGNEES", tc.assignees)
 			writeFakeGlab(t, binDir, script)
 			t.Setenv("PATH", binDir)
-			_, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, Confirm: true})
+			_, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Labels: []string{"bug"}, Assignees: []string{"sample"}, Draft: true, Confirm: true})
 			if err == nil || !strings.Contains(err.Error(), "exactly match") {
 				t.Fatalf("extra readback authority error = %v", err)
 			}
@@ -341,7 +341,7 @@ if [ "$1 $2" = "mr view" ]; then printf 'view\n' >> glab.calls; printf '{"web_ur
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
+	result, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
 	if err == nil || result.URL != "https://gitlab.com/acme/repo/-/merge_requests/16" || strings.Contains(err.Error(), result.URL) || !strings.Contains(err.Error(), "needs reconciliation") {
 		t.Fatalf("GitLab mismatch result=%+v err=%v", result, err)
 	}
@@ -367,7 +367,7 @@ printf 'api\n' >> glab.calls
 exit 2
 `)
 	t.Setenv("PATH", binDir)
-	result, err := NewProvider().CreatePullRequest(port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
+	result, err := NewProvider().CreatePullRequest(t.Context(), port.IssueProviderCreatePullRequestRequest{Repo: repo, Title: "MR", HeadBranch: "feat/x", BaseBranch: "main", Draft: true, Confirm: true})
 	if err == nil || result.URL != "" || !strings.Contains(err.Error(), "needs reconciliation") || strings.Contains(err.Error(), "abcdefghijklmnopqrstuvwxyz123456") {
 		t.Fatalf("unsafe GitLab URL result=%+v err=%v", result, err)
 	}
@@ -421,7 +421,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	got, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		Title:          "하위 작업",
@@ -478,7 +478,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	_, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	_, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		Title:          "하위 작업",
@@ -505,7 +505,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	_, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	_, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12",
 		Title:          "하위 작업",
@@ -525,7 +525,7 @@ exit 2
 
 func TestGitLabCloseChildDryRunDoesNotExecute(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	res, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		ChildURL:       "https://gitlab.example.com/acme/repo/-/work_items/34",
@@ -572,7 +572,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		ChildURL:       "https://gitlab.example.com/acme/repo/-/work_items/34",
@@ -621,7 +621,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		ChildURL:       "https://gitlab.example.com/acme/repo/-/work_items/34",
@@ -995,7 +995,7 @@ func TestGitLabUpdateIssueBodySectionAcceptsWorkItemsIssueURL(t *testing.T) {
 // work_items 별칭으로 봉인된 사이클에서 Large Issue Breakdown이 막히면 안 된다.
 func TestGitLabCreateChildPreviewAcceptsWorkItemsParentURL(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+	res, err := NewProvider().CreateChild(t.Context(), port.IssueProviderCreateChildRequest{
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/work_items/105",
 		Title:          "child task",
 	})

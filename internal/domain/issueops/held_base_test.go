@@ -10,8 +10,8 @@ import (
 // content; commits of the current base need ancestry (a tree-equal rewrite of
 // the current base is a history purge).
 func TestBaseHoldsWorkBaseAllowsContentOnlyForEarlierBases(t *testing.T) {
-	record := model.IssueOpsRecord{
-		BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: "parent-tip", Retargets: []model.IssueOpsBranchRetarget{{FromBase: "41-parent", ToBase: "main"}}},
+	record := model.Record{
+		BranchPrepare: &model.BranchPrepare{BaseBranch: "main", BaseSHA: "parent-tip", Retargets: []model.BranchRetarget{{FromBase: "41-parent", ToBase: "main"}}},
 		Execution: &model.Execution{SyncBaseEvents: []model.ExecutionSyncBaseEvent{
 			{BaseBranch: "41-parent", BaseOID: "parent-mid"},
 			{BaseBranch: "main", BaseOID: "main-m1"},

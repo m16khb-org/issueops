@@ -26,14 +26,14 @@ var structuredToolNames = []string{"harness_inspect", "docs_index"}
 func structuredToolDeps(inspect func(string, string) any) MCPDependencies {
 	deps := testTransportServices()
 	deps.Inspect = inspect
-	deps.Resources.DocsIndex = func(root, version string, _ bool) docscontract.DocsIndexResult {
-		return docscontract.DocsIndexResult{OK: true, Version: version, IssueOpsRoot: root}
+	deps.Resources.DocsIndex = func(root, version string, _ bool) docscontract.IndexResult {
+		return docscontract.IndexResult{OK: true, Version: version, IssueOpsRoot: root}
 	}
 	return deps
 }
 
 func nilSliceInspect(string, string) any {
-	return inspectcontract.InspectInfo{OK: true, Version: "test"}
+	return inspectcontract.Info{OK: true, Version: "test"}
 }
 
 func resolveListedSchema(t *testing.T, listed any) *jsonschema.Resolved {
@@ -185,7 +185,7 @@ func TestSDKHarnessInspectForwardsHostReceiptsArgument(t *testing.T) {
 	var gotRepo, gotReceipts string
 	session := startMCPTransportTestSession(t, "stdio", structuredToolDeps(func(repo, receipts string) any {
 		gotRepo, gotReceipts = repo, receipts
-		return inspectcontract.InspectInfo{OK: true}
+		return inspectcontract.Info{OK: true}
 	}))
 	result, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "harness_inspect", Arguments: map[string]any{"repo": "/r", "host_receipts": "/receipts.json"}})
 	if err != nil || result.IsError || gotRepo != "/r" || gotReceipts != "/receipts.json" {
@@ -194,7 +194,7 @@ func TestSDKHarnessInspectForwardsHostReceiptsArgument(t *testing.T) {
 }
 
 func TestSDKStructuredToolErrorResultKeepsTextWithoutStructuredContent(t *testing.T) {
-	handler := sdkToolHandlerWithContext(mcpcatalog.Build(), func(context.Context, MCPToolCall) MCPToolOutcome {
+	handler := sdkToolHandlerWithContext(mcpcatalog.Build(), func(context.Context, MCPToolCall) mcpToolOutcome {
 		return mcpToolErrorPayload(map[string]any{"ok": false, "error": "boom"})
 	}, "harness_inspect")
 	result, err := handler(t.Context(), &mcp.CallToolRequest{Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)}})

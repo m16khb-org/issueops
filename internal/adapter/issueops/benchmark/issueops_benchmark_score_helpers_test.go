@@ -5,6 +5,6 @@ import (
 	domain "issueops/internal/domain/issueopsbenchmark"
 )
 
-func ScoreIssueOpsBenchmarkArtifact(fixture contract.IssueOpsBenchmarkFixture, artifact contract.IssueOpsBenchmarkArtifact) contract.IssueOpsBenchmarkScore {
+func ScoreIssueOpsBenchmarkArtifact(fixture contract.Fixture, artifact contract.Artifact) contract.Score {
 	return domain.ScoreArtifact(fixture, artifact, issueOpsSkillRoutingFidelityComplete(fixture, artifact))
 }

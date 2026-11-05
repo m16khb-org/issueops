@@ -17,7 +17,7 @@ func TestLinkedBranchAuditPreservesConcurrentCycleChanges(t *testing.T) {
 	for _, name := range []string{"metadata", "applying fence", "changed target", "deleted cycle"} {
 		t.Run(name, func(t *testing.T) {
 			root, record := lbFixture(t)
-			var expected model.IssueOpsRecord
+			var expected model.Record
 			deps := (&lbDeps{}).build()
 			deps.ObserveLinkedBranches = func(context.Context, string) (linkedbranch.Observation, error) {
 				if name == "deleted cycle" {
@@ -25,12 +25,12 @@ func TestLinkedBranchAuditPreservesConcurrentCycleChanges(t *testing.T) {
 						t.Fatal(err)
 					}
 				} else {
-					mutateFinishRecord(t, root, record.ID, func(current *model.IssueOpsRecord) {
+					mutateFinishRecord(t, root, record.ID, func(current *model.Record) {
 						switch name {
 						case "metadata":
 							current.PlanPath = "new-plan.md"
 						case "applying fence":
-							current.CleanupAbandonFailure = &model.IssueOpsCleanupAbandonFailure{Step: model.CleanupFailureStepApplying}
+							current.CleanupAbandonFailure = &model.CleanupAbandonFailure{Step: model.CleanupFailureStepApplying}
 						case "changed target":
 							current.BranchPrepare.BaseSHA = "new-base"
 						}

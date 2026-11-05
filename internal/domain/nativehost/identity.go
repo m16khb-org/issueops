@@ -1,3 +1,5 @@
+// Package nativehost holds domain rules about the native agent hosts (Codex,
+// Claude, Omo, Omp, opencode), such as launcher identity and config paths.
 package nativehost
 
 import (

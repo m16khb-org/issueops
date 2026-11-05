@@ -145,14 +145,14 @@ func (g *realErrorFinishGit) run(_ string, args ...string) (int, string) {
 // merged·같은 프로젝트·명시적 supersede를 만족하면 정리할 수 있어야 한다.
 func TestCleanupFinishAcceptsAVerifiedSupersedingArtifact(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.BranchPrepare.BaseBranch = "439-all-handoffs-green"
 	})
 	git := &realErrorFinishGit{branchOID: ""}
 	deps := CleanupFinishDeps{
 		Git:       git.run,
 		Processes: quietCleanupProcesses(),
-		ObserveArtifact: func(url string) (issueopsdomain.ArtifactObservation, error) {
+		ObserveArtifact: func(_ context.Context, url string) (issueopsdomain.ArtifactObservation, error) {
 			return issueopsdomain.ArtifactObservation{
 				URL: url, Provider: "github", Merged: true, State: "MERGED",
 				Body: "Supersedes " + record.RemoteArtifact.URL,
@@ -190,33 +190,33 @@ func TestCleanupFinishAcceptsAVerifiedSupersedingArtifact(t *testing.T) {
 func TestCleanupFinishRejectsUnverifiableSupersedingArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
-		observe  func(string) (issueopsdomain.ArtifactObservation, error)
+		observe  func(context.Context, string) (issueopsdomain.ArtifactObservation, error)
 		wantHint string
 	}{
 		{
 			"관측 실패",
-			func(string) (issueopsdomain.ArtifactObservation, error) {
+			func(context.Context, string) (issueopsdomain.ArtifactObservation, error) {
 				return issueopsdomain.ArtifactObservation{}, errors.New("gh pr view failed")
 			},
 			"could not be observed",
 		},
 		{
 			"머지되지 않음",
-			func(url string) (issueopsdomain.ArtifactObservation, error) {
+			func(_ context.Context, url string) (issueopsdomain.ArtifactObservation, error) {
 				return issueopsdomain.ArtifactObservation{URL: url, Merged: false, State: "OPEN", Body: "Supersedes x"}, nil
 			},
 			"is not merged",
 		},
 		{
 			"supersede 선언 없음",
-			func(url string) (issueopsdomain.ArtifactObservation, error) {
+			func(_ context.Context, url string) (issueopsdomain.ArtifactObservation, error) {
 				return issueopsdomain.ArtifactObservation{URL: url, Merged: true, State: "MERGED", Body: "unrelated"}, nil
 			},
 			"does not declare",
 		},
 		{
 			"cross-repo",
-			func(string) (issueopsdomain.ArtifactObservation, error) {
+			func(context.Context, string) (issueopsdomain.ArtifactObservation, error) {
 				return issueopsdomain.ArtifactObservation{
 					URL: "https://github.com/other/repo/pull/999", Merged: true, State: "MERGED",
 					Body: "Supersedes everything",

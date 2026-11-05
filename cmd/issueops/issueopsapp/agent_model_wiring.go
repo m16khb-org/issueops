@@ -61,7 +61,7 @@ func modelDependencies() modelcli.Dependencies {
 		},
 		CodexCatalog: func() []string { return agentmodelconfig.CodexCatalog(os.Getenv, home) },
 		RoleAgentArgs: func(ctx context.Context, host, repo string) ([]string, error) {
-			return roleAgentArgs(ctx, statestore.StateDir(), host, repo)
+			return roleAgentArgs(ctx, statestore.Dir(), host, repo)
 		},
 		PrintArgv: hostprotocol.BuildPrintArgv,
 		Getwd:     os.Getwd,

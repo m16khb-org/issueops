@@ -2,6 +2,9 @@ package selfverify
 
 import "issueops/internal/contract/failurecause"
 
+// StepResult records one executed self-verification step: its label and
+// command, outcome, whether a previous result was reused, duration, and the
+// captured output with its original byte sizes and truncation flags.
 type StepResult struct {
 	Label           string                  `json:"label"`
 	Command         string                  `json:"command,omitempty"`

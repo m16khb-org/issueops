@@ -12,7 +12,7 @@ func stageIssueOpsArtifactForTest(
 	id string,
 	name string,
 	content []byte,
-) (issueopscontract.IssueOpsRecord, error) {
+) (issueopscontract.Record, error) {
 	return issueOpsArtifactHandlersForTest().Stage(stateRoot, id, name, content)
 }
 

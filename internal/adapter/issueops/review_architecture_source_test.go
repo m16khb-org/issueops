@@ -17,7 +17,7 @@ import (
 // 승인이 실행 뒤에도 stale로 오판되지 않는다.
 func TestReviewArchitectureSourceSealedDigestMatchesRecordedDigest(t *testing.T) {
 	root := t.TempDir()
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID: "io-arch",
 		Execution: &issueops.Execution{Workspace: issueops.Workspace{
 			Root: root, ArtifactDir: ".issueops/issues/1/artifact",
@@ -28,7 +28,7 @@ func TestReviewArchitectureSourceSealedDigestMatchesRecordedDigest(t *testing.T)
 	if body, err := source.Document("", record); err != nil || body != "" {
 		t.Fatalf("a missing sealed file reads as an empty document, got %q err=%v", body, err)
 	}
-	if _, err := source.SealedDigest(record); err == nil {
+	if _, err := source.sealedDigest(record); err == nil {
 		t.Fatal("a missing sealed architecture must not produce a digest")
 	}
 
@@ -44,13 +44,13 @@ func TestReviewArchitectureSourceSealedDigestMatchesRecordedDigest(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sealed, err := source.SealedDigest(record)
+	sealed, err := source.sealedDigest(record)
 	if err != nil || sealed != recorded {
 		t.Fatalf("sealed digest %q (err %v) must equal the recorded digest %q", sealed, err, recorded)
 	}
 
 	record.Execution.Workspace.ArtifactDir = ""
-	if _, err := source.SealedDigest(record); err == nil {
+	if _, err := source.sealedDigest(record); err == nil {
 		t.Fatal("a record without a sealed directory must not read a file from the worktree root")
 	}
 }
@@ -88,7 +88,7 @@ func TestSealedArchitectureMatchesTheDigestBoundAtReview(t *testing.T) {
 	if _, err := materializeStagedArtifacts(stateRoot, reviewed); err != nil {
 		t.Fatalf("materialize: %v", err)
 	}
-	sealed, err := ReviewArchitectureSource{}.SealedDigest(reviewed)
+	sealed, err := ReviewArchitectureSource{}.sealedDigest(reviewed)
 	if err != nil || sealed != reviewed.ArchitectureReview.ReviewedArchitectureDigest {
 		t.Fatalf("sealed digest %q (err %v) must equal the digest bound at review %q", sealed, err, reviewed.ArchitectureReview.ReviewedArchitectureDigest)
 	}

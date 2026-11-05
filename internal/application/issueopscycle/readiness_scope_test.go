@@ -14,21 +14,21 @@ import (
 func TestReadinessPublicOperationsCreateOneScope(t *testing.T) {
 	for _, operation := range []struct {
 		name string
-		run  func(Readiness, model.IssueOpsRecord)
+		run  func(Readiness, model.Record)
 	}{
-		{"plan", func(s Readiness, r model.IssueOpsRecord) { s.Plan(r) }},
-		{"compatibility", func(s Readiness, r model.IssueOpsRecord) { s.Compatibility(r) }},
-		{"implementation", func(s Readiness, r model.IssueOpsRecord) { s.Implementation(r) }},
-		{"clean", func(s Readiness, r model.IssueOpsRecord) { s.AISlopClean(r) }},
-		{"pr", func(s Readiness, r model.IssueOpsRecord) { s.PR(r) }},
-		{"completion", func(s Readiness, r model.IssueOpsRecord) { s.Completion(r, model.IssueOpsPhasePR) }},
-		{"observe", func(s Readiness, r model.IssueOpsRecord) { s.ObserveLocalPR(r) }},
-		{"strict", func(s Readiness, r model.IssueOpsRecord) { strictPRForTest(s, r) }},
-		{"state", func(s Readiness, r model.IssueOpsRecord) { s.StrictPRWithState("state", r) }},
-		{"callback", func(s Readiness, r model.IssueOpsRecord) {
-			s.StrictPRWithFetch("state", r, func(root string) review.UpstreamFetch { return review.UpstreamFetch{Root: root} })
+		{"plan", func(s Readiness, r model.Record) { s.Plan(r) }},
+		{"compatibility", func(s Readiness, r model.Record) { s.Compatibility(r) }},
+		{"implementation", func(s Readiness, r model.Record) { s.Implementation(r) }},
+		{"clean", func(s Readiness, r model.Record) { s.AISlopClean(r) }},
+		{"pr", func(s Readiness, r model.Record) { s.PR(r) }},
+		{"completion", func(s Readiness, r model.Record) { s.Completion(r, model.PhasePR) }},
+		{"observe", func(s Readiness, r model.Record) { s.ObserveLocalPR(r) }},
+		{"strict", func(s Readiness, r model.Record) { strictPRForTest(s, r) }},
+		{"state", func(s Readiness, r model.Record) { s.StrictPRWithState("state", r) }},
+		{"callback", func(s Readiness, r model.Record) {
+			s.strictPRWithFetch("state", r, func(root string) review.UpstreamFetch { return review.UpstreamFetch{Root: root} })
 		}},
-		{"prefetch", func(s Readiness, r model.IssueOpsRecord) { s.PrefetchUpstream(r) }},
+		{"prefetch", func(s Readiness, r model.Record) { s.prefetchUpstream(r) }},
 	} {
 		t.Run(operation.name, func(t *testing.T) {
 			locked, events := false, []string{}
@@ -39,7 +39,7 @@ func TestReadinessPublicOperationsCreateOneScope(t *testing.T) {
 				copy.Git = git
 				return copy
 			}
-			record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
+			record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
 			operation.run(s, record)
 			if scopes != 1 || s.NewObservationScope == nil {
 				t.Fatalf("scopes=%d original factory cleared=%v", scopes, s.NewObservationScope == nil)
@@ -56,7 +56,7 @@ type scopedReadinessGit struct {
 	block func()
 }
 
-func (g *scopedReadinessGit) Head(model.IssueOpsRecord) string {
+func (g *scopedReadinessGit) Head(model.Record) string {
 	if g.block != nil {
 		g.block()
 	}
@@ -79,7 +79,7 @@ func TestReadinessSameInstanceReobservesChangedState(t *testing.T) {
 		copy.Git = &scopedReadinessGit{readinessGitFixture: *git, head: head}
 		return copy
 	}
-	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}
+	record := model.Record{Repo: "/repo", Branch: "feature"}
 	first, _ := s.ObserveLocalPR(record)
 	head = "second"
 	second, _ := s.ObserveLocalPR(record)
@@ -91,13 +91,13 @@ func TestReadinessSameInstanceReobservesChangedState(t *testing.T) {
 func TestReadinessConcurrentOperationsHaveIndependentScopes(t *testing.T) {
 	locked, events := false, []string{}
 	s, git := readinessForEffects(t, &locked, &events)
-	s.ObserveChanges = func(model.IssueOpsRecord, string) review.LocalChangeObservation {
+	s.ObserveChanges = func(model.Record, string) review.LocalChangeObservation {
 		return review.LocalChangeObservation{Verified: true, Fingerprint: "fingerprint"}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	started, release := make(chan string, 2), make(chan struct{})
-	done := make(chan model.IssueOpsReadiness, 2)
+	done := make(chan model.Readiness, 2)
 	var scopes atomic.Int32
 	s.NewObservationScope = func(copy Readiness) Readiness {
 		head := fmt.Sprint(scopes.Add(1))
@@ -112,7 +112,7 @@ func TestReadinessConcurrentOperationsHaveIndependentScopes(t *testing.T) {
 	}
 	for range 2 {
 		go func() {
-			ready, _ := s.ObserveLocalPR(model.IssueOpsRecord{Repo: "/repo", Branch: "feature"})
+			ready, _ := s.ObserveLocalPR(model.Record{Repo: "/repo", Branch: "feature"})
 			done <- ready
 		}()
 	}

@@ -1,3 +1,4 @@
+// Package repopath normalizes repository root paths supplied by callers.
 package repopath
 
 import (
@@ -6,6 +7,9 @@ import (
 	"path/filepath"
 )
 
+// NormalizeRoot returns root as an absolute path, defaulting an empty root to
+// the current directory. It fails when the path does not exist or is not a
+// directory.
 func NormalizeRoot(root string) (string, error) {
 	if root == "" {
 		root = "."

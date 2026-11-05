@@ -6,6 +6,9 @@ import (
 	reviewcontract "issueops/internal/contract/issueopsreview"
 )
 
+// SameChangeObservationIdentity reports whether two observations describe the same
+// change root. The prepared base SHA and branch only count when HasPreparedBase is set;
+// surrounding whitespace is ignored.
 func SameChangeObservationIdentity(a, b reviewcontract.ChangeObservationIdentity) bool {
 	return changeObservationKey(a) == changeObservationKey(b)
 }

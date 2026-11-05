@@ -13,7 +13,7 @@ func sample(id string, avg float64, passed bool) benchmarkcontract.JudgeSample {
 	return benchmarkcontract.JudgeSample{
 		SampleID:   id,
 		Provenance: "run-" + id,
-		Score:      benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: avg, Passed: passed},
+		Score:      benchmarkcontract.Score{AverageScore: avg, Passed: passed},
 	}
 }
 
@@ -155,14 +155,14 @@ func TestConsensusJudgeVerdict_IndependenceGuard(t *testing.T) {
 		{
 			name: "empty sample id",
 			samples: []benchmarkcontract.JudgeSample{
-				{SampleID: "", Provenance: "p1", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+				{SampleID: "", Provenance: "p1", Score: benchmarkcontract.Score{AverageScore: 100, Passed: true}},
 				sample("b", 100, true),
 			},
 		},
 		{
 			name: "empty provenance",
 			samples: []benchmarkcontract.JudgeSample{
-				{SampleID: "a", Provenance: "  ", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+				{SampleID: "a", Provenance: "  ", Score: benchmarkcontract.Score{AverageScore: 100, Passed: true}},
 				sample("b", 100, true),
 			},
 		},
@@ -181,9 +181,9 @@ func TestConsensusJudgeVerdict_ProvenanceDeduped(t *testing.T) {
 	// is the same source bucket; the reported provenance list is de-duplicated
 	// but the samples themselves remain distinct votes.
 	v, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
-		{SampleID: "a", Provenance: "offline-batch-1", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
-		{SampleID: "b", Provenance: "offline-batch-1", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
-		{SampleID: "c", Provenance: "offline-batch-2", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+		{SampleID: "a", Provenance: "offline-batch-1", Score: benchmarkcontract.Score{AverageScore: 100, Passed: true}},
+		{SampleID: "b", Provenance: "offline-batch-1", Score: benchmarkcontract.Score{AverageScore: 100, Passed: true}},
+		{SampleID: "c", Provenance: "offline-batch-2", Score: benchmarkcontract.Score{AverageScore: 100, Passed: true}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

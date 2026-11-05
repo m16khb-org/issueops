@@ -6,7 +6,8 @@ import (
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-func SchemaEvidenceMissingForPaths(record model.IssueOpsRecord, changed []string, currentFingerprint string) string {
+// SchemaEvidenceMissingForPaths 함수는 changed 경로가 스키마를 건드릴 때 스키마 증거가 없거나 현재 지문과 맞지 않으면 누락 키를, 아니면 빈 문자열을 돌려준다.
+func SchemaEvidenceMissingForPaths(record model.Record, changed []string, currentFingerprint string) string {
 	evidence := reviewcontract.SchemaGateEvidence{}
 	if recorded := record.SchemaEvidence; recorded != nil {
 		evidence = reviewcontract.SchemaGateEvidence{
@@ -18,7 +19,8 @@ func SchemaEvidenceMissingForPaths(record model.IssueOpsRecord, changed []string
 	return reviewdomain.SchemaEvidenceMissing(reviewdomain.ChangeSetTouchesSchema(changed), evidence, currentFingerprint)
 }
 
-func ObservedSchemaEvidenceMissing(record model.IssueOpsRecord, strict bool, observedPaths []string, currentFingerprint string, observePaths func(model.IssueOpsRecord) []string) string {
+// ObservedSchemaEvidenceMissing 함수는 실행 기록에 대해 스키마 증거 누락 키를 돌려준다. strict이면 observePaths로 변경 경로를 새로 관찰하고, 아니면 observedPaths를 쓴다. 실행이 없으면 빈 문자열이다.
+func ObservedSchemaEvidenceMissing(record model.Record, strict bool, observedPaths []string, currentFingerprint string, observePaths func(model.Record) []string) string {
 	if record.Execution == nil {
 		return ""
 	}

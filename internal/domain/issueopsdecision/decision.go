@@ -1,3 +1,5 @@
+// Package issueopsdecision holds the domain rules that validate and build
+// issueops decision records.
 package issueopsdecision
 
 import (
@@ -9,6 +11,9 @@ import (
 	"issueops/internal/domain/secretdetection"
 )
 
+// Build validates request and returns the Decision recorded at now (UTC). It
+// rejects an unknown kind or affected artifact, an empty or oversized title
+// (512 bytes) or body (64 KiB), and a body that looks like it contains secrets.
 func Build(
 	request issueopsdecisioncontract.Request,
 	now time.Time,

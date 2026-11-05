@@ -10,14 +10,21 @@ import (
 	"issueops/internal/port"
 )
 
+// DirectWorkspaceAdapter adapts the execution workspace provisioner to the
+// preparation contract's direct (non-delegated) worktree flow.
 type DirectWorkspaceAdapter struct {
 	provisioner port.ExecutionWorkspaceProvisioner
 }
 
+// NewDirectWorkspace returns a DirectWorkspaceAdapter over provisioner.
 func NewDirectWorkspace(provisioner port.ExecutionWorkspaceProvisioner) *DirectWorkspaceAdapter {
 	return &DirectWorkspaceAdapter{provisioner: provisioner}
 }
 
+// ProbeAccess asks the provisioner whether the canonical worktree base is
+// accessible from host. The request's cwd must be the source root, the
+// canonical worktree or the sealed parent worktree, and the provisioner must
+// implement port.ExecutionWorkspaceAccessProber.
 func (adapter *DirectWorkspaceAdapter) ProbeAccess(ctx context.Context, request preparationcontract.WorkspaceRequest, host string) (preparationcontract.AccessResult, error) {
 	if err := validateDirectCWD(request); err != nil {
 		return preparationcontract.AccessResult{}, err
@@ -33,6 +40,8 @@ func (adapter *DirectWorkspaceAdapter) ProbeAccess(ctx context.Context, request 
 	return preparationcontract.AccessResult{Allowed: result.Allowed, Code: result.Code, RelaunchCommand: result.RelaunchCommand}, err
 }
 
+// Prepare creates or reuses the canonical worktree through the provisioner
+// and returns its receipt. The request's cwd is validated as in ProbeAccess.
 func (adapter *DirectWorkspaceAdapter) Prepare(ctx context.Context, request preparationcontract.WorkspaceRequest) (preparationcontract.WorkspaceReceipt, error) {
 	if err := validateDirectCWD(request); err != nil {
 		return preparationcontract.WorkspaceReceipt{}, err

@@ -13,7 +13,7 @@ func handleMCPIssueOpsExecutionWithContext(
 	ctx context.Context,
 	args map[string]any,
 	deps MCPDependencies,
-) MCPToolOutcome {
+) mcpToolOutcome {
 	req, err := executionActionRequestFromMCP(args, deps)
 	if err != nil {
 		return mcpToolErrorPayload(issueOpsMCPErrorPayload(err))

@@ -108,13 +108,13 @@ func TestProjectDocMCPRefusalsPreserveFileBytes(t *testing.T) {
 	}
 }
 
-func projectDocsSDKRead(t *testing.T, deps mcpcli.MCPDependencies) (docscontract.ProjectDocsReadResult, error) {
+func projectDocsSDKRead(t *testing.T, deps mcpcli.MCPDependencies) (docscontract.ReadResult, error) {
 	result, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"project_docs_read","arguments":{"rel_path":".issueops/TESTING.md"}}`), deps)
 	if rpcErr != nil {
-		return docscontract.ProjectDocsReadResult{}, rpcErr
+		return docscontract.ReadResult{}, rpcErr
 	}
 	text := result.(map[string]any)["content"].([]map[string]any)[0]["text"].(string)
-	var read docscontract.ProjectDocsReadResult
+	var read docscontract.ReadResult
 	err := json.Unmarshal([]byte(text), &read)
 	return read, err
 }
@@ -136,14 +136,14 @@ func TestProjectDocCLIInstancesPinRelativeRootsAndRejectInvalidAppend(t *testing
 		routeJSON := captureStdoutForContract(t, func() error {
 			return projectcli.Run(projectcli.Dependencies{Docs: service}, []string{"route-docs", "--task", "test", "--json"})
 		})
-		var route docscontract.ProjectDocsRouteResult
+		var route docscontract.RouteResult
 		if err := json.Unmarshal([]byte(routeJSON), &route); err != nil || route.RepoRoot != roots[i] {
 			t.Fatalf("route %d: %+v %v", i, route, err)
 		}
 		raw := captureStdoutForContract(t, func() error {
 			return projectcli.Run(projectcli.Dependencies{Docs: service}, []string{"append", "--kind", "adr", "--title", "Instance decision", "--summary", fmt.Sprintf("owner-%d", i), "--json"})
 		})
-		var appended docscontract.ProjectDocsAppendResult
+		var appended docscontract.AppendResult
 		if err := json.Unmarshal([]byte(raw), &appended); err != nil || appended.RepoRoot != roots[i] {
 			t.Fatalf("append %d: %+v %v", i, appended, err)
 		}

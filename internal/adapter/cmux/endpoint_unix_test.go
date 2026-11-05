@@ -32,7 +32,7 @@ func TestObserveEndpointPinsPrivateUnixSocketAndParent(t *testing.T) {
 	if got.Path != path || got.ParentPath != dir || got.Kind != "unix_socket" || got.Inode == 0 || got.CTimeNS <= 0 || got.Mode != 0o600 {
 		t.Fatalf("endpoint=%+v", got)
 	}
-	if err := ValidateEndpoint(got, path, os.Getuid()); err != nil {
+	if err := validateEndpoint(got, path, os.Getuid()); err != nil {
 		t.Fatalf("validate observed endpoint: %v", err)
 	}
 }

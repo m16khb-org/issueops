@@ -134,13 +134,13 @@ func TestIssueOpsDelegationStartProcessHelper(t *testing.T) {
 	}
 	waitForChildStartGate(t, gate)
 
-	result, err := childStarterForTest(stateRoot).Start(context.Background(), issueops.IssueOpsChildStartRequest{
+	result, err := childStarterForTest(stateRoot).Start(context.Background(), issueops.ChildStartRequest{
 		ParentID:           parentID,
 		Branch:             branch,
 		Title:              title,
 		TaskScope:          "process sibling concurrency",
 		AcceptanceCriteria: []string{"every process sibling persists"},
-	}, &issueops.IssueOpsActor{
+	}, &issueops.Actor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: parentWorktree,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{liveFixtureReceipt()},
 	})
@@ -192,12 +192,12 @@ func waitForChildStartGate(t *testing.T, gate string) {
 	t.Fatalf("timed out waiting for child start gate %s", gate)
 }
 
-func seedChildStartParentRefsForTest(t *testing.T, stateRoot string, parent issueops.IssueOpsRecord, count int) issueops.IssueOpsRecord {
+func seedChildStartParentRefsForTest(t *testing.T, stateRoot string, parent issueops.Record, count int) issueops.Record {
 	t.Helper()
-	parent.ChildCycles = make([]issueops.IssueOpsChildCycleRef, 0, count)
+	parent.ChildCycles = make([]issueops.ChildCycleRef, 0, count)
 	for i := range count {
 		branch := fmt.Sprintf("90%d-existing-child-ref", i)
-		parent.ChildCycles = append(parent.ChildCycles, issueops.IssueOpsChildCycleRef{
+		parent.ChildCycles = append(parent.ChildCycles, issueops.ChildCycleRef{
 			CycleID:   newIssueOpsID(parent.Repo, branch),
 			Branch:    branch,
 			Title:     fmt.Sprintf("existing child ref %d", i),

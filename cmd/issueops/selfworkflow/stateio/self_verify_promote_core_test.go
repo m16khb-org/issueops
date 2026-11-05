@@ -39,12 +39,12 @@ func TestPromoteSelfAugmentBaselineRejectsMissingKeysAndBadSource(t *testing.T) 
 func TestPromoteSelfAugmentBaselinePropagatesDestinationWriteError(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	source := augmentcontract.SelfAugmentStateSnapshot{
+	source := augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "2000-01-01T00:00:00Z",
-		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1, TerminationEligible: true},
+		Summary:       augmentcontract.Summary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1, TerminationEligible: true},
 	}
 	if err := WriteSelfAugmentSnapshotRecord(dir, "candidate", source); err != nil {
 		t.Fatalf("write candidate: %v", err)

@@ -8,7 +8,7 @@ import (
 	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
-func capabilityVerifier(identity completioncontract.Actor) ActorVerifier {
+func capabilityVerifier(identity completioncontract.Actor) actorVerifier {
 	return func(context.Context, completioncontract.Actor, []completioncontract.ProcessReceipt) (completioncontract.Actor, error) {
 		return identity, nil
 	}

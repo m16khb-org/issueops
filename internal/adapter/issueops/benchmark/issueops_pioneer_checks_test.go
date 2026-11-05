@@ -8,8 +8,8 @@ import (
 
 func pioneerCheckForTest(target, evidence string) bool {
 	return domain.PioneerSkillEvidenceComplete(
-		benchmark.IssueOpsBenchmarkFixture{ID: "pioneer-" + target, PioneerSkillTarget: target},
-		benchmark.IssueOpsBenchmarkArtifact{PioneerSkillEvidence: evidence},
+		benchmark.Fixture{ID: "pioneer-" + target, PioneerSkillTarget: target},
+		benchmark.Artifact{PioneerSkillEvidence: evidence},
 	)
 }
 

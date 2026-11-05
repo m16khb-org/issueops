@@ -33,7 +33,7 @@ func (cli command) runIssueOpsDecision(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.AddIssueOpsDecisionWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDecisionRecordRequest{
+	record, err := cli.Runtime.AddIssueOpsDecisionWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.DecisionRecordRequest{
 		Title:              *title,
 		Body:               *body,
 		Kind:               *kind,

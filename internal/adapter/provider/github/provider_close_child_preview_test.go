@@ -27,7 +27,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		ChildURL:       "https://github.com/acme/repo/issues/34",
@@ -57,7 +57,7 @@ exit 2
 // 여기서 오류를 내면 gh 부재 환경의 dry-run이 통째로 깨질 뿐이다.
 func TestGitHubCloseChildPreviewLeavesStateUnobservedWithoutGh(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		ChildURL:       "https://github.com/acme/repo/issues/34",
@@ -83,7 +83,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://github.com/acme/repo/issues/12",
 		ChildURL:       "https://github.com/acme/repo/issues/34",

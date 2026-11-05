@@ -27,20 +27,20 @@ func TestReadinessFetchBoundariesRefreshBeforePostFetchFacts(t *testing.T) {
 				copy.ClearGitObservations = func() { events = append(events, "clear") }
 				return copy
 			}
-			record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
+			record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
 			want := []string{"observe", "clear", "fetch", "clear", "counts", "paths"}
 			switch mode {
 			case "internal":
 				strictPRForTest(s, record)
 			case "callback":
-				s.StrictPRWithFetch("state", record, func(root string) review.UpstreamFetch {
+				s.strictPRWithFetch("state", record, func(root string) review.UpstreamFetch {
 					events = append(events, "fetch")
 					return review.UpstreamFetch{Root: root}
 				})
 			case "prefetch":
-				fetched := s.PrefetchUpstream(record)
+				fetched := s.prefetchUpstream(record)
 				locked = true
-				s.StrictPRWithFetch("state", record, fetched)
+				s.strictPRWithFetch("state", record, fetched)
 				want = []string{"fetch", "observe", "clear", "clear", "counts", "paths"}
 			}
 			wantScopes := 1

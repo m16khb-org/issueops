@@ -8,10 +8,10 @@ import (
 )
 
 func TestCleanupFinishPreviewRequiresIndependentEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Phase: model.IssueOpsPhasePlan,
-		BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "main"},
+	record := model.Record{ID: "cycle", Repo: "/repo", Phase: model.PhasePlan,
+		BranchPrepare: &model.BranchPrepare{BaseBranch: "main"},
 		Execution:     &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusActive}},
-		IssueLinks:    []model.IssueOpsIssueLink{{Type: "child", URL: "child"}},
+		IssueLinks:    []model.IssueLink{{Type: "child", URL: "child"}},
 	}
 	inventory := model.CleanupFinishInventory{WorktreeRoot: "/worktree", WorktreePresent: true, Branch: "123-cleanup"}
 	facts := CleanupFinishObservation{WorktreeIdentityConflict: true, WorkspaceMissing: []string{"workspace_processes_observable"}}
@@ -26,7 +26,7 @@ func TestCleanupFinishPreviewRequiresIndependentEvidence(t *testing.T) {
 }
 
 func TestCleanupFinishTargetsPreferExecutionAndPreserveLinkedFallback(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Branch: "record-branch", WorktreePath: " /linked ", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "artifact"}}
+	record := model.Record{ID: "cycle", Repo: "/repo", Branch: "record-branch", WorktreePath: " /linked ", RemoteArtifact: &model.RemoteArtifactVerification{URL: "artifact"}}
 	if got := CleanupFinishTargets(record); got.WorktreeRoot != "/linked" || got.Branch != "record-branch" || got.RemoteURL != "artifact" {
 		t.Fatalf("targets=%+v", got)
 	}
@@ -59,7 +59,7 @@ func TestClassifyMergedBaseRetarget(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ClassifyCleanupMergedBase(tc.prepared, tc.observed, tc.defaultBranch, tc.preparedRemotePresent, tc.observed_)
+			got := classifyCleanupMergedBase(tc.prepared, tc.observed, tc.defaultBranch, tc.preparedRemotePresent, tc.observed_)
 			if strings.Join(got, ",") != strings.Join(tc.want, ",") {
 				t.Fatalf("classifyMergedBase = %v, want %v", got, tc.want)
 			}

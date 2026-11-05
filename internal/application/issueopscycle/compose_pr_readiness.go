@@ -6,17 +6,17 @@ import (
 	"issueops/internal/domain/stringlist"
 )
 
-type ObservedPRReadinessFacts struct {
+type observedPRReadinessFacts struct {
 	Git                cycledomain.PRGitFacts
-	Artifact           ObservedPRFacts
+	Artifact           observedPRFacts
 	CurrentHead        string
 	CurrentFingerprint string
 }
 
-func ComposeObservedPRReadiness(record model.IssueOpsRecord, ready model.IssueOpsReadiness, facts ObservedPRReadinessFacts) model.IssueOpsReadiness {
+func composeObservedPRReadiness(record model.Record, ready model.Readiness, facts observedPRReadinessFacts) model.Readiness {
 	gitMissing, warnings := cycledomain.PRGitReadiness(record, facts.Git)
 	missing := append(append([]string{}, ready.Missing...), gitMissing...)
-	missing = append(missing, ObservedPRReadinessMissing(record, facts.Artifact)...)
+	missing = append(missing, observedPRReadinessMissing(record, facts.Artifact)...)
 	ready.Missing = stringlist.UniqueSorted(missing)
 	ready.Warnings = warnings
 	ready.AISlopCleanHead = record.AISlopCleanHead
@@ -27,7 +27,7 @@ func ComposeObservedPRReadiness(record model.IssueOpsRecord, ready model.IssueOp
 	return ready
 }
 
-func ApplyChildPRGate(ready model.IssueOpsReadiness, childMissing, childWarnings []string) model.IssueOpsReadiness {
+func applyChildPRGate(ready model.Readiness, childMissing, childWarnings []string) model.Readiness {
 	ready.Missing = stringlist.UniqueSorted(append(append([]string{}, ready.Missing...), childMissing...))
 	ready.Warnings = append(ready.Warnings, childWarnings...)
 	ready.Ready = len(ready.Missing) == 0

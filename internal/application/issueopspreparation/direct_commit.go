@@ -7,6 +7,10 @@ import (
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 )
 
+// ApplyDirectCommit returns a copy of current whose Execution carries the commit's
+// workspace and a generation-1 active lease held by the command's actor, plus the
+// matching result. It fails when current is already prepared or the commit has no
+// artifact directory.
 func ApplyDirectCommit(current leasecontract.Record, commit DirectCommit) (leasecontract.Record, preparationcontract.Result, error) {
 	if current.Execution != nil {
 		return current, preparationcontract.Result{}, fmt.Errorf("IssueOps execution is already prepared")

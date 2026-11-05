@@ -11,7 +11,7 @@ import (
 // --field keeps id/phase and the asked fields, lists unrecorded ones as
 // absent, and refuses a name the record does not have.
 func TestStatusProjectionKeepsRequestedFields(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{OK: true, ID: "io-1", Phase: "plan", PlanPath: "/w/plan.md", Repo: "/r"}
+	record := issueopscontract.Record{OK: true, ID: "io-1", Phase: "plan", PlanPath: "/w/plan.md", Repo: "/r"}
 	got, err := statusProjection(record, []string{"plan_path,remote_artifact"})
 	if err != nil {
 		t.Fatal(err)

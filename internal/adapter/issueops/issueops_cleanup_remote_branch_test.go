@@ -70,21 +70,21 @@ func (g *fakeRemoteBranchGit) run(_ context.Context, _ string, args ...string) (
 	return 128, "fakeRemoteBranchGit: unhandled git command " + args[0]
 }
 
-func remoteBranchTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func remoteBranchTestRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: remoteBranchTestBranch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: remoteBranchTestBranch})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueops.IssueOpsPhaseDone
+	record.Phase = issueops.PhaseDone
 	record.IssueURL = "https://github.com/acme/repo/issues/116"
-	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueops.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL,
 		Branch: remoteBranchTestBranch, BaseBranch: "main",
 	}
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: remoteBranchTestArtifact,
 	}
 	record.Execution = &issueops.Execution{
@@ -94,7 +94,7 @@ func remoteBranchTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		},
 		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { *rec = record })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { *rec = record })
 	return stateRoot, record
 }
 
@@ -105,7 +105,7 @@ func remoteBranchGit() *fakeRemoteBranchGit {
 func remoteBranchDeps(git *fakeRemoteBranchGit) CleanupRemoteBranchDeps {
 	return CleanupRemoteBranchDeps{
 		Git: git.run,
-		VerifyMergedArtifact: func(issueops.IssueOpsRemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
+		VerifyMergedArtifact: func(issueops.RemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
 			return issueops.CleanupRemoteBranchArtifactHead{
 				HeadRefName: remoteBranchTestBranch, HeadRefOID: remoteBranchTestHeadOID,
 			}, nil
@@ -180,7 +180,7 @@ func TestCleanupRemoteBranchDeleteUsesFullyQualifiedRefAndForceWithLease(t *test
 func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 	cases := []struct {
 		name    string
-		mutate  func(*issueops.IssueOpsRecord)
+		mutate  func(*issueops.Record)
 		deps    func(*CleanupRemoteBranchDeps)
 		git     func(*fakeRemoteBranchGit)
 		missing string
@@ -188,7 +188,7 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 		{
 			name: "unmerged artifact",
 			deps: func(d *CleanupRemoteBranchDeps) {
-				d.VerifyMergedArtifact = func(issueops.IssueOpsRemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
+				d.VerifyMergedArtifact = func(issueops.RemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
 					return issueops.CleanupRemoteBranchArtifactHead{}, fmt.Errorf("remote artifact is not verified merged")
 				}
 			},
@@ -197,7 +197,7 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 		{
 			name: "readback failure",
 			deps: func(d *CleanupRemoteBranchDeps) {
-				d.VerifyMergedArtifact = func(issueops.IssueOpsRemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
+				d.VerifyMergedArtifact = func(issueops.RemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
 					return issueops.CleanupRemoteBranchArtifactHead{}, fmt.Errorf("gh: HTTP 503")
 				}
 			},
@@ -213,7 +213,7 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 		{
 			name: "artifact head is another branch",
 			deps: func(d *CleanupRemoteBranchDeps) {
-				d.VerifyMergedArtifact = func(issueops.IssueOpsRemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
+				d.VerifyMergedArtifact = func(issueops.RemoteArtifactVerification) (issueops.CleanupRemoteBranchArtifactHead, error) {
 					return issueops.CleanupRemoteBranchArtifactHead{
 						HeadRefName: "999-other-branch", HeadRefOID: remoteBranchTestHeadOID,
 					}, nil
@@ -233,7 +233,7 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 		},
 		{
 			name: "lease still active",
-			mutate: func(rec *issueops.IssueOpsRecord) {
+			mutate: func(rec *issueops.Record) {
 				rec.Execution.Lease.Status = issueops.LeaseStatusActive
 				rec.Execution.Lease.ClaimedAt = "2026-07-25T00:00:00Z"
 				rec.Execution.Lease.Holder = &issueops.NativeActor{
@@ -247,18 +247,18 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 		},
 		{
 			name:    "phase not done",
-			mutate:  func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePR },
+			mutate:  func(rec *issueops.Record) { rec.Phase = issueops.PhasePR },
 			missing: "phase_done",
 		},
 		{
 			name:    "branch equals base",
-			mutate:  func(rec *issueops.IssueOpsRecord) { rec.BranchPrepare.BaseBranch = remoteBranchTestBranch },
+			mutate:  func(rec *issueops.Record) { rec.BranchPrepare.BaseBranch = remoteBranchTestBranch },
 			missing: "branch_not_base",
 		},
 		{
 			name: "unclosed child",
-			mutate: func(rec *issueops.IssueOpsRecord) {
-				rec.IssueLinks = append(rec.IssueLinks, issueops.IssueOpsIssueLink{
+			mutate: func(rec *issueops.Record) {
+				rec.IssueLinks = append(rec.IssueLinks, issueops.IssueLink{
 					Type: "child", URL: "https://github.com/acme/repo/issues/118",
 				})
 			},
@@ -266,13 +266,13 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 		},
 		{
 			name:    "remote artifact absent",
-			mutate:  func(rec *issueops.IssueOpsRecord) { rec.RemoteArtifact = nil },
+			mutate:  func(rec *issueops.Record) { rec.RemoteArtifact = nil },
 			missing: "remote_artifact_present",
 		},
 		{
 			// 수동 편집된 레코드가 임의 ref를 지우지 못하게 삭제 직전 재검증한다.
 			name: "branch name no longer valid",
-			mutate: func(rec *issueops.IssueOpsRecord) {
+			mutate: func(rec *issueops.Record) {
 				rec.Branch = "release-candidate"
 				rec.Execution.Workspace.Branch = "release-candidate"
 			},
@@ -311,8 +311,8 @@ func TestCleanupRemoteBranchGatesRejectUnrecordedBranch(t *testing.T) {
 	t.Parallel()
 
 	git := remoteBranchGit()
-	_, result := remoteBranchPreviewer(remoteBranchDeps(git)).Plan(context.Background(), issueops.IssueOpsRecord{
-		ID: "io-test", Repo: t.TempDir(), Phase: issueops.IssueOpsPhaseDone,
+	_, result := remoteBranchPreviewer(remoteBranchDeps(git)).Plan(context.Background(), issueops.Record{
+		ID: "io-test", Repo: t.TempDir(), Phase: issueops.PhaseDone,
 	}, issueops.CleanupRemoteBranchRequest{ID: "io-test"})
 	missing := result.Missing
 	if !containsString(missing, "branch_recorded") {
@@ -421,7 +421,7 @@ func TestCleanupRemoteBranchRejectsArtifactDriftBeforeDelete(t *testing.T) {
 	deps.Git = func(ctx context.Context, repo string, args ...string) (int, string) {
 		code, out := git.run(ctx, repo, args...)
 		if args[0] == "ls-remote" {
-			mutateFinishRecord(t, root, record.ID, func(current *issueops.IssueOpsRecord) {
+			mutateFinishRecord(t, root, record.ID, func(current *issueops.Record) {
 				current.RemoteArtifact.URL = "https://github.com/acme/repo/pull/999"
 			})
 		}

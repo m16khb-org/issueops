@@ -1,6 +1,6 @@
 package mcp
 
-// GatesTools는 태스크 게이트 ledger 도구군이다. CLI gates 명령과 같은
+// GatesTools 함수는 태스크 게이트 ledger 도구군이다. CLI gates 명령과 같은
 // contract DTO를 공유한다.
 func GatesTools() []Tool {
 	stringProp := func(description string) map[string]any {

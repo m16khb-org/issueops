@@ -7,18 +7,22 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// RemoteRecordStore reads and updates cycle records for remote operations.
 type RemoteRecordStore struct{ StateRoot string }
 
+// WithinTransaction runs fn while holding the per-cycle lock for id.
 func (s RemoteRecordStore) WithinTransaction(ctx context.Context, id string, fn func(context.Context) error) error {
 	return withIssueOpsLock(ctx, s.StateRoot, id, fn)
 }
 
-func (s RemoteRecordStore) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
+func (s RemoteRecordStore) Read(_ context.Context, id string) (model.Record, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 
-func (s RemoteRecordStore) Update(ctx context.Context, id string, transition application.RecordTransition) (model.IssueOpsRecord, error) {
-	var persisted model.IssueOpsRecord
+// Update applies transition to the current record of id under the cycle lock and returns
+// the persisted record.
+func (s RemoteRecordStore) Update(ctx context.Context, id string, transition application.RecordTransition) (model.Record, error) {
+	var persisted model.Record
 	err := withIssueOpsLock(ctx, s.StateRoot, id, func(spanCtx context.Context) error {
 		current, err := ReadIssueOps(s.StateRoot, id)
 		if err != nil {

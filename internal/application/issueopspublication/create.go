@@ -1,3 +1,7 @@
+// Package issueopspublication is the application layer for creating remote issue and
+// pull-request publications safely: CreateService journals an intent before calling the
+// provider once, and ReconcileService later resolves intents whose outcome is unknown by
+// adopting, retrying, or preserving them. Providers, persistence, and verification sit behind ports.
 package issueopspublication
 
 import (
@@ -9,17 +13,23 @@ import (
 	domain "issueops/internal/domain/issueopspublication"
 )
 
+// CreateService creates one remote publication per confirmed command, journaling the intent
+// first so a crash or ambiguous provider failure is resolved by ReconcileService instead of a blind retry.
 type CreateService struct {
-	preparer   Preparer
+	preparer   preparer
 	repository Repository
 	provider   Provider
-	verifier   Verifier
+	verifier   verifier
 }
 
-func NewCreateService(preparer Preparer, repository Repository, provider Provider, verifier Verifier) *CreateService {
+// NewCreateService wires a CreateService; Create fails if any dependency is nil.
+func NewCreateService(preparer preparer, repository Repository, provider Provider, verifier verifier) *CreateService {
 	return &CreateService{preparer: preparer, repository: repository, provider: provider, verifier: verifier}
 }
 
+// Create prepares command and, without Confirm, only validates eligibility and returns the provider's unconfirmed result without journaling.
+// With Confirm it journals the intent, invokes the provider once, and verifies and records the receipt;
+// a failed or ambiguous remote create is never retried here and must go through execution reconcile.
 func (s *CreateService) Create(ctx context.Context, command contract.CreateCommand) (contract.ProviderCreateResult, error) {
 	if s == nil || s.preparer == nil || s.repository == nil || s.provider == nil || s.verifier == nil {
 		return contract.ProviderCreateResult{}, fmt.Errorf("publication create dependencies are required")

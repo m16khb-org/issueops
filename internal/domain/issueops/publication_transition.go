@@ -2,9 +2,11 @@ package issueops
 
 import model "issueops/internal/contract/issueops"
 
-// The caller validates publication authority before applying these transitions.
-// Publication never completes the execution or releases its write lease.
-func BeginPublication(record model.IssueOpsRecord, pending model.ExternalIntent) model.IssueOpsRecord {
+// BeginPublication records pending as the external intent of the execution
+// and clears an earlier failure. The caller validates publication authority
+// before applying these transitions. Publication never completes the
+// execution or releases its write lease.
+func BeginPublication(record model.Record, pending model.ExternalIntent) model.Record {
 	execution := *record.Execution
 	execution.Pending = &pending
 	execution.Failure = nil
@@ -12,7 +14,10 @@ func BeginPublication(record model.IssueOpsRecord, pending model.ExternalIntent)
 	return record
 }
 
-func FailPublication(record model.IssueOpsRecord, operationID, message, at string, notInvoked bool) model.IssueOpsRecord {
+// FailPublication records an execution failure for operationID. A not-invoked
+// failure also clears the pending intent; otherwise the intent stays and the
+// failure is marked ambiguous so reconcile must resolve it.
+func FailPublication(record model.Record, operationID, message, at string, notInvoked bool) model.Record {
 	execution := *record.Execution
 	code := "external_operation_ambiguous"
 	if notInvoked {
@@ -24,7 +29,9 @@ func FailPublication(record model.IssueOpsRecord, operationID, message, at strin
 	return record
 }
 
-func CompletePublication(record model.IssueOpsRecord, artifact model.IssueOpsRemoteArtifactVerification) model.IssueOpsRecord {
+// CompletePublication clears the pending intent and failure of the execution
+// and stores the verified remote artifact on the record.
+func CompletePublication(record model.Record, artifact model.RemoteArtifactVerification) model.Record {
 	execution := *record.Execution
 	execution.Pending = nil
 	execution.Failure = nil

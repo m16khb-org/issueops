@@ -20,7 +20,7 @@ func TestCleanupFinishEvidenceFailurePreservesErrorRendering(t *testing.T) {
 			deps := cleanupStatusDeps(&results)
 			provider := &cleanupStatusProvider{}
 			deps.Provider = func(string) (port.IssueProvider, error) { return provider, nil }
-			deps.VerifyMergedHead = func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+			deps.VerifyMergedHead = func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 				if mode == "merge" {
 					return model.CleanupRemoteBranchArtifactHead{}, failure
 				}

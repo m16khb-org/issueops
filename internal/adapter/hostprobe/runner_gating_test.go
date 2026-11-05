@@ -32,7 +32,7 @@ func TestOmoAndOmpRunRejectInvalidConfigurationBeforeLaunching(t *testing.T) {
 		deps := func(mutate func(*Dependencies)) Dependencies {
 			d := Dependencies{
 				LookPath: func(string) (string, error) { return "/opt/bin/" + rc.host, nil },
-				Process: &omoFakeProcess{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+				Process: &omoFakeProcess{run: func(context.Context, commandRequest) (CommandOutput, error) {
 					launched = true
 					return CommandOutput{}, nil
 				}},
@@ -178,7 +178,7 @@ func TestResolveOmoAuthRejectsRelativeLocationsAndLooseFiles(t *testing.T) {
 		t.Fatalf("world-readable auth err = %v", err)
 	}
 	makePrivate(t, auth, 0o600)
-	if err := os.WriteFile(auth, []byte(strings.Repeat("x", MaxOutputBytes+1)), 0o600); err != nil {
+	if err := os.WriteFile(auth, []byte(strings.Repeat("x", maxOutputBytes+1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := resolveOmoAuth(env(map[string]string{"OMO_CODING_AGENT_DIR": dir})); err == nil || err.Error() != "omo_auth_invalid" {
@@ -589,7 +589,7 @@ func TestValidHostRuntimeObservationRequiresEveryEvidenceField(t *testing.T) {
 func TestObserveHostStreamRejectsStructuralViolations(t *testing.T) {
 	for name, stream := range map[string]string{
 		"empty":                    "",
-		"oversize":                 strings.Repeat(" ", MaxOutputBytes+1),
+		"oversize":                 strings.Repeat(" ", maxOutputBytes+1),
 		"whitespace only":          "   \n",
 		"duplicate claude tool id": `{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t","name":"x"},{"type":"tool_use","id":"t","name":"y"}]}}`,
 		"tool_use without id":      `{"type":"assistant","message":{"content":[{"type":"tool_use","name":"x"}]}}`,

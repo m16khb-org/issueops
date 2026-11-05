@@ -7,7 +7,11 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func CompareSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate contract.SelfAugmentStateSnapshot, stateDir string) contract.SelfAugmentCompareResult {
+// CompareSnapshots diffs two self-verification summary snapshots and returns the regressions and
+// warnings of candidate relative to baseline: status, goal score, failed steps, elapsed time, step
+// labels and per-step durations. maxElapsedRegressionPct is the tolerated percentage growth; the
+// returned result is always OK and sets Regressed when any regression was found.
+func CompareSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate contract.StateSnapshot, stateDir string) contract.CompareResult {
 	result := NewCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct, stateDir)
 	result.BaselineSummary = baseline.Summary
 	result.CandidateSummary = candidate.Summary
@@ -54,7 +58,7 @@ func CompareSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct 
 
 // appendSummaryRegressions records the regressions derivable from the snapshot
 // status, goal score, failed-step count and elapsed time.
-func appendSummaryRegressions(result *contract.SelfAugmentCompareResult, baseline, candidate contract.SelfAugmentStateSnapshot, maxElapsedRegressionPct float64) {
+func appendSummaryRegressions(result *contract.CompareResult, baseline, candidate contract.StateSnapshot, maxElapsedRegressionPct float64) {
 	if baseline.OK && !candidate.OK {
 		result.Regressions = append(result.Regressions, "candidate_not_ok")
 	}
@@ -74,7 +78,7 @@ func appendSummaryRegressions(result *contract.SelfAugmentCompareResult, baselin
 
 // compareStepDurations records slow-step and step-budget regressions when both
 // snapshots share the same step-duration contract, else a mismatch warning.
-func compareStepDurations(result *contract.SelfAugmentCompareResult, baseline, candidate contract.SelfAugmentStateSnapshot, maxElapsedRegressionPct float64) {
+func compareStepDurations(result *contract.CompareResult, baseline, candidate contract.StateSnapshot, maxElapsedRegressionPct float64) {
 	baselineContract, candidateContract := baseline.Summary.Contract, candidate.Summary.Contract
 	if baselineContract.Name == candidateContract.Name &&
 		baselineContract.Version == candidateContract.Version &&
@@ -92,8 +96,10 @@ func compareStepDurations(result *contract.SelfAugmentCompareResult, baseline, c
 	}
 }
 
-func NewCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64, stateDir string) contract.SelfAugmentCompareResult {
-	return contract.SelfAugmentCompareResult{
+// NewCompareResult returns an empty, not-yet-OK CompareResult carrying the request fields, with
+// every list initialized to a non-nil empty slice so it encodes as [] in JSON.
+func NewCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64, stateDir string) contract.CompareResult {
+	return contract.CompareResult{
 		OK:                      false,
 		StateDir:                stateDir,
 		BaselineKey:             baselineKey,
@@ -103,7 +109,7 @@ func NewCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct 
 		AddedStepLabels:         []string{},
 		Regressions:             []string{},
 		Warnings:                []string{},
-		SlowStepRegressions:     []contract.SelfAugmentSlowStepRegression{},
-		StepBudgetRegressions:   []contract.SelfAugmentStepBudgetRegression{},
+		SlowStepRegressions:     []contract.SlowStepRegression{},
+		StepBudgetRegressions:   []contract.StepBudgetRegression{},
 	}
 }

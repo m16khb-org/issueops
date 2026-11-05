@@ -13,11 +13,11 @@ func TestPlanningRecorderRejectsAuthorityBeforeRequestValidation(t *testing.T) {
 	denied := errors.New("actor rejected")
 	calls := map[string]func(PlanningRecorder) error{
 		"intent": func(s PlanningRecorder) error {
-			_, e := s.Intent("state", "cycle", model.IssueOpsIntentRecordRequest{})
+			_, e := s.Intent("state", "cycle", model.IntentRecordRequest{})
 			return e
 		},
 		"plan prep": func(s PlanningRecorder) error {
-			_, e := s.PlanPrep("state", "cycle", model.IssueOpsPlanPrepRequest{})
+			_, e := s.PlanPrep("state", "cycle", model.PlanPrepRequest{})
 			return e
 		},
 		"architecture": func(s PlanningRecorder) error {
@@ -42,11 +42,11 @@ func TestPlanningRecorderRejectsAuthorityBeforeRequestValidation(t *testing.T) {
 					defer func() { events = append(events, "unlock") }()
 					return fn()
 				},
-				Read: func(_, _ string) (model.IssueOpsRecord, error) {
+				Read: func(_, _ string) (model.Record, error) {
 					events = append(events, "read")
-					return model.IssueOpsRecord{}, nil
+					return model.Record{}, nil
 				},
-				ValidateMutation: func(model.IssueOpsRecord) error { events = append(events, "authority"); return denied },
+				ValidateMutation: func(model.Record) error { events = append(events, "authority"); return denied },
 			}}
 			err := call(s)
 			if !errors.Is(err, denied) || !reflect.DeepEqual(events, []string{"lock", "read", "authority", "unlock"}) {
@@ -67,16 +67,16 @@ func TestPlanningRecorderIntentLocksBothReadsAndPreservesWriteResult(t *testing.
 			defer func() { locked = false; events = append(events, "unlock") }()
 			return fn()
 		},
-		Read: func(_, _ string) (model.IssueOpsRecord, error) {
+		Read: func(_, _ string) (model.Record, error) {
 			if !locked {
 				t.Fatal("unlocked read")
 			}
 			events = append(events, "read")
-			return model.IssueOpsRecord{ID: "cycle"}, nil
+			return model.Record{ID: "cycle"}, nil
 		},
-		ValidateMutation: func(model.IssueOpsRecord) error { events = append(events, "authority"); return nil },
+		ValidateMutation: func(model.Record) error { events = append(events, "authority"); return nil },
 		Now:              func() string { events = append(events, "clock"); return "2026-09-30T00:00:00Z" },
-		Write: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Write: func(_ string, r model.Record) (model.Record, error) {
 			if !locked || r.Intent == nil || r.UpdatedAt != r.Intent.RecordedAt {
 				t.Fatalf("invalid write: %+v", r)
 			}
@@ -84,7 +84,7 @@ func TestPlanningRecorderIntentLocksBothReadsAndPreservesWriteResult(t *testing.
 			return r, writeErr
 		},
 	}}
-	result, err := s.Intent("state", "cycle", model.IssueOpsIntentRecordRequest{RawRequest: "Fix the login bug", InterpretedIntent: "Restore expired session refresh while preserving authenticated user identity", SuccessCriteria: []string{"expired session refresh succeeds"}, IntentClass: "standard"})
+	result, err := s.Intent("state", "cycle", model.IntentRecordRequest{RawRequest: "Fix the login bug", InterpretedIntent: "Restore expired session refresh while preserving authenticated user identity", SuccessCriteria: []string{"expired session refresh succeeds"}, IntentClass: "standard"})
 	if !errors.Is(err, writeErr) || result.ID != "cycle" || !reflect.DeepEqual(events, []string{"lock", "read", "authority", "read", "clock", "clock", "write", "unlock"}) {
 		t.Fatalf("result=%+v err=%v events=%v", result, err, events)
 	}

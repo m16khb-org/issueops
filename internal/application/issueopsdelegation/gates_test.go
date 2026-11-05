@@ -10,14 +10,14 @@ import (
 )
 
 func TestChildGatesScopeOneScanToCurrentParent(t *testing.T) {
-	parent := model.IssueOpsRecord{ID: "parent", Repo: "/repo", ChildCycles: []model.IssueOpsChildCycleRef{{CycleID: "missing"}}}
-	records := []model.IssueOpsRecord{
-		{ID: "active", Repo: "/repo", Phase: model.IssueOpsPhaseImplement, Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "parent"}},
-		{ID: "other-repo", Repo: "/other", Phase: model.IssueOpsPhaseImplement, Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "parent"}},
-		{ID: "other-parent", Repo: "/repo", Phase: model.IssueOpsPhaseImplement, Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "other"}},
+	parent := model.Record{ID: "parent", Repo: "/repo", ChildCycles: []model.ChildCycleRef{{CycleID: "missing"}}}
+	records := []model.Record{
+		{ID: "active", Repo: "/repo", Phase: model.PhaseImplement, Delegation: &model.DelegationContract{ParentCycleID: "parent"}},
+		{ID: "other-repo", Repo: "/other", Phase: model.PhaseImplement, Delegation: &model.DelegationContract{ParentCycleID: "parent"}},
+		{ID: "other-parent", Repo: "/repo", Phase: model.PhaseImplement, Delegation: &model.DelegationContract{ParentCycleID: "other"}},
 	}
 	reads := 0
-	gates := ChildGates{Scan: func(root string) ([]model.IssueOpsRecord, error) {
+	gates := ChildGates{Scan: func(root string) ([]model.Record, error) {
 		reads++
 		if root != "state" {
 			t.Fatalf("untrimmed state root: %q", root)
@@ -36,8 +36,8 @@ func TestChildGatesScopeOneScanToCurrentParent(t *testing.T) {
 
 func TestChildGatesFailClosedOnScanErrorAndSkipUnconfiguredState(t *testing.T) {
 	reads := 0
-	gates := ChildGates{Scan: func(string) ([]model.IssueOpsRecord, error) { reads++; return nil, errors.New("storage unreadable") }}
-	parent := model.IssueOpsRecord{ID: "parent", Repo: "/repo"}
+	gates := ChildGates{Scan: func(string) ([]model.Record, error) { reads++; return nil, errors.New("storage unreadable") }}
+	parent := model.Record{ID: "parent", Repo: "/repo"}
 	missing, warnings := gates.PRMissing("state", parent)
 	if !reflect.DeepEqual(missing, []string{"children_complete"}) || !reflect.DeepEqual(warnings, []string{"failed to scan delegated children: storage unreadable"}) {
 		t.Fatalf("scan failure treated as no children: %v %v", missing, warnings)

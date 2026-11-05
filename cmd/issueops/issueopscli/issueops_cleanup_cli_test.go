@@ -109,20 +109,20 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 	bin := t.TempDir()
 	writeFakeGhForCloseChildren(t, bin)
 	t.Setenv("PATH", bin)
-	record := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	record := issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            (issueopscore.CycleStartIdentity{}).StableID(repo, "12-child-cleanup"),
 		Repo:          repo,
 		Branch:        "12-child-cleanup",
-		Phase:         issueopscontract.IssueOpsPhasePR,
+		Phase:         issueopscontract.PhasePR,
 		IssueURL:      "https://github.com/acme/repo/issues/12",
-		IssueLinks: []issueopscontract.IssueOpsIssueLink{{
+		IssueLinks: []issueopscontract.IssueLink{{
 			Type:     "child",
 			URL:      "https://github.com/acme/repo/issues/34",
 			Provider: "github",
 		}},
 	}
-	record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/acme/repo/pull/55",

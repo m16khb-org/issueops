@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func prDraft(fixture benchmark.IssueOpsBenchmarkFixture, issueNumber, branchName, worktreePath, guideline, expectedIssue, expectedPR string) string {
+func prDraft(fixture benchmark.Fixture, issueNumber, branchName, worktreePath, guideline, expectedIssue, expectedPR string) string {
 	return strings.Join([]string{
 		"## 요약",
 		"",

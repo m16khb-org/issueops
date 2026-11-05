@@ -1,3 +1,5 @@
+// Package fingerprint derives a stable identity fingerprint of a project
+// checkout for the lifecycle adapters.
 package fingerprint
 
 import (
@@ -9,6 +11,10 @@ import (
 	"strings"
 )
 
+// ForRoot computes the ProjectFingerprint of the repository at root: its git
+// directory (the .git directory, or the gitdir pointer file content for
+// worktrees) and the SHA-256 of the origin URL returned by readOrigin. Fields
+// are left empty when .git is absent or readOrigin returns "".
 func ForRoot(root string, readOrigin func(string) string) lifecyclecontract.ProjectFingerprint {
 	gitDir := ""
 	if info, err := os.Stat(filepath.Join(root, ".git")); err == nil {

@@ -7,6 +7,8 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// SummaryStep is the per-step input to SummarizeSteps: outcome and wall time, with Reused marking a
+// step satisfied by earlier evidence that must not count toward duration stats.
 type SummaryStep struct {
 	Label      string
 	OK         bool
@@ -14,19 +16,24 @@ type SummaryStep struct {
 	DurationMS int64
 }
 
+// SummaryRun groups the steps executed in one iteration together with its iteration number and
+// seed.
 type SummaryRun struct {
 	Iteration int
 	Seed      int64
 	Steps     []SummaryStep
 }
 
-func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugmentSummary {
-	summary := contract.SelfAugmentSummary{
+// SummarizeSteps aggregates runs into a Summary: step totals, the first failure, ordered step
+// labels, the five slowest executed steps, and per-label duration stats with reuse counts. Goal
+// scores and termination eligibility are filled later by FinalizeSummary.
+func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.Summary {
+	summary := contract.Summary{
 		TotalRuns:         len(runs),
 		TargetScore:       targetScore,
 		StepLabels:        []string{},
-		SlowestSteps:      []contract.SelfAugmentSlowStep{},
-		StepDurationStats: []contract.SelfAugmentStepDurationStat{},
+		SlowestSteps:      []contract.SlowStep{},
+		StepDurationStats: []contract.StepDurationStat{},
 	}
 	seenLabels := map[string]bool{}
 	durationsByLabel := map[string][]int64{}
@@ -53,13 +60,13 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 				reusedByLabel[step.Label]++
 				continue
 			}
-			summary.SlowestSteps = append(summary.SlowestSteps, contract.SelfAugmentSlowStep{
+			summary.SlowestSteps = append(summary.SlowestSteps, contract.SlowStep{
 				Iteration: run.Iteration, Seed: run.Seed, Label: step.Label, DurationMS: step.DurationMS,
 			})
 			durationsByLabel[step.Label] = append(durationsByLabel[step.Label], step.DurationMS)
 		}
 	}
-	slices.SortFunc(summary.SlowestSteps, func(a, b contract.SelfAugmentSlowStep) int {
+	slices.SortFunc(summary.SlowestSteps, func(a, b contract.SlowStep) int {
 		return cmp.Or(cmp.Compare(b.DurationMS, a.DurationMS), cmp.Compare(a.Iteration, b.Iteration), cmp.Compare(a.Label, b.Label))
 	})
 	if len(summary.SlowestSteps) > 5 {
@@ -72,7 +79,10 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 	return summary
 }
 
-func FinalizeSummary(summary *contract.SelfAugmentSummary, runOK bool) {
+// FinalizeSummary derives MinimumGoalScore and TerminationEligible on summary from its goal scores.
+// Termination is eligible only when runOK is true and every goal passed; the minimum is zero when
+// there are no goals.
+func FinalizeSummary(summary *contract.Summary, runOK bool) {
 	summary.MinimumGoalScore = 100
 	if len(summary.GoalScores) == 0 {
 		summary.MinimumGoalScore = 0

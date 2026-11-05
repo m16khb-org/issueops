@@ -247,17 +247,17 @@ func TestObserveLocalChangesUsesOneBaseResolutionAndTwoSnapshotReads(t *testing.
 	}
 }
 
-func newLocalObservationRepo(t *testing.T) (string, model.IssueOpsRecord) {
+func newLocalObservationRepo(t *testing.T) (string, model.Record) {
 	t.Helper()
 	repo := newImplementationGitRepo(t)
 	writeObservationFile(t, repo, "tracked.txt", "base\n")
 	runGit(t, repo, "add", "tracked.txt")
 	runGit(t, repo, "commit", "-m", "add tracked fixture")
 	baseSHA := strings.TrimSpace(runGitOutput(t, repo, "rev-parse", "HEAD"))
-	return repo, model.IssueOpsRecord{
+	return repo, model.Record{
 		Repo:         repo,
 		WorktreePath: repo,
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		BranchPrepare: &model.BranchPrepare{
 			BaseBranch: "1234-impl",
 			BaseSHA:    baseSHA,
 		},

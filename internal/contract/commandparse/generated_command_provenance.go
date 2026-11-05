@@ -1,3 +1,6 @@
+// Package commandparse owns the wire format of generated command provenance: the trailing
+// --generated-by-executable, --generated-by-sha256 and --generated-for-generation flags that bind a
+// command the harness printed to the binary and lease generation that produced it, plus the errors for malformed or mismatched flags.
 package commandparse
 
 import (
@@ -7,18 +10,24 @@ import (
 	"strings"
 )
 
+// Generated command provenance flag names, appended by BindGeneratedCommand and removed by ConsumeGeneratedCommandProvenance.
 const (
 	GeneratedByExecutableFlag  = "--generated-by-executable"
 	GeneratedBySHA256Flag      = "--generated-by-sha256"
 	GeneratedForGenerationFlag = "--generated-for-generation"
 )
 
+// GeneratedCommandProvenance identifies the binary and lease generation that generated a command:
+// the absolute executable path, its lowercase hex SHA-256, and the execution lease generation.
 type GeneratedCommandProvenance struct {
 	ExecutablePath   string `json:"executable_path"`
 	ExecutableSHA256 string `json:"executable_sha256"`
 	LeaseGeneration  uint64 `json:"lease_generation"`
 }
 
+// Validate checks that the path is absolute, clean, control-free and at most 4096 bytes,
+// the digest is 64 lowercase hex characters, and the lease generation is non-zero.
+// It returns a *GeneratedCommandProvenanceError otherwise.
 func (p GeneratedCommandProvenance) Validate() error {
 	if p.ExecutablePath == "" || !filepath.IsAbs(p.ExecutablePath) || filepath.Clean(p.ExecutablePath) != p.ExecutablePath || len(p.ExecutablePath) > 4096 || containsControl(p.ExecutablePath) {
 		return &GeneratedCommandProvenanceError{Code: "generated_command_provenance_invalid", Message: "generated command executable path is invalid", Expected: p}
@@ -35,6 +44,9 @@ func (p GeneratedCommandProvenance) Validate() error {
 	return nil
 }
 
+// BindGeneratedCommand rewrites a generated command that starts with the "issueops" token so it runs the
+// quoted provenance executable, ensures it asks for --json, and appends the three provenance flags.
+// It fails for an empty command, a different leading token, or invalid provenance.
 func BindGeneratedCommand(command string, provenance GeneratedCommandProvenance) (string, error) {
 	if strings.TrimSpace(command) == "" {
 		return "", &GeneratedCommandProvenanceError{Code: "generated_command_provenance_invalid", Message: "generated command is empty", Expected: provenance}
@@ -59,6 +71,9 @@ func BindGeneratedCommand(command string, provenance GeneratedCommandProvenance)
 		" " + GeneratedForGenerationFlag + " " + strconv.FormatUint(provenance.LeaseGeneration, 10), nil
 }
 
+// ConsumeGeneratedCommandProvenance strips the provenance flags (in "--flag value" or "--flag=value" form) from args
+// and returns the remaining args and the parsed provenance. The bool reports whether any provenance flag was present;
+// duplicated, valueless, incomplete, or invalid flags return an error.
 func ConsumeGeneratedCommandProvenance(args []string) ([]string, GeneratedCommandProvenance, bool, error) {
 	clean := make([]string, 0, len(args))
 	values := map[string]string{}
@@ -103,6 +118,8 @@ func ConsumeGeneratedCommandProvenance(args []string) ([]string, GeneratedComman
 	return clean, evidence, true, nil
 }
 
+// GeneratedCommandProvenanceError reports a provenance failure with a stable Code.
+// Expected and Observed carry the bound and the actually observed binary, and Generation the lease generation.
 type GeneratedCommandProvenanceError struct {
 	Code       string
 	Message    string
@@ -111,6 +128,8 @@ type GeneratedCommandProvenanceError struct {
 	Generation uint64
 }
 
+// NewGeneratedCommandProvenanceObservationError returns the error for a failed binary provenance observation;
+// the underlying cause is intentionally not exposed in the message.
 func NewGeneratedCommandProvenanceObservationError(error) error {
 	return &GeneratedCommandProvenanceError{
 		Code:    "generated_command_provenance_observation_failed",
@@ -125,6 +144,7 @@ func (e *GeneratedCommandProvenanceError) Error() string {
 	return e.Message
 }
 
+// IssueOpsErrorFields returns the structured error fields (code, expected and observed executable and SHA-256, lease generation) for JSON error output.
 func (e *GeneratedCommandProvenanceError) IssueOpsErrorFields() map[string]any {
 	if e == nil {
 		return nil

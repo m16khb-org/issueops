@@ -76,21 +76,21 @@ func (g *fakeFinishGit) run(dir string, args ...string) (int, string) {
 	return 0, ""
 }
 
-func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOpsRecord, string) {
+func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.Record, string) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "80-finish"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "80-finish"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	worktree := ""
-	record.Phase = issueops.IssueOpsPhaseDone
+	record.Phase = issueops.PhaseDone
 	record.IssueURL = "https://github.com/acme/repo/issues/80"
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/90"}
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/90"}
 	// execution complete가 base_branch 없는 done 전이를 거부하므로 done 레코드는
 	// 항상 준비된 base를 갖는다.
-	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueops.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: "80-finish",
 		BaseBranch: "main", BaseSHA: "deadbeef", LinkVerified: true,
 	}
@@ -170,14 +170,14 @@ func TestCleanupFinishPreviewGatesRejectMissingEvidence(t *testing.T) {
 		}
 	})
 	t.Run("unclosed child", func(t *testing.T) {
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-			rec.IssueLinks = append(rec.IssueLinks, issueops.IssueOpsIssueLink{Type: "child", URL: "https://github.com/acme/repo/issues/91"})
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
+			rec.IssueLinks = append(rec.IssueLinks, issueops.IssueLink{Type: "child", URL: "https://github.com/acme/repo/issues/91"})
 		})
 		result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), finishDeps(git))
 		if err == nil || !containsString(result.Missing, "child_tasks_closed") {
 			t.Fatalf("unclosed child must block: %v %v", err, result.Missing)
 		}
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 			rec.IssueLinks[len(rec.IssueLinks)-1].CloseVerifiedAt = "t"
 		})
 	})
@@ -185,7 +185,7 @@ func TestCleanupFinishPreviewGatesRejectMissingEvidence(t *testing.T) {
 
 func TestCleanupFinishAllowsRetargetedBaseAfterParentMerged(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.BranchPrepare.BaseBranch = "484-parent"
 	})
 
@@ -334,11 +334,11 @@ func TestCleanupFinishResumableConvergesAndRecordDeleted(t *testing.T) {
 	}
 
 	// 레코드 삭제 후 동일 (repo, branch) start → 새 problem-phase 사이클.
-	fresh, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "80-finish"})
+	fresh, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: record.Repo, Branch: "80-finish"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.Phase != issueops.IssueOpsPhaseProblem || fresh.Execution != nil || fresh.RemoteArtifact != nil {
+	if fresh.Phase != issueops.PhaseProblem || fresh.Execution != nil || fresh.RemoteArtifact != nil {
 		t.Fatalf("finish must unlock same-branch rework with a fresh cycle: %+v", fresh)
 	}
 }
@@ -372,12 +372,12 @@ func TestCleanupFinishBranchDeleteFailureAndGates(t *testing.T) {
 	}
 
 	// phase/lease 게이트.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePR })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.Phase = issueops.PhasePR })
 	if result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps); err == nil || !containsString(result.Missing, "phase_done") {
 		t.Fatalf("non-done phase must block: %v %v", err, result.Missing)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.Phase = issueops.IssueOpsPhaseDone
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
+		rec.Phase = issueops.PhaseDone
 		rec.Execution.Lease.Status = "active"
 		rec.Execution.Lease.ClaimedAt = "2026-07-24T00:00:00Z"
 		rec.Execution.Lease.Holder = &issueops.NativeActor{
@@ -427,7 +427,7 @@ func TestCleanupFinishBlocksWhileRemoteBranchStillExists(t *testing.T) {
 	}
 }
 
-func mutateFinishRecord(t *testing.T, stateRoot, id string, mutate func(*issueops.IssueOpsRecord)) {
+func mutateFinishRecord(t *testing.T, stateRoot, id string, mutate func(*issueops.Record)) {
 	t.Helper()
 	if err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, err := ReadIssueOps(stateRoot, id)
@@ -447,8 +447,8 @@ func mutateFinishRecord(t *testing.T, stateRoot, id string, mutate func(*issueop
 // 마찬가지다 — 면제가 아니라 기록된 결정이기 때문이다.
 func TestCleanupFinishAcceptsRecordedRetarget(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.BranchPrepare.Retargets = []issueops.IssueOpsBranchRetarget{{FromBase: "main", ToBase: "2803-umbrella", Reason: "child of the umbrella"}}
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
+		rec.BranchPrepare.Retargets = []issueops.BranchRetarget{{FromBase: "main", ToBase: "2803-umbrella", Reason: "child of the umbrella"}}
 		rec.BranchPrepare.BaseBranch = "2803-umbrella"
 	})
 	git := &fakeFinishGit{branchOID: "abc123", defaultRef: "refs/heads/main", basePresent: true}

@@ -21,7 +21,7 @@ func TestServeMCPStreamAnswersEveryRequestReadBeforeInputEOF(t *testing.T) {
 		`{"jsonrpc":"2.0","id":"three","method":"resources/read","params":{"uri":"issueops://commit-policy"}}`,
 	}, "\n") + "\n"
 	var output bytes.Buffer
-	_ = ServeMCPStreamWithDependencies(strings.NewReader(input), &output, io.Discard, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest()})
+	_ = serveMCPStreamWithDependencies(strings.NewReader(input), &output, io.Discard, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest()})
 	answered := map[string]bool{}
 	for line := range strings.SplitSeq(strings.TrimSpace(output.String()), "\n") {
 		if line == "" {
@@ -85,7 +85,7 @@ func TestInflightRequestsWaitIdleStopsAtTheLimit(t *testing.T) {
 	inflight.observeInbound([]byte(`{"jsonrpc":"2.0","id":"never","method":"ping"}`))
 	done := make(chan struct{})
 	go func() {
-		inflight.waitIdle(20 * time.Millisecond)
+		inflight.waitIdle(t.Context(), 20*time.Millisecond)
 		close(done)
 	}()
 	select {

@@ -1,3 +1,5 @@
+// Package contractcli implements the `issueops contract` command: printing and checking the CLI/MCP compatibility
+// contract, and running tool conformance baseline, live, replay, and probe-server subcommands.
 package contractcli
 
 import (
@@ -25,6 +27,8 @@ import (
 	mcpcontract "issueops/internal/contract/mcp"
 )
 
+// LiveRequest is one live conformance benchmark run: which hosts, models, profile, and cases to run, how many
+// attempts per case, where evidence goes, and an optional previous report to resume from.
 type LiveRequest struct {
 	Hosts              []string
 	Models             []string
@@ -37,7 +41,7 @@ type LiveRequest struct {
 	Previous           *toolconformancecontract.BenchmarkReport
 }
 
-type ReplayOutcome struct {
+type replayOutcome struct {
 	HandlerCalls      int
 	StateBeforeSHA256 string
 	StateAfterSHA256  string
@@ -46,6 +50,9 @@ type ReplayOutcome struct {
 	FinalResult       map[string]any
 }
 
+// ConformanceDependencies are the effects the conformance command depends on: manifest and fixture loading,
+// replay, the probe server, the tool catalog, the live runner, and baseline evaluation. Nil entries
+// get a safe default or a "not configured" error in NewConformance.
 type ConformanceDependencies struct {
 	LoadManifest          func([]toolconformancecontract.ToolDescriptor) ([]toolconformancecontract.Fixture, []toolconformancecontract.BaselineCase, error)
 	LoadRegressionFixture func(string) (toolconformancecontract.RegressionFixture, error)
@@ -55,11 +62,14 @@ type ConformanceDependencies struct {
 	Root                  func() string
 	RunProcess            func(context.Context, LiveRequest) (toolconformancecontract.BenchmarkReport, error)
 	EvaluateBaseline      func() (caseCount int, ok bool, err error)
-	Replay                func(context.Context, string, string) (ReplayOutcome, error)
+	Replay                func(context.Context, string, string) (replayOutcome, error)
 }
 
+// Conformance runs the contract conformance subcommands (baseline, live, replay, serve).
 type Conformance struct{ deps ConformanceDependencies }
 
+// NewConformance builds a Conformance from deps, filling unset dependencies with defaults:
+// an empty catalog, the working directory as root, and errors for unconfigured loaders and runners.
 func NewConformance(deps ConformanceDependencies) *Conformance {
 	c := &Conformance{deps: deps}
 	if c.deps.Catalog == nil {
@@ -108,21 +118,22 @@ func NewConformance(deps ConformanceDependencies) *Conformance {
 	return c
 }
 
-func (c *Conformance) replayRegressionFixture(_ context.Context, fixturePath, stateDir string) (ReplayOutcome, error) {
+func (c *Conformance) replayRegressionFixture(_ context.Context, fixturePath, stateDir string) (replayOutcome, error) {
 	fixture, err := c.deps.LoadRegressionFixture(fixturePath)
 	if err != nil {
-		return ReplayOutcome{}, err
+		return replayOutcome{}, err
 	}
 	replayed, err := c.deps.ReplayRegression(fixture, c.conformanceDescriptors(), stateDir)
 	if err != nil {
-		return ReplayOutcome{}, err
+		return replayOutcome{}, err
 	}
 	if !replayed.OK {
-		return ReplayOutcome{}, fmt.Errorf("replay_expectation_failed")
+		return replayOutcome{}, fmt.Errorf("replay_expectation_failed")
 	}
-	return ReplayOutcome{HandlerCalls: replayed.HandlerCalls, StateBeforeSHA256: replayed.StateBeforeSHA256, StateAfterSHA256: replayed.StateAfterSHA256, Classification: replayed.Classification, Diagnostics: replayed.Diagnostics, FinalResult: replayed.FinalResult}, nil
+	return replayOutcome{HandlerCalls: replayed.HandlerCalls, StateBeforeSHA256: replayed.StateBeforeSHA256, StateAfterSHA256: replayed.StateAfterSHA256, Classification: replayed.Classification, Diagnostics: replayed.Diagnostics, FinalResult: replayed.FinalResult}, nil
 }
 
+// Run dispatches the conformance subcommand in args: baseline, live, replay, or serve.
 func (c *Conformance) Run(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing conformance subcommand")
@@ -466,6 +477,7 @@ func (c *Conformance) buildCandidateRegression(report toolconformancecontract.Be
 }
 
 // confirmedEpisodeMatches returns the first host/fixture group (in sorted key order)
+
 // with at least two completed episodes carrying the confirmed signature; empty when none qualifies.
 func confirmedEpisodeMatches(report toolconformancecontract.BenchmarkReport, signature string) []toolconformancecontract.EpisodeReport {
 	groups := map[string][]toolconformancecontract.EpisodeReport{}
@@ -547,14 +559,14 @@ func reportedIf(jsonOut bool, err error) error {
 	return err
 }
 
-func (c *Conformance) replayFixture(fixture string) (ReplayOutcome, error) {
+func (c *Conformance) replayFixture(fixture string) (replayOutcome, error) {
 	stateDir, err := os.MkdirTemp("", "issueops-conformance-replay-")
 	if err != nil {
-		return ReplayOutcome{}, err
+		return replayOutcome{}, err
 	}
 	defer os.RemoveAll(stateDir)
 	if err := osfile.Chmod(stateDir, 0o700); err != nil {
-		return ReplayOutcome{}, err
+		return replayOutcome{}, err
 	}
 	return c.deps.Replay(context.Background(), fixture, stateDir)
 }
@@ -585,11 +597,11 @@ func (c *Conformance) runConformanceServe(args []string) error {
 func (c *Conformance) sourceSchema(name string) map[string]any {
 	for _, t := range c.deps.Catalog() {
 		if t.Name == name {
-			copy, err := cloneJSONMap(t.InputSchema)
+			schema, err := cloneJSONMap(t.InputSchema)
 			if err != nil {
 				return nil
 			}
-			return copy
+			return schema
 		}
 	}
 	return nil
@@ -600,11 +612,11 @@ func cloneJSONMap(value map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var copy map[string]any
-	if err := json.Unmarshal(b, &copy); err != nil {
+	var clone map[string]any
+	if err := json.Unmarshal(b, &clone); err != nil {
 		return nil, err
 	}
-	return copy, nil
+	return clone, nil
 }
 
 type stringSlice []string

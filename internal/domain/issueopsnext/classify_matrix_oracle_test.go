@@ -49,7 +49,7 @@ func (f matrixFacts) selfActive() bool {
 	return f.hasExec && f.status == issueopsnextcontract.LeaseStatusActive && f.self
 }
 
-func validCleanup(attempt *issueopscontract.IssueOpsCleanupAttempt) bool {
+func validCleanup(attempt *issueopscontract.CleanupAttempt) bool {
 	return attempt != nil && (attempt.Operation == issueopsnextcontract.CleanupOperationFinish ||
 		attempt.Operation == issueopsnextcontract.CleanupOperationAbandon ||
 		attempt.Operation == issueopsnextcontract.CleanupOperationRemoteBranch)
@@ -502,7 +502,7 @@ func publicationStageCommands(in Input, stage string) []string {
 }
 
 // doneCommand is the read-only cleanup step the merge receipts select.
-func doneCommand(completion *issueopscontract.IssueOpsRemoteCompletion) string {
+func doneCommand(completion *issueopscontract.RemoteCompletion) string {
 	switch {
 	case completion != nil && (completion.ReflectedAt != "" || completion.IssueClosedAt != ""):
 		return "issueops cleanup finish --id " + matrixID + " --preview"

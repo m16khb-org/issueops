@@ -49,7 +49,7 @@ func TestMCPHTTPGatesDefaultFilesResolveAgainstRequestCWD(t *testing.T) {
 	}
 	grantA := authorizeSessionForTest(t, repoA, "client-a", self)
 	url, _ := startProductionHTTPServer(t, issueOpsMCPHTTPDependencies())
-	bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+	bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestMCPHTTPGatesPathsStayInsideAuthorizedWorkspace(t *testing.T) {
 	grantA := authorizeSessionForTest(t, repoA, "client-a", self)
 	grantB := authorizeSessionForTest(t, repoB, "client-b", self)
 	url, _ := startProductionHTTPServer(t, issueOpsMCPHTTPDependencies())
-	bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+	bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestMCPHTTPBoundLoopAndWorkerWritesSucceed(t *testing.T) {
 	}
 	grant := authorizeSessionForTest(t, repo, "client-a", self)
 	url, _ := startProductionHTTPServer(t, issueOpsMCPHTTPDependencies())
-	bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+	bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestMCPHTTPCompletedReplacePreviewUsesProductionBaseSync(t *testing.T) {
 			}
 			deps.ForRequest = issueOpsMCPRequestDependencies(deps)
 			url, _ := startProductionHTTPServer(t, deps)
-			bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+			bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 			if err != nil {
 				t.Fatal(err)
 			}

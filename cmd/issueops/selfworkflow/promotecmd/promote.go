@@ -1,3 +1,5 @@
+// Package promotecmd implements the `issueops self-verify promote` command,
+// which promotes a saved summary snapshot to a baseline state key.
 package promotecmd
 
 import (
@@ -8,11 +10,14 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// Deps injects the promote operation and JSON output used by Run.
 type Deps struct {
-	Promote   func(fromKey, baselineKey string, confirm, allowFailedSource bool) (contract.SelfAugmentPromoteResult, error)
+	Promote   func(fromKey, baselineKey string, confirm, allowFailedSource bool) (contract.PromoteResult, error)
 	PrintJSON func(any) error
 }
 
+// Run parses the promote flags and promotes --from-key to --baseline-key. It
+// only writes with --confirm; otherwise it reports what would be promoted.
 func Run(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("self-verify promote", flag.ContinueOnError)
 	fromKey := fs.String("from-key", "", "state key containing the candidate self-verification summary snapshot")

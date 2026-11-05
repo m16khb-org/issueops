@@ -11,11 +11,11 @@ import (
 
 var layoutRepo = testsupport.AbsPath("work", "repo")
 
-func layoutRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
+func layoutRecord() model.Record {
+	return model.Record{
 		ID: "io-1", Repo: layoutRepo, IssueURL: "https://github.com/acme/repo/issues/7", Branch: "feat/x",
-		Phase: model.IssueOpsPhasePlan,
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		Phase: model.PhasePlan,
+		BranchPrepare: &model.BranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/7", Branch: "feat/x", BaseBranch: "main", BaseSHA: "abc123",
 		},
 	}
@@ -52,12 +52,12 @@ func TestDeriveWorkspaceLayoutDerivesCanonicalWorktreePaths(t *testing.T) {
 	}
 
 	record.BranchPrepare.ParentWorktree = ""
-	record.Delegation = &model.IssueOpsDelegationContract{ParentCycleID: "parent"}
+	record.Delegation = &model.DelegationContract{ParentCycleID: "parent"}
 	layout, err = DeriveWorkspaceLayout(record)
 	if err != nil || layout.ParentWorktree != epic || layout.ExpectedParent != "" {
 		t.Fatalf("delegated cycle must derive its parent worktree: %+v %v", layout, err)
 	}
-	record.Delegation = &model.IssueOpsDelegationContract{ParentCycleID: "  "}
+	record.Delegation = &model.DelegationContract{ParentCycleID: "  "}
 	layout, err = DeriveWorkspaceLayout(record)
 	if err != nil || layout.ParentWorktree != "" {
 		t.Fatalf("blank parent cycle id must not count as delegated: %+v %v", layout, err)
@@ -67,17 +67,17 @@ func TestDeriveWorkspaceLayoutDerivesCanonicalWorktreePaths(t *testing.T) {
 func TestDeriveWorkspaceLayoutRejectsUnsafeInputs(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		mutate func(*model.IssueOpsRecord)
+		mutate func(*model.Record)
 		want   string
 	}{
-		{"no branch prepare", func(r *model.IssueOpsRecord) { r.BranchPrepare = nil }, "base_sha is required"},
-		{"blank base sha", func(r *model.IssueOpsRecord) { r.BranchPrepare.BaseSHA = "  " }, "base_sha is required"},
-		{"empty branch", func(r *model.IssueOpsRecord) { r.Branch = " " }, "execution branch is invalid"},
-		{"dot branch", func(r *model.IssueOpsRecord) { r.Branch = "." }, "execution branch is invalid"},
-		{"dotdot branch", func(r *model.IssueOpsRecord) { r.Branch = ".." }, "execution branch is invalid"},
-		{"parent without base branch", func(r *model.IssueOpsRecord) { r.BranchPrepare.ParentWorktree = "/p"; r.BranchPrepare.BaseBranch = "" }, "base branch is invalid"},
-		{"delegated with dotdot base", func(r *model.IssueOpsRecord) {
-			r.Delegation = &model.IssueOpsDelegationContract{ParentCycleID: "x"}
+		{"no branch prepare", func(r *model.Record) { r.BranchPrepare = nil }, "base_sha is required"},
+		{"blank base sha", func(r *model.Record) { r.BranchPrepare.BaseSHA = "  " }, "base_sha is required"},
+		{"empty branch", func(r *model.Record) { r.Branch = " " }, "execution branch is invalid"},
+		{"dot branch", func(r *model.Record) { r.Branch = "." }, "execution branch is invalid"},
+		{"dotdot branch", func(r *model.Record) { r.Branch = ".." }, "execution branch is invalid"},
+		{"parent without base branch", func(r *model.Record) { r.BranchPrepare.ParentWorktree = "/p"; r.BranchPrepare.BaseBranch = "" }, "base branch is invalid"},
+		{"delegated with dotdot base", func(r *model.Record) {
+			r.Delegation = &model.DelegationContract{ParentCycleID: "x"}
 			r.BranchPrepare.BaseBranch = ".."
 		}, "base branch is invalid"},
 	} {

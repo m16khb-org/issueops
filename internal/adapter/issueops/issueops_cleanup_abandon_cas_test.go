@@ -49,7 +49,7 @@ func TestAbandonDeletionCASStillCatchesAuthorityDrift(t *testing.T) {
 	}
 
 	// preview 이후 홀더가 생겼다. 이 apply는 다른 상태를 지우는 것이 된다.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		holder := executionActor("claude", "drifted-session")
 		rec.Execution.Lease = issueops.WriteLease{
 			Generation: 1, Status: issueops.LeaseStatusActive,

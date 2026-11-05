@@ -82,15 +82,15 @@ func fullCoreReconcileRequest() issueopscontract.ExecutionReconcileRequest {
 			},
 		},
 		CWD:      "/repo.worktrees/195-publication",
-		Snapshot: &issueopscontract.IssueOpsRecord{ID: "io-195", Phase: issueopscontract.IssueOpsPhasePR},
+		Snapshot: &issueopscontract.Record{ID: "io-195", Phase: issueopscontract.PhasePR},
 	}
 }
 
 func publicationRecordRaw(t *testing.T) []byte {
 	t.Helper()
-	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion, ID: "io-195", Repo: "/repo",
-		Branch: "195-publication", Phase: issueopscontract.IssueOpsPhasePR,
+	record := issueopscontract.Record{
+		OK: true, SchemaVersion: issueopscontract.SchemaVersion, ID: "io-195", Repo: "/repo",
+		Branch: "195-publication", Phase: issueopscontract.PhasePR,
 		Execution: &issueopscontract.Execution{
 			Workspace: issueopscontract.Workspace{
 				SourceRoot: "/repo", Root: "/repo.worktrees/195-publication", Branch: "195-publication",

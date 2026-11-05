@@ -11,6 +11,9 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
+// ValidatePersistedRecord checks that a lease record loaded from storage is internally consistent:
+// required workspace fields, status-specific holder and token invariants, and valid actors.
+// A record without an execution section is accepted.
 func ValidatePersistedRecord(record leasecontract.Record) error {
 	if record.Execution == nil {
 		return nil
@@ -33,7 +36,7 @@ func ValidatePersistedRecord(record leasecontract.Record) error {
 	if err := validateLease(execution.Lease); err != nil {
 		return err
 	}
-	return ValidatePersistedSidecars(*execution)
+	return validatePersistedSidecars(*execution)
 }
 
 func validateLease(lease leasecontract.Lease) error {
@@ -82,6 +85,8 @@ func validateReleasedLease(lease leasecontract.Lease) error {
 	return nil
 }
 
+// ValidatePersistedActor checks that actor is a native actor: a supported host, a session ID and a PID
+// reuse-safe session process receipt.
 func ValidatePersistedActor(actor leasecontract.Actor) error {
 	if actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" && actor.Host != "omp" && actor.Host != "opencode" {
 		return fmt.Errorf("native actor host must be codex, claude, omo, omp, or opencode")
@@ -95,7 +100,7 @@ func ValidatePersistedActor(actor leasecontract.Actor) error {
 	return nil
 }
 
-func ValidatePersistedSidecars(execution leasecontract.Execution) error {
+func validatePersistedSidecars(execution leasecontract.Execution) error {
 	if err := validatePendingIntent(execution.Pending); err != nil {
 		return err
 	}

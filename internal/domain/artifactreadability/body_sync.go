@@ -8,6 +8,8 @@ import (
 	"issueops/internal/domain/artifacttemplate"
 )
 
+// BodySyncArtifactKind maps the body-sync kind string to an artifact kind:
+// "child" and "pr"/"mr" map to their kinds, anything else is treated as an issue.
 func BodySyncArtifactKind(kind string) artifacttemplate.IssueOpsArtifactKind {
 	switch kind {
 	case "child":
@@ -33,6 +35,8 @@ func BodySyncTemplate(kind artifacttemplate.IssueOpsArtifactKind, template, body
 	return named, nil
 }
 
+// CheckBodySyncReadability runs the readability check on a body-sync proposal
+// using the already resolved artifact kind and template.
 func CheckBodySyncReadability(kind artifacttemplate.IssueOpsArtifactKind, template artifacttemplate.IssueOpsTemplateKind, body string) reportcontract.Report {
 	return Check(Input{Kind: KindFor(kind), Template: template, Body: body})
 }

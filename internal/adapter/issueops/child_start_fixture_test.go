@@ -16,30 +16,30 @@ func childStarterForTest(root string) delegationapp.ChildStarter {
 	authority := cycleapp.NewMutationAuthority(samePath, liveTestVerifier())
 	return delegationapp.ChildStarter{Records: ChildCycleStore{CycleRecordStore: records}, Identity: CycleStartIdentity{RunGit: GitCmd}, Authority: authority, Links: branchapp.Linker{Records: records, Authority: authority, Now: time.Now}, Now: time.Now}
 }
-func StartIssueOpsChildWithActor(root string, req model.IssueOpsChildStartRequest, actor model.IssueOpsActor) (model.IssueOpsChildStartResult, error) {
+func StartIssueOpsChildWithActor(root string, req model.ChildStartRequest, actor model.Actor) (model.ChildStartResult, error) {
 	return childStarterForTest(root).Start(context.Background(), req, &actor)
 }
 
 func childStatusServiceForTest(root string) delegationapp.StatusService {
 	return delegationapp.StatusService{Records: ChildCycleStore{CycleRecordStore: CycleRecordStore{StateRoot: root}}, Authority: cycleapp.NewMutationAuthority(samePath, liveTestVerifier()), Now: time.Now}
 }
-func IssueOpsChildStatus(root, id string, repair bool) (model.IssueOpsChildStatusResult, error) {
+func IssueOpsChildStatus(root, id string, repair bool) (model.ChildStatusResult, error) {
 	return childStatusServiceForTest(root).Status(context.Background(), id, repair, nil)
 }
-func IssueOpsChildStatusWithActor(root, id string, repair bool, actor model.IssueOpsActor) (model.IssueOpsChildStatusResult, error) {
+func IssueOpsChildStatusWithActor(root, id string, repair bool, actor model.Actor) (model.ChildStatusResult, error) {
 	return childStatusServiceForTest(root).Status(context.Background(), id, repair, &actor)
 }
 
 func childValidatorForTest(root string) delegationapp.Validator {
 	return delegationapp.Validator{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(samePath, liveTestVerifier()), Now: time.Now}
 }
-func AcceptIssueOpsChildWithActor(root, parentID, childID string, evidence []string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func AcceptIssueOpsChildWithActor(root, parentID, childID string, evidence []string, actor model.Actor) (model.ChildValidationResult, error) {
 	return childValidatorForTest(root).Accept(context.Background(), parentID, childID, evidence, &actor)
 }
-func RejectIssueOpsChildWithActor(root, parentID, childID, reason string, evidence []string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func RejectIssueOpsChildWithActor(root, parentID, childID, reason string, evidence []string, actor model.Actor) (model.ChildValidationResult, error) {
 	return childValidatorForTest(root).Reject(context.Background(), parentID, childID, reason, evidence, &actor)
 }
-func DropIssueOpsChildWithActor(root, parentID, childID, reason string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func DropIssueOpsChildWithActor(root, parentID, childID, reason string, actor model.Actor) (model.ChildValidationResult, error) {
 	return childValidatorForTest(root).Drop(context.Background(), parentID, childID, reason, &actor)
 }
 
@@ -51,19 +51,19 @@ type archivedObservationForTest struct {
 	observed bool
 }
 
-func (s *archivedObservationForTest) Load(id string) (model.IssueOpsRecord, error) {
+func (s *archivedObservationForTest) Load(id string) (model.Record, error) {
 	if id == s.childID && !s.observed {
 		s.observed = true
-		return model.IssueOpsRecord{}, fs.ErrNotExist
+		return model.Record{}, fs.ErrNotExist
 	}
 	return s.CycleRecordStore.Load(id)
 }
-func acceptArchivedIssueOpsChild(root, parentID, childID string, evidence []string, actor *model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func acceptArchivedIssueOpsChild(root, parentID, childID string, evidence []string, actor *model.Actor) (model.ChildValidationResult, error) {
 	service := childValidatorForTest(root)
 	service.Records = &archivedObservationForTest{CycleRecordStore: CycleRecordStore{StateRoot: root}, childID: childID}
 	return service.Accept(context.Background(), parentID, childID, evidence, actor)
 }
-func dropArchivedIssueOpsChild(root, parentID, childID, reason string, actor *model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func dropArchivedIssueOpsChild(root, parentID, childID, reason string, actor *model.Actor) (model.ChildValidationResult, error) {
 	service := childValidatorForTest(root)
 	service.Records = &archivedObservationForTest{CycleRecordStore: CycleRecordStore{StateRoot: root}, childID: childID}
 	return service.Drop(context.Background(), parentID, childID, reason, actor)

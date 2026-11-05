@@ -14,7 +14,7 @@ import (
 func TestRemoteVerificationWiringProtectsChildLink(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := issueOpsStateRoot()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "1234-child-verification"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: makeGitRepoForContract(t), Branch: "1234-child-verification"})
 	if err != nil {
 		t.Fatal(err)
 	}

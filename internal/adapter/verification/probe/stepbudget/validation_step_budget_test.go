@@ -17,7 +17,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 	tempState := t.TempDir()
 	writes := []string{}
 	removed := []string{}
-	deps := StepBudgetValidationDeps{
+	deps := ValidationDeps{
 		MakeTempState: func(seed int64) (string, error) {
 			if seed != 42 {
 				t.Fatalf("unexpected seed: %d", seed)
@@ -31,7 +31,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 			removed = append(removed, path)
 			return nil
 		},
-		WriteSnapshot: func(dir, key string, snapshot selfaugment.SelfAugmentStateSnapshot) error {
+		WriteSnapshot: func(dir, key string, snapshot selfaugment.StateSnapshot) error {
 			writes = append(writes, key)
 			if dir != tempState || snapshot.Kind != selfaugmentx.SelfVerificationSummaryKind || snapshot.LoopKind != "self_verification" || snapshot.IssueOpsRoot != root {
 				t.Fatalf("unexpected snapshot write: dir=%q key=%q snapshot=%+v", dir, key, snapshot)
@@ -58,7 +58,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 		t.Fatalf("expected injected RemoveAll to clean the temp state once, got %v", removed)
 	}
 
-	deps.WriteSnapshot = func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return errors.New("write fail") }
+	deps.WriteSnapshot = func(string, string, selfaugment.StateSnapshot) error { return errors.New("write fail") }
 	failed := ValidateStepBudgetBaselineWithDeps("bin", root, 42, deps)
 	if failed.OK || failed.Error != "write fail" {
 		t.Fatalf("unexpected write failure: %+v", failed)
@@ -68,10 +68,10 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 func TestValidateStepBudgetBaselineWithDepsCoversCommandParseAndContractFailures(t *testing.T) {
 	root := t.TempDir()
 	tempState := t.TempDir()
-	deps := StepBudgetValidationDeps{
+	deps := ValidationDeps{
 		MakeTempState: func(int64) (string, error) { return tempState, nil },
 		RemoveAll:     func(string) error { return nil },
-		WriteSnapshot: func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return nil },
+		WriteSnapshot: func(string, string, selfaugment.StateSnapshot) error { return nil },
 	}
 
 	deps.MakeTempState = func(int64) (string, error) { return "", errors.New("temp fail") }
@@ -108,15 +108,15 @@ func TestValidateStepBudgetBaselineWithDepsCoversCommandParseAndContractFailures
 	}
 }
 
-func validStepBudgetCompareResult() selfaugment.SelfAugmentCompareResult {
-	return selfaugment.SelfAugmentCompareResult{
+func validStepBudgetCompareResult() selfaugment.CompareResult {
+	return selfaugment.CompareResult{
 		OK:        true,
 		Regressed: true,
 		Regressions: []string{
 			"step_budget:docs index smoke_p95_increased_by_30.00_pct",
 		},
-		SlowStepRegressions: []selfaugment.SelfAugmentSlowStepRegression{},
-		StepBudgetRegressions: []selfaugment.SelfAugmentStepBudgetRegression{
+		SlowStepRegressions: []selfaugment.SlowStepRegression{},
+		StepBudgetRegressions: []selfaugment.StepBudgetRegression{
 			{Label: "docs index smoke", Metric: "p95_duration_ms", DeltaMS: 30, DeltaPct: 30},
 		},
 	}

@@ -1,3 +1,5 @@
+// Package benchmarkcmd implements the `issueops benchmark` subcommands
+// (run, compare, gate, reliability, consensus) as an inbound CLI adapter.
 package benchmarkcmd
 
 import (
@@ -11,8 +13,12 @@ import (
 	app "issueops/internal/application/issueopsbenchmark"
 )
 
+// Command dispatches `issueops benchmark` subcommands to the benchmark
+// application Service.
 type Command struct{ Service *app.Service }
 
+// Run executes the benchmark subcommand named by args[0]. Help arguments print
+// usage; an unknown subcommand or an unconfigured Service returns an error.
 func (c Command) Run(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops benchmark run|compare|gate|reliability|consensus [--json]")

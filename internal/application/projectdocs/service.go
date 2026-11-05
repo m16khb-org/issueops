@@ -13,42 +13,48 @@ type Service struct {
 	Appending     AppendEffects
 }
 
-func (service Service) Read(root, rel string) (docscontract.ProjectDocsReadResult, error) {
+// Read returns the document at rel under the normalized root; see the Read function.
+func (service Service) Read(root, rel string) (docscontract.ReadResult, error) {
 	root, err := service.NormalizeRoot(root)
 	if err != nil {
-		return docscontract.ProjectDocsReadResult{}, err
+		return docscontract.ReadResult{}, err
 	}
 	rel, err = docdomain.NormalizeRelPath(rel)
 	if err != nil {
-		return docscontract.ProjectDocsReadResult{}, err
+		return docscontract.ReadResult{}, err
 	}
 	return Read(root, rel, service.Routing.Path(root, rel), service.Revision)
 }
 
-func (service Service) Revise(request docscontract.ProjectDocsReviseRequest) (docscontract.ProjectDocsReviseResult, error) {
+// Revise replaces one project document after validating the request and its expected hash.
+// Without confirmation it only plans the change.
+func (service Service) Revise(request docscontract.ReviseRequest) (docscontract.ReviseResult, error) {
 	root, err := service.NormalizeRoot(request.RepoRoot)
 	if err != nil {
-		return docscontract.ProjectDocsReviseResult{}, err
+		return docscontract.ReviseResult{}, err
 	}
 	rel, err := docdomain.NormalizeRelPath(request.RelPath)
 	if err != nil {
-		return docscontract.ProjectDocsReviseResult{}, err
+		return docscontract.ReviseResult{}, err
 	}
-	return Revise(request, root, rel, service.Routing.Path(root, rel), service.Revision)
+	return revise(request, root, rel, service.Routing.Path(root, rel), service.Revision)
 }
 
-func (service Service) Route(root, task string) (docscontract.ProjectDocsRouteResult, error) {
+// Route returns the project documents and dated records a task should read before work starts.
+// It only reads; missing docs are reported as warnings.
+func (service Service) Route(root, task string) (docscontract.RouteResult, error) {
 	root, err := service.NormalizeRoot(root)
 	if err != nil {
-		return docscontract.ProjectDocsRouteResult{}, err
+		return docscontract.RouteResult{}, err
 	}
-	return Route(root, task, service.Routing), nil
+	return route(root, task, service.Routing), nil
 }
 
-func (service Service) Append(request docscontract.ProjectDocsAppendRequest) (docscontract.ProjectDocsAppendResult, error) {
+// Append writes one new dated caution or ADR record and links it from the family overview.
+func (service Service) Append(request docscontract.AppendRequest) (docscontract.AppendResult, error) {
 	root, err := service.NormalizeRoot(request.RepoRoot)
 	if err != nil {
-		return docscontract.ProjectDocsAppendResult{}, err
+		return docscontract.AppendResult{}, err
 	}
 	return Append(root, request, service.Appending)
 }

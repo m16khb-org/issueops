@@ -7,7 +7,7 @@ import (
 	"issueops/internal/domain/policy"
 )
 
-func MateriallyDifferentIntent(rawRequest, interpretedIntent string) bool {
+func materiallyDifferentIntent(rawRequest, interpretedIntent string) bool {
 	rawTokens := intentTokenSet(rawRequest)
 	interpretedTokens := intentTokenSet(interpretedIntent)
 	if len(rawTokens) < 4 || len(interpretedTokens) < 4 {
@@ -45,6 +45,9 @@ func intentStopWord(token string) bool {
 	}
 }
 
+// CleanTextValues trims values, drops empty, NUL-containing, and duplicate
+// entries, and redacts secret-like text. Order of first appearance is kept, and
+// duplicates created by redaction are removed too.
 func CleanTextValues(values []string) []string {
 	seen := map[string]bool{}
 	out := []string{}

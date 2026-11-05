@@ -17,7 +17,7 @@ func TestGoMatchGuardOrderCommandAndFailurePropagation(t *testing.T) {
 	want := contract.StepResult{Label: "Go test match guard", Command: "bash scripts/verify-go-test-match-test.sh", Error: "exit status 23", Stdout: "match evidence", Stderr: "fixture failure"}
 	calls := 0
 	var goTest contract.StepResult
-	planned := PlannedSteps("/repo", "/tmp/issueops", 100, &goTest, SelfVerifyStepDeps{
+	planned := PlannedSteps("/repo", "/tmp/issueops", 100, &goTest, StepDeps{
 		RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 			calls++
 			if root != "/repo" || label != want.Label || timeout != 30*time.Second || stdin != "" || name != "bash" || !reflect.DeepEqual(args, []string{"scripts/verify-go-test-match-test.sh"}) {
@@ -50,7 +50,7 @@ func TestGoMatchGuardMissingOrFailedEvidencePreventsCompletion(t *testing.T) {
 				}
 				steps = append(steps, contract.StepResult{Label: label, OK: label != "Go test match guard"})
 			}
-			summary := SummarizeSelfVerification(augment.SelfAugmentResult{OK: missing, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}, 95)
+			summary := SummarizeSelfVerification(augment.Result{OK: missing, Iterations: 1, Runs: []augment.Iteration{{Iteration: 1, Steps: steps}}}, 95)
 			if summary.TerminationEligible {
 				t.Fatalf("incomplete guard evidence allowed completion: %+v", summary)
 			}
@@ -77,7 +77,7 @@ func TestGoMatchGuardFailureStopsLoop(t *testing.T) {
 		RemoveAll:      func(string) error { return nil },
 		TempBinaryPath: func(string) string { return "/temp/issueops" },
 		Summarize:      SummarizeSelfVerification,
-		StepDeps: SelfVerifyStepDeps{
+		StepDeps: StepDeps{
 			ValidateHarnessInvariants: func(string) contract.StepResult { return contract.StepResult{Label: "harness invariants", OK: true} },
 			ValidateGoFormat:          func(string) contract.StepResult { return contract.StepResult{Label: "gofmt", OK: true} },
 			RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) contract.StepResult {
@@ -98,7 +98,7 @@ func TestGoMatchGuardRunsRealScriptFixtures(t *testing.T) {
 		t.Fatal(err)
 	}
 	var goTest contract.StepResult
-	planned := PlannedSteps(root, "/tmp/issueops", 100, &goTest, SelfVerifyStepDeps{RunCommandStep: evidenceRunner})
+	planned := PlannedSteps(root, "/tmp/issueops", 100, &goTest, StepDeps{RunCommandStep: evidenceRunner})
 	if planned[3].Label != "Go test match guard" {
 		t.Fatalf("guard missing: %s", planned[3].Label)
 	}

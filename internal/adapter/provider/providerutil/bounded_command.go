@@ -1,3 +1,6 @@
+// Package providerutil holds the command runners and string helpers shared by the
+// issue provider adapters: bounded subprocess execution with timeouts and output
+// caps, dry-run previews, and trimmed string-set comparison.
 package providerutil
 
 import (
@@ -20,17 +23,43 @@ const (
 	providerDiagnosticLimit = 4096
 )
 
+// RunBoundedReadbackContext runs name in repo with a 15 second timeout and a
+// 256 KiB stdout cap and returns its stdout. It fails when the command cannot
+// start, exits non-zero, times out, or writes more than the cap.
 func RunBoundedReadbackContext(ctx context.Context, repo, name string, args ...string) ([]byte, error) {
 	stdout, _, err := runBoundedCommandContext(ctx, repo, name, args, providerReadbackTimeout, providerReadbackLimit)
 	return stdout, err
 }
 
+// RunBoundedMutationContext runs a state-changing command with a 60 second
+// timeout and a 256 KiB stdout cap. invoked reports whether the process started,
+// so a caller can tell a failure that left no side effect from one that may have.
 func RunBoundedMutationContext(ctx context.Context, repo, name string, args ...string) (stdout []byte, invoked bool, err error) {
 	return runBoundedCommandContext(ctx, repo, name, args, providerMutationTimeout, providerReadbackLimit)
 }
 
+// RunBoundedMutationWithOutputLimitContext behaves like RunBoundedMutationContext
+// but caps stdout at outputLimit bytes instead of the default 256 KiB.
 func RunBoundedMutationWithOutputLimitContext(ctx context.Context, repo, name string, outputLimit int, args ...string) (stdout []byte, invoked bool, err error) {
 	return runBoundedCommandContext(ctx, repo, name, args, providerMutationTimeout, outputLimit)
+}
+
+// RunContext runs name in repo (the current directory when repo is empty) and
+// returns its stdout. Unlike the bounded runners it sets no timeout or output
+// limit. On failure the child's *exec.ExitError carries its stderr; when ctx
+// ended first, RunContext returns ctx.Err() instead, because the killed
+// child's exit status says nothing about the command itself.
+func RunContext(ctx context.Context, repo, name string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	processlease.Attach(ctx, cmd)
+	cmd.Dir = repo
+	out, err := cmd.Output()
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return out, ctxErr
+		}
+	}
+	return out, err
 }
 
 // DryRunPreview renders the command a confirm would run, quoting each word
@@ -78,7 +107,7 @@ func runBoundedCommandContext(parent context.Context, repo, name string, args []
 	stderr := &boundedBuffer{limit: providerDiagnosticLimit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	if err := cmd.Start(); err != nil {
-		return nil, false, fmt.Errorf("command start failed: %s", boundedDiagnostic(err.Error()))
+		return nil, false, startError{text: boundedDiagnostic(err.Error()), cause: err}
 	}
 	err := cmd.Wait()
 	output := append([]byte(nil), stdout.data...)
@@ -93,6 +122,18 @@ func runBoundedCommandContext(parent context.Context, repo, name string, args []
 	}
 	return output, true, nil
 }
+
+// startError reports a command that never started. Error keeps the bounded,
+// redacted diagnostic; Unwrap keeps the cause so callers can use errors.Is
+// (for example exec.ErrNotFound) instead of matching the message.
+type startError struct {
+	text  string
+	cause error
+}
+
+func (e startError) Error() string { return "command start failed: " + e.text }
+
+func (e startError) Unwrap() error { return e.cause }
 
 type boundedBuffer struct {
 	data      []byte

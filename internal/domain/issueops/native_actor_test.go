@@ -90,7 +90,7 @@ func TestNormalizeNativeActorBindsOpencodeHostToOpencodeReceipt(t *testing.T) {
 // whoami instead of only listing the valid hosts.
 func TestValidateNativeActorNamesAnEmptyHost(t *testing.T) {
 	err := ValidateNativeActor(model.NativeActor{SessionID: "s"})
-	if err == nil || err.Error() != EmptyActorHostMessage {
+	if err == nil || err.Error() != emptyActorHostMessage {
 		t.Fatalf("err = %v", err)
 	}
 	err = ValidateNativeActor(model.NativeActor{Host: "other", SessionID: "s"})

@@ -1,3 +1,6 @@
+// Package candidateexport is the self-verification probe that validates the
+// candidate export command and its saved state checkpoint against the built
+// binary.
 package candidateexport
 
 import (
@@ -18,15 +21,15 @@ import (
 const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
 
-type CandidateExportCommandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult
+type commandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult
 
-type CandidateExportValidationDeps struct {
+type validationDeps struct {
 	MakeTempState func(seed int64) (string, error)
 	RemoveAll     func(path string) error
-	Run           CandidateExportCommandRunner
+	Run           commandRunner
 }
 
-func (deps CandidateExportValidationDeps) withDefaults() CandidateExportValidationDeps {
+func (deps validationDeps) withDefaults() validationDeps {
 	if deps.MakeTempState == nil {
 		deps.MakeTempState = verification.SeededTempState("issueops-candidates")
 	}
@@ -39,11 +42,16 @@ func (deps CandidateExportValidationDeps) withDefaults() CandidateExportValidati
 	return deps
 }
 
+// ValidateSelfVerifyCandidateExport runs the built binary's
+// `self-verify candidates --save-state` and `state read` in a temporary state
+// directory seeded by seed, then checks the export identity, candidate
+// curriculum, and saved checkpoint snapshot. Failures are reported in the
+// returned StepResult rather than as an error.
 func ValidateSelfVerifyCandidateExport(binary, root string, seed int64) verifycontract.StepResult {
-	return ValidateSelfVerifyCandidateExportWithDeps(binary, root, seed, CandidateExportValidationDeps{})
+	return validateSelfVerifyCandidateExportWithDeps(binary, root, seed, validationDeps{})
 }
 
-func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, deps CandidateExportValidationDeps) verifycontract.StepResult {
+func validateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, deps validationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	tempState, err := deps.MakeTempState(seed)
@@ -73,7 +81,7 @@ func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, 
 	if !readStep.OK {
 		return verifydomain.CombineFailedStep("candidate export", time.Since(started).Milliseconds(), readStep, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
-	var readResult statecontract.StateResult
+	var readResult statecontract.Result
 	if err := json.Unmarshal([]byte(readStep.Stdout), &readResult); err != nil {
 		return verifydomain.AssertionStepWithOutput("candidate export", time.Since(started).Milliseconds(), []string{err.Error()}, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
@@ -82,7 +90,7 @@ func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, 
 		return verifydomain.AssertionStepWithOutput("candidate export", time.Since(started).Milliseconds(), []string{"candidate export state snapshot parse: " + err.Error()}, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
 
-	errs := CandidateExportValidationErrors(key, exportResult, snapshot)
+	errs := validationErrors(key, exportResult, snapshot)
 	if len(errs) > 0 {
 		return verifydomain.AssertionStepWithOutput("candidate export", time.Since(started).Milliseconds(), errs, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
@@ -98,7 +106,7 @@ func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, 
 	}
 }
 
-func CandidateExportValidationErrors(key string, exportResult augmentcontract.SelfVerificationCandidateExportResult, snapshot augmentcontract.SelfVerificationCandidateExportStateSnapshot) []string {
+func validationErrors(key string, exportResult augmentcontract.SelfVerificationCandidateExportResult, snapshot augmentcontract.SelfVerificationCandidateExportStateSnapshot) []string {
 	errs := []string{}
 	if !candidateExportIdentityOK(exportResult) {
 		errs = append(errs, "candidate export identity mismatch")

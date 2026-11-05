@@ -7,6 +7,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// CleanupRemoteBranchObservation supplies the provider and git facts for
+// remote branch cleanup: the merge verification of the artifact, any
+// superseding artifact, the identity check, the remote branch OID, and
+// whether the tip reached the base branch. Each read error stays distinct
+// from an absent value.
 type CleanupRemoteBranchObservation struct {
 	MergeConfigured        bool
 	Head                   model.CleanupRemoteBranchArtifactHead
@@ -21,7 +26,10 @@ type CleanupRemoteBranchObservation struct {
 	TipSupersededBy        string
 }
 
-func CleanupRemoteBranchTargets(record model.IssueOpsRecord) model.CleanupRemoteBranchInventory {
+// CleanupRemoteBranchTargets builds the local part of the remote-branch
+// inventory from record: the branch (the workspace branch wins) and the
+// remote artifact URL. Remote observations are filled in by the caller.
+func CleanupRemoteBranchTargets(record model.Record) model.CleanupRemoteBranchInventory {
 	inventory := model.CleanupRemoteBranchInventory{ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch)}
 	if record.Execution != nil {
 		if branch := strings.TrimSpace(record.Execution.Workspace.Branch); branch != "" {
@@ -34,14 +42,22 @@ func CleanupRemoteBranchTargets(record model.IssueOpsRecord) model.CleanupRemote
 	return inventory
 }
 
-// A squash-merged head is safe even when Git cannot prove ancestry. Ancestry
-// and a verified superseding artifact are additional paths, not replacements.
+// CleanupRemoteBranchNeedsTipEvidence reports whether a present remote branch
+// needs extra proof that its tip was merged. A squash-merged head is safe
+// even when Git cannot prove ancestry, so tip evidence is needed only when
+// the merged head OID does not equal the remote tip. Ancestry and a verified
+// superseding artifact are additional paths, not replacements.
 func CleanupRemoteBranchNeedsTipEvidence(facts CleanupRemoteBranchObservation) bool {
 	return facts.RemoteError == nil && facts.RemoteOID != "" &&
 		!(facts.MergeConfigured && facts.MergeError == nil && strings.TrimSpace(facts.Head.HeadRefOID) != "" && strings.EqualFold(strings.TrimSpace(facts.Head.HeadRefOID), facts.RemoteOID))
 }
 
-func BuildCleanupRemoteBranchPreview(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
+// BuildCleanupRemoteBranchPreview evaluates every gate for deleting the
+// remote branch: record state, closed child tasks, artifact merge and head
+// match, remote identity, branch readability, and tip evidence. It returns
+// the inventory with remote observations filled in and a result whose Missing
+// lists the failed gates.
+func BuildCleanupRemoteBranchPreview(record model.Record, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	result := model.CleanupRemoteBranchResult{OK: true, ID: record.ID, Preview: !req.Apply, Branch: inventory.Branch, Missing: []string{}}
 	missing := cleanupRemoteBranchRecordMissing([]string{}, record, inventory)
 	if hasUnclosedChildTask(record.IssueLinks) {
@@ -74,7 +90,7 @@ func BuildCleanupRemoteBranchPreview(record model.IssueOpsRecord, req model.Clea
 }
 
 // cleanupRemoteBranchRecordMissing checks branch name, base-branch collision, phase, and lease gates.
-func cleanupRemoteBranchRecordMissing(missing []string, record model.IssueOpsRecord, inventory model.CleanupRemoteBranchInventory) []string {
+func cleanupRemoteBranchRecordMissing(missing []string, record model.Record, inventory model.CleanupRemoteBranchInventory) []string {
 	if inventory.Branch == "" {
 		missing = append(missing, "branch_recorded")
 	} else if err := ValidateBranch(inventory.Branch); err != nil {
@@ -83,7 +99,7 @@ func cleanupRemoteBranchRecordMissing(missing []string, record model.IssueOpsRec
 	if inventory.Branch != "" && record.BranchPrepare != nil && inventory.Branch == strings.TrimSpace(record.BranchPrepare.BaseBranch) {
 		missing = append(missing, "branch_not_base")
 	}
-	if record.Phase != model.IssueOpsPhaseDone {
+	if record.Phase != model.PhaseDone {
 		missing = append(missing, "phase_done")
 	}
 	if record.Execution != nil && record.Execution.Lease.Status != model.LeaseStatusReleased {
@@ -132,6 +148,9 @@ func cleanupRemoteBranchTipMissing(missing []string, result *model.CleanupRemote
 	return missing
 }
 
+// ValidateCleanupRemoteBranchApply requires --confirm and a request
+// fingerprint equal to the current preview fingerprint, so an apply cannot
+// run on stale preview data.
 func ValidateCleanupRemoteBranchApply(req model.CleanupRemoteBranchRequest, fingerprint string) error {
 	if !req.Confirm {
 		return fmt.Errorf("cleanup remote-branch --apply requires --confirm")

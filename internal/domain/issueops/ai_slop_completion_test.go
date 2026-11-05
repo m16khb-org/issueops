@@ -8,7 +8,7 @@ import (
 )
 
 func TestAISlopCleanCompletionMissingPreservesEvidenceKeys(t *testing.T) {
-	got := AISlopCleanCompletionMissing(model.IssueOpsRecord{
+	got := AISlopCleanCompletionMissing(model.Record{
 		AISlopCleanAt:           "2026-09-28T00:00:00Z",
 		AISlopCleanHead:         "head",
 		AISlopCleanCategories:   []string{"\x00"},
@@ -18,7 +18,7 @@ func TestAISlopCleanCompletionMissingPreservesEvidenceKeys(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("missing=%v, want %v", got, want)
 	}
-	complete := model.IssueOpsRecord{
+	complete := model.Record{
 		AISlopCleanAt: "now", AISlopCleanHead: "head", AISlopCleanFingerprint: "fingerprint",
 		AISlopCleanCategories: []string{"cleanup"}, AISlopCleanVerification: []string{"go test"},
 	}

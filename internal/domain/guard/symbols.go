@@ -9,12 +9,12 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
-func ReuseFinding(rel string, line int, symbol string, existing map[string][]string) (guardcontract.GuardFinding, bool) {
+func reuseFinding(rel string, line int, symbol string, existing map[string][]string) (guardcontract.Finding, bool) {
 	key := NormalizeSymbol(symbol)
 	if key == "" || len(existing[key]) == 0 {
-		return guardcontract.GuardFinding{}, false
+		return guardcontract.Finding{}, false
 	}
-	return guardcontract.GuardFinding{
+	return guardcontract.Finding{
 		Severity: "review",
 		Rule:     "reuse-before-new",
 		File:     rel,
@@ -28,6 +28,9 @@ func ReuseFinding(rel string, line int, symbol string, existing map[string][]str
 	}, true
 }
 
+// NormalizeSymbol turns a symbol name into a comparison key by splitting it into lowercase tokens,
+// dropping plural suffixes and tokens of two characters or fewer, and sorting them. Two symbols with
+// the same key resemble each other. It returns "" when no token remains.
 func NormalizeSymbol(symbol string) string {
 	symbol = strings.TrimSpace(symbol)
 	if symbol == "" {

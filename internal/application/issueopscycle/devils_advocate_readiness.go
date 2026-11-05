@@ -9,7 +9,7 @@ import (
 
 // DevilsAdvocateReviewMissing observes the linked plan only when its digest is
 // needed. The resolver owns filesystem access; the review domain owns the gate.
-func DevilsAdvocateReviewMissing(record model.IssueOpsRecord, checkPlanBinding bool, resolveDigest func(model.IssueOpsRecord) (string, error)) []string {
+func DevilsAdvocateReviewMissing(record model.Record, checkPlanBinding bool, resolveDigest func(model.Record) (string, error)) []string {
 	hasLinkedPlan := strings.TrimSpace(record.PlanPath) != ""
 	var digest string
 	var err error

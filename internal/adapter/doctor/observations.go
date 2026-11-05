@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -13,9 +14,11 @@ import (
 	"issueops/internal/domain/projectdoc"
 )
 
+// ObserveProjectDocs reports which of the required project documents are
+// missing from the project docs directory under root.
 func ObserveProjectDocs(root string) doctordomain.ProjectDocsObservation {
 	observation := doctordomain.ProjectDocsObservation{Directory: filepath.Join(root, projectdoc.ProjectDocsDir)}
-	for _, name := range projectdoc.ProjectDocNames() {
+	for _, name := range projectdoc.Names() {
 		if _, err := os.Stat(filepath.Join(observation.Directory, name)); errors.Is(err, fs.ErrNotExist) {
 			observation.Missing = append(observation.Missing, name)
 		}
@@ -23,6 +26,9 @@ func ObserveProjectDocs(root string) doctordomain.ProjectDocsObservation {
 	return observation
 }
 
+// ObserveRuntimeState collects the runtime state paths that exist under root's
+// project docs directory and the content of STATE.md when it can be read.
+// Missing or unreadable entries are left empty, not reported as errors.
 func ObserveRuntimeState(root string) doctordomain.RuntimeStateObservation {
 	observation := doctordomain.RuntimeStateObservation{DocumentPath: filepath.Join(root, projectdoc.ProjectDocsDir, "STATE.md")}
 	for _, path := range []string{filepath.Join(root, projectdoc.ProjectDocsDir, "state"), filepath.Join(root, projectdoc.ProjectDocsDir, "state.schema.json")} {
@@ -44,11 +50,15 @@ const maxConcurrentGatewayProbes = 8
 // injected so tests stay hermetic. CountFDs counts every port's listener FDs in
 // one call.
 type Gateways struct {
-	Probe    func(string) error
-	CountFDs func([]int) map[int]GatewayFDResult
+	Probe    func(context.Context, string) error
+	CountFDs func(context.Context, []int) map[int]GatewayFDResult
 }
 
-func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
+// Observe reads the loopback MCP gateway endpoints from home/.claude.json,
+// probes each endpoint, and counts the open FDs of each listener port. It
+// returns early with only Home set when home is empty and sets ConfigError when
+// the config cannot be read or parsed.
+func (gateways Gateways) Observe(ctx context.Context, home string) doctordomain.GatewayObservation {
 	observation := doctordomain.GatewayObservation{Home: home}
 	if home == "" {
 		return observation
@@ -61,8 +71,8 @@ func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
 	ports := uniqueMCPGatewayPorts(endpoints)
 	var fdResults []GatewayFDResult
 	var fds sync.WaitGroup
-	fds.Go(func() { fdResults = gateways.countFDs(ports) })
-	observation.Endpoints = gateways.probeEndpoints(endpoints)
+	fds.Go(func() { fdResults = gateways.countFDs(ctx, ports) })
+	observation.Endpoints = gateways.probeEndpoints(ctx, endpoints)
 	fds.Wait()
 	for i, port := range ports {
 		observation.FDs = append(observation.FDs, doctordomain.GatewayFD{Port: port, Count: fdResults[i].Count, Available: fdResults[i].Err == nil})
@@ -72,7 +82,7 @@ func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
 
 // probeEndpoints probes the endpoints concurrently, at most
 // maxConcurrentGatewayProbes at a time, and returns them in endpoint order.
-func (gateways Gateways) probeEndpoints(endpoints []mcpGatewayEndpoint) []doctordomain.GatewayEndpoint {
+func (gateways Gateways) probeEndpoints(ctx context.Context, endpoints []mcpGatewayEndpoint) []doctordomain.GatewayEndpoint {
 	var observed []doctordomain.GatewayEndpoint
 	if len(endpoints) == 0 {
 		return observed
@@ -85,7 +95,7 @@ func (gateways Gateways) probeEndpoints(endpoints []mcpGatewayEndpoint) []doctor
 		probes.Go(func() {
 			defer func() { <-slots }()
 			target := endpoint.URL.String()
-			observed[i] = doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: gateways.Probe(target)}
+			observed[i] = doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: gateways.Probe(ctx, target)}
 		})
 	}
 	probes.Wait()
@@ -93,12 +103,12 @@ func (gateways Gateways) probeEndpoints(endpoints []mcpGatewayEndpoint) []doctor
 }
 
 // countFDs returns one result per port, in port order.
-func (gateways Gateways) countFDs(ports []int) []GatewayFDResult {
+func (gateways Gateways) countFDs(ctx context.Context, ports []int) []GatewayFDResult {
 	results := make([]GatewayFDResult, len(ports))
 	if len(ports) == 0 {
 		return results
 	}
-	counted := gateways.CountFDs(ports)
+	counted := gateways.CountFDs(ctx, ports)
 	for i, port := range ports {
 		result, ok := counted[port]
 		if !ok {
@@ -109,6 +119,8 @@ func (gateways Gateways) countFDs(ports []int) []GatewayFDResult {
 	return results
 }
 
+// ObserveNativeIntegrations checks whether the Codex hooks file under home
+// exists. An empty home yields an observation with only Home set.
 func ObserveNativeIntegrations(home string) doctordomain.NativeObservation {
 	observation := doctordomain.NativeObservation{Home: home}
 	if home == "" {

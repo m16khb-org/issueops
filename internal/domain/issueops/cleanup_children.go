@@ -8,13 +8,19 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// Constants naming the evidence basis of child cleanup.
+// ChildCleanupAlreadyClosed is the basis reported when every child issue was
+// already closed remotely.
 const (
-	ChildCleanupParentMergeVerified = "parent_merge_verified"
+	childCleanupParentMergeVerified = "parent_merge_verified"
 	ChildCleanupAlreadyClosed       = "children_already_closed"
 )
 
-func PrepareChildCleanup(record model.IssueOpsRecord, req model.IssueOpsCloseChildrenRequest) (model.IssueOpsCloseChildrenResult, error) {
-	result := model.IssueOpsCloseChildrenResult{OK: true, ID: record.ID, Merged: req.Merged, Confirmed: req.Confirm, DryRun: !req.Confirm}
+// PrepareChildCleanup validates the preconditions for closing child tasks and
+// starts the result: merge evidence must be given or requested and the parent
+// issue must be linked. Failures set Missing on the returned result.
+func PrepareChildCleanup(record model.Record, req model.CloseChildrenRequest) (model.CloseChildrenResult, error) {
+	result := model.CloseChildrenResult{OK: true, ID: record.ID, Merged: req.Merged, Confirmed: req.Confirm, DryRun: !req.Confirm}
 	if !req.Merged && !req.MergeEvidenceRequested {
 		result.Missing = []string{"merge_evidence"}
 		return result, fmt.Errorf("cannot close child tasks without merge evidence")
@@ -26,11 +32,13 @@ func PrepareChildCleanup(record model.IssueOpsRecord, req model.IssueOpsCloseChi
 	return result, nil
 }
 
-// An unmerged parent artifact cannot be replaced by child closure evidence.
-// A parent without its own artifact requires observation of every child.
-func ChildCleanupEvidenceBasis(record model.IssueOpsRecord, merged bool) (string, error) {
+// ChildCleanupEvidenceBasis names the evidence that allows child cleanup. A
+// verified parent merge is the basis; without it, an unmerged parent artifact
+// cannot be replaced by child closure evidence, and a parent without its own
+// artifact requires observation of every child.
+func ChildCleanupEvidenceBasis(record model.Record, merged bool) (string, error) {
 	if merged {
-		return ChildCleanupParentMergeVerified, nil
+		return childCleanupParentMergeVerified, nil
 	}
 	if record.RemoteArtifact != nil {
 		return "", fmt.Errorf("cannot close child tasks without merge evidence: parent artifact is not verified merged")
@@ -38,6 +46,8 @@ func ChildCleanupEvidenceBasis(record model.IssueOpsRecord, merged bool) (string
 	return "", nil
 }
 
+// ValidateClosedChildObservation fails unless the observed remote state of
+// child url is closed. An empty state is reported as unobserved.
 func ValidateClosedChildObservation(url, state string) error {
 	if strings.EqualFold(state, "closed") {
 		return nil
@@ -48,15 +58,20 @@ func ValidateClosedChildObservation(url, state string) error {
 	return fmt.Errorf("cannot close child tasks without merge evidence: child %s is %s remotely", url, state)
 }
 
-func ValidateChildCloseConfirmation(result model.IssueOpsCloseChildResult, confirm bool) error {
+// ValidateChildCloseConfirmation fails when confirm is set but the provider
+// did not verify the hierarchy or the close of the child.
+func ValidateChildCloseConfirmation(result model.CloseChildResult, confirm bool) error {
 	if confirm && (!result.HierarchyVerified || !result.Closed) {
 		return fmt.Errorf("provider did not verify child close for %s", result.URL)
 	}
 	return nil
 }
 
-func ApplyChildCleanupReceipts(record model.IssueOpsRecord, indices []int, now string) model.IssueOpsRecord {
-	record.IssueLinks = append([]model.IssueOpsIssueLink(nil), record.IssueLinks...)
+// ApplyChildCleanupReceipts stamps the issue links at indices as closed and
+// close-verified at now with reason "completed". It keeps an earlier ClosedAt
+// and copies the link slice before changing it.
+func ApplyChildCleanupReceipts(record model.Record, indices []int, now string) model.Record {
+	record.IssueLinks = append([]model.IssueLink(nil), record.IssueLinks...)
 	for _, index := range indices {
 		link := &record.IssueLinks[index]
 		if strings.TrimSpace(link.ClosedAt) == "" {
@@ -69,9 +84,11 @@ func ApplyChildCleanupReceipts(record model.IssueOpsRecord, indices []int, now s
 	return record
 }
 
-// Bind remote merge evidence to the current closure inputs after reacquiring
-// the cycle lock. Metadata unrelated to child closure may advance independently.
-func ValidateChildCleanupMergeObservation(observed, current model.IssueOpsRecord) error {
+// ValidateChildCleanupMergeObservation binds remote merge evidence to the
+// current closure inputs after the cycle lock is reacquired. It fails when
+// the identity, branch, issue links, or remote artifact changed since
+// observation; metadata unrelated to child closure may advance independently.
+func ValidateChildCleanupMergeObservation(observed, current model.Record) error {
 	changed := observed.ID != current.ID || observed.Repo != current.Repo || observed.Branch != current.Branch || observed.IssueURL != current.IssueURL || !slices.Equal(observed.IssueLinks, current.IssueLinks)
 	if (observed.RemoteArtifact == nil) != (current.RemoteArtifact == nil) {
 		changed = true

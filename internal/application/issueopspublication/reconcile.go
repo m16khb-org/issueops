@@ -9,28 +9,33 @@ import (
 	domain "issueops/internal/domain/issueopspublication"
 )
 
+// ReconcileService resolves a journaled publication intent whose remote outcome is unknown,
+// using the provider's inventory to adopt an existing remote, retry the create, or preserve the intent.
 type ReconcileService struct {
 	repository Repository
 	provider   Provider
-	verifier   Verifier
-	settled    CrashSettlement
+	verifier   verifier
+	settled    crashSettlement
 }
 
-// CrashSettlement reports whether a pending create whose invocation is unknown
+// crashSettlement reports whether a pending create whose invocation is unknown
 // can no longer land (see domain ReconcileFacts.CrashSettled).
-type CrashSettlement func(ctx context.Context, intent contract.Intent) (bool, error)
+type crashSettlement func(ctx context.Context, intent contract.Intent) (bool, error)
 
 // WithCrashSettlement lets reconcile retry a create whose caller died inside
 // the provider call once the settlement proves nothing can still land.
-func (s *ReconcileService) WithCrashSettlement(settled CrashSettlement) *ReconcileService {
+func (s *ReconcileService) WithCrashSettlement(settled crashSettlement) *ReconcileService {
 	s.settled = settled
 	return s
 }
 
-func NewReconcileService(repository Repository, provider Provider, verifier Verifier) *ReconcileService {
+// NewReconcileService wires a ReconcileService; Reconcile fails if any required dependency is nil.
+func NewReconcileService(repository Repository, provider Provider, verifier verifier) *ReconcileService {
 	return &ReconcileService{repository: repository, provider: provider, verifier: verifier}
 }
 
+// Reconcile loads the intent by id, inspects the remote, and applies the domain decision (adopt, retry, or preserve).
+// Ambiguous or failed observations keep the intent and are reported as a failed reconcile rather than guessed.
 func (s *ReconcileService) Reconcile(ctx context.Context, id string) (contract.ReconcileResult, error) {
 	if s == nil || s.repository == nil || s.provider == nil || s.verifier == nil {
 		return contract.ReconcileResult{}, fmt.Errorf("publication reconcile dependencies are required")

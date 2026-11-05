@@ -61,7 +61,7 @@
   },
   {
     "path": "internal/contract/guard/error.go",
-    "symbol": "func GuardBlockedError.Error",
+    "symbol": "func BlockedError.Error",
     "role": "error"
   },
   {
@@ -556,7 +556,7 @@
   },
   {
     "path": "internal/contract/policy/command_types.go",
-    "symbol": "func PolicyDeniedError.Error",
+    "symbol": "func DeniedError.Error",
     "role": "error"
   },
   {
@@ -616,12 +616,12 @@
   },
   {
     "path": "internal/contract/issueops/cli_result_types.go",
-    "symbol": "func MutationAck",
+    "symbol": "func NewMutationAck",
     "role": "projection"
   },
   {
     "path": "internal/contract/issueops/cli_result_types.go",
-    "symbol": "func BranchPrepareAck",
+    "symbol": "func NewBranchPrepareAck",
     "role": "projection"
   },
   {

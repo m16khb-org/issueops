@@ -41,7 +41,7 @@ func normalizePublicationActor(ctx context.Context, actor contract.Actor, verifi
 	return result, nil
 }
 
-func publicationMutationActor(command contract.CreateCommand) model.IssueOpsActor {
+func publicationMutationActor(command contract.CreateCommand) model.Actor {
 	actor := publicationNativeActor(command.Actor)
-	return model.IssueOpsActor{Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: command.CWD, NativeProcessAncestry: actor.ProcessAncestry}
+	return model.Actor{Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: command.CWD, NativeProcessAncestry: actor.ProcessAncestry}
 }

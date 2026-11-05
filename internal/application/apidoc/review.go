@@ -10,11 +10,17 @@ import (
 	domain "issueops/internal/domain/apidoc"
 )
 
+// Review gate errors. ErrReviewGateFailed means the host agent returned a fail
+// verdict; ErrReviewResultRequired means no result file was supplied yet and
+// the returned prompt must be run by the host agent first.
 var (
 	ErrReviewGateFailed     = errors.New("api documentation review gate failed")
 	ErrReviewResultRequired = errors.New("api documentation host-agent review result required")
 )
 
+// ReviewOptions selects what the host-agent review covers: the repository,
+// explicit files or all tracked ones, an optional precomputed diff file, and
+// the host agent's result file.
 type ReviewOptions struct {
 	Repo       string
 	Files      []string
@@ -25,6 +31,8 @@ type ReviewOptions struct {
 	JSON       bool
 }
 
+// ReviewEffects injects the filesystem, git, and prompt-building side effects
+// the review needs so the service itself stays free of I/O.
 type ReviewEffects struct {
 	NormalizeFiles func(string, []string) []string
 	TrackedFiles   func(string) []string
@@ -37,8 +45,15 @@ type ReviewEffects struct {
 	ReadResult     func(string, string) (string, []byte, error)
 }
 
+// ReviewService builds the review prompt for the documentation diff and gates
+// on the host agent's verdict.
 type ReviewService struct{ Effects ReviewEffects }
 
+// Review resolves candidate files, builds the diff and prompt, and evaluates
+// the host-agent result file. With no candidates or an empty diff it returns a
+// skipped passing result; without a result file it returns a pending result
+// with the prompt and ErrReviewResultRequired; a fail verdict yields
+// ErrReviewGateFailed.
 func (service ReviewService) Review(options ReviewOptions) (contract.ReviewResult, error) {
 	files := service.candidateFiles(options)
 	if len(files) == 0 && options.DiffFile == "" {

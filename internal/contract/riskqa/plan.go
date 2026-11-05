@@ -1,6 +1,9 @@
 package riskqa
 
-type RiskQATierPlan struct {
+// TierPlan is the verification plan chosen for a change: the risk Tier, the
+// ChangedPaths and Reasons that led to it, the Commands to run, and the
+// resolved tree Scope when it could be determined.
+type TierPlan struct {
 	Tier         string   `json:"tier"`
 	ChangedPaths []string `json:"changed_paths"`
 	Reasons      []string `json:"reasons"`

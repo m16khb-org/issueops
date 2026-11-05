@@ -16,12 +16,17 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
+// ReseedArtifacts 타입은 lease reseed 때 새 세대의 claim token 파일을 만들고 지우는 파일 시스템 어댑터다.
 type ReseedArtifacts struct{}
 
+// NewReseedArtifacts 함수는 상태가 없는 ReseedArtifacts를 만든다.
 func NewReseedArtifacts() *ReseedArtifacts {
 	return &ReseedArtifacts{}
 }
 
+// Prepare 메서드는 record의 현재 세대 claim token 파일을 0600 권한으로 새로 만들고 token의 SHA-256과 대상 경로를 담은 영수증을 반환한다.
+// 같은 경로의 기존 파일은 먼저 지우며, 쓰기나 검증이 실패하면 만든 파일을 정리한 뒤 오류를 반환한다.
+// record에 execution이 없으면 오류를 반환한다.
 func (a *ReseedArtifacts) Prepare(_ context.Context, record leasecontract.Record) (leaseapp.ReseedArtifactReceipt, error) {
 	if record.Execution == nil {
 		return leaseapp.ReseedArtifactReceipt{}, fmt.Errorf("cannot prepare reseed artifacts without an execution")
@@ -63,10 +68,13 @@ func (a *ReseedArtifacts) Prepare(_ context.Context, record leasecontract.Record
 	return leaseapp.ReseedArtifactReceipt{TokenSHA256: claimTokenSHA256(token), Receipt: receipt, TargetPaths: paths}, nil
 }
 
+// Rollback 메서드는 Prepare가 만든 token 파일을 영수증의 대상 경로 안에서만 지운다.
+// 영수증 경로가 대상 세대 밖이면 오류를 반환한다.
 func (a *ReseedArtifacts) Rollback(_ context.Context, receipt leaseapp.ReseedArtifactReceipt) error {
 	return joinReseedArtifactErrors(validateReseedReceiptTargets(receipt.Receipt, receipt.TargetPaths), removeReseedArtifactTargets(receipt.Receipt.Execution.Workspace.Root, receipt.TargetPaths))
 }
 
+// CleanupSuperseded 메서드는 대체된 세대의 claim token 파일을 지운다. 파일이 없으면 무시하고 record에 execution이 없으면 오류를 반환한다.
 func (a *ReseedArtifacts) CleanupSuperseded(_ context.Context, record leasecontract.Record) error {
 	if record.Execution == nil {
 		return fmt.Errorf("cannot clean superseded reseed artifacts without an execution")

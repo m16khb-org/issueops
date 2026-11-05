@@ -19,7 +19,7 @@ type issueCreateProvider struct {
 	create func(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error)
 }
 
-func (p issueCreateProvider) CreateIssueContext(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p issueCreateProvider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return p.create(ctx, req)
 }
 
@@ -36,7 +36,7 @@ func TestIssueCreateCancellationPreservesPreviewAndConfirm(t *testing.T) {
 					t.Fatalf("git: %s %v", out, err)
 				}
 			}
-			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "74-cancel"})
+			record, err := startIssueOpsFixture(root, model.StartRequest{Repo: repo, Branch: "74-cancel"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -51,7 +51,7 @@ func TestIssueCreateCancellationPreservesPreviewAndConfirm(t *testing.T) {
 				}
 				return port.IssueProviderCreateIssueResult{OK: true, Preview: "preview"}, nil
 			}}
-			service := newIssueCreator(root, func(string) (port.IssueProvider, error) { return provider, nil }, func(context.Context, model.IssueOpsRemoteArtifactVerificationRequest) error {
+			service := newIssueCreator(root, func(string) (port.IssueProvider, error) { return provider, nil }, func(context.Context, model.RemoteArtifactVerificationRequest) error {
 				t.Fatal("unexpected verification")
 				return nil
 			}, time.Now)
@@ -82,7 +82,7 @@ func TestIssueCreateCompositionPersistsBeforeInvocationAndBlocksAmbiguousRetry(t
 			t.Fatalf("git: %s %v", out, err)
 		}
 	}
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "52-issue-create"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: repo, Branch: "52-issue-create"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestIssueCreateCompositionPersistsBeforeInvocationAndBlocksAmbiguousRetry(t
 			t.Fatalf("provider=%s", name)
 		}
 		return provider, nil
-	}, func(context.Context, model.IssueOpsRemoteArtifactVerificationRequest) error {
+	}, func(context.Context, model.RemoteArtifactVerificationRequest) error {
 		t.Fatal("failed creation verified")
 		return nil
 	}, time.Now)
@@ -153,11 +153,11 @@ func TestIssueCreateCompositionLinksReadyCycleAfterLiveVerification(t *testing.T
 			t.Fatalf("git: %s %v", out, err)
 		}
 	}
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "53-create-ready"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: repo, Branch: "53-create-ready"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Intent = &model.IssueOpsIntentContract{IntentClass: "trivial", RawRequest: "create issue", InterpretedIntent: "track work", SuccessCriteria: []string{"issue linked"}}
+	record.Intent = &model.IntentContract{IntentClass: "trivial", RawRequest: "create issue", InterpretedIntent: "track work", SuccessCriteria: []string{"issue linked"}}
 	if _, err := (issueops.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestIssueCreateCompositionLinksReadyCycleAfterLiveVerification(t *testing.T
 		return port.IssueProviderCreateIssueResult{OK: true, URL: "https://github.com/acme/repo/issues/53"}, nil
 	}}
 	verified := false
-	service := newIssueCreator(root, func(string) (port.IssueProvider, error) { return provider, nil }, func(_ context.Context, req model.IssueOpsRemoteArtifactVerificationRequest) error {
+	service := newIssueCreator(root, func(string) (port.IssueProvider, error) { return provider, nil }, func(_ context.Context, req model.RemoteArtifactVerificationRequest) error {
 		stored, err := issueops.ReadIssueOps(root, record.ID)
 		if err != nil {
 			t.Fatal(err)
@@ -184,7 +184,7 @@ func TestIssueCreateCompositionLinksReadyCycleAfterLiveVerification(t *testing.T
 		t.Fatalf("create=%+v verified=%t err=%v", result, verified, err)
 	}
 	stored, err := issueops.ReadIssueOps(root, record.ID)
-	if err != nil || stored.IssueURL != result.URL || stored.IssueCreateIntent.Status != model.IssueCreateIntentCompleted || stored.Phase != model.IssueOpsPhasePlan {
+	if err != nil || stored.IssueURL != result.URL || stored.IssueCreateIntent.Status != model.IssueCreateIntentCompleted || stored.Phase != model.PhasePlan {
 		t.Fatalf("completion phase=%s intent=%+v err=%v", stored.Phase, stored.IssueCreateIntent, err)
 	}
 }

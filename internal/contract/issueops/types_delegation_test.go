@@ -7,14 +7,14 @@ import (
 )
 
 func TestIssueOpsRecordDelegationRoundTrip(t *testing.T) {
-	rec := IssueOpsRecord{
+	rec := Record{
 		OK:            true,
-		SchemaVersion: IssueOpsSchemaVersion,
+		SchemaVersion: SchemaVersion,
 		ID:            "io-parent",
 		Repo:          "/repo/example",
 		Branch:        "123-parent",
-		Phase:         IssueOpsPhaseImplement,
-		Delegation: &IssueOpsDelegationContract{
+		Phase:         PhaseImplement,
+		Delegation: &DelegationContract{
 			ParentCycleID:      "io-root",
 			TaskScope:          "implement delegated model types",
 			AcceptanceCriteria: []string{"delegation contract round-trips", "child refs round-trip"},
@@ -22,7 +22,7 @@ func TestIssueOpsRecordDelegationRoundTrip(t *testing.T) {
 			ChildIssueURL:      "https://github.com/example/repo/issues/124",
 			DelegatedAt:        "2026-07-07T00:00:00Z",
 		},
-		ChildCycles: []IssueOpsChildCycleRef{
+		ChildCycles: []ChildCycleRef{
 			{
 				CycleID:            "io-child-a",
 				Branch:             "124-child-a",
@@ -49,7 +49,7 @@ func TestIssueOpsRecordDelegationRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal record: %v", err)
 	}
-	var got IssueOpsRecord
+	var got Record
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("unmarshal record: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestIssueOpsRecordDelegationRoundTrip(t *testing.T) {
 }
 
 func TestIssueOpsRecordWithoutDelegationOmitsKeys(t *testing.T) {
-	rec := IssueOpsRecord{ID: "io-plain", Repo: "/repo/example", Phase: IssueOpsPhaseProblem}
+	rec := Record{ID: "io-plain", Repo: "/repo/example", Phase: PhaseProblem}
 	data, err := json.Marshal(rec)
 	if err != nil {
 		t.Fatalf("marshal record: %v", err)

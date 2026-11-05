@@ -1,3 +1,5 @@
+// Package workercli implements the `issueops worker` command: enqueueing, running read-only, inspecting,
+// listing, cleaning up, and cancelling local worker jobs.
 package workercli
 
 import (
@@ -6,6 +8,8 @@ import (
 	"strings"
 )
 
+// Command runs the `issueops worker` subcommands against a worker Service. ResolveTarget maps a repo flag
+// to the target workspace root.
 type Command struct {
 	Service       workerapp.Service
 	ResolveTarget func(string) string

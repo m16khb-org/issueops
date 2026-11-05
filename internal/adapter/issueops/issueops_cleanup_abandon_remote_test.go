@@ -23,16 +23,16 @@ type fakeAbandonRemote struct {
 }
 
 func (p *fakeAbandonRemote) Name() string { return "github" }
-func (p *fakeAbandonRemote) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p *fakeAbandonRemote) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (p *fakeAbandonRemote) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (p *fakeAbandonRemote) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
-func (p *fakeAbandonRemote) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *fakeAbandonRemote) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
-func (p *fakeAbandonRemote) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p *fakeAbandonRemote) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
 func (p *fakeAbandonRemote) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
@@ -88,14 +88,14 @@ func (g *remoteAbandonGit) run(_ string, args ...string) (int, string) {
 	return 0, ""
 }
 
-func remoteAbandonRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func remoteAbandonRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot, record := abandonTestRecord(t)
 	record.IssueURL = "https://github.com/acme/repo/issues/106"
-	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueops.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main",
 	}
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/107",
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {

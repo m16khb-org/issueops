@@ -14,14 +14,14 @@ import (
 func TestCleanupCLIInstancesKeepCapturedState(t *testing.T) {
 	roots := []string{t.TempDir(), t.TempDir(), t.TempDir()}
 	var deps [2]issueopscli.Dependencies
-	var records [2]model.IssueOpsRecord
+	var records [2]model.Record
 	var stateRoots [2]string
 	repo := makeGitRepoForContract(t)
 	for i := range deps {
 		t.Setenv("ISSUEOPS_STATE_DIR", roots[i])
 		stateRoots[i] = issueOpsStateRoot()
 		var err error
-		records[i], err = startIssueOpsFixture(stateRoots[i], model.IssueOpsStartRequest{Repo: repo, Branch: "991-cleanup-instance"})
+		records[i], err = startIssueOpsFixture(stateRoots[i], model.StartRequest{Repo: repo, Branch: "991-cleanup-instance"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -35,7 +35,7 @@ func TestCleanupCLIInstancesKeepCapturedState(t *testing.T) {
 		raw := captureStdoutForContract(t, func() error {
 			return issueopscli.RunIssueOpsWithDependencies([]string{"feedback", "add", "--id", records[i].ID, "--source", "instance", "--body", "captured state", "--classification", "contract_change", "--json"}, deps[i])
 		})
-		var updated model.IssueOpsRecord
+		var updated model.Record
 		if err := json.Unmarshal([]byte(raw), &updated); err != nil {
 			t.Fatal(err)
 		}

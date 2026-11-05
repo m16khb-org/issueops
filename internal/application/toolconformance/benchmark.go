@@ -1,3 +1,7 @@
+// Package toolconformance is the application layer of the MCP tool-conformance benchmark:
+// FixtureService loads and replays fixtures, and RunLiveBenchmark drives host probe runners
+// through one episode per fixture and host, then assembles the scored report.
+// Classification and gate rules live in domain/toolconformance; host processes sit behind ports.
 package toolconformance
 
 import (
@@ -19,6 +23,9 @@ import (
 
 const contextPressureBytes = 32 << 10
 
+// LiveBenchmarkRequest selects what a live benchmark run covers. Hosts and Models choose the
+// host runners and their models, Only restricts the run to one fixture, TargetCompleted and
+// MaxAttemptsPerCase bound the attempts, and Previous resumes from an earlier report of the same Profile.
 type LiveBenchmarkRequest struct {
 	Hosts              []string
 	Models             map[string]string
@@ -31,6 +38,8 @@ type LiveBenchmarkRequest struct {
 	Previous           *fixturecontract.BenchmarkReport
 }
 
+// LiveBenchmarkDependencies injects everything RunLiveBenchmark needs from outside:
+// host runners by name, the clock and token source, the fixture manifest loader, and the failure-cause classifier.
 type LiveBenchmarkDependencies struct {
 	Runners      map[string]port.HostProbeRunner
 	Now          func() time.Time
@@ -39,6 +48,9 @@ type LiveBenchmarkDependencies struct {
 	Classify     func(bool, []failurecausecontract.Evidence) failurecausecontract.Result
 }
 
+// RunLiveBenchmark runs the selected fixtures on each requested host and returns the benchmark report with counts and the gate decision.
+// It returns an error for an invalid request, a previous report that does not match the profile or selection,
+// or a manifest/host failure; an inconclusive gate marks the report not OK.
 func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descriptors []fixturecontract.ToolDescriptor, deps LiveBenchmarkDependencies) (fixturecontract.BenchmarkReport, error) {
 	if err := validateLiveRequest(request); err != nil {
 		return fixturecontract.BenchmarkReport{}, err
@@ -328,6 +340,8 @@ func validateLiveRequest(request LiveBenchmarkRequest) error {
 	return nil
 }
 
+// BuildEpisodePrompt returns the prompt for one episode and, for the "context-pressure" profile,
+// the SHA-256 of the fixed filler block prepended to it (empty for other profiles).
 func BuildEpisodePrompt(fixture fixturecontract.Fixture, profile string) (string, string) {
 	instruction := fmt.Sprintf("Call the only allowed MCP tool %s exactly once with these exact JSON arguments. Do not add, remove, rename, or coerce any field. After the tool result, output only captured.\nArguments:\n%s", fixture.ProbeTool, mustJSON(fixture.ExpectedArguments))
 	if profile != "context-pressure" {

@@ -19,10 +19,10 @@ func TestEvidenceRecordersRequireTheActiveLeaseHolder(t *testing.T) {
 
 	recorders := []struct {
 		name   string
-		record func(stateRoot, id string, actor *issueops.IssueOpsActor) error
+		record func(stateRoot, id string, actor *issueops.Actor) error
 	}{
-		{"implementation-review", func(stateRoot, id string, actor *issueops.IssueOpsActor) error {
-			req := issueops.IssueOpsImplementationReviewRequest{Verdict: "pass", Findings: []string{"none"}, Evidence: []string{"go test ./..."}}
+		{"implementation-review", func(stateRoot, id string, actor *issueops.Actor) error {
+			req := issueops.ImplementationReviewRequest{Verdict: "pass", Findings: []string{"none"}, Evidence: []string{"go test ./..."}}
 			if actor == nil {
 				_, err := RecordIssueOpsImplementationReview(stateRoot, id, req)
 				return err
@@ -30,8 +30,8 @@ func TestEvidenceRecordersRequireTheActiveLeaseHolder(t *testing.T) {
 			_, err := RecordIssueOpsImplementationReviewWithActor(stateRoot, id, req, *actor)
 			return err
 		}},
-		{"schema-evidence", func(stateRoot, id string, actor *issueops.IssueOpsActor) error {
-			req := issueops.IssueOpsSchemaEvidenceRequest{Measurements: []string{"orders rows=1"}, Sources: []string{"psql"}}
+		{"schema-evidence", func(stateRoot, id string, actor *issueops.Actor) error {
+			req := issueops.SchemaEvidenceRequest{Measurements: []string{"orders rows=1"}, Sources: []string{"psql"}}
 			if actor == nil {
 				_, err := RecordIssueOpsSchemaEvidence(stateRoot, id, req)
 				return err
@@ -39,8 +39,8 @@ func TestEvidenceRecordersRequireTheActiveLeaseHolder(t *testing.T) {
 			_, err := RecordIssueOpsSchemaEvidenceWithActor(stateRoot, id, req, *actor)
 			return err
 		}},
-		{"project-docs-review", func(stateRoot, id string, actor *issueops.IssueOpsActor) error {
-			req := issueops.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"read AGENTS.md"}}
+		{"project-docs-review", func(stateRoot, id string, actor *issueops.Actor) error {
+			req := issueops.ProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"read AGENTS.md"}}
 			if actor == nil {
 				_, err := RecordIssueOpsProjectDocsReview(stateRoot, id, req)
 				return err
@@ -58,7 +58,7 @@ func TestEvidenceRecordersRequireTheActiveLeaseHolder(t *testing.T) {
 			}
 			id := fixture.record.ID
 
-			intruder := issueops.IssueOpsActor{Host: "claude", SessionID: "intruder", CWD: fixture.worktree}
+			intruder := issueops.Actor{Host: "claude", SessionID: "intruder", CWD: fixture.worktree}
 			if err := recorder.record(stateRoot, id, &intruder); err == nil || !strings.Contains(err.Error(), "requires the current write lease holder") {
 				t.Fatalf("a non-holder must not record %s under an active lease: %v", recorder.name, err)
 			}
@@ -92,15 +92,15 @@ func TestEvidenceRecordersStayOpenBeforeExecutionPreparation(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "995-pre-execution"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "995-pre-execution"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueops.IssueOpsPhaseImplement
+	record.Phase = issueops.PhaseImplement
 	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{
+	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.SchemaEvidenceRequest{
 		Measurements: []string{"orders rows=1"}, Sources: []string{"psql"},
 	}); err != nil {
 		t.Fatalf("a record without execution must accept schema evidence: %v", err)
@@ -109,11 +109,11 @@ func TestEvidenceRecordersStayOpenBeforeExecutionPreparation(t *testing.T) {
 
 // activeLeaseEvidenceFixture는 implement 단계에서 다른 세션이 활성 lease를 쥔
 // 레코드와, 그 holder로 인정되는 actor를 만든다.
-func activeLeaseEvidenceFixture(t *testing.T, stateRoot string) (claimableExecutionFixture, issueops.IssueOpsActor) {
+func activeLeaseEvidenceFixture(t *testing.T, stateRoot string) (claimableExecutionFixture, issueops.Actor) {
 	t.Helper()
 	fixture := newClaimableExecutionFixture(t, stateRoot, "996-evidence-fence")
 	receipt := liveFixtureReceipt()
-	fixture.record.Phase = issueops.IssueOpsPhaseImplement
+	fixture.record.Phase = issueops.PhaseImplement
 	fixture.record.Execution.Lease = issueops.WriteLease{
 		Generation: 1, Status: issueops.LeaseStatusActive,
 		Holder:    &issueops.NativeActor{Host: "codex", SessionID: "owner-session", SessionProcess: &receipt},
@@ -127,7 +127,7 @@ func activeLeaseEvidenceFixture(t *testing.T, stateRoot string) (claimableExecut
 	if err := os.WriteFile(filepath.Join(fixture.worktree, "changed.go"), []byte("package changed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	holder := issueops.IssueOpsActor{
+	holder := issueops.Actor{
 		Host: "codex", SessionID: "owner-session", CWD: fixture.worktree,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{receipt},
 	}

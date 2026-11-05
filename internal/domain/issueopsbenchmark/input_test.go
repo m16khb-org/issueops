@@ -9,12 +9,12 @@ import (
 )
 
 func TestResolveJudgeScoresPreservesDecodeAndCoveragePrecedence(t *testing.T) {
-	fixtures := []contract.IssueOpsBenchmarkFixture{{ID: "first"}, {ID: "second"}}
+	fixtures := []contract.Fixture{{ID: "first"}, {ID: "second"}}
 	bad := errors.New("malformed score")
 	calls := 0
-	decode := func([]byte) (contract.IssueOpsBenchmarkScore, error) {
+	decode := func([]byte) (contract.Score, error) {
 		calls++
-		return contract.IssueOpsBenchmarkScore{}, bad
+		return contract.Score{}, bad
 	}
 	_, err := ResolveJudgeScores(fixtures, map[string][]byte{"first": {}, "extra": {}}, decode)
 	if !errors.Is(err, bad) || calls != 1 || !strings.Contains(err.Error(), `fixture "first"`) {
@@ -25,8 +25,8 @@ func TestResolveJudgeScoresPreservesDecodeAndCoveragePrecedence(t *testing.T) {
 	if err == nil || err.Error() != `judge map missing fixture "first"` || calls != 0 {
 		t.Fatalf("err=%v calls=%d", err, calls)
 	}
-	decode = func([]byte) (contract.IssueOpsBenchmarkScore, error) {
-		return contract.IssueOpsBenchmarkScore{Passed: true}, nil
+	decode = func([]byte) (contract.Score, error) {
+		return contract.Score{Passed: true}, nil
 	}
 	_, err = ResolveJudgeScores(fixtures, map[string][]byte{"first": {}, "second": {}, "extra": {}}, decode)
 	if err == nil || err.Error() != `judge map has unknown fixture "extra"` {
@@ -35,7 +35,7 @@ func TestResolveJudgeScoresPreservesDecodeAndCoveragePrecedence(t *testing.T) {
 }
 
 func TestValidateFixtureRequiresBusinessInputsInOrder(t *testing.T) {
-	f := contract.IssueOpsBenchmarkFixture{}
+	f := contract.Fixture{}
 	for _, tc := range []struct {
 		want string
 		fill func()

@@ -19,6 +19,8 @@ const (
 	maxRepresentableTicksPerSecond = uint64(time.Second)
 )
 
+// Inspect returns the start time and canonical executable path of pid, read
+// from /proc. It fails for non-positive pids or when /proc entries are unreadable.
 func (observer Inspector) Inspect(pid int) (contract.Identity, error) {
 	if pid <= 0 {
 		return contract.Identity{}, fmt.Errorf("pid must be positive")

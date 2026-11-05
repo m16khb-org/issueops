@@ -6,10 +6,13 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// SelfVerificationSummaryKind is the snapshot kind written for saved self-verification summaries.
 const SelfVerificationSummaryKind = "self_verification_summary"
 
-func NewSelfVerificationSummarySnapshot(result contract.SelfAugmentResult, generatedAt time.Time) contract.SelfAugmentStateSnapshot {
-	return contract.SelfAugmentStateSnapshot{
+// NewSelfVerificationSummarySnapshot converts result into its schema-version-1 state snapshot and
+// stamps generatedAt in RFC 3339 form.
+func NewSelfVerificationSummarySnapshot(result contract.Result, generatedAt time.Time) contract.StateSnapshot {
+	return contract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          SelfVerificationSummaryKind,
 		LoopKind:      result.LoopKind,

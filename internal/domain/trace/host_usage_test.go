@@ -104,14 +104,14 @@ func TestReduceUsageCoverageRules(t *testing.T) {
 
 func TestUsageDigestIsDeterministicAndDomainSeparated(t *testing.T) {
 	hexDigest := regexp.MustCompile(`^[0-9a-f]{64}$`)
-	first, again := UsageDigest("session", "abc"), UsageDigest("session", "abc")
+	first, again := usageDigest("session", "abc"), usageDigest("session", "abc")
 	if !hexDigest.MatchString(first) || first != again {
 		t.Errorf("digest must be stable lowercase hex")
 	}
-	if UsageDigest("session", "abc") == UsageDigest("turn", "abc") || UsageDigest("session", "abc") == UsageDigest("session", "abd") {
+	if usageDigest("session", "abc") == usageDigest("turn", "abc") || usageDigest("session", "abc") == usageDigest("session", "abd") {
 		t.Errorf("digests must be separated by kind and id")
 	}
-	if UsageDigest("session", "") != "" {
+	if usageDigest("session", "") != "" {
 		t.Errorf("an empty identifier must stay empty")
 	}
 }
@@ -178,7 +178,7 @@ func TestReduceUsageSampleScopeAndUnknownDefaults(t *testing.T) {
 	scoped := delta("sess", "t", 1)
 	scoped.Finality, scoped.CostBasis = "", ""
 	sample := ReduceUsage([]UsageObservation{scoped}, nil).Samples[0]
-	if sample.ScopeID != UsageDigest("scope", "codex\x00sess") || sample.ScopeID == "" {
+	if sample.ScopeID != usageDigest("scope", "codex\x00sess") || sample.ScopeID == "" {
 		t.Errorf("scope = %q", sample.ScopeID)
 	}
 	if sample.Finality != "unknown" || sample.CostBasis != "unknown" {

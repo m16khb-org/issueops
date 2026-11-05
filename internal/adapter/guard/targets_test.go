@@ -9,7 +9,7 @@ import (
 )
 
 func TestGuardTargetFilesUsesExplicitRelevantFiles(t *testing.T) {
-	got := guardTargetFiles(t.TempDir(), guardcontract.GuardCheckRequest{
+	got := guardTargetFiles(t.TempDir(), guardcontract.CheckRequest{
 		Files: []string{
 			" internal/core/foo.go ",
 			"README.md",
@@ -39,7 +39,7 @@ func TestGuardTargetFilesWalksRelevantFilesAndSkipsGeneratedDirs(t *testing.T) {
 	writeGuardTargetFile(t, root, ".git/ignored.go")
 	writeGuardTargetFile(t, root, "notes.txt")
 
-	got := guardTargetFiles(root, guardcontract.GuardCheckRequest{All: true})
+	got := guardTargetFiles(root, guardcontract.CheckRequest{All: true})
 	want := []string{"internal/core/foo.go", "skills/demo/SKILL.md"}
 	if len(got) != len(want) {
 		t.Fatalf("guardTargetFiles all length = %d, want %d: %#v", len(got), len(want), got)

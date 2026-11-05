@@ -7,7 +7,7 @@ import (
 
 func TestAppendAbandonInsertsBeforeTrailingBlankLinesAndShiftsLaterIndexes(t *testing.T) {
 	ledger := Parse("- [ ] G1: a\n\n\r\n")
-	AppendAbandon(&ledger, "G1", "  not needed ")
+	appendAbandon(&ledger, "G1", "  not needed ")
 	if got := Render(ledger); got != "- [ ] G1: a\nABANDON: G1 not needed\n\n\r\n" {
 		t.Fatalf("got %q", got)
 	}
@@ -22,7 +22,7 @@ func TestAppendAbandonInsertsBeforeTrailingBlankLinesAndShiftsLaterIndexes(t *te
 
 func TestAppendAbandonWithBlankReasonRecordsPlaceholder(t *testing.T) {
 	ledger := Parse("- [ ] G1: a\n")
-	AppendAbandon(&ledger, "G1", "  ")
+	appendAbandon(&ledger, "G1", "  ")
 	if ledger.Gates[0].AbandonReason != "(no reason)" {
 		t.Fatalf("reason=%q", ledger.Gates[0].AbandonReason)
 	}
@@ -30,8 +30,8 @@ func TestAppendAbandonWithBlankReasonRecordsPlaceholder(t *testing.T) {
 
 func TestMarkPassInsertedEvidenceKeepsFollowingGateIndexesValid(t *testing.T) {
 	ledger := Parse("- [ ] G1: a\n- [ ] G2: b\n  EVIDENCE: pending\n")
-	MarkPass(&ledger, 0, "done")
-	MarkPass(&ledger, 1, "also")
+	markPass(&ledger, 0, "done")
+	markPass(&ledger, 1, "also")
 	got := Render(ledger)
 	want := "- [x] G1: a\n  EVIDENCE: done\n- [x] G2: b\n  EVIDENCE: also\n"
 	if got != want {
@@ -41,47 +41,47 @@ func TestMarkPassInsertedEvidenceKeepsFollowingGateIndexesValid(t *testing.T) {
 
 func TestMarkPassReusesIndentOfExistingAttributeLines(t *testing.T) {
 	ledger := Parse("- [ ] G1: a\n\r\n# note\n\tCHECK: true\n")
-	MarkPass(&ledger, 0, "ok")
+	markPass(&ledger, 0, "ok")
 	if !strings.Contains(Render(ledger), "\n\tEVIDENCE: ok\n") {
 		t.Fatalf("indent not reused: %q", Render(ledger))
 	}
 	ledger = Parse("- [ ] G1: a\nprose line\n- [ ] G2: b\n  CHECK: true\n")
-	MarkPass(&ledger, 0, "ok")
+	markPass(&ledger, 0, "ok")
 	if !strings.Contains(Render(ledger), "- [x] G1: a\n  EVIDENCE: ok\nprose") {
 		t.Fatalf("prose must stop the indent search: %q", Render(ledger))
 	}
 }
 
 func TestExpectMatchesIgnoresUnknownRegexFlagsAndInvalidPatterns(t *testing.T) {
-	if !ExpectMatches("/^OK$/ims", "x\nok\ny") {
+	if !expectMatches("/^OK$/ims", "x\nok\ny") {
 		t.Fatal("i and m flags must apply")
 	}
-	if !ExpectMatches("/a.b/s", "a\nb") {
+	if !expectMatches("/a.b/s", "a\nb") {
 		t.Fatal("s flag must let dot match newline")
 	}
-	if ExpectMatches("/a.b/", "a\nb") {
+	if expectMatches("/a.b/", "a\nb") {
 		t.Fatal("without s the dot must not match newline")
 	}
-	if !ExpectMatches("/ok/g", "ok") {
+	if !expectMatches("/ok/g", "ok") {
 		t.Fatal("unsupported flags are ignored")
 	}
-	if ExpectMatches("/(/", "(") {
+	if expectMatches("/(/", "(") {
 		t.Fatal("invalid regex must not match")
 	}
-	if !ExpectMatches("ok", "line one\r\nok\r\n") {
+	if !expectMatches("ok", "line one\r\nok\r\n") {
 		t.Fatal("CRLF output must match line-anchored literal")
 	}
 }
 
 func TestEvidenceTailDefaultsLimitAndReportsEmptyOutput(t *testing.T) {
-	if got := EvidenceTail(" \n\r\n ", 0); got != "(no output)" {
+	if got := evidenceTail(" \n\r\n ", 0); got != "(no output)" {
 		t.Fatalf("got %q", got)
 	}
 	long := strings.Repeat("x", 500)
-	if got := EvidenceTail(long, -1); len(got) > 200 || len(got) == 0 {
+	if got := evidenceTail(long, -1); len(got) > 200 || len(got) == 0 {
 		t.Fatalf("default limit not applied: len=%d", len(got))
 	}
-	if got := EvidenceTail("a\nb\nc", 100); got != "b | c" {
+	if got := evidenceTail("a\nb\nc", 100); got != "b | c" {
 		t.Fatalf("got %q", got)
 	}
 }

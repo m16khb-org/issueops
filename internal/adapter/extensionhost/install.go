@@ -29,18 +29,28 @@ var Omo = Spec{Host: "omo", DisplayName: "Omo", ConfigRoot: ".omo", SkillsRoot: 
 // Omp is the omp host spec (default-profile agent directory).
 var Omp = Spec{Host: "omp", DisplayName: "omp", ConfigRoot: filepath.Join(".omp", "agent"), SkillsRoot: filepath.Join(".omp", "agent", "skills"), StdioType: "stdio"}
 
+// Installer installs one extension-style host described by its Spec. It writes the
+// user MCP config, lifecycle extension, project templates, and skill links.
 type Installer struct {
 	spec               Spec
 	deps               Dependencies
 	lifecycleExtension func(string) string
 }
 
+// NewInstaller returns an Installer for spec. lifecycleExtension renders the
+// lifecycle extension source for a given issueops binary path.
 func NewInstaller(spec Spec, deps Dependencies, lifecycleExtension func(string) string) Installer {
 	return Installer{spec: spec, deps: deps, lifecycleExtension: lifecycleExtension}
 }
 
+var _ port.HostInstaller = Installer{}
+
+// Name returns the host id used to select this installer.
 func (installer Installer) Name() string { return installer.spec.Host }
 
+// Install plans and applies the host's skill links, user and project MCP configs,
+// and lifecycle extension. With req.DryRun it only reports the plan. Project-local
+// HTTP transport removes the project MCP entry instead of writing one.
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	host := installer.spec.Host
 	name := installer.spec.DisplayName

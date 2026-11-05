@@ -1,3 +1,7 @@
+// Package issueopsorphancleanup is the domain policy for cleaning up an orphaned
+// cycle, one whose record is gone but whose worktree and branch remain. It turns
+// inventory observations into a preview that lists the requirements still
+// missing; it performs no I/O.
 package issueopsorphancleanup
 
 import (
@@ -10,6 +14,8 @@ import (
 	corehealth "issueops/internal/domain/operationalhealth"
 )
 
+// NormalizeRequest trims and lowercases the request fields and fails when the
+// cycle id, branch, or any part of the remote artifact identity is missing.
 func NormalizeRequest(request contract.Request) (contract.Request, error) {
 	request.ID = strings.TrimSpace(request.ID)
 	request.Branch = strings.TrimSpace(request.Branch)
@@ -28,6 +34,9 @@ func NormalizeRequest(request contract.Request) (contract.Request, error) {
 	return request, nil
 }
 
+// ResultForRequest returns the starting preview result for request: ready
+// checks empty, the record assumed absent, and remote branch deletion explicitly
+// left untouched.
 func ResultForRequest(request contract.Request) contract.Result {
 	return contract.Result{
 		OK:                   true,
@@ -46,7 +55,7 @@ func ResultForRequest(request contract.Request) contract.Result {
 	}
 }
 
-func InspectInventory(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
+func inspectInventory(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
 	if !samePath(snapshot.RepoRoot, request.RepoRoot) {
 		Missing(result, "repo_root_match")
 		return
@@ -181,11 +190,15 @@ func uniqueSorted(values []string) []string {
 // Inventory paths have already been canonicalized at the filesystem boundary.
 func samePath(left, right string) bool { return left != "" && right != "" && left == right }
 
+// Missing records code as an unmet requirement on result. Blank codes are ignored.
 func Missing(result *contract.Result, code string) {
 	if code = strings.TrimSpace(code); code != "" {
 		result.Missing = append(result.Missing, code)
 	}
 }
+
+// Finish sorts and deduplicates the missing and warning lists and sets Ready
+// when no requirement is missing.
 func Finish(result *contract.Result) {
 	result.Missing = uniqueSorted(result.Missing)
 	result.Warnings = uniqueSorted(result.Warnings)
@@ -200,13 +213,16 @@ type LocalObservation struct {
 	StateOutsideTarget bool
 }
 
+// LocalPreview builds the preview from the health snapshot and the local
+// filesystem observation. It marks every unmet requirement as missing and leaves
+// remote merge evidence and Finish to the caller.
 func LocalPreview(request contract.Request, snapshot corehealth.Snapshot, observed LocalObservation) contract.Result {
 	result := ResultForRequest(request)
 	result.InventoryRefreshed = true
 	if !observed.PathsObservable {
 		Missing(&result, "inventory_complete")
 	}
-	InspectInventory(&result, request, snapshot)
+	inspectInventory(&result, request, snapshot)
 	if !observed.CleanObservable {
 		Missing(&result, "worktree_git_status")
 	} else {
@@ -220,6 +236,9 @@ func LocalPreview(request contract.Request, snapshot corehealth.Snapshot, observ
 	}
 	return result
 }
+
+// MergeEvidence records whether the remote artifact was verified as merged. An
+// unverified merge makes remote_artifact_merged missing and adds a warning.
 func MergeEvidence(result *contract.Result, verified bool) {
 	result.RemoteMerged = verified
 	if !verified {

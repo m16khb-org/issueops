@@ -7,6 +7,6 @@ import (
 // Test fixture for the retired adapter runner; production uses application.Service.
 type IssueOpsBenchmarkRunRequest struct {
 	StateRoot string
-	Fixtures  []benchmarkcontract.IssueOpsBenchmarkFixture
-	Artifacts map[string]benchmarkcontract.IssueOpsBenchmarkArtifact
+	Fixtures  []benchmarkcontract.Fixture
+	Artifacts map[string]benchmarkcontract.Artifact
 }

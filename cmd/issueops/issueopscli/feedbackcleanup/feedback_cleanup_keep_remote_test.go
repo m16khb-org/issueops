@@ -17,12 +17,12 @@ func TestRunCleanupFinishPropagatesKeepRemoteBranchExactly(t *testing.T) {
 	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
-	provider := &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
+	provider := &cleanupStatusProvider{snapshot: executionissue.Snapshot{
 		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}
 	deps := cleanupStatusDeps(nil)
 	deps.Provider = func(string) (port.IssueProvider, error) { return provider, nil }
-	deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+	deps.VerifyMergedHead = func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 	}
 

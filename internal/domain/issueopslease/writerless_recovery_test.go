@@ -10,7 +10,7 @@ func TestWriterlessRecoveryActionMatrix(t *testing.T) {
 		{"claimable", RecoveryClaim},
 		{"released", RecoveryReplacePreview},
 		{"revoking", RecoveryFinalizePreview},
-		{"active", RecoveryNone},
+		{"active", recoveryNone},
 	}
 	for _, test := range tests {
 		if got := DecideWriterlessRecovery(test.status); got != test.want {

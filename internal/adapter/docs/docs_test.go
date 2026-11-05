@@ -23,10 +23,10 @@ func TestReadHeadingsKeepsTitleOutOfSectionList(t *testing.T) {
 		}
 		return path
 	}
-	if title, headings := ReadHeadings(write("h1.md", "## Before\n# Title\n## A\n### B\n")); title != "Title" || !reflect.DeepEqual(headings, []string{"Before", "A", "B"}) {
+	if title, headings := readHeadings(write("h1.md", "## Before\n# Title\n## A\n### B\n")); title != "Title" || !reflect.DeepEqual(headings, []string{"Before", "A", "B"}) {
 		t.Fatalf("h1: %q %v", title, headings)
 	}
-	if title, headings := ReadHeadings(write("noh1.md", "## First\n## Second\n")); title != "First" || !reflect.DeepEqual(headings, []string{"Second"}) {
+	if title, headings := readHeadings(write("noh1.md", "## First\n## Second\n")); title != "First" || !reflect.DeepEqual(headings, []string{"Second"}) {
 		t.Fatalf("no h1: %q %v", title, headings)
 	}
 	var many strings.Builder
@@ -34,14 +34,14 @@ func TestReadHeadingsKeepsTitleOutOfSectionList(t *testing.T) {
 	for i := range 25 {
 		fmt.Fprintf(&many, "## S%d\n", i)
 	}
-	if title, headings := ReadHeadings(write("many.md", many.String())); title != "T" || len(headings) != 20 || headings[19] != "S19" {
+	if title, headings := readHeadings(write("many.md", many.String())); title != "T" || len(headings) != 20 || headings[19] != "S19" {
 		t.Fatalf("cap: %q %d %v", title, len(headings), headings)
 	}
 	many.Reset()
 	for i := range 25 {
 		fmt.Fprintf(&many, "## S%d\n", i)
 	}
-	if title, headings := ReadHeadings(write("many-noh1.md", many.String())); title != "S0" || len(headings) != 20 || headings[0] != "S1" {
+	if title, headings := readHeadings(write("many-noh1.md", many.String())); title != "S0" || len(headings) != 20 || headings[0] != "S1" {
 		t.Fatalf("cap without h1: %q %d %v", title, len(headings), headings)
 	}
 }

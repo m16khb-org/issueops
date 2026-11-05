@@ -9,14 +9,19 @@ import (
 	selfaugmentdomain "issueops/internal/domain/selfaugment"
 )
 
+// SaveSummaryDeps injects the clock, snapshot encoder, state writer and state directory lookup used
+// by SaveSummary.
 type SaveSummaryDeps struct {
 	Now      func() time.Time
-	Encode   func(selfaugmentcontract.SelfAugmentStateSnapshot) ([]byte, error)
-	Write    func(string, string) (statecontract.StateResult, error)
+	Encode   func(selfaugmentcontract.StateSnapshot) ([]byte, error)
+	Write    func(string, string) (statecontract.Result, error)
 	StateDir func() string
 }
 
-func SaveSummary(result *selfaugmentcontract.SelfAugmentResult, key string, deps SaveSummaryDeps) error {
+// SaveSummary writes the result summary to state as a snapshot under key (default
+// self-verify-latest) and records the outcome in result.StateCheckpoint. It classifies the failure
+// cause as the snapshot store does so the stored snapshot passes read validation.
+func SaveSummary(result *selfaugmentcontract.Result, key string, deps SaveSummaryDeps) error {
 	if key == "" {
 		key = "self-verify-latest"
 	}
@@ -26,15 +31,15 @@ func SaveSummary(result *selfaugmentcontract.SelfAugmentResult, key string, deps
 	snapshot.Summary.FailureCause, snapshot.Summary.FailureCauseReason, snapshot.Summary.FailureCauseEvidence = cause.Cause, cause.Reason, cause.Evidence
 	b, err := deps.Encode(snapshot)
 	if err != nil {
-		result.StateCheckpoint = &selfaugmentcontract.SelfAugmentStateCheckpoint{OK: false, Key: key, Error: err.Error()}
+		result.StateCheckpoint = &selfaugmentcontract.StateCheckpoint{OK: false, Key: key, Error: err.Error()}
 		return err
 	}
 	state, err := deps.Write(key, string(b))
 	if err != nil {
-		result.StateCheckpoint = &selfaugmentcontract.SelfAugmentStateCheckpoint{OK: false, Key: key, StateDir: deps.StateDir(), Error: err.Error()}
+		result.StateCheckpoint = &selfaugmentcontract.StateCheckpoint{OK: false, Key: key, StateDir: deps.StateDir(), Error: err.Error()}
 		return err
 	}
-	result.StateCheckpoint = &selfaugmentcontract.SelfAugmentStateCheckpoint{
+	result.StateCheckpoint = &selfaugmentcontract.StateCheckpoint{
 		OK:       true,
 		Key:      state.Record.Key,
 		StateDir: state.StateDir,

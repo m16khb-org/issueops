@@ -22,6 +22,11 @@ const (
 	managedCommandMaxSize    = int64(268435456)
 )
 
+// ManagedCommandPathTransaction replaces an existing regular command file
+// with a symlink to the managed target. Apply makes a private backup and swaps
+// the symlink in atomically, Rollback restores the backup, and Finalize
+// commits and removes the backup. Each transaction can apply once and ends
+// after Rollback or Finalize.
 type ManagedCommandPathTransaction struct {
 	plan      install.ManagedCommandPathPlan
 	existing  managedCommandIdentity
@@ -83,6 +88,10 @@ func defaultManagedCommandPathDeps() managedCommandPathDeps {
 	}
 }
 
+// PrepareManagedCommandPathCandidate plans adopting the regular command file
+// at path as a symlink to target. The existing file and candidate must be
+// issueops builds. It refuses without adopt; with dryRun it returns only the
+// plan and a nil transaction, otherwise the transaction to Apply.
 func PrepareManagedCommandPathCandidate(target, candidate, path string, adopt, dryRun bool) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
 	return prepareManagedCommandPathCandidateWithDeps(target, candidate, path, adopt, dryRun, defaultManagedCommandPathDeps())
 }
@@ -119,6 +128,10 @@ func prepareManagedCommandPathCandidateWithDeps(target, candidatePath, path stri
 	return &ManagedCommandPathTransaction{plan: plan, existing: existing, candidate: candidate, deps: deps}, plan, nil
 }
 
+// Apply backs up the existing command and atomically swaps in the symlink to
+// the target, revalidating that the command did not change. It fails when the
+// transaction was already applied or closed; on late failures the backup is
+// retained and named in the error.
 func (transaction *ManagedCommandPathTransaction) Apply() (install.ManagedCommandPathPlan, error) {
 	if transaction == nil || transaction.closed || transaction.applied {
 		return install.ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction is not applicable")
@@ -205,6 +218,8 @@ func (transaction *ManagedCommandPathTransaction) verifyReplacement(temporaryLin
 	return nil
 }
 
+// Rollback restores the backed-up command after a successful Apply. It fails
+// when the transaction was not applied or is already closed.
 func (transaction *ManagedCommandPathTransaction) Rollback() (install.ManagedCommandPathPlan, error) {
 	if transaction == nil || transaction.closed || !transaction.applied {
 		return install.ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction cannot roll back")
@@ -319,6 +334,9 @@ func (transaction *ManagedCommandPathTransaction) restoreRollbackDisplacement(di
 	return nil
 }
 
+// Finalize commits an applied transaction after checking the symlink is still
+// in place, then removes the backup. It fails when the transaction was not
+// applied or is already closed.
 func (transaction *ManagedCommandPathTransaction) Finalize() (install.ManagedCommandPathPlan, error) {
 	if transaction == nil || transaction.closed || !transaction.applied {
 		return install.ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction cannot finalize")

@@ -21,7 +21,7 @@ func (r *flexBranchRecords) Load(context.Context, string) (model.CleanupSnapshot
 	*r.events = append(*r.events, "load")
 	return r.snapshot, r.loadErr
 }
-func (r *flexBranchRecords) Arm(_ context.Context, snap model.CleanupSnapshot, a model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
+func (r *flexBranchRecords) Arm(_ context.Context, snap model.CleanupSnapshot, a model.CleanupAttempt) (model.CleanupSnapshot, error) {
 	*r.events = append(*r.events, "arm")
 	snap.Record.CleanupAttempt = &a
 	return snap, r.armErr
@@ -81,8 +81,8 @@ func newBranchRunFixture() *branchRunFixture {
 	f.cleaner = RemoteBranchCleaner{
 		Records: f.records,
 		Acquire: func(context.Context, string) (CleanupLifetime, error) { return f.lifetime, nil },
-		NewAttempt: func(op model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
-			return model.IssueOpsCleanupAttempt{Operation: op, Token: "token", StartedAt: "now"}, nil
+		NewAttempt: func(op model.CleanupOperation) (model.CleanupAttempt, error) {
+			return model.CleanupAttempt{Operation: op, Token: "token", StartedAt: "now"}, nil
 		},
 		Preview: RemoteBranchPreviewer{Environment: f.env, VerifyMergedArtifact: mergedHeadFor("tip")},
 		Now:     func() time.Time { return time.Date(2026, 9, 29, 1, 2, 3, 0, time.UTC) },
@@ -113,9 +113,9 @@ func TestRemoteBranchCleanerRefusesBeforeArming(t *testing.T) {
 		}, wantIs: acquireFailure},
 		{name: "load fails", configure: func(f *branchRunFixture) { f.records.loadErr = loadFailure }, wantIs: loadFailure},
 		{name: "other cleanup owns the cycle", configure: func(f *branchRunFixture) {
-			f.records.snapshot.Record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationFinish}
+			f.records.snapshot.Record.CleanupAttempt = &model.CleanupAttempt{Operation: model.CleanupOperationFinish}
 		}, wantErr: "cleanup finish owns this cycle"},
-		{name: "gates missing", configure: func(f *branchRunFixture) { f.records.snapshot.Record.Phase = model.IssueOpsPhaseImplement }, wantErr: "cleanup remote-branch is not ready; unmet gates: phase_done"},
+		{name: "gates missing", configure: func(f *branchRunFixture) { f.records.snapshot.Record.Phase = model.PhaseImplement }, wantErr: "cleanup remote-branch is not ready; unmet gates: phase_done"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -246,8 +246,8 @@ func TestRemoteBranchCleanerReportsArmingFailures(t *testing.T) {
 	t.Run("attempt token", func(t *testing.T) {
 		f := newBranchRunFixture()
 		req := f.applyRequest(t)
-		f.cleaner.NewAttempt = func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
-			return model.IssueOpsCleanupAttempt{}, attemptFailure
+		f.cleaner.NewAttempt = func(model.CleanupOperation) (model.CleanupAttempt, error) {
+			return model.CleanupAttempt{}, attemptFailure
 		}
 		result, err := f.cleaner.Run(t.Context(), req)
 		if !errors.Is(err, attemptFailure) || result.OK || result.ID != "io-test" || slices.Contains(*f.events, "arm") {
@@ -268,7 +268,7 @@ func TestRemoteBranchCleanerAlreadyAbsentBranch(t *testing.T) {
 	t.Run("crashed attempt preview points at apply without writing", func(t *testing.T) {
 		f := newBranchRunFixture()
 		f.env.remoteOID = ""
-		f.records.snapshot.Record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationRemoteBranch, Token: "old", StartedAt: "then"}
+		f.records.snapshot.Record.CleanupAttempt = &model.CleanupAttempt{Operation: model.CleanupOperationRemoteBranch, Token: "old", StartedAt: "then"}
 		result, err := f.cleaner.Run(t.Context(), model.CleanupRemoteBranchRequest{ID: "io-test"})
 		if err != nil || !result.AlreadyAbsent || result.NextCommand != "issueops cleanup remote-branch --id io-test --apply --json" || slices.Contains(*f.events, "arm") {
 			t.Fatalf("result=%+v err=%v events=%v", result, err, *f.events)
@@ -277,7 +277,7 @@ func TestRemoteBranchCleanerAlreadyAbsentBranch(t *testing.T) {
 	t.Run("crashed attempt apply releases without deleting", func(t *testing.T) {
 		f := newBranchRunFixture()
 		f.env.remoteOID = ""
-		f.records.snapshot.Record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationRemoteBranch, Token: "old", StartedAt: "then"}
+		f.records.snapshot.Record.CleanupAttempt = &model.CleanupAttempt{Operation: model.CleanupOperationRemoteBranch, Token: "old", StartedAt: "then"}
 		result, err := f.cleaner.Run(t.Context(), model.CleanupRemoteBranchRequest{ID: "io-test", Apply: true})
 		if err != nil || !result.AlreadyAbsent || result.Deleted {
 			t.Fatalf("result=%+v err=%v", result, err)

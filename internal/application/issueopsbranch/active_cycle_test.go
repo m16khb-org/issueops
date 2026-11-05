@@ -12,25 +12,25 @@ import (
 )
 
 type activeTestStore struct {
-	records map[string]model.IssueOpsRecord
+	records map[string]model.Record
 }
 
 func newActiveTestStore(t *testing.T) *activeTestStore {
 	t.Helper()
-	return &activeTestStore{records: map[string]model.IssueOpsRecord{}}
+	return &activeTestStore{records: map[string]model.Record{}}
 }
-func (s *activeTestStore) writeRecord(t *testing.T, record model.IssueOpsRecord) {
+func (s *activeTestStore) writeRecord(t *testing.T, record model.Record) {
 	t.Helper()
 	s.records[record.ID] = record
 }
 func (s *activeTestStore) reader() app.ActiveCycleReader {
-	return app.ActiveCycleReader{CleanPath: pathutil.CleanAbsPath, Scan: func() ([]model.IssueOpsRecord, error) {
+	return app.ActiveCycleReader{CleanPath: pathutil.CleanAbsPath, Scan: func() ([]model.Record, error) {
 		ids := make([]string, 0, len(s.records))
 		for id := range s.records {
 			ids = append(ids, id)
 		}
 		sort.Strings(ids)
-		records := make([]model.IssueOpsRecord, 0, len(ids))
+		records := make([]model.Record, 0, len(ids))
 		for _, id := range ids {
 			records = append(records, s.records[id])
 		}
@@ -42,12 +42,12 @@ func TestActiveUmbrellaIncludesDeletedWorktreeAndExcludesDoneAndOtherRepos(t *te
 	store := newActiveTestStore(t)
 	repo, other := t.TempDir(), t.TempDir()
 	url := "https://github.com/acme/repo/issues/79"
-	for _, record := range []model.IssueOpsRecord{
-		{ID: "a-done", Repo: repo, Phase: model.IssueOpsPhaseDone},
-		{ID: "b-other", Repo: other, Phase: model.IssueOpsPhasePlan},
-		{ID: "c-parent", Repo: repo, Phase: model.IssueOpsPhaseImplement, WorktreePath: filepath.Join(t.TempDir(), "gone")},
+	for _, record := range []model.Record{
+		{ID: "a-done", Repo: repo, Phase: model.PhaseDone},
+		{ID: "b-other", Repo: other, Phase: model.PhasePlan},
+		{ID: "c-parent", Repo: repo, Phase: model.PhaseImplement, WorktreePath: filepath.Join(t.TempDir(), "gone")},
 	} {
-		record.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: url}}
+		record.IssueLinks = []model.IssueLink{{Type: "child", URL: url}}
 		store.writeRecord(t, record)
 	}
 	got, ok := store.reader().UmbrellaForChildIssue(repo, url)
@@ -59,12 +59,12 @@ func TestActiveUmbrellaIncludesDeletedWorktreeAndExcludesDoneAndOtherRepos(t *te
 func TestActiveCycleReaderUsesOneScanAndPreservesUnavailableResult(t *testing.T) {
 	scans := 0
 	fail := false
-	reader := app.ActiveCycleReader{CleanPath: pathutil.CleanAbsPath, Scan: func() ([]model.IssueOpsRecord, error) {
+	reader := app.ActiveCycleReader{CleanPath: pathutil.CleanAbsPath, Scan: func() ([]model.Record, error) {
 		scans++
 		if fail {
 			return nil, errors.New("unreadable inventory")
 		}
-		return []model.IssueOpsRecord{{ID: "child", Repo: "/repo", WorktreePath: "/worktree", Phase: model.IssueOpsPhaseImplement, BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: " 78-parent "}}}, nil
+		return []model.Record{{ID: "child", Repo: "/repo", WorktreePath: "/worktree", Phase: model.PhaseImplement, BranchPrepare: &model.BranchPrepare{BaseBranch: " 78-parent "}}}, nil
 	}}
 	if base, ok := reader.PreparedBaseBranchForWorkspace("/worktree/../worktree"); !ok || base != "78-parent" || scans != 1 {
 		t.Fatalf("base=%q found=%v scans=%d", base, ok, scans)

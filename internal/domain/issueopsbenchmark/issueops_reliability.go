@@ -20,13 +20,13 @@ import (
 // interval이 된다. 그래서 ComputeReliability는 각 run에 서로 다른 run_id와
 // 생성 방식을 나타내는 비어 있지 않은 provenance label을 요구한다.
 
-// MaxReliabilityTrials는 float64 binomial tail의 정확성과 p^j·(1-p)^(n-j)의
+// MaxReliabilityTrials 상수는 float64 binomial tail의 정확성과 p^j·(1-p)^(n-j)의
 // underflow 방지를 위해 n을 제한한다. 실제 offline reliability run은 k≈3..8이며,
 // 이 상한을 넘기면 "exact binomial tail" 보장이 조용히 약해진다. 저하된 수치를
 // 반환하지 않도록 호출자를 거부한다.
 const MaxReliabilityTrials = 50
 
-// ComputeReliability는 offline 기록 run을 ReliabilityReport로 집계한다.
+// ComputeReliability 함수는 offline 기록 run을 ReliabilityReport로 집계한다.
 // provenance guard와 run 간 fixture 집합 정렬을 검증하며, Inf/NaN을 만들기보다
 // 잘못된 입력을 거부한다.
 func ComputeReliability(rec contract.RecordedOutcomes, alpha float64) (contract.ReliabilityReport, error) {
@@ -66,7 +66,7 @@ func ComputeReliability(rec contract.RecordedOutcomes, alpha float64) (contract.
 	return contract.ReliabilityReport{
 		Runs:          len(runs),
 		Alpha:         alpha,
-		MacroPassAt1:  Round4(macro),
+		MacroPassAt1:  round4(macro),
 		MaxK:          maxK,
 		PassPowKCurve: curve,
 		Fixtures:      fixtures,
@@ -149,10 +149,10 @@ func reliabilityFixtureStats(runs []contract.RecordedRun, canonical []string, al
 			FixtureID:     f,
 			Trials:        n,
 			Successes:     c,
-			PassAt1:       Round4(float64(c) / float64(n)),
-			IntervalLow:   Round4(lo),
-			IntervalHigh:  Round4(hi),
-			IntervalWidth: Round4(hi - lo),
+			PassAt1:       round4(float64(c) / float64(n)),
+			IntervalLow:   round4(lo),
+			IntervalHigh:  round4(hi),
+			IntervalWidth: round4(hi - lo),
 		})
 	}
 	return fixtures, nil
@@ -170,12 +170,12 @@ func passPowKCurve(fixtures []contract.FixtureReliability, maxK int) ([]contract
 			}
 			sum += v
 		}
-		curve = append(curve, contract.PassPowKPoint{K: k, PassPowK: Round4(sum / float64(len(fixtures)))})
+		curve = append(curve, contract.PassPowKPoint{K: k, PassPowK: round4(sum / float64(len(fixtures)))})
 	}
 	return curve, nil
 }
 
-// passPowK는 tau-bench의 fixture별 신뢰도 kernel이다. 기록된 `trials`회 중
+// PassPowK 함수는 tau-bench의 fixture별 신뢰도 kernel이다. 기록된 `trials`회 중
 // `successes`회가 통과했을 때, 비복원으로 k회를 뽑아 모두 통과할 확률
 // C(successes,k)/C(trials,k)를 ∏_{i=0}^{k-1} (successes-i)/(trials-i)로 계산한다.
 //
@@ -207,7 +207,7 @@ func PassPowK(successes, trials, k int) (float64, error) {
 	return r, nil
 }
 
-// clopperPearson은 n회 중 c회 성공의 정확한 (1-alpha) binomial confidence
+// ClopperPearson 함수는 n회 중 c회 성공의 정확한 (1-alpha) binomial confidence
 // interval을 반환한다. beta function 대신 binomial tail을 이분 탐색한다. c=0과
 // c=n 끝점은 반드시 하드코딩한다. P(X>=0)==1과 P(X<=n)==1은 항등식이므로
 // 퇴화한 방정식을 이분 탐색하면 수렴하지 않는다.
@@ -284,7 +284,7 @@ func binomCoeff(n, k int) float64 {
 	return r
 }
 
-// ScoreSpread는 점수의 최솟값, 최댓값, 폭(max-min)을 반환한다. 폭이 0이면 모든
+// ScoreSpread 함수는 점수의 최솟값, 최댓값, 폭(max-min)을 반환한다. 폭이 0이면 모든
 // 값이 같다. scorer-determinism 검사를 뒷받침하며, 확률적 SUT의 신뢰도/분산
 // 지표로 쓰지 않는다.
 func ScoreSpread(scores []float64) (lo, hi, width float64) {
@@ -303,6 +303,6 @@ func ScoreSpread(scores []float64) (lo, hi, width float64) {
 	return lo, hi, hi - lo
 }
 
-func Round4(f float64) float64 {
+func round4(f float64) float64 {
 	return math.Round(f*1e4) / 1e4
 }

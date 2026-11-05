@@ -14,6 +14,9 @@ import (
 	"issueops/internal/adapter/outbound/gitbin"
 )
 
+// ListTrackedGoFiles returns the git-tracked .go files under root as
+// root-relative paths. Files that git still lists but that no longer exist on
+// disk are skipped.
 func ListTrackedGoFiles(ctx context.Context, root string) ([]string, error) {
 	cmd := exec.CommandContext(ctx, gitbin.Path(), "-C", root, "ls-files", "-z", "--", "*.go")
 	var stderr bytes.Buffer
@@ -39,6 +42,8 @@ func ListTrackedGoFiles(ctx context.Context, root string) ([]string, error) {
 	return files, nil
 }
 
+// ListUnformatted runs gofmt -l on files in root and returns the ones gofmt
+// would rewrite. A gofmt failure is returned with its stderr text attached.
 func ListUnformatted(ctx context.Context, root string, files []string) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "gofmt", append([]string{"-l"}, files...)...)
 	cmd.Dir = root

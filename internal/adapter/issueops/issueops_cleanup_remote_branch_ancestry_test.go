@@ -130,7 +130,7 @@ func TestRemoteBranchDeleteKeepsOIDPathIndependentOfAncestry(t *testing.T) {
 // 남긴다.
 func TestRemoteBranchDeleteSkipsAncestryWithoutPreparedBase(t *testing.T) {
 	stateRoot, record := remoteBranchTestRecord(t)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.BranchPrepare.BaseBranch = ""
 	})
 	git := ancestryGit()

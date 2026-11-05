@@ -19,12 +19,12 @@ func TestRepositoryListsAndStrictlyReadsRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            "io-valid",
 		Repo:          "/repo",
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	}
 	encoded, err := json.Marshal(record)
 	if err != nil {
@@ -68,12 +68,12 @@ func TestRepositoryListIDsAndReadUnchecked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            "io-list",
 		Repo:          "/repo",
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	}
 	encoded, err := json.Marshal(record)
 	if err != nil {

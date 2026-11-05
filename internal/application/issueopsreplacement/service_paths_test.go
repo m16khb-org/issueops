@@ -22,8 +22,8 @@ type loadFailsRecords struct {
 	err error
 }
 
-func (r loadFailsRecords) Load(string) (model.IssueOpsRecord, error) {
-	return model.IssueOpsRecord{}, r.err
+func (r loadFailsRecords) Load(string) (model.Record, error) {
+	return model.Record{}, r.err
 }
 
 type statusProcesses struct {
@@ -70,7 +70,7 @@ type artifactStub struct {
 	tokenErr    error
 }
 
-func (a *artifactStub) Cleanup(record model.IssueOpsRecord) error {
+func (a *artifactStub) Cleanup(record model.Record) error {
 	a.cleanups++
 	if len(a.cleanupErrs) == 0 {
 		return nil
@@ -80,7 +80,7 @@ func (a *artifactStub) Cleanup(record model.IssueOpsRecord) error {
 	return err
 }
 
-func (a *artifactStub) CreateToken(record model.IssueOpsRecord) (string, string, error) {
+func (a *artifactStub) CreateToken(record model.Record) (string, string, error) {
 	if a.tokenErr != nil {
 		return "", "", a.tokenErr
 	}
@@ -262,7 +262,7 @@ func completedReleasedFixture() (Service, *replacementFixture, model.ExecutionRe
 	f.record.Execution.Lease.Status = model.LeaseStatusReleased
 	f.record.Execution.Lease.Holder = nil
 	f.record.Execution.Completion = &model.ExecutionCompletion{Generation: 3}
-	f.record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "main"}
+	f.record.BranchPrepare = &model.BranchPrepare{BaseBranch: "main"}
 	return service, f, req
 }
 

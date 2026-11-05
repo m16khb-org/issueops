@@ -6,16 +6,16 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func planPrepMemStore() (Store, *model.IssueOpsRecord) {
-	rec := &model.IssueOpsRecord{ID: "io-1"}
+func planPrepMemStore() (Store, *model.Record) {
+	rec := &model.Record{ID: "io-1"}
 	store := Store{
-		Read: func(_, _ string) (model.IssueOpsRecord, error) { return *rec, nil },
-		TouchWrite: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(_, _ string) (model.Record, error) { return *rec, nil },
+		TouchWrite: func(_ string, r model.Record) (model.Record, error) {
 			*rec = r
 			return r, nil
 		},
-		PlanReadiness: func(r model.IssueOpsRecord) model.IssueOpsReadiness {
-			return model.IssueOpsReadiness{Ready: true}
+		PlanReadiness: func(r model.Record) model.Readiness {
+			return model.Readiness{Ready: true}
 		},
 	}
 	return store, rec
@@ -23,11 +23,11 @@ func planPrepMemStore() (Store, *model.IssueOpsRecord) {
 
 func TestRecordPlanPrepStoresEvidenceAndWaive(t *testing.T) {
 	store, rec := planPrepMemStore()
-	_, err := RecordPlanPrep(store, "state", "io-1", model.IssueOpsPlanPrepRequest{
-		PriorDecisions: model.IssueOpsPlanPrepItemRequest{Evidence: []string{".issueops/ADR.md"}},
-		RelatedIssues:  model.IssueOpsPlanPrepItemRequest{Evidence: []string{"remote score: selected=#1(0.9)"}},
-		WebResearch:    model.IssueOpsPlanPrepItemRequest{WaiveReason: "내부 전용 변경"},
-		CodebaseSurvey: model.IssueOpsPlanPrepItemRequest{Evidence: []string{"rg gate: issueops_readiness.go, plan_prep.go 관련 심볼 전수 확인"}},
+	_, err := RecordPlanPrep(store, "state", "io-1", model.PlanPrepRequest{
+		PriorDecisions: model.PlanPrepItemRequest{Evidence: []string{".issueops/ADR.md"}},
+		RelatedIssues:  model.PlanPrepItemRequest{Evidence: []string{"remote score: selected=#1(0.9)"}},
+		WebResearch:    model.PlanPrepItemRequest{WaiveReason: "내부 전용 변경"},
+		CodebaseSurvey: model.PlanPrepItemRequest{Evidence: []string{"rg gate: issueops_readiness.go, plan_prep.go 관련 심볼 전수 확인"}},
 	})
 	if err != nil {
 		t.Fatalf("RecordPlanPrep error: %v", err)
@@ -42,10 +42,10 @@ func TestRecordPlanPrepStoresEvidenceAndWaive(t *testing.T) {
 
 func TestRecordPlanPrepRejectsMissingCodebaseSurvey(t *testing.T) {
 	store, _ := planPrepMemStore()
-	_, err := RecordPlanPrep(store, "state", "io-1", model.IssueOpsPlanPrepRequest{
-		PriorDecisions: model.IssueOpsPlanPrepItemRequest{Evidence: []string{"a"}},
-		RelatedIssues:  model.IssueOpsPlanPrepItemRequest{Evidence: []string{"b"}},
-		WebResearch:    model.IssueOpsPlanPrepItemRequest{WaiveReason: "c"},
+	_, err := RecordPlanPrep(store, "state", "io-1", model.PlanPrepRequest{
+		PriorDecisions: model.PlanPrepItemRequest{Evidence: []string{"a"}},
+		RelatedIssues:  model.PlanPrepItemRequest{Evidence: []string{"b"}},
+		WebResearch:    model.PlanPrepItemRequest{WaiveReason: "c"},
 	})
 	if err == nil {
 		t.Fatal("codebase_survey with neither evidence nor waive must error")
@@ -54,10 +54,10 @@ func TestRecordPlanPrepRejectsMissingCodebaseSurvey(t *testing.T) {
 
 func TestRecordPlanPrepRejectsBothEvidenceAndWaive(t *testing.T) {
 	store, _ := planPrepMemStore()
-	_, err := RecordPlanPrep(store, "state", "io-1", model.IssueOpsPlanPrepRequest{
-		PriorDecisions: model.IssueOpsPlanPrepItemRequest{Evidence: []string{"a"}, WaiveReason: "b"},
-		RelatedIssues:  model.IssueOpsPlanPrepItemRequest{Evidence: []string{"a"}},
-		WebResearch:    model.IssueOpsPlanPrepItemRequest{WaiveReason: "c"},
+	_, err := RecordPlanPrep(store, "state", "io-1", model.PlanPrepRequest{
+		PriorDecisions: model.PlanPrepItemRequest{Evidence: []string{"a"}, WaiveReason: "b"},
+		RelatedIssues:  model.PlanPrepItemRequest{Evidence: []string{"a"}},
+		WebResearch:    model.PlanPrepItemRequest{WaiveReason: "c"},
 	})
 	if err == nil {
 		t.Fatal("evidence + waive on one item must error")
@@ -66,10 +66,10 @@ func TestRecordPlanPrepRejectsBothEvidenceAndWaive(t *testing.T) {
 
 func TestRecordPlanPrepRejectsEmptyItem(t *testing.T) {
 	store, _ := planPrepMemStore()
-	_, err := RecordPlanPrep(store, "state", "io-1", model.IssueOpsPlanPrepRequest{
-		PriorDecisions: model.IssueOpsPlanPrepItemRequest{},
-		RelatedIssues:  model.IssueOpsPlanPrepItemRequest{Evidence: []string{"a"}},
-		WebResearch:    model.IssueOpsPlanPrepItemRequest{WaiveReason: "c"},
+	_, err := RecordPlanPrep(store, "state", "io-1", model.PlanPrepRequest{
+		PriorDecisions: model.PlanPrepItemRequest{},
+		RelatedIssues:  model.PlanPrepItemRequest{Evidence: []string{"a"}},
+		WebResearch:    model.PlanPrepItemRequest{WaiveReason: "c"},
 	})
 	if err == nil {
 		t.Fatal("item with neither evidence nor waive must error")
@@ -78,7 +78,7 @@ func TestRecordPlanPrepRejectsEmptyItem(t *testing.T) {
 
 func TestRecordIntentPersistsIntentClass(t *testing.T) {
 	store, rec := planPrepMemStore()
-	_, err := RecordIntent(store, "state", "io-1", model.IssueOpsIntentRecordRequest{
+	_, err := RecordIntent(store, "state", "io-1", model.IntentRecordRequest{
 		RawRequest:        "raw ask",
 		InterpretedIntent: "reframed agent interpretation differs",
 		SuccessCriteria:   []string{"works"},
@@ -94,7 +94,7 @@ func TestRecordIntentPersistsIntentClass(t *testing.T) {
 
 func TestRecordIntentRejectsUnknownIntentClass(t *testing.T) {
 	store, _ := planPrepMemStore()
-	_, err := RecordIntent(store, "state", "io-1", model.IssueOpsIntentRecordRequest{
+	_, err := RecordIntent(store, "state", "io-1", model.IntentRecordRequest{
 		RawRequest:        "raw ask",
 		InterpretedIntent: "reframed agent interpretation differs",
 		SuccessCriteria:   []string{"works"},

@@ -1,3 +1,5 @@
+// Package cli 패키지는 `issueops` CLI의 공개 표면(최상위 명령 목록과 usage 카탈로그)을
+// 정의한다. 계약 계층에 속하며 명령 실행 로직은 담지 않는다.
 package cli
 
 // Command describes a stable top-level CLI command exposed by the harness.
@@ -6,6 +8,8 @@ type Command struct {
 	Description string `json:"description"`
 }
 
+// RootCommands 함수는 하네스가 노출하는 최상위 CLI 명령을 표시 순서대로 돌려준다.
+// 호출할 때마다 새 슬라이스를 만든다.
 func RootCommands() []Command {
 	commands := []Command{
 		{Name: "inspect", Description: "inspect harness installation and native integration"},

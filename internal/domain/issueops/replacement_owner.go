@@ -6,10 +6,18 @@ import (
 	"strings"
 )
 
+// ReplacementSelfHolder reports whether the requester is the session that
+// holds the lease: same host (case-insensitive), session ID, and agent ID,
+// and a recorded session process.
 func ReplacementSelfHolder(lease issueops.WriteLease, requester issueops.NativeActor) bool {
 	holder := lease.Holder
 	return holder != nil && strings.EqualFold(holder.Host, requester.Host) && holder.SessionID == requester.SessionID && holder.AgentID == requester.AgentID && holder.SessionProcess != nil
 }
+
+// ValidateReplacementSelfRevoke refuses to revoke a lease whose holder
+// process is still live, which is the requesting session itself. Revoking
+// your own lease leaves no exit, so the error points at execution release
+// instead.
 func ValidateReplacementSelfRevoke(id string, generation uint64, status string) error {
 	if status != "live" {
 		return nil
@@ -25,12 +33,18 @@ func pidReused(receipt, observed issueops.NativeProcessReceipt) bool {
 		executable != "" && executable != strings.TrimSpace(receipt.Executable)
 }
 
+// ValidateReplacementCWD requires the command to run from the source root or
+// the canonical worktree; the caller passes whether each matched.
 func ValidateReplacementCWD(sourceMatches, workspaceMatches bool) error {
 	if !sourceMatches && !workspaceMatches {
 		return fmt.Errorf("execution replace cwd must be source_root or the canonical worktree")
 	}
 	return nil
 }
+
+// ValidateReplacementHolderProcess requires the revoking lease to still carry
+// the process receipt of its old holder, which finalize needs to check
+// quiescence.
 func ValidateReplacementHolderProcess(holder *issueops.NativeActor) error {
 	if holder == nil || holder.SessionProcess == nil {
 		return fmt.Errorf("revoking lease is missing its old process receipt")

@@ -23,28 +23,28 @@ func TestRecordArchitectureReviewPreservesValidationReadinessAndWriteOrder(t *te
 	for _, tc := range []struct {
 		name    string
 		request reviewcontract.ArchitectureReviewRequest
-		ready   model.IssueOpsReadiness
+		ready   model.Readiness
 		want    string
 		events  []string
 	}{
 		{name: "invalid request before read", request: reviewcontract.ArchitectureReviewRequest{}, want: "problem_summary is required"},
-		{name: "intent missing", request: request, ready: model.IssueOpsReadiness{Missing: []string{"intent"}}, want: "cannot record architecture review before intent contract", events: []string{"read", "readiness"}},
-		{name: "plan preparation alone is allowed", request: request, ready: model.IssueOpsReadiness{Missing: []string{"plan_prep_evidence"}}, events: []string{"read", "readiness", "clock", "write"}},
+		{name: "intent missing", request: request, ready: model.Readiness{Missing: []string{"intent"}}, want: "cannot record architecture review before intent contract", events: []string{"read", "readiness"}},
+		{name: "plan preparation alone is allowed", request: request, ready: model.Readiness{Missing: []string{"plan_prep_evidence"}}, events: []string{"read", "readiness", "clock", "write"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var events []string
 			store := reviewport.ArchitectureReviewStore{
-				Read: func(_, _ string) (model.IssueOpsRecord, error) {
+				Read: func(_, _ string) (model.Record, error) {
 					events = append(events, "read")
-					return model.IssueOpsRecord{ID: "io-1"}, nil
+					return model.Record{ID: "io-1"}, nil
 				},
-				PlanReadiness: func(model.IssueOpsRecord) model.IssueOpsReadiness {
+				PlanReadiness: func(model.Record) model.Readiness {
 					events = append(events, "readiness")
 					return tc.ready
 				},
 				Now:      func() string { events = append(events, "clock"); return "2026-09-28T00:00:00Z" },
-				Document: func(string, model.IssueOpsRecord) (string, error) { return validArchitectureDocument(), nil },
-				TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+				Document: func(string, model.Record) (string, error) { return validArchitectureDocument(), nil },
+				TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 					events = append(events, "write")
 					if record.ArchitectureReview == nil || record.ArchitectureReview.ReviewedAt != "2026-09-28T00:00:00Z" {
 						t.Fatalf("architecture review = %+v", record.ArchitectureReview)
@@ -96,11 +96,11 @@ func TestRecordArchitectureReviewRejectsMissingSections(t *testing.T) {
 			}
 			wrote := false
 			store := reviewport.ArchitectureReviewStore{
-				Read:          func(_, _ string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{ID: "io-1"}, nil },
-				PlanReadiness: func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} },
+				Read:          func(_, _ string) (model.Record, error) { return model.Record{ID: "io-1"}, nil },
+				PlanReadiness: func(model.Record) model.Readiness { return model.Readiness{Ready: true} },
 				Now:           func() string { return "2026-09-28T00:00:00Z" },
-				Document:      func(string, model.IssueOpsRecord) (string, error) { return tc.doc, nil },
-				TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+				Document:      func(string, model.Record) (string, error) { return tc.doc, nil },
+				TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 					wrote = true
 					return record, nil
 				},
@@ -115,18 +115,18 @@ func TestRecordArchitectureReviewRejectsMissingSections(t *testing.T) {
 
 func TestRecordArchitectureReviewBindsDigestAndKeepsHistory(t *testing.T) {
 	doc := validArchitectureDocument()
-	var stored model.IssueOpsRecord
+	var stored model.Record
 	store := reviewport.ArchitectureReviewStore{
-		Read:          func(_, _ string) (model.IssueOpsRecord, error) { return stored, nil },
-		PlanReadiness: func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} },
+		Read:          func(_, _ string) (model.Record, error) { return stored, nil },
+		PlanReadiness: func(model.Record) model.Readiness { return model.Readiness{Ready: true} },
 		Now:           func() string { return "2026-09-28T00:00:00Z" },
-		Document:      func(string, model.IssueOpsRecord) (string, error) { return doc, nil },
-		TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Document:      func(string, model.Record) (string, error) { return doc, nil },
+		TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 			stored = record
 			return record, nil
 		},
 	}
-	stored = model.IssueOpsRecord{ID: "io-1"}
+	stored = model.Record{ID: "io-1"}
 	if _, err := RecordArchitectureReview(store, "state", "io-1", approvedArchitectureRequest()); err != nil {
 		t.Fatal(err)
 	}

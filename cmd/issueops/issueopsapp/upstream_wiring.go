@@ -32,7 +32,7 @@ func syncUpstream(ctx context.Context, root string, dryRun bool) (upstreamcontra
 		Plugins: upstreamadapter.ClaudePluginHost{},
 		Skills: upstreamadapter.GitSkillStore{
 			SkillsDir: filepath.Join(home, ".claude", "skills"),
-			CacheDir:  filepath.Join(statestore.StateDir(), "upstream", "skills"),
+			CacheDir:  filepath.Join(statestore.Dir(), "upstream", "skills"),
 		},
 	}
 	return service.Sync(ctx, cfg, dryRun)

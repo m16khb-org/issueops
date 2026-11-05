@@ -17,14 +17,16 @@ type reconcileService interface {
 
 var _ reconcileService = (*publicationapp.ReconcileService)(nil)
 
-type ReconcileHandler struct{ service reconcileService }
+type reconcileHandler struct{ service reconcileService }
 
+// NewReconcileHandler 함수는 발행 재조정 서비스를 execution reconcile 핸들러 함수로 감싼다.
 // 반환 타입은 어댑터의 이름 붙은 핸들러 타입 대신 같은 시그니처를 직접 쓴다.
+// service가 nil이면 핸들러는 ErrRemotePullRequestReconcileHandlerUnavailable을 반환한다.
 func NewReconcileHandler(service reconcileService) func(context.Context, string, issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
-	return ReconcileHandler{service: service}.Handle
+	return reconcileHandler{service: service}.Handle
 }
 
-func (h ReconcileHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
+func (h reconcileHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 	if h.service == nil {
 		return issueopscontract.ExecutionReconcileResult{ID: request.ID}, issueopscontract.ErrRemotePullRequestReconcileHandlerUnavailable
 	}
@@ -36,7 +38,7 @@ func (h ReconcileHandler) Handle(ctx context.Context, _ string, request issueops
 	if result.Record.ID != "" {
 		public.ID = result.Record.ID
 	}
-	var record issueopscontract.IssueOpsRecord
+	var record issueopscontract.Record
 	if serviceErr != nil && !result.Reconciled && request.Snapshot != nil {
 		record = *request.Snapshot
 	} else {

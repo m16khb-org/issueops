@@ -5,6 +5,9 @@ import (
 	installdomain "issueops/internal/domain/install"
 )
 
+// MCPProxyEffects is the process boundary for MCP proxy cleanup: listing the
+// proxy processes, terminating one by pid, and reporting the current pid and
+// whether orphan termination is supported on this platform.
 type MCPProxyEffects interface {
 	List() ([]updatecontract.MCPProxyProcess, error)
 	Terminate(int) error
@@ -12,6 +15,10 @@ type MCPProxyEffects interface {
 	SupportsOrphanTermination() bool
 }
 
+// CleanupMCPProxies decides an action for each MCP proxy process effects lists
+// and, unless dryRun, terminates the ones that qualify. Before terminating, it
+// re-lists processes and skips a pid whose identity changed. The result stops
+// at the first list or terminate error and reports OK=false with it.
 func CleanupMCPProxies(effects MCPProxyEffects, dryRun bool) (updatecontract.MCPCleanupResult, error) {
 	processes, err := effects.List()
 	if err != nil {

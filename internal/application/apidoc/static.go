@@ -9,8 +9,12 @@ import (
 	domain "issueops/internal/domain/apidoc"
 )
 
+// ErrStaticGateFailed is returned by StaticService.Check when any API
+// documentation violation is found.
 var ErrStaticGateFailed = errors.New("api documentation static check gate failed")
 
+// StaticOptions selects the repository and files the static check covers;
+// All falls back to every tracked file instead of the staged ones.
 type StaticOptions struct {
 	Repo  string
 	Files []string
@@ -18,6 +22,8 @@ type StaticOptions struct {
 	JSON  bool
 }
 
+// StaticEffects injects the file listing, API-documentation mode, and file
+// reading side effects the static check needs.
 type StaticEffects struct {
 	NormalizeFiles func(repo string, files []string) []string
 	TrackedFiles   func(repo string) []string
@@ -26,8 +32,13 @@ type StaticEffects struct {
 	ReadFile       func(repo, file string) (string, error)
 }
 
+// StaticService checks TypeScript controllers and DTOs for missing Swagger
+// documentation.
 type StaticService struct{ Effects StaticEffects }
 
+// Check reports violations for the candidate files. It skips with a passing
+// result when no candidates exist or the repository uses contract-tests
+// documentation, and returns ErrStaticGateFailed when violations remain.
 func (service StaticService) Check(options StaticOptions) (contract.StaticResult, error) {
 	files, summary := service.candidateFiles(options)
 	if len(files) == 0 {

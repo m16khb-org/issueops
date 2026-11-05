@@ -9,10 +9,15 @@ import (
 	"issueops/internal/port"
 )
 
+// ChildCycleStore persists parent and child cycle records together, on top of the
+// single-record CycleRecordStore.
 type ChildCycleStore struct{ CycleRecordStore }
 
-func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.IssueOpsRecord) (model.IssueOpsRecord, model.IssueOpsRecord, error) {
-	for _, record := range []model.IssueOpsRecord{parent, child} {
+// SavePair writes the parent and child records in one compare-and-apply transaction so
+// both land or neither does. Records carrying a cleanup attempt are refused, and an
+// existing row must still match the bytes read just before the write.
+func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.Record) (model.Record, model.Record, error) {
+	for _, record := range []model.Record{parent, child} {
 		if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 			return parent, child, err
 		}
@@ -46,6 +51,7 @@ func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.Issue
 	return parent, child, err
 }
 
-func (s ChildCycleStore) Scan() ([]model.IssueOpsRecord, error) {
+// Scan lists every readable cycle record under the state root.
+func (s ChildCycleStore) Scan() ([]model.Record, error) {
 	return ScanReadableIssueOps(s.StateRoot)
 }

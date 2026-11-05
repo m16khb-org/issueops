@@ -38,15 +38,15 @@ func TestMCPAssistantServicesKeepCapturedRepositoryAndState(t *testing.T) {
 		if d.Resources.IssueOpsRoot != roots[i] || !strings.HasPrefix(d.Execution.IssueOpsStateRoot(), states[i]) {
 			t.Fatalf("instance %d root=%s state=%s", i, d.Resources.IssueOpsRoot, d.Execution.IssueOpsStateRoot())
 		}
-		info := d.Inspect("", "").(inspectmodel.InspectInfo)
+		info := d.Inspect("", "").(inspectmodel.Info)
 		if info.IssueOpsRoot != roots[i] || info.TargetRepo != roots[i] {
 			t.Fatalf("instance %d inspect=%+v", i, info)
 		}
-		result, err := d.Commit.Suggest(commitmodel.CommitSuggestRequest{RepoRoot: "."})
+		result, err := d.Commit.Suggest(commitmodel.Request{RepoRoot: "."})
 		if err != nil || !result.Executed || result.RepoRoot != roots[i] || !strings.Contains(result.Prompt, fmt.Sprintf("instance-%d", i)) {
 			t.Fatalf("instance %d commit=%+v err=%v", i, result, err)
 		}
-		lint, err := d.Lint.Diagnose(lintmodel.LintDiagnoseRequest{RepoRoot: ".", CommandArgv: []string{catReadme, "README.md"}})
+		lint, err := d.Lint.Diagnose(lintmodel.Request{RepoRoot: ".", CommandArgv: []string{catReadme, "README.md"}})
 		if err != nil || !lint.Failed || !strings.Contains(lint.Prompt, fmt.Sprintf("instance-%d", i)) {
 			t.Fatalf("instance %d lint=%+v err=%v", i, lint, err)
 		}

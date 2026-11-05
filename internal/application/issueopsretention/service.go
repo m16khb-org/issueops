@@ -10,19 +10,27 @@ import (
 	issueopsretentiondomain "issueops/internal/domain/issueopsretention"
 )
 
+// Service prunes expired issueops records through a Repository, using an
+// injected clock to compute the cutoff.
 type Service struct {
 	repository Repository
-	clock      Clock
+	clock      clock
 }
 
 const unreadableReportLimit = 20
 
-var ErrIncomplete = errors.New("issueops retention incomplete")
+var errIncomplete = errors.New("issueops retention incomplete")
 
-func NewService(repository Repository, clock Clock) *Service {
+// NewService returns a Service that reads and deletes records through
+// repository and takes the current time from clock.
+func NewService(repository Repository, clock clock) *Service {
 	return &Service{repository: repository, clock: clock}
 }
 
+// Prune deletes records in stateRoot last updated before now minus maxAge.
+// Without confirm it only reports what would be pruned (dry run). Unreadable
+// records and delete failures make the run incomplete and return an error
+// wrapping the incomplete sentinel alongside the partial result.
 func (service *Service) Prune(
 	ctx context.Context,
 	stateRoot string,
@@ -65,15 +73,15 @@ func (service *Service) Prune(
 		if confirm {
 			if err := service.repository.DeleteIfUnchanged(ctx, stateRoot, id, record); err != nil {
 				noteDeleteFailure(&result, id)
-				result.Error = ErrIncomplete.Error()
-				return result, fmt.Errorf("%w: delete %s: %v", ErrIncomplete, id, err) //nolint:errorlint // callers classify on ErrIncomplete alone; the delete failure is diagnostic text
+				result.Error = errIncomplete.Error()
+				return result, fmt.Errorf("%w: delete %s: %v", errIncomplete, id, err) //nolint:errorlint // callers classify on errIncomplete alone; the delete failure is diagnostic text
 			}
 		}
 		result.Pruned = append(result.Pruned, id)
 	}
 	if result.ReadErrors > 0 {
-		result.Error = ErrIncomplete.Error()
-		return result, fmt.Errorf("%w: %d unreadable record(s)", ErrIncomplete, result.ReadErrors)
+		result.Error = errIncomplete.Error()
+		return result, fmt.Errorf("%w: %d unreadable record(s)", errIncomplete, result.ReadErrors)
 	}
 	result.OK = true
 	return result, nil

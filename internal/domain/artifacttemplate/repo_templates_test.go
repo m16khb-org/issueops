@@ -15,16 +15,16 @@ var repoTemplates = []struct {
 	kind     IssueOpsArtifactKind
 	template IssueOpsTemplateKind
 }{
-	{".github/ISSUE_TEMPLATE/implementation_task.yml", IssueOpsArtifactIssue, IssueOpsTemplateImplementationTask},
-	{".github/ISSUE_TEMPLATE/feature_request.yml", IssueOpsArtifactIssue, IssueOpsTemplateFeature},
-	{".github/ISSUE_TEMPLATE/bug_report.yml", IssueOpsArtifactIssue, IssueOpsTemplateBug},
-	{".github/ISSUE_TEMPLATE/proposal.yml", IssueOpsArtifactIssue, IssueOpsTemplateProposal},
+	{".github/ISSUE_TEMPLATE/implementation_task.yml", IssueOpsArtifactIssue, issueOpsTemplateImplementationTask},
+	{".github/ISSUE_TEMPLATE/feature_request.yml", IssueOpsArtifactIssue, issueOpsTemplateFeature},
+	{".github/ISSUE_TEMPLATE/bug_report.yml", IssueOpsArtifactIssue, issueOpsTemplateBug},
+	{".github/ISSUE_TEMPLATE/proposal.yml", IssueOpsArtifactIssue, issueOpsTemplateProposal},
 	{".github/ISSUE_TEMPLATE/child_task.yml", IssueOpsArtifactChild, IssueOpsTemplateChildTask},
 	{".github/pull_request_template.md", IssueOpsArtifactPR, IssueOpsTemplatePullRequest},
-	{".gitlab/issue_templates/implementation_task.md", IssueOpsArtifactIssue, IssueOpsTemplateImplementationTask},
-	{".gitlab/issue_templates/feature_request.md", IssueOpsArtifactIssue, IssueOpsTemplateFeature},
-	{".gitlab/issue_templates/bug_report.md", IssueOpsArtifactIssue, IssueOpsTemplateBug},
-	{".gitlab/issue_templates/proposal.md", IssueOpsArtifactIssue, IssueOpsTemplateProposal},
+	{".gitlab/issue_templates/implementation_task.md", IssueOpsArtifactIssue, issueOpsTemplateImplementationTask},
+	{".gitlab/issue_templates/feature_request.md", IssueOpsArtifactIssue, issueOpsTemplateFeature},
+	{".gitlab/issue_templates/bug_report.md", IssueOpsArtifactIssue, issueOpsTemplateBug},
+	{".gitlab/issue_templates/proposal.md", IssueOpsArtifactIssue, issueOpsTemplateProposal},
 	{".gitlab/issue_templates/child_task.md", IssueOpsArtifactChild, IssueOpsTemplateChildTask},
 	{".gitlab/merge_request_templates/default.md", IssueOpsArtifactPR, IssueOpsTemplatePullRequest},
 }

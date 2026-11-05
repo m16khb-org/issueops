@@ -25,6 +25,8 @@ type nestDTOScanner struct {
 	classDepth       int
 }
 
+// CheckNestDTO scans the text of a NestJS DTO file and returns a violation for each property whose
+// @ApiProperty documentation is missing or disagrees with its TypeScript optionality.
 func CheckNestDTO(file, text string) []contract.Violation {
 	s := &nestDTOScanner{file: file}
 	for i, line := range strings.Split(text, "\n") {
@@ -129,6 +131,7 @@ func (s *nestDTOScanner) checkRequiredOptionalMismatch(lineNo int, name string, 
 	}
 }
 
+// BraceDepthDelta returns the net change in curly-brace depth across line: opening braces minus closing braces.
 func BraceDepthDelta(line string) int {
 	delta := 0
 	for _, ch := range line {

@@ -10,22 +10,23 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remotedomain "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
-type CommentProviderResolver func(string) (port.IssueProviderCommenter, error)
+type commentProviderResolver func(string) (port.IssueProviderCommenter, error)
 
 // RemoteCommentService posts one user-requested comment on the cycle's issue
 // or PR/MR. QA: asked to leave a progress comment, an agent found no issueops
 // path and stopped to ask for a raw `gh issue comment`, which skips the
 // Korean, length and secret checks every other remote write gets.
 type RemoteCommentService struct {
-	records IssueRecordReader
-	resolve CommentProviderResolver
+	records issueRecordReader
+	resolve commentProviderResolver
 }
 
-func NewRemoteCommentService(records IssueRecordReader, resolve CommentProviderResolver) *RemoteCommentService {
+// NewRemoteCommentService 함수는 기록 조회와 provider 해석 함수를 묶어 서비스를 만든다.
+func NewRemoteCommentService(records issueRecordReader, resolve commentProviderResolver) *RemoteCommentService {
 	return &RemoteCommentService{records: records, resolve: resolve}
 }
 
@@ -48,7 +49,7 @@ func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body, expect
 	digest := sha256.Sum256([]byte(text))
 	result := model.RemoteCommentResult{ID: record.ID, Provider: provider, On: on, TargetURL: target,
 		BodyChars: utf8.RuneCountInString(text), BodySHA256: hex.EncodeToString(digest[:])}
-	if err := remotedomain.ValidateComment(provider, body); err != nil {
+	if err := issueopsremote.ValidateComment(provider, body); err != nil {
 		return result, err
 	}
 	if !confirm {
@@ -70,7 +71,7 @@ func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body, expect
 	return result, nil
 }
 
-func commentTarget(record model.IssueOpsRecord, on string) (string, error) {
+func commentTarget(record model.Record, on string) (string, error) {
 	switch on {
 	case "issue":
 		if url := strings.TrimSpace(record.IssueURL); url != "" {

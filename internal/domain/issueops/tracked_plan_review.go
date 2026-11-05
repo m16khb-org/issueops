@@ -10,10 +10,10 @@ import (
 // RenderTrackedPlanReview writes every plan-review round with its findings
 // for readers who want more than the issue's one-line summary. Hashes and
 // local paths in findings are masked the same way the issue region masks them.
-func RenderTrackedPlanReview(review *issueops.IssueOpsDevilsAdvocateReview) string {
+func RenderTrackedPlanReview(review *issueops.DevilsAdvocateReview) string {
 	var b strings.Builder
 	b.WriteString("# 계획 검토 기록\n")
-	rounds := append(append([]issueops.IssueOpsDevilsAdvocateRound{}, review.History...), issueops.IssueOpsDevilsAdvocateRound{
+	rounds := append(append([]issueops.DevilsAdvocateRound{}, review.History...), issueops.DevilsAdvocateRound{
 		Verdict: review.Verdict, Findings: review.Findings, Waived: review.Waived, WaiverRationale: review.WaiverRationale,
 		ReviewerModel: review.ReviewerModel, ReviewerEffort: review.ReviewerEffort,
 	})

@@ -9,14 +9,14 @@ import (
 func TestUmbrellaCycleForChildIssueFindsLinkingParent(t *testing.T) {
 	store := newActiveTestStore(t)
 	repo := t.TempDir()
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID:       "io-umbrella",
 		OK:       true,
 		Repo:     repo,
 		Branch:   "78-umbrella",
 		IssueURL: "https://github.com/example/repo/issues/78",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueLinks: []model.IssueOpsIssueLink{
+		Phase:    model.PhasePlan,
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/example/repo/issues/79"},
 		},
 	})
@@ -33,14 +33,14 @@ func TestUmbrellaCycleForChildIssueFindsLinkingParent(t *testing.T) {
 func TestUmbrellaCycleForChildIssueDoesNotMatchItself(t *testing.T) {
 	store := newActiveTestStore(t)
 	repo := t.TempDir()
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID:       "io-umbrella",
 		OK:       true,
 		Repo:     repo,
 		Branch:   "78-umbrella",
 		IssueURL: "https://github.com/example/repo/issues/78",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueLinks: []model.IssueOpsIssueLink{
+		Phase:    model.PhasePlan,
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/example/repo/issues/79"},
 		},
 	})
@@ -54,14 +54,14 @@ func TestUmbrellaCycleForChildIssueDoesNotMatchItself(t *testing.T) {
 func TestUmbrellaCycleForChildIssueIgnoresNonChildLinks(t *testing.T) {
 	store := newActiveTestStore(t)
 	repo := t.TempDir()
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID:       "io-related",
 		OK:       true,
 		Repo:     repo,
 		Branch:   "78-related",
 		IssueURL: "https://github.com/example/repo/issues/78",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueLinks: []model.IssueOpsIssueLink{
+		Phase:    model.PhasePlan,
+		IssueLinks: []model.IssueLink{
 			{Type: "depends-on", URL: "https://github.com/example/repo/issues/79"},
 		},
 	})
@@ -75,14 +75,14 @@ func TestUmbrellaCycleForChildIssueIgnoresNonChildLinks(t *testing.T) {
 func TestUmbrellaCycleForChildIssueSkipsDoneParents(t *testing.T) {
 	store := newActiveTestStore(t)
 	repo := t.TempDir()
-	store.writeRecord(t, model.IssueOpsRecord{
+	store.writeRecord(t, model.Record{
 		ID:       "io-umbrella",
 		OK:       true,
 		Repo:     repo,
 		Branch:   "78-umbrella",
 		IssueURL: "https://github.com/example/repo/issues/78",
-		Phase:    model.IssueOpsPhaseDone,
-		IssueLinks: []model.IssueOpsIssueLink{
+		Phase:    model.PhaseDone,
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/example/repo/issues/79"},
 		},
 	})

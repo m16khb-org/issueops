@@ -31,7 +31,7 @@ func TestTraceparentBindingsIsolateRequestsAndClearInheritedContext(t *testing.T
 			root := seedObservedRecord(t, "io-trace0001")
 			var got SpanObservation
 			store := Store{Observer: ObserverFunc(func(value SpanObservation) { got = value })}
-			if _, err := store.Update(ctx, root, "io-trace0001", func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+			if _, err := store.Update(ctx, root, "io-trace0001", func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 				return record, false, nil
 			}); err != nil {
 				t.Fatal(err)
@@ -65,7 +65,7 @@ func TestConcurrentStoreRequestsKeepTheirOwnTraceparent(t *testing.T) {
 				results <- ctx.Err()
 				return
 			}
-			_, err := store.Update(bound, root, "io-trace0001", func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+			_, err := store.Update(bound, root, "io-trace0001", func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 				record.Branch = "observed"
 				return record, true, nil
 			})

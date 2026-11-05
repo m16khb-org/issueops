@@ -345,12 +345,12 @@ func executionCLIRecord(t *testing.T) (string, string, []string) {
 	}
 	baseHead := preflight.GitOut(repo, "rev-parse", "HEAD")
 	branch := "69-execution-cli"
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/example/issueops/issues/69"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}

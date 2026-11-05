@@ -8,10 +8,10 @@ import (
 )
 
 func TestPhaseDecisionsPreserveCurrentOrder(t *testing.T) {
-	if !issueopsdomain.KnownIssueOpsPhase(issueopscontract.IssueOpsPhaseImplement) || issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseImplement) != 5 {
+	if !issueopsdomain.KnownIssueOpsPhase(issueopscontract.PhaseImplement) || issueopsdomain.PhaseRank(issueopscontract.PhaseImplement) != 5 {
 		t.Fatal("implement phase identity drift")
 	}
-	if issueopsdomain.KnownIssueOpsPhase("unknown") || issueopsdomain.IssueOpsPhaseRank("unknown") != 0 {
+	if issueopsdomain.KnownIssueOpsPhase("unknown") || issueopsdomain.PhaseRank("unknown") != 0 {
 		t.Fatal("unknown phase accepted")
 	}
 }

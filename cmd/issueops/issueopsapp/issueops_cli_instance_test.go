@@ -34,7 +34,7 @@ func TestLifecycleCLIInstancesKeepCapturedState(t *testing.T) {
 		output := testsupport.CaptureStdout(t, func() error {
 			return issueopscli.RunIssueOpsWithDependencies([]string{"start", "--repo", repo, "--json"}, item.deps)
 		})
-		var record model.IssueOpsRecord
+		var record model.Record
 		if err := json.Unmarshal([]byte(output), &record); err != nil {
 			t.Fatal(err)
 		}
@@ -45,7 +45,7 @@ func TestLifecycleCLIInstancesKeepCapturedState(t *testing.T) {
 		output = testsupport.CaptureStdout(t, func() error {
 			return issueopscli.RunIssueOpsWithDependencies([]string{"pr-readiness", "--id", record.ID, "--json"}, item.deps)
 		})
-		var readiness model.IssueOpsReadiness
+		var readiness model.Readiness
 		if err := json.Unmarshal([]byte(output), &readiness); err != nil {
 			t.Fatal(err)
 		}
@@ -71,7 +71,7 @@ func TestLifecyclePRGateKeepsCapturedLoopState(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	rootB := issueOpsStateRoot()
 	b := newIssueOpsCLIGates()
-	record := model.IssueOpsRecord{Repo: repo}
+	record := model.Record{Repo: repo}
 	for _, item := range []struct {
 		root    string
 		gates   issueopscli.LoopGateDeps

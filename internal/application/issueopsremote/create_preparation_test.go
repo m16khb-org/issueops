@@ -11,7 +11,7 @@ import (
 )
 
 type preparationObserver struct {
-	record            model.IssueOpsRecord
+	record            model.Record
 	events            []string
 	authorizeError    error
 	fingerprint, head string
@@ -21,19 +21,19 @@ func (o *preparationObserver) inspect(receipt model.NativeProcessReceipt) (strin
 	o.events = append(o.events, "actor")
 	return "live", receipt, nil
 }
-func (o *preparationObserver) Read(context.Context, string) (model.IssueOpsRecord, error) {
+func (o *preparationObserver) Read(context.Context, string) (model.Record, error) {
 	o.events = append(o.events, "read")
 	return o.record, nil
 }
-func (o *preparationObserver) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+func (o *preparationObserver) Authorize(context.Context, model.Record, model.Actor) error {
 	o.events = append(o.events, "authorize")
 	return o.authorizeError
 }
-func (o *preparationObserver) Fingerprint(context.Context, model.IssueOpsRecord) string {
+func (o *preparationObserver) Fingerprint(context.Context, model.Record) string {
 	o.events = append(o.events, "fingerprint")
 	return o.fingerprint
 }
-func (o *preparationObserver) Head(context.Context, model.IssueOpsRecord) string {
+func (o *preparationObserver) Head(context.Context, model.Record) string {
 	o.events = append(o.events, "head")
 	return o.head
 }
@@ -41,10 +41,10 @@ func (o *preparationObserver) Head(context.Context, model.IssueOpsRecord) string
 func preparationFixture() (*preparationObserver, contract.CreateCommand) {
 	process := contract.ProcessReceipt{PID: 42, StartedAt: "then", Executable: "/bin/codex"}
 	return &preparationObserver{
-		record: model.IssueOpsRecord{ID: "cycle", Phase: model.IssueOpsPhasePR, Repo: "/repo", Branch: "42-work", IssueURL: "https://github.com/team/repo/issues/42",
-			BranchPrepare:        &model.IssueOpsBranchPrepare{Provider: "github", BaseBranch: "main"},
+		record: model.Record{ID: "cycle", Phase: model.PhasePR, Repo: "/repo", Branch: "42-work", IssueURL: "https://github.com/team/repo/issues/42",
+			BranchPrepare:        &model.BranchPrepare{Provider: "github", BaseBranch: "main"},
 			Execution:            &model.Execution{Workspace: model.Workspace{Root: "/worktree", Branch: "42-work"}, Lease: model.WriteLease{Generation: 3, Status: model.LeaseStatusActive}},
-			ImplementationReview: &model.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: "fingerprint"},
+			ImplementationReview: &model.ImplementationReview{Verdict: "pass", ReviewedFingerprint: "fingerprint"},
 		}, fingerprint: "fingerprint", head: strings.Repeat("a", 40),
 	}, contract.CreateCommand{Actor: contract.Actor{Host: " CODEX ", SessionID: " session ", SessionProcess: &process, ProcessAncestry: []contract.ProcessReceipt{process}}, ID: "cycle", Provider: "github", Head: "42-work", Base: "main", Title: " title ", Body: " body ", Labels: []string{"bug"}, Assignees: []string{"maintainer"}, ExpectedGeneration: 3, Confirm: true}
 }
@@ -135,12 +135,12 @@ func TestPreparationReportsExecutionEligibilityFromRecord(t *testing.T) {
 
 	for _, tc := range []struct {
 		name                      string
-		change                    func(*model.IssueOpsRecord)
+		change                    func(*model.Record)
 		wantActive, wantNoPending bool
 	}{
-		{"no execution", func(r *model.IssueOpsRecord) { r.Execution = nil }, false, true},
-		{"released lease", func(r *model.IssueOpsRecord) { r.Execution.Lease.Status = model.LeaseStatusClaimable }, false, true},
-		{"pending intent", func(r *model.IssueOpsRecord) { r.Execution.Pending = &model.ExternalIntent{} }, true, false},
+		{"no execution", func(r *model.Record) { r.Execution = nil }, false, true},
+		{"released lease", func(r *model.Record) { r.Execution.Lease.Status = model.LeaseStatusClaimable }, false, true},
+		{"pending intent", func(r *model.Record) { r.Execution.Pending = &model.ExternalIntent{} }, true, false},
 	} {
 		t.Run("preview "+tc.name, func(t *testing.T) {
 			o, c := preparationFixture()

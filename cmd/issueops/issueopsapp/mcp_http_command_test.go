@@ -56,7 +56,7 @@ func startProductionHTTPServer(t *testing.T, deps mcpcli.MCPDependencies) (strin
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		done <- serveMCPHTTP(ctx, "127.0.0.1:0", statestore.StateDir(), deps, writer)
+		done <- serveMCPHTTP(ctx, "127.0.0.1:0", statestore.Dir(), deps, writer)
 		_ = writer.Close()
 	}()
 	lines := bufio.NewReader(reader)
@@ -182,13 +182,13 @@ func gitWorktreeForHTTPTest(t *testing.T, repo, branch string) string {
 	return worktree
 }
 
-func seedHTTPLeaseRecord(t *testing.T, repo, worktree string, holder model.NativeActor) model.IssueOpsRecord {
+func seedHTTPLeaseRecord(t *testing.T, repo, worktree string, holder model.NativeActor) model.Record {
 	t.Helper()
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	record := model.IssueOpsRecord{
-		OK: true, SchemaVersion: model.IssueOpsSchemaVersion,
+	record := model.Record{
+		OK: true, SchemaVersion: model.SchemaVersion,
 		ID: (issueopscore.CycleStartIdentity{}).StableID(repo, "300-http-lease"), Repo: repo, Branch: "300-http-lease",
-		Phase: model.IssueOpsPhaseImplement, WorktreePath: worktree,
+		Phase: model.PhaseImplement, WorktreePath: worktree,
 		Execution: &model.Execution{
 			Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: "300-http-lease", BaseHead: strings.Repeat("a", 40), LinkedAt: now},
 			Lease:     model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder, ClaimedAt: now},
@@ -224,7 +224,7 @@ func TestMCPHTTPServesTwoClientsWithRequestScopedAuthority(t *testing.T) {
 	record := seedHTTPLeaseRecord(t, repoA, worktreeA, holder)
 
 	url, logs := startProductionHTTPServer(t, issueOpsMCPHTTPDependencies())
-	bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+	bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,10 +303,10 @@ func TestMCPHTTPServesTwoClientsWithRequestScopedAuthority(t *testing.T) {
 	if _, isError = callHTTPTool(t, clientA, "issueops_execution", map[string]any{"action": "status", "id": record.ID, "authority_file": rotated}); isError {
 		t.Fatal("rotated credential was rejected")
 	}
-	payload, isError = callHTTPTool(t, clientA, "issueops_execution", map[string]any{"action": "status", "id": record.ID, "authority_file": filepath.Join(statestore.StateDir(), "mcp-http", "grants", "missing")})
+	payload, isError = callHTTPTool(t, clientA, "issueops_execution", map[string]any{"action": "status", "id": record.ID, "authority_file": filepath.Join(statestore.Dir(), "mcp-http", "grants", "missing")})
 	requireToolCode(t, payload, isError, authoritycontract.CodeInvalid)
 
-	_, token, err := (authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()}).Read(t.Context(), rotated)
+	_, token, err := (authorityoutbound.CredentialFiles{StateDir: statestore.Dir()}).Read(t.Context(), rotated)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -331,7 +331,7 @@ func TestMCPHTTPRejectsExpiredCapability(t *testing.T) {
 	grant := authorizeSessionForTest(t, repo, "client-a", self)
 	later := authorityapp.New(
 		authorityoutbound.Repository{StateRoot: issueOpsStateRoot()}, issueopscore.NativeProcessInspector{},
-		authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()},
+		authorityoutbound.CredentialFiles{StateDir: statestore.Dir()},
 		func() time.Time { return time.Now().Add(13 * time.Hour) }, authorityoutbound.ScopeResolver{}, rand.Reader,
 	)
 	deps := issueOpsMCPHTTPDependencies()
@@ -343,7 +343,7 @@ func TestMCPHTTPRejectsExpiredCapability(t *testing.T) {
 		return sqlstore.WithRecordGuard(bound, issueOpsStateRoot(), later.BindSpan), verified, nil
 	}
 	url, _ := startProductionHTTPServer(t, deps)
-	bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+	bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,12 +356,12 @@ func TestMCPHTTPRejectsExpiredCapability(t *testing.T) {
 
 func TestMCPHTTPForegroundRejectsNonLoopbackAndBusyAddress(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if err := serveMCPHTTP(t.Context(), "0.0.0.0:0", statestore.StateDir(), issueOpsMCPHTTPDependencies(), io.Discard); err == nil || !strings.Contains(err.Error(), "loopback") {
+	if err := serveMCPHTTP(t.Context(), "0.0.0.0:0", statestore.Dir(), issueOpsMCPHTTPDependencies(), io.Discard); err == nil || !strings.Contains(err.Error(), "loopback") {
 		t.Fatalf("non-loopback err = %v", err)
 	}
 	url, _ := startProductionHTTPServer(t, issueOpsMCPHTTPDependencies())
 	address := strings.TrimSuffix(strings.TrimPrefix(url, "http://"), mcpcli.HTTPEndpointPath)
-	if err := serveMCPHTTP(t.Context(), address, statestore.StateDir(), issueOpsMCPHTTPDependencies(), io.Discard); err == nil || !strings.Contains(err.Error(), "conflict") {
+	if err := serveMCPHTTP(t.Context(), address, statestore.Dir(), issueOpsMCPHTTPDependencies(), io.Discard); err == nil || !strings.Contains(err.Error(), "conflict") {
 		t.Fatalf("busy address err = %v", err)
 	}
 }

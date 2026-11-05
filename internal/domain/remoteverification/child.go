@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+// ChildTarget parses childURL into a ChildTarget. GitHub URLs yield only the
+// provider. GitLab issue and work item URLs also yield project, IID, and kind
+// (defaulting to issues), and a GitLab URL without project or IID is an error.
+// Other hosts return the URL and hostname with no provider.
 func ChildTarget(childURL string) (model.ChildTarget, error) {
 	parsed, err := url.Parse(strings.TrimSpace(childURL))
 	if err != nil {
@@ -34,6 +38,9 @@ func ChildTarget(childURL string) (model.ChildTarget, error) {
 	}
 	return target, nil
 }
+
+// ValidateTask requires metadata fetched for GitLab issue iid to identify a Task
+// work item. Empty metadata or a type other than TASK is an error.
 func ValidateTask(iid string, metadata model.TaskMetadata) error {
 	if metadata.Empty {
 		return fmt.Errorf("gitlab issues/%s fallback did not return task metadata", iid)

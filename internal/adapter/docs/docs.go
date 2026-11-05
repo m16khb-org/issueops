@@ -1,3 +1,6 @@
+// Package docs is the filesystem and git adapter behind the docs index: it lists
+// Markdown candidates, tracked paths, document headings, and the documentation
+// manifest's module directories for the docs application service.
 package docs
 
 import (
@@ -11,8 +14,12 @@ import (
 	"strings"
 )
 
+// Observer reads documentation candidates and metadata from disk and git.
 type Observer struct{}
 
+// Candidates returns the files under each of roots (relative to root): a file
+// root is returned as is, and a directory root is walked for .md files while
+// skipping excluded directories. Unreadable paths are skipped silently.
 func (Observer) Candidates(root string, roots []string) []docscontract.Candidate {
 	var candidates []docscontract.Candidate
 	appendPath := func(path string) {
@@ -73,6 +80,8 @@ func (Observer) TrackedPaths(root string) (map[string]bool, bool) {
 	return set, true
 }
 
+// ReadDocument returns the index info (root-relative path, title, headings, byte
+// size) for the file at path. It reports false when path is missing or a directory.
 func (Observer) ReadDocument(root, path string) (docscontract.DocIndexInfo, bool) {
 	info, err := os.Stat(path)
 	if err != nil || info.IsDir() {
@@ -82,14 +91,14 @@ func (Observer) ReadDocument(root, path string) (docscontract.DocIndexInfo, bool
 	if err != nil {
 		rel = path
 	}
-	title, headings := ReadHeadings(path)
+	title, headings := readHeadings(path)
 	return docscontract.DocIndexInfo{RelPath: filepath.ToSlash(rel), Title: title, Headings: headings, Bytes: info.Size()}, true
 }
 
-// ReadHeadings returns the document title (the first level-1 heading, else
+// readHeadings returns the document title (the first level-1 heading, else
 // the first heading) and up to 20 section headings after it; the title is not
 // repeated in the list.
-func ReadHeadings(path string) (string, []string) {
+func readHeadings(path string) (string, []string) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return "", nil

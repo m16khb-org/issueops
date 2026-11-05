@@ -9,13 +9,13 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func covCFAttempt(op model.CleanupOperation, tokenChar string) model.IssueOpsCleanupAttempt {
-	return model.IssueOpsCleanupAttempt{Operation: op, Token: strings.Repeat(tokenChar, 64), StartedAt: "2026-01-02T03:04:05Z"}
+func covCFAttempt(op model.CleanupOperation, tokenChar string) model.CleanupAttempt {
+	return model.CleanupAttempt{Operation: op, Token: strings.Repeat(tokenChar, 64), StartedAt: "2026-01-02T03:04:05Z"}
 }
 
 func TestCovCFCleanupOperationAccessRejectsForeignOperation(t *testing.T) {
 	attempt := covCFAttempt(model.CleanupOperationFinish, "a")
-	record := model.IssueOpsRecord{CleanupAttempt: &attempt}
+	record := model.Record{CleanupAttempt: &attempt}
 	err := ValidateCleanupOperationAccess(record, model.CleanupOperationAbandon)
 	if err == nil || !strings.Contains(err.Error(), "resume cleanup finish before cleanup abandon") {
 		t.Fatalf("err = %v", err)
@@ -23,7 +23,7 @@ func TestCovCFCleanupOperationAccessRejectsForeignOperation(t *testing.T) {
 	if err := ValidateCleanupOperationAccess(record, model.CleanupOperationFinish); err != nil {
 		t.Fatalf("same operation must pass: %v", err)
 	}
-	if err := ValidateCleanupOperationAccess(model.IssueOpsRecord{}, model.CleanupOperationFinish); err != nil {
+	if err := ValidateCleanupOperationAccess(model.Record{}, model.CleanupOperationFinish); err != nil {
 		t.Fatalf("no attempt must pass: %v", err)
 	}
 }
@@ -31,16 +31,16 @@ func TestCovCFCleanupOperationAccessRejectsForeignOperation(t *testing.T) {
 func TestCovCFArmCleanupRejections(t *testing.T) {
 	base := covCFAttempt(model.CleanupOperationFinish, "a")
 
-	if _, err := ArmCleanup(model.IssueOpsRecord{}, model.IssueOpsCleanupAttempt{Operation: "bogus", Token: base.Token, StartedAt: base.StartedAt}); err == nil {
+	if _, err := ArmCleanup(model.Record{}, model.CleanupAttempt{Operation: "bogus", Token: base.Token, StartedAt: base.StartedAt}); err == nil {
 		t.Fatal("invalid attempt must be rejected")
 	}
 
 	foreign := covCFAttempt(model.CleanupOperationAbandon, "b")
-	if _, err := ArmCleanup(model.IssueOpsRecord{CleanupAttempt: &foreign}, base); err == nil || !strings.Contains(err.Error(), "owns this cycle") {
+	if _, err := ArmCleanup(model.Record{CleanupAttempt: &foreign}, base); err == nil || !strings.Contains(err.Error(), "owns this cycle") {
 		t.Fatalf("foreign owner err = %v", err)
 	}
 
-	applying := model.IssueOpsRecord{CleanupAbandonFailure: &model.IssueOpsCleanupAbandonFailure{Step: model.CleanupFailureStepApplying}}
+	applying := model.Record{CleanupAbandonFailure: &model.CleanupAbandonFailure{Step: model.CleanupFailureStepApplying}}
 	if _, err := ArmCleanup(applying, base); err == nil || !strings.Contains(err.Error(), "abandon apply is in progress") {
 		t.Fatalf("abandon-applying err = %v", err)
 	}
@@ -50,7 +50,7 @@ func TestCovCFArmCleanupRejections(t *testing.T) {
 		t.Fatalf("abandon resume = %+v, %v", got.CleanupAttempt, err)
 	}
 
-	same := model.IssueOpsRecord{CleanupAttempt: &base}
+	same := model.Record{CleanupAttempt: &base}
 	if _, err := ArmCleanup(same, base); err == nil || !strings.Contains(err.Error(), "requires a new attempt token") {
 		t.Fatalf("reused token err = %v", err)
 	}
@@ -58,7 +58,7 @@ func TestCovCFArmCleanupRejections(t *testing.T) {
 
 func TestCovCFArmCleanupSetsAttemptAndTimestampThenRelease(t *testing.T) {
 	attempt := covCFAttempt(model.CleanupOperationRemoteBranch, "d")
-	armed, err := ArmCleanup(model.IssueOpsRecord{UpdatedAt: "old"}, attempt)
+	armed, err := ArmCleanup(model.Record{UpdatedAt: "old"}, attempt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,12 +81,12 @@ func TestCovCFValidateCleanupOwnerRejections(t *testing.T) {
 	attempt := covCFAttempt(model.CleanupOperationFinish, "a")
 	other := covCFAttempt(model.CleanupOperationFinish, "b")
 	cases := map[string]struct {
-		record   model.IssueOpsRecord
-		expected model.IssueOpsCleanupAttempt
+		record   model.Record
+		expected model.CleanupAttempt
 	}{
-		"empty token":     {model.IssueOpsRecord{CleanupAttempt: &attempt}, model.IssueOpsCleanupAttempt{}},
-		"no attempt":      {model.IssueOpsRecord{}, attempt},
-		"different token": {model.IssueOpsRecord{CleanupAttempt: &other}, attempt},
+		"empty token":     {model.Record{CleanupAttempt: &attempt}, model.CleanupAttempt{}},
+		"no attempt":      {model.Record{}, attempt},
+		"different token": {model.Record{CleanupAttempt: &other}, attempt},
 	}
 	for name, tc := range cases {
 		if err := ValidateCleanupOwner(tc.record, tc.expected); err == nil || !strings.Contains(err.Error(), "ownership changed") {
@@ -96,10 +96,10 @@ func TestCovCFValidateCleanupOwnerRejections(t *testing.T) {
 }
 
 func TestCovCFCleanupCommandGenerationAndProvenance(t *testing.T) {
-	if got := CleanupCommandGeneration(model.IssueOpsRecord{}); got != 0 {
+	if got := CleanupCommandGeneration(model.Record{}); got != 0 {
 		t.Fatalf("nil execution = %d", got)
 	}
-	record := model.IssueOpsRecord{Execution: &model.Execution{Lease: model.WriteLease{Generation: 7}}}
+	record := model.Record{Execution: &model.Execution{Lease: model.WriteLease{Generation: 7}}}
 	if got := CleanupCommandGeneration(record); got != 7 {
 		t.Fatalf("generation = %d", got)
 	}
@@ -116,12 +116,12 @@ func TestCovCFCleanupCommandGenerationAndProvenance(t *testing.T) {
 }
 
 func TestCovCFValidateChildCleanupMergeObservation(t *testing.T) {
-	artifact := func() *model.IssueOpsRemoteArtifactVerification {
-		return &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://x/1", TargetBranch: "main"}
+	artifact := func() *model.RemoteArtifactVerification {
+		return &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://x/1", TargetBranch: "main"}
 	}
-	base := func() model.IssueOpsRecord {
-		return model.IssueOpsRecord{ID: "c", Repo: "r", Branch: "b", IssueURL: "u", RemoteArtifact: artifact(),
-			IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: "c1"}}}
+	base := func() model.Record {
+		return model.Record{ID: "c", Repo: "r", Branch: "b", IssueURL: "u", RemoteArtifact: artifact(),
+			IssueLinks: []model.IssueLink{{Type: "child", URL: "c1"}}}
 	}
 	if err := ValidateChildCleanupMergeObservation(base(), base()); err != nil {
 		t.Fatalf("identical must pass: %v", err)
@@ -133,17 +133,17 @@ func TestCovCFValidateChildCleanupMergeObservation(t *testing.T) {
 	if err := ValidateChildCleanupMergeObservation(base(), unrelated); err != nil {
 		t.Fatalf("unrelated metadata must pass: %v", err)
 	}
-	mutations := map[string]func(*model.IssueOpsRecord){
-		"id":            func(r *model.IssueOpsRecord) { r.ID = "d" },
-		"repo":          func(r *model.IssueOpsRecord) { r.Repo = "r2" },
-		"branch":        func(r *model.IssueOpsRecord) { r.Branch = "b2" },
-		"issue url":     func(r *model.IssueOpsRecord) { r.IssueURL = "u2" },
-		"links":         func(r *model.IssueOpsRecord) { r.IssueLinks[0].CloseVerifiedAt = "t" },
-		"artifact gone": func(r *model.IssueOpsRecord) { r.RemoteArtifact = nil },
-		"provider":      func(r *model.IssueOpsRecord) { r.RemoteArtifact.Provider = "gitlab" },
-		"kind":          func(r *model.IssueOpsRecord) { r.RemoteArtifact.Kind = "mr" },
-		"url":           func(r *model.IssueOpsRecord) { r.RemoteArtifact.URL = "https://x/2" },
-		"target branch": func(r *model.IssueOpsRecord) { r.RemoteArtifact.TargetBranch = "dev" },
+	mutations := map[string]func(*model.Record){
+		"id":            func(r *model.Record) { r.ID = "d" },
+		"repo":          func(r *model.Record) { r.Repo = "r2" },
+		"branch":        func(r *model.Record) { r.Branch = "b2" },
+		"issue url":     func(r *model.Record) { r.IssueURL = "u2" },
+		"links":         func(r *model.Record) { r.IssueLinks[0].CloseVerifiedAt = "t" },
+		"artifact gone": func(r *model.Record) { r.RemoteArtifact = nil },
+		"provider":      func(r *model.Record) { r.RemoteArtifact.Provider = "gitlab" },
+		"kind":          func(r *model.Record) { r.RemoteArtifact.Kind = "mr" },
+		"url":           func(r *model.Record) { r.RemoteArtifact.URL = "https://x/2" },
+		"target branch": func(r *model.Record) { r.RemoteArtifact.TargetBranch = "dev" },
 	}
 	for name, mutate := range mutations {
 		current := base()
@@ -163,38 +163,38 @@ func TestCovCFValidateChildCleanupMergeObservation(t *testing.T) {
 }
 
 func TestCovCFPreparedBaseNormalization(t *testing.T) {
-	if got := PreparedBaseBranch(model.IssueOpsRecord{}); got != "" {
+	if got := PreparedBaseBranch(model.Record{}); got != "" {
 		t.Fatalf("no prepare = %q", got)
 	}
-	if got := PreparedBaseRef(model.IssueOpsRecord{}); got != "" {
+	if got := PreparedBaseRef(model.Record{}); got != "" {
 		t.Fatalf("no prepare ref = %q", got)
 	}
 	cases := map[string]string{"main": "main", " main ": "main", "refs/heads/main": "main", "origin/main": "main", "refs/heads/origin/dev": "dev", "feature/x": "feature/x"}
 	for in, want := range cases {
-		record := model.IssueOpsRecord{BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: in}}
+		record := model.Record{BranchPrepare: &model.BranchPrepare{BaseBranch: in}}
 		if got := PreparedBaseRef(record); got != want {
 			t.Errorf("PreparedBaseRef(%q) = %q want %q", in, got, want)
 		}
 	}
-	record := model.IssueOpsRecord{BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "  origin/main "}}
+	record := model.Record{BranchPrepare: &model.BranchPrepare{BaseBranch: "  origin/main "}}
 	if got := PreparedBaseBranch(record); got != "origin/main" {
 		t.Fatalf("PreparedBaseBranch = %q", got)
 	}
 }
 
 func TestCovCFValidateCleanupSupersedeInput(t *testing.T) {
-	withURL := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://x/1"}}
-	blankURL := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "  "}}
+	withURL := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://x/1"}}
+	blankURL := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "  "}}
 	cases := []struct {
 		name       string
-		record     model.IssueOpsRecord
+		record     model.Record
 		candidate  string
 		configured bool
 		want       string
 	}{
 		{"blank candidate", withURL, "  ", true, "no superseding artifact"},
 		{"not configured", withURL, "https://x/2", false, "provider observation is not configured"},
-		{"no artifact", model.IssueOpsRecord{}, "https://x/2", true, "original artifact URL is unknown"},
+		{"no artifact", model.Record{}, "https://x/2", true, "original artifact URL is unknown"},
 		{"blank artifact url", blankURL, "https://x/2", true, "original artifact URL is unknown"},
 		{"ok", withURL, "https://x/2", true, ""},
 	}
@@ -286,7 +286,7 @@ func TestCovCFFinishAudit(t *testing.T) {
 }
 
 func TestCovCFFinishPreviewBaseMissingBranches(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseDone, BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "main"}}
+	record := model.Record{ID: "c", Phase: model.PhaseDone, BranchPrepare: &model.BranchPrepare{BaseBranch: "main"}}
 	req := model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true}
 
 	unobserved := BuildCleanupFinishPreview(record, req, model.CleanupFinishInventory{}, CleanupFinishObservation{})
@@ -324,7 +324,7 @@ func TestCovCFFinishPreviewBaseMissingBranches(t *testing.T) {
 }
 
 func TestCovCFFinishPreviewWorktreeGates(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseDone}
+	record := model.Record{ID: "c", Phase: model.PhaseDone}
 	req := model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true}
 	inv := model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/wt"}
 
@@ -349,7 +349,7 @@ func TestCovCFFinishPreviewWorktreeGates(t *testing.T) {
 }
 
 func TestCovCFFinishPreviewBranchGates(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseDone}
+	record := model.Record{ID: "c", Phase: model.PhaseDone}
 	req := model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true}
 	inv := model.CleanupFinishInventory{Branch: "feat", BranchOID: "abc"}
 
@@ -377,8 +377,8 @@ func TestCovCFFinishPreviewBranchGates(t *testing.T) {
 }
 
 func TestCovCFFinishTargetsPrefersExecutionWorkspace(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Repo: "r", Branch: " rec ", WorktreePath: " /legacy ",
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://x/1"},
+	record := model.Record{ID: "c", Repo: "r", Branch: " rec ", WorktreePath: " /legacy ",
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://x/1"},
 		Execution: &model.Execution{
 			Workspace: model.Workspace{Root: " /exec ", Branch: " exec-branch "},
 		}}
@@ -395,7 +395,7 @@ func TestCovCFFinishTargetsPrefersExecutionWorkspace(t *testing.T) {
 
 func TestCovCFRemoteBranchPreviewRecordGates(t *testing.T) {
 	merged := CleanupRemoteBranchObservation{MergeConfigured: true, Head: model.CleanupRemoteBranchArtifactHead{HeadRefName: "12-feat"}}
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseDone, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "u"}}
+	record := model.Record{ID: "c", Phase: model.PhaseDone, RemoteArtifact: &model.RemoteArtifactVerification{URL: "u"}}
 
 	empty := model.CleanupRemoteBranchInventory{}
 	_, got := BuildCleanupRemoteBranchPreview(record, model.CleanupRemoteBranchRequest{}, empty, merged)
@@ -408,16 +408,16 @@ func TestCovCFRemoteBranchPreviewRecordGates(t *testing.T) {
 		t.Fatalf("invalid name = %v", got.Missing)
 	}
 
-	record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: " 12-feat "}
+	record.BranchPrepare = &model.BranchPrepare{BaseBranch: " 12-feat "}
 	_, got = BuildCleanupRemoteBranchPreview(record, model.CleanupRemoteBranchRequest{}, model.CleanupRemoteBranchInventory{Branch: "12-feat"}, merged)
 	if !slices.Contains(got.Missing, "branch_not_base") {
 		t.Fatalf("base collision = %v", got.Missing)
 	}
 
 	record.BranchPrepare = nil
-	record.Phase = model.IssueOpsPhasePR
+	record.Phase = model.PhasePR
 	record.Execution = &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusActive}}
-	record.IssueLinks = []model.IssueOpsIssueLink{{Type: "child"}}
+	record.IssueLinks = []model.IssueLink{{Type: "child"}}
 	_, got = BuildCleanupRemoteBranchPreview(record, model.CleanupRemoteBranchRequest{Apply: true}, model.CleanupRemoteBranchInventory{Branch: "12-feat"}, merged)
 	if got.Preview || !slices.Equal(got.Missing, []string{"phase_done", "lease_released", "child_tasks_closed"}) {
 		t.Fatalf("lifecycle = %+v", got)
@@ -425,7 +425,7 @@ func TestCovCFRemoteBranchPreviewRecordGates(t *testing.T) {
 }
 
 func TestCovCFRemoteBranchPreviewArtifactStates(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseDone, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "u"}}
+	record := model.Record{ID: "c", Phase: model.PhaseDone, RemoteArtifact: &model.RemoteArtifactVerification{URL: "u"}}
 	inv := model.CleanupRemoteBranchInventory{Branch: "12-feat"}
 
 	noArtifact := record
@@ -461,7 +461,7 @@ func TestCovCFRemoteBranchPreviewArtifactStates(t *testing.T) {
 }
 
 func TestCovCFRemoteBranchPreviewTipEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseDone, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "u"}}
+	record := model.Record{ID: "c", Phase: model.PhaseDone, RemoteArtifact: &model.RemoteArtifactVerification{URL: "u"}}
 	inv := model.CleanupRemoteBranchInventory{Branch: "12-feat"}
 	head := model.CleanupRemoteBranchArtifactHead{HeadRefName: "12-feat", HeadRefOID: "AbC"}
 	base := CleanupRemoteBranchObservation{MergeConfigured: true, Head: head, RemoteOID: "abc"}
@@ -515,7 +515,7 @@ func TestCovCFRemoteBranchPreviewTipEvidence(t *testing.T) {
 }
 
 func TestCovCFRemoteBranchTargetsPreferExecutionBranch(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Repo: "r", Branch: " rec ", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: " https://x/1 "},
+	record := model.Record{ID: "c", Repo: "r", Branch: " rec ", RemoteArtifact: &model.RemoteArtifactVerification{URL: " https://x/1 "},
 		Execution: &model.Execution{Workspace: model.Workspace{Branch: " exec "}}}
 	got := CleanupRemoteBranchTargets(record)
 	if got.Branch != "exec" || got.ArtifactURL != "https://x/1" {
@@ -542,7 +542,7 @@ func TestCovCFStatusFinishEvidenceAndConversion(t *testing.T) {
 		OK: false, ID: "c", Missing: []string{"worktree_clean", "phase_done", "phase_done"}, WorktreePath: "/wt", Branch: "feat",
 		WorkspaceProcesses: []model.CleanupWorkspaceProcess{{PID: 4, Command: "vim", StartedAt: "t"}},
 	}
-	status := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{RemoteArtifactURL: "https://x/1"}, result)
+	status := CleanupStatusFromFinish(model.CleanupStatus{RemoteArtifactURL: "https://x/1"}, result)
 	if status.Ready || !status.OK || !status.Merged || status.ID != "c" || status.WorktreePath != "/wt" || status.Branch != "feat" || status.RemoteArtifactURL != "https://x/1" {
 		t.Fatalf("status = %+v", status)
 	}
@@ -556,17 +556,17 @@ func TestCovCFStatusFinishEvidenceAndConversion(t *testing.T) {
 		t.Fatalf("choices = %v", status.Choices)
 	}
 
-	ready := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{}, model.CleanupFinishResult{OK: true, ID: "c"})
+	ready := CleanupStatusFromFinish(model.CleanupStatus{}, model.CleanupFinishResult{OK: true, ID: "c"})
 	if !ready.Ready || len(ready.Missing) != 0 || !strings.Contains(ready.Choices[0], "정리 진행") || ready.NextCommand != "issueops cleanup finish --id c --preview --json" {
 		t.Fatalf("ready = %+v", ready)
 	}
 	// The remedy chain orders reflect-completion before close-issue.
-	blocked := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{}, model.CleanupFinishResult{ID: "c", Missing: []string{"issue_closed", "completion_reflected"}})
+	blocked := CleanupStatusFromFinish(model.CleanupStatus{}, model.CleanupFinishResult{ID: "c", Missing: []string{"issue_closed", "completion_reflected"}})
 	if !strings.HasPrefix(blocked.NextCommand, "issueops remote reflect-completion --id c ") {
 		t.Fatalf("blocked next_command = %q", blocked.NextCommand)
 	}
 	// OK=true with leftover Missing must not be ready.
-	contradictory := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{}, model.CleanupFinishResult{OK: true, Missing: []string{"x"}})
+	contradictory := CleanupStatusFromFinish(model.CleanupStatus{}, model.CleanupFinishResult{OK: true, Missing: []string{"x"}})
 	if contradictory.Ready {
 		t.Fatalf("contradictory = %+v", contradictory)
 	}
@@ -592,24 +592,24 @@ func TestCovCFStatusWarningsOnlyForProcesses(t *testing.T) {
 }
 
 func TestCovCFRemoteArtifactMissingFieldsAndMetadata(t *testing.T) {
-	if got := RemoteArtifactMissing(model.IssueOpsRecord{}); !slices.Equal(got, []string{"remote_artifact"}) {
+	if got := RemoteArtifactMissing(model.Record{}); !slices.Equal(got, []string{"remote_artifact"}) {
 		t.Fatalf("nil = %v", got)
 	}
-	blank := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: " ", Labels: []string{" ", "a\x00b"}, Assignees: nil}}
+	blank := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{Provider: " ", Labels: []string{" ", "a\x00b"}, Assignees: nil}}
 	want := []string{"remote_artifact_assignees", "remote_artifact_kind", "remote_artifact_labels", "remote_artifact_provider", "remote_artifact_url"}
 	if got := RemoteArtifactMissing(blank); !slices.Equal(got, want) {
 		t.Fatalf("blank = %v", got)
 	}
-	full := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "g", Kind: "pr", URL: "u", Labels: []string{"l"}, Assignees: []string{"a"}}}
+	full := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{Provider: "g", Kind: "pr", URL: "u", Labels: []string{"l"}, Assignees: []string{"a"}}}
 	if got := RemoteArtifactMissing(full); len(got) != 0 {
 		t.Fatalf("full = %v", got)
 	}
 }
 
 func TestCovCFStatusBuildChildCloseAndPhase(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhasePlan,
-		IssueLinks: []model.IssueOpsIssueLink{{Type: "related"}, {Type: "child", CloseVerifiedAt: " "}}}
-	status := BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{Merged: true}, CleanupStatusObservation{})
+	record := model.Record{ID: "c", Phase: model.PhasePlan,
+		IssueLinks: []model.IssueLink{{Type: "related"}, {Type: "child", CloseVerifiedAt: " "}}}
+	status := BuildCleanupStatus(record, model.CleanupStatusRequest{Merged: true}, CleanupStatusObservation{})
 	for _, slug := range []string{"pr_phase", "remote_artifact", "child_tasks_closed", "worktree_path"} {
 		if !slices.Contains(status.Missing, slug) {
 			t.Errorf("missing %q in %v", slug, status.Missing)
@@ -618,17 +618,17 @@ func TestCovCFStatusBuildChildCloseAndPhase(t *testing.T) {
 	if slices.Contains(status.Missing, "remote_artifact_merged") {
 		t.Errorf("merged request must not report unmerged: %v", status.Missing)
 	}
-	record.IssueLinks = []model.IssueOpsIssueLink{{Type: "related"}, {Type: "child", CloseVerifiedAt: "t"}}
-	status = BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{}, CleanupStatusObservation{})
+	record.IssueLinks = []model.IssueLink{{Type: "related"}, {Type: "child", CloseVerifiedAt: "t"}}
+	status = BuildCleanupStatus(record, model.CleanupStatusRequest{}, CleanupStatusObservation{})
 	if slices.Contains(status.Missing, "child_tasks_closed") || !slices.Contains(status.Missing, "remote_artifact_merged") {
 		t.Fatalf("verified child, unmerged = %v", status.Missing)
 	}
 }
 
 func TestCovCFStatusBuildWorktreeAndRemoteObservations(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "c", Phase: model.IssueOpsPhaseDone, WorktreePath: "/wt", Branch: "feat",
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "g", Kind: "pr", URL: "u", Labels: []string{"l"}, Assignees: []string{"a"}}}
-	req := model.IssueOpsCleanupStatusRequest{Merged: true}
+	record := model.Record{ID: "c", Phase: model.PhaseDone, WorktreePath: "/wt", Branch: "feat",
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "g", Kind: "pr", URL: "u", Labels: []string{"l"}, Assignees: []string{"a"}}}
+	req := model.CleanupStatusRequest{Merged: true}
 
 	status := BuildCleanupStatus(record, req, CleanupStatusObservation{})
 	if !slices.Equal(status.Missing, []string{"worktree_exists"}) {
@@ -672,8 +672,8 @@ func TestCovCFStatusBuildWorktreeAndRemoteObservations(t *testing.T) {
 }
 
 func TestCovCFStatusNeedsMergeReadback(t *testing.T) {
-	complete := &model.IssueOpsRemoteArtifactVerification{Provider: "g", Kind: "pr", URL: "u", Labels: []string{"l"}, Assignees: []string{"a"}}
-	done := model.IssueOpsRecord{Phase: model.IssueOpsPhaseDone, RemoteArtifact: complete}
+	complete := &model.RemoteArtifactVerification{Provider: "g", Kind: "pr", URL: "u", Labels: []string{"l"}, Assignees: []string{"a"}}
+	done := model.Record{Phase: model.PhaseDone, RemoteArtifact: complete}
 	if !CleanupStatusNeedsMergeReadback(done, true) {
 		t.Fatal("done+complete+requested must read back")
 	}
@@ -681,11 +681,11 @@ func TestCovCFStatusNeedsMergeReadback(t *testing.T) {
 		t.Fatal("not requested")
 	}
 	notDone := done
-	notDone.Phase = model.IssueOpsPhasePR
+	notDone.Phase = model.PhasePR
 	if CleanupStatusNeedsMergeReadback(notDone, true) {
 		t.Fatal("non-done phase")
 	}
-	if CleanupStatusNeedsMergeReadback(model.IssueOpsRecord{Phase: model.IssueOpsPhaseDone}, true) {
+	if CleanupStatusNeedsMergeReadback(model.Record{Phase: model.PhaseDone}, true) {
 		t.Fatal("missing artifact")
 	}
 }

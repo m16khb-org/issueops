@@ -16,7 +16,7 @@ func (cli command) addIssueOpsActorFlags(fs *flag.FlagSet) issueOpsActorFlags {
 	return issueOpsActorFlags{flags: actorflags.Add(fs), observe: cli.Runtime.ObserveNativeProcessAncestry}
 }
 
-func (flags issueOpsActorFlags) actor() issueopscontract.IssueOpsActor {
+func (flags issueOpsActorFlags) actor() issueopscontract.Actor {
 	ancestry, _ := flags.observe(os.Getpid())
 	return flags.flags.ActorWithAncestry(ancestry)
 }

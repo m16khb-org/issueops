@@ -121,7 +121,7 @@ func TestSpanPhaseBoundaries(t *testing.T) {
 			readsAtObserver = clock.reads
 			observations = append(observations, observation)
 		})
-		if err := database.withSpan(ctx, clock.now, func(spanCtx context.Context) error {
+		if err := database.withSpanAt(ctx, clock.now, func(spanCtx context.Context) error {
 			return applyRow(spanCtx, database, "one")
 		}); err != nil {
 			t.Fatal(err)
@@ -153,7 +153,7 @@ func TestSpanPhaseBoundaries(t *testing.T) {
 		sentinel := errors.New("panic sentinel")
 		recovered := func() (value any) {
 			defer func() { value = recover() }()
-			_ = database.withSpan(ctx, clock.now, func(spanCtx context.Context) error {
+			_ = database.withSpanAt(ctx, clock.now, func(spanCtx context.Context) error {
 				if err := applyRow(spanCtx, database, "before-panic"); err != nil {
 					return err
 				}
@@ -204,7 +204,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 		database := openTestDB(t)
 		clock := newScriptedClock(t, 0, 1, 2, 3, 4, 5)
 		ctx, observations := collectSpans(context.Background())
-		if err := database.withSpan(ctx, clock.now, func(context.Context) error { return nil }); err != nil {
+		if err := database.withSpanAt(ctx, clock.now, func(context.Context) error { return nil }); err != nil {
 			t.Fatal(err)
 		}
 		got := onlySpan(t, *observations)
@@ -220,7 +220,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 		database := openTestDB(t)
 		clock := newScriptedClock(t, 0, 1, 2, 3, 5, 6, 9, 10, 12, 13)
 		ctx, observations := collectSpans(context.Background())
-		if err := database.withSpan(ctx, clock.now, func(spanCtx context.Context) error {
+		if err := database.withSpanAt(ctx, clock.now, func(spanCtx context.Context) error {
 			if err := applyRow(spanCtx, database, "first"); err != nil {
 				return err
 			}
@@ -246,7 +246,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 		// 일어나지만 결정적으로 실패한다.
 		clock.hooks = map[int]func(){3: cancel}
 		ctx, observations := collectSpans(parent)
-		err := database.withSpan(ctx, clock.now, func(spanCtx context.Context) error {
+		err := database.withSpanAt(ctx, clock.now, func(spanCtx context.Context) error {
 			return applyRow(spanCtx, database, "canceled-before-commit")
 		})
 		if err == nil {
@@ -268,7 +268,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 		database := openTestDB(t)
 		clock := newScriptedClock(t, 0, 1, 2, 3, 4, 5)
 		ctx, observations := collectSpans(context.Background())
-		if err := database.withSpan(ctx, clock.now, func(context.Context) error {
+		if err := database.withSpanAt(ctx, clock.now, func(context.Context) error {
 			return database.Put("span_phase", "autocommit", []byte("v"))
 		}); err != nil {
 			t.Fatal(err)
@@ -284,7 +284,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 		database := openTestDB(t)
 		clock := newScriptedClock(t, 0, 1, 2, 3, 4, 5)
 		ctx, observations := collectSpans(context.Background())
-		if err := database.withSpan(ctx, clock.now, func(context.Context) error {
+		if err := database.withSpanAt(ctx, clock.now, func(context.Context) error {
 			return applyRow(context.Background(), database, "lost-context")
 		}); err != nil {
 			t.Fatal(err)
@@ -327,7 +327,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 		canceled, cancel := context.WithCancel(context.Background())
 		cancel()
 		ctx, observations := collectSpans(canceled)
-		err := database.withSpan(ctx, clock.now, func(context.Context) error {
+		err := database.withSpanAt(ctx, clock.now, func(context.Context) error {
 			t.Fatal("callback ran after cancellation")
 			return nil
 		})
@@ -335,7 +335,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 			t.Fatalf("err=%v", err)
 		}
 		want := SpanObservation{
-			Outcome:        SpanOutcomeCanceled,
+			Outcome:        spanOutcomeCanceled,
 			Wait:           millis(4),
 			Commit:         new(time.Duration(0)),
 			Total:          millis(4),
@@ -363,7 +363,7 @@ func TestSpanCancelledContenderReportsUnacquired(t *testing.T) {
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
 	ctx, observations := collectSpans(canceled)
-	err := database.withSpan(ctx, clock.now, func(context.Context) error {
+	err := database.withSpanAt(ctx, clock.now, func(context.Context) error {
 		t.Error("contender callback ran while the gate was held")
 		return nil
 	})
@@ -375,7 +375,7 @@ func TestSpanCancelledContenderReportsUnacquired(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 	got := onlySpan(t, *observations)
-	if got.Outcome != SpanOutcomeCanceled || got.Acquired || got.Callback != nil ||
+	if got.Outcome != spanOutcomeCanceled || got.Acquired || got.Callback != nil ||
 		got.Hold != 0 || got.Wait != millis(5) || got.Total != millis(5) {
 		t.Fatalf("observation=%+v", got)
 	}

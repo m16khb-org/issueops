@@ -105,7 +105,7 @@ exit 0
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := VerifyRemoteArtifactLiveContext(ctx, issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	err := VerifyRemoteArtifactLiveContext(ctx, issueopscontract.RemoteArtifactVerificationRequest{
 		Provider: "github",
 		Kind:     "pr",
 		URL:      "https://github.com/example/repo/pull/1",

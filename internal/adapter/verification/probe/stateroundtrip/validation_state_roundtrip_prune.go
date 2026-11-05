@@ -24,7 +24,7 @@ func runStateJSON[T any](s *stateRoundtripStateSession, label string, command ..
 
 func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 	oldKey := s.input.key + "-old"
-	oldWriteResult, failed, ok := runStateJSON[statecontract.StateResult](s, "state old write", s.input.binary, "state", "write", "--key", oldKey, "--value", "old state", "--json")
+	oldWriteResult, failed, ok := runStateJSON[statecontract.Result](s, "state old write", s.input.binary, "state", "write", "--key", oldKey, "--value", "old state", "--json")
 	if !ok {
 		return failed
 	}
@@ -33,7 +33,7 @@ func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 		return s.fail(err.Error())
 	}
 
-	pruneDryResult, failed, ok := runStateJSON[statecontract.StatePruneResult](s, "state prune dry-run", s.input.binary, "state", "prune", "--max-age", "1h", "--json")
+	pruneDryResult, failed, ok := runStateJSON[statecontract.PruneResult](s, "state prune dry-run", s.input.binary, "state", "prune", "--max-age", "1h", "--json")
 	if !ok {
 		return failed
 	}
@@ -41,7 +41,7 @@ func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 		return s.fail("state prune dry-run did not classify old/fresh keys")
 	}
 
-	pruneConfirmResult, failed, ok := runStateJSON[statecontract.StatePruneResult](s, "state prune confirm", s.input.binary, "state", "prune", "--max-age", "1h", "--confirm", "--json")
+	pruneConfirmResult, failed, ok := runStateJSON[statecontract.PruneResult](s, "state prune confirm", s.input.binary, "state", "prune", "--max-age", "1h", "--confirm", "--json")
 	if !ok {
 		return failed
 	}
@@ -49,7 +49,7 @@ func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 		return s.fail("state prune confirm did not delete old key")
 	}
 
-	listAfterPruneResult, failed, ok := runStateJSON[statecontract.StateListResult](s, "state list after prune", s.input.binary, "state", "list", "--json")
+	listAfterPruneResult, failed, ok := runStateJSON[statecontract.ListResult](s, "state list after prune", s.input.binary, "state", "list", "--json")
 	if !ok {
 		return failed
 	}
@@ -60,11 +60,11 @@ func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 }
 
 // pruneDryRunClassifiedKeys reports whether a dry-run prune marked oldKey for deletion and kept freshKey.
-func pruneDryRunClassifiedKeys(result statecontract.StatePruneResult, oldKey, freshKey string) bool {
+func pruneDryRunClassifiedKeys(result statecontract.PruneResult, oldKey, freshKey string) bool {
 	return result.OK && result.DryRun && slices.Contains(result.DeletedKeys, oldKey) && slices.Contains(result.KeptKeys, freshKey)
 }
 
 // pruneConfirmDeletedKey reports whether a confirmed prune actually deleted oldKey.
-func pruneConfirmDeletedKey(result statecontract.StatePruneResult, oldKey string) bool {
+func pruneConfirmDeletedKey(result statecontract.PruneResult, oldKey string) bool {
 	return result.OK && !result.DryRun && result.Confirm && slices.Contains(result.DeletedKeys, oldKey)
 }

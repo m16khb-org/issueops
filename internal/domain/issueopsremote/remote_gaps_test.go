@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"encoding/json"
@@ -173,8 +173,8 @@ func TestValidProjectKey(t *testing.T) {
 		"github.com/acme#x":            false,
 		"github.com/acme\nrepo":        false,
 	} {
-		if got := ValidProjectKey(key); got != want {
-			t.Errorf("ValidProjectKey(%q)=%v want %v", key, got, want)
+		if got := validProjectKey(key); got != want {
+			t.Errorf("validProjectKey(%q)=%v want %v", key, got, want)
 		}
 	}
 }
@@ -268,8 +268,8 @@ func TestIssueNumberAndArtifactPaths(t *testing.T) {
 		"https://github.com/a/b/pull/3":             "",
 		"://bad":                                    "",
 	} {
-		if got := IssueNumber(url); got != want {
-			t.Errorf("IssueNumber(%q)=%q want %q", url, got, want)
+		if got := issueNumber(url); got != want {
+			t.Errorf("issueNumber(%q)=%q want %q", url, got, want)
 		}
 	}
 	if got := IssueArtifactDir("https://github.com/a/b/issues/42"); got != ".issueops/issues/42/artifact" {
@@ -279,7 +279,7 @@ func TestIssueNumberAndArtifactPaths(t *testing.T) {
 		t.Fatalf("numberless issue must have no artifact dir, got %q", got)
 	}
 	const issue = "https://github.com/a/b/issues/42"
-	for _, name := range TrackedMaterialNames {
+	for _, name := range trackedMaterialNames {
 		for _, p := range []string{".issueops/issues/42/" + name, `.issueops\issues\42\` + name} {
 			if !IsTrackedMaterialPath(issue, p) {
 				t.Errorf("%q should be tracked", p)
@@ -297,9 +297,9 @@ func TestIssueNumberAndArtifactPaths(t *testing.T) {
 }
 
 func TestRenderIssueOpsRemoteJudgePrompt(t *testing.T) {
-	req := IssueOpsRemoteLLMJudgeRequest{Request: IssueOpsRemoteScoringRequest{
-		Provider: "gitlab", Issue: IssueOpsRemoteArtifact{Title: "UNIQUE-TITLE-XYZ", Body: "body"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{{ID: "#9", Title: "cand"}},
+	req := LLMJudgeRequest{Request: ScoringRequest{
+		Provider: "gitlab", Issue: ArtifactDraft{Title: "UNIQUE-TITLE-XYZ", Body: "body"},
+		IssueCandidates: []IssueCandidate{{ID: "#9", Title: "cand"}},
 	}}
 	res, err := RenderIssueOpsRemoteJudgePrompt(req)
 	if err != nil {
@@ -313,7 +313,7 @@ func TestRenderIssueOpsRemoteJudgePrompt(t *testing.T) {
 			t.Errorf("prompt missing %q", want)
 		}
 	}
-	plain, err := RenderIssueOpsRemoteLLMJudgePrompt(req)
+	plain, err := renderIssueOpsRemoteLLMJudgePrompt(req)
 	if err != nil || plain != res.Prompt {
 		t.Fatalf("plain prompt differs from wrapped prompt (err=%v)", err)
 	}
@@ -323,11 +323,11 @@ func TestRenderIssueOpsRemoteJudgePromptRejectsUnmarshalableScore(t *testing.T) 
 	// NaN cannot be encoded as JSON, so building the request payload must fail
 	// and neither renderer may return a half-built prompt.
 	nan := zeroOverZero()
-	req := IssueOpsRemoteLLMJudgeRequest{Request: IssueOpsRemoteScoringRequest{
-		Issue:           IssueOpsRemoteArtifact{Title: "t"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{{ID: "1", Score: &nan}},
+	req := LLMJudgeRequest{Request: ScoringRequest{
+		Issue:           ArtifactDraft{Title: "t"},
+		IssueCandidates: []IssueCandidate{{ID: "1", Score: &nan}},
 	}}
-	if p, err := RenderIssueOpsRemoteLLMJudgePrompt(req); err == nil || p != "" {
+	if p, err := renderIssueOpsRemoteLLMJudgePrompt(req); err == nil || p != "" {
 		t.Fatalf("llm prompt=(%q,%v)", p, err)
 	}
 	if res, err := RenderIssueOpsRemoteJudgePrompt(req); err == nil || res.OK || res.Prompt != "" {
@@ -385,17 +385,17 @@ func TestDecodeIssueOpsRemoteJudgeJSONRejectsContractViolations(t *testing.T) {
 
 func TestScoreIssueOpsRemoteCandidatesExplicitScoresAndOrdering(t *testing.T) {
 	score := func(v float64) *float64 { return &v }
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Provider: "gitlab", Threshold: 0.5,
-		Issue: IssueOpsRemoteArtifact{Title: "login crash"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{
+		Issue: ArtifactDraft{Title: "login crash"},
+		IssueCandidates: []IssueCandidate{
 			{ID: "b", Score: score(0.8), URL: " https://gitlab.example/g/p/-/issues/2 "},
 			{ID: "a", Score: score(0.8)},
 			{ID: "hi", Score: score(7)},
 			{ID: "lo", Score: score(-3)},
 			{Title: "title-only-ref", Score: score(0.9)},
 		},
-		LabelCandidates: []IssueOpsRemoteLabelCandidate{
+		LabelCandidates: []LabelCandidate{
 			{Name: "zeta", Score: score(0.6)},
 			{Name: "alpha", Score: score(0.6)},
 			{Name: "weak", Score: score(0.1)},
@@ -419,7 +419,7 @@ func TestScoreIssueOpsRemoteCandidatesExplicitScoresAndOrdering(t *testing.T) {
 		res.RejectedRelatedIssues[0].RejectReason == "" {
 		t.Fatalf("rejected=%+v", res.RejectedRelatedIssues)
 	}
-	byID := map[string]IssueOpsRemoteScoredItem{}
+	byID := map[string]ScoredItem{}
 	for _, it := range res.SelectedRelatedIssues {
 		byID[it.ID+it.Title] = it
 	}
@@ -449,9 +449,9 @@ func TestScoreIssueOpsRemoteCandidatesExplicitScoresAndOrdering(t *testing.T) {
 
 func TestScoreIssueOpsRemoteCandidatesGitHubHints(t *testing.T) {
 	one := 1.0
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
-		Issue: IssueOpsRemoteArtifact{Body: "x"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
+		Issue: ArtifactDraft{Body: "x"},
+		IssueCandidates: []IssueCandidate{
 			{ID: "#1", Score: &one, URL: "https://github.com/a/b/issues/1"},
 			{ID: "#2", Score: &one}, {Title: "no ref", Score: &one},
 		},
@@ -472,14 +472,14 @@ func TestScoreIssueOpsRemoteCandidatesGitHubHints(t *testing.T) {
 func TestScoreIssueOpsRemoteCandidatesRejectsInvalidRequests(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
-		req      IssueOpsRemoteScoringRequest
+		req      ScoringRequest
 		wantMsg  string
 		provider string
 	}{
-		{"unsupported provider", IssueOpsRemoteScoringRequest{Provider: " Bitbucket ", Issue: IssueOpsRemoteArtifact{Title: "t"}}, "unsupported", "bitbucket"},
-		{"provider falls back to issue provider", IssueOpsRemoteScoringRequest{Issue: IssueOpsRemoteArtifact{Provider: "svn", Title: "t"}}, "unsupported", "svn"},
-		{"threshold above one", IssueOpsRemoteScoringRequest{Threshold: 1.01, Issue: IssueOpsRemoteArtifact{Title: "t"}}, "threshold", "github"},
-		{"blank issue", IssueOpsRemoteScoringRequest{Issue: IssueOpsRemoteArtifact{Title: " ", Body: "\n"}}, "issue.title or issue.body", "github"},
+		{"unsupported provider", ScoringRequest{Provider: " Bitbucket ", Issue: ArtifactDraft{Title: "t"}}, "unsupported", "bitbucket"},
+		{"provider falls back to issue provider", ScoringRequest{Issue: ArtifactDraft{Provider: "svn", Title: "t"}}, "unsupported", "svn"},
+		{"threshold above one", ScoringRequest{Threshold: 1.01, Issue: ArtifactDraft{Title: "t"}}, "threshold", "github"},
+		{"blank issue", ScoringRequest{Issue: ArtifactDraft{Title: " ", Body: "\n"}}, "issue.title or issue.body", "github"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := ScoreIssueOpsRemoteCandidates(tc.req)
@@ -494,13 +494,13 @@ func TestScoreIssueOpsRemoteCandidatesRejectsInvalidRequests(t *testing.T) {
 }
 
 func TestScoreIssueOpsRemoteCandidatesHeuristicScoringWithDefaultThreshold(t *testing.T) {
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
-		Issue: IssueOpsRemoteArtifact{Title: "login bug failure", Body: "login page shows bug failure after sign in"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
+		Issue: ArtifactDraft{Title: "login bug failure", Body: "login page shows bug failure after sign in"},
+		IssueCandidates: []IssueCandidate{
 			{ID: "#1", Title: "login bug failure", Body: "login page shows bug failure after sign in", Labels: []string{"bug"}},
 			{ID: "#2", Title: "unrelated billing export", Body: "csv invoices"},
 		},
-		LabelCandidates: []IssueOpsRemoteLabelCandidate{
+		LabelCandidates: []LabelCandidate{
 			{Name: "bug", Description: "bug failure defect"},
 			{Name: "documentation", Description: "docs"},
 		},

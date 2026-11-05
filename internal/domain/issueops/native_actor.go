@@ -9,19 +9,23 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-// ActorReceiptRemedy names what a caller missing the session receipt passes:
+// actorReceiptRemedy names what a caller missing the session receipt passes:
 // agents copying the shorter record flags into execution commands hit this.
-const ActorReceiptRemedy = "pass every ACTOR_FLAG, including --session-pid, --session-started-at, and --session-executable (issueops execution whoami --json prints them as claim_actor_flags)"
+const actorReceiptRemedy = "pass every ACTOR_FLAG, including --session-pid, --session-started-at, and --session-executable (issueops execution whoami --json prints them as claim_actor_flags)"
 
-// EmptyActorHostMessage answers an empty --host: in QA it came from an unset
+// emptyActorHostMessage answers an empty --host: in QA it came from an unset
 // shell variable, which "must be codex, claude, ..." did not point at.
-const EmptyActorHostMessage = "native actor host is empty: pass --host codex|claude|omo|omp|opencode; issueops execution whoami --json prints the whole flag set"
+const emptyActorHostMessage = "native actor host is empty: pass --host codex|claude|omo|omp|opencode; issueops execution whoami --json prints the whole flag set"
 
+// ValidateNativeActor checks that actor names a supported host (codex,
+// claude, omo, omp, or opencode), has a session ID, and carries a
+// PID-reuse-safe session process receipt. The errors name the flags the
+// caller must pass.
 func ValidateNativeActor(actor model.NativeActor) error {
 	switch actor.Host {
 	case "codex", "claude", "omo", "omp", "opencode":
 	case "":
-		return fmt.Errorf("%s", EmptyActorHostMessage)
+		return fmt.Errorf("%s", emptyActorHostMessage)
 	default:
 		return fmt.Errorf("native actor host must be codex, claude, omo, omp, or opencode")
 	}
@@ -29,11 +33,15 @@ func ValidateNativeActor(actor model.NativeActor) error {
 		return fmt.Errorf("native actor session_id is required")
 	}
 	if actor.SessionProcess == nil || actor.SessionProcess.PID <= 0 || actor.SessionProcess.StartedAt == "" || actor.SessionProcess.Executable == "" {
-		return fmt.Errorf("native actor requires a PID reuse-safe session_process receipt: %s", ActorReceiptRemedy)
+		return fmt.Errorf("native actor requires a PID reuse-safe session_process receipt: %s", actorReceiptRemedy)
 	}
 	return nil
 }
 
+// NormalizeNativeActor trims and lower-cases the actor fields, copies the
+// process ancestry, and validates the result. An opencode session must be
+// proven by the standalone opencode server process, and the session process
+// receipt must appear in the local process ancestry.
 func NormalizeNativeActor(actor model.NativeActor) (model.NativeActor, error) {
 	actor.Host = strings.ToLower(strings.TrimSpace(actor.Host))
 	actor.SessionID = strings.TrimSpace(actor.SessionID)
@@ -59,6 +67,10 @@ func NormalizeNativeActor(actor model.NativeActor) (model.NativeActor, error) {
 	return actor, fmt.Errorf("native session process receipt is not in the local process ancestry: pass the claim_actor_flags that `issueops execution whoami --json` prints in this session; if this session was resumed after the process that took the lease exited, `issueops next --id <ID> --json` routes it to the takeover chain")
 }
 
+// ValidateObservedNativeProcess checks a process observation against the
+// receipt it should match: the observed status must be live and the start
+// time and executable must equal those of the receipt, so a reused PID is
+// rejected.
 func ValidateObservedNativeProcess(receipt model.NativeProcessReceipt, status string, observed model.NativeProcessReceipt) error {
 	if status != "live" {
 		return fmt.Errorf("native process identity is not live: pid=%d status=%s", receipt.PID, status)

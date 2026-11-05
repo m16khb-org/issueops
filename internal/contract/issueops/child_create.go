@@ -8,7 +8,7 @@ import (
 
 // ChildCreateOperation seals one remote create without retaining the body.
 type ChildCreateOperation struct {
-	IssueOpsIssueCreateIntent
+	IssueCreateIntent
 	Origin        string       `json:"origin"`
 	RequestSHA256 string       `json:"request_sha256"`
 	ParentURL     string       `json:"parent_url"`
@@ -17,10 +17,15 @@ type ChildCreateOperation struct {
 	CWD           string       `json:"cwd,omitempty"`
 }
 
+// ValidateChildCreateOperations checks every sealed child-create operation: the
+// embedded issue-create shape, marker and origin identity, request digest, the
+// canonical URL required once the create completed, and that a leased operation
+// carries its holder and CWD (an unleased one carries neither). It rejects a
+// duplicate operation ID and a duplicate implicit request digest.
 func ValidateChildCreateOperations(operations []ChildCreateOperation) error {
 	ids, implicit := map[string]bool{}, map[string]bool{}
 	for _, op := range operations {
-		shape := op.IssueOpsIssueCreateIntent
+		shape := op.IssueCreateIntent
 		shape.Marker = "<!-- issueops:issue-create:" + op.OperationID + " -->"
 		if err := ValidateIssueCreateIntent(shape); err != nil {
 			return err
@@ -46,7 +51,7 @@ func ValidateChildCreateOperations(operations []ChildCreateOperation) error {
 }
 
 func validateChildCreateIdentity(op ChildCreateOperation) error {
-	if op.Marker != "<!-- issueops:child-create:"+op.OperationID+" -->" || (op.Origin != "implicit" && op.Origin != "explicit") || strings.TrimSpace(op.ParentURL) == "" || len(op.ParentURL) > MaxIssueCreateURLBytes {
+	if op.Marker != "<!-- issueops:child-create:"+op.OperationID+" -->" || (op.Origin != "implicit" && op.Origin != "explicit") || strings.TrimSpace(op.ParentURL) == "" || len(op.ParentURL) > maxIssueCreateURLBytes {
 		return fmt.Errorf("invalid child create operation identity")
 	}
 	return nil
@@ -76,6 +81,9 @@ func validateChildCreateCanonicalAndAuthority(op ChildCreateOperation) error {
 	return nil
 }
 
+// ChildReconcileResult reports what reconciling a pending child create found:
+// how many remote candidates matched, whether the child would be (or was)
+// adopted, and the command that finishes recovery.
 type ChildReconcileResult struct {
 	OK                bool   `json:"ok"`
 	OperationID       string `json:"operation_id"`

@@ -9,10 +9,10 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-func planningRecorderForTest(actor *model.IssueOpsActor) app.PlanningRecorder {
-	return app.PlanningRecorder{ActiveChildren: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).ActiveIDs, Store: core.NewReviewMutationStore(actor), PlanReadiness: (cycleapp.Readiness{}).Plan, CompatibilityReadiness: (cycleapp.Readiness{Paths: core.ReadinessPathObservations()}).Compatibility, PhaseRank: domain.IssueOpsPhaseRank, PlanDigest: app.NewPlanDigestResolver(core.ReviewPlanSource{}).Digest, ArchitectureDocument: core.ReviewArchitectureSource{}.Document}
+func planningRecorderForTest(actor *model.Actor) app.PlanningRecorder {
+	return app.PlanningRecorder{ActiveChildren: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).ActiveIDs, Store: core.NewReviewMutationStore(actor), PlanReadiness: (cycleapp.Readiness{}).Plan, CompatibilityReadiness: (cycleapp.Readiness{Paths: core.ReadinessPathObservations()}).Compatibility, PhaseRank: domain.PhaseRank, PlanDigest: app.NewPlanDigestResolver(core.ReviewPlanSource{}).Digest, ArchitectureDocument: core.ReviewArchitectureSource{}.Document}
 }
 
-func recordDomainReviewForTest(root, id string, req model.IssueOpsDomainReviewRequest) (model.IssueOpsRecord, error) {
+func recordDomainReviewForTest(root, id string, req model.DomainReviewRequest) (model.Record, error) {
 	return app.RecordDomainReview(core.NewReviewMutationStore(nil), root, id, req)
 }

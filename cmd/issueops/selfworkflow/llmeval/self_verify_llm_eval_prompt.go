@@ -8,24 +8,27 @@ import (
 	judgement "issueops/internal/domain/judgement"
 )
 
-const SelfVerifyLLMEvalEvidenceBudgetBytes = 24 * 1024
+const selfVerifyLLMEvalEvidenceBudgetBytes = 24 * 1024
 
-type SelfVerifyLLMEvalInput struct {
-	OK                  bool                                 `json:"ok"`
-	LoopKind            string                               `json:"loop_kind"`
-	Iterations          int                                  `json:"iterations"`
-	TargetScore         float64                              `json:"target_score"`
-	TerminationEligible bool                                 `json:"termination_eligible"`
-	Summary             augmentcontract.SelfAugmentSummary   `json:"summary"`
-	LastRun             augmentcontract.SelfAugmentIteration `json:"last_run"`
+type selfVerifyLLMEvalInput struct {
+	OK                  bool                      `json:"ok"`
+	LoopKind            string                    `json:"loop_kind"`
+	Iterations          int                       `json:"iterations"`
+	TargetScore         float64                   `json:"target_score"`
+	TerminationEligible bool                      `json:"termination_eligible"`
+	Summary             augmentcontract.Summary   `json:"summary"`
+	LastRun             augmentcontract.Iteration `json:"last_run"`
 }
 
-func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (string, int, error) {
-	lastRun := augmentcontract.SelfAugmentIteration{}
+// BuildSelfVerifyLLMEvalPrompt serializes the self-verify result's last run and summary into a
+// JSON prompt packet. It returns the packet, its byte length, and any marshal error. Evidence is
+// tail-truncated so the whole packet stays within the evidence budget.
+func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.Result) (string, int, error) {
+	lastRun := augmentcontract.Iteration{}
 	if len(result.Runs) > 0 {
 		lastRun = result.Runs[len(result.Runs)-1]
 	}
-	evidence := SelfVerifyLLMEvalInput{
+	evidence := selfVerifyLLMEvalInput{
 		OK:                  result.OK,
 		LoopKind:            result.LoopKind,
 		Iterations:          result.Iterations,
@@ -38,7 +41,7 @@ func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (str
 	if err != nil {
 		return "", 0, err
 	}
-	allowedEvidenceBytes := SelfVerifyLLMEvalEvidenceBudgetBytes
+	allowedEvidenceBytes := selfVerifyLLMEvalEvidenceBudgetBytes
 	evidenceJSON, _, _ := selfverifydomain.TailWithBudget(string(evidenceBytes), allowedEvidenceBytes)
 	packet := struct {
 		Identity              string   `json:"identity"`
@@ -102,8 +105,8 @@ func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (str
 	if err != nil {
 		return "", 0, err
 	}
-	for len(b) > SelfVerifyLLMEvalEvidenceBudgetBytes && allowedEvidenceBytes > 0 {
-		overflow := len(b) - SelfVerifyLLMEvalEvidenceBudgetBytes
+	for len(b) > selfVerifyLLMEvalEvidenceBudgetBytes && allowedEvidenceBytes > 0 {
+		overflow := len(b) - selfVerifyLLMEvalEvidenceBudgetBytes
 		allowedEvidenceBytes -= overflow + 512
 		if allowedEvidenceBytes < 0 {
 			allowedEvidenceBytes = 0
@@ -118,6 +121,8 @@ func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (str
 	return string(b), len(b), nil
 }
 
+// SelfVerifyLLMResponseSchemaExample returns the example JSON object embedded in the prompt
+// as the response schema the evaluator must follow.
 func SelfVerifyLLMResponseSchemaExample() string {
 	return `{
   "ok": true,
@@ -129,6 +134,8 @@ func SelfVerifyLLMResponseSchemaExample() string {
 }`
 }
 
+// SelfVerifyLLMResponseFieldTypes returns one human-readable type/requirement line per
+// field of the evaluator's response object, for the prompt's schema section.
 func SelfVerifyLLMResponseFieldTypes() []string {
 	return []string{
 		"ok: boolean, required.",

@@ -17,7 +17,7 @@ func TestRenderProjectDocCatalogOmissions(t *testing.T) {
 }
 
 func TestRenderProjectDocCatalogUserViewIsOneLineNamingTheRepository(t *testing.T) {
-	docs := []projectdoc.ProjectDocCatalogEntry{
+	docs := []projectdoc.CatalogEntry{
 		{RelPath: ".issueops/ADR.md", Title: "Decisions", Description: "Structural decisions."},
 		{RelPath: ".issueops/NOTES.md", Title: "Notes only"},
 	}

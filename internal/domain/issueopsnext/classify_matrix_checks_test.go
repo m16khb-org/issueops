@@ -378,7 +378,7 @@ func (k *matrixChecker) checkForwardedWarnings(c *matrixCase, has func(string) b
 		}
 	}
 	for _, op := range in.Record.ChildCreateOperations {
-		if intentIsUnsettled(&op.IssueOpsIssueCreateIntent) && !has("reconcile-child --id "+matrixID+" --operation-id "+op.OperationID) {
+		if intentIsUnsettled(&op.IssueCreateIntent) && !has("reconcile-child --id "+matrixID+" --operation-id "+op.OperationID) {
 			k.violations.add("an unsettled child create always warns", k.m, c, op.OperationID)
 		}
 	}

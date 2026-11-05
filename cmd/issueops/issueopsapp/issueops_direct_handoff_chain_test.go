@@ -27,12 +27,12 @@ func TestDirectHandoffChainThroughProductionCommands(t *testing.T) {
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(preflight.GitOut(repo, "rev-parse", "HEAD"))
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "410-direct-handoff-chain"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: repo, Branch: "410-direct-handoff-chain"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/410"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
@@ -85,7 +85,7 @@ func TestDirectHandoffChainThroughProductionCommands(t *testing.T) {
 	observation := manualHerdrHandoffObservation(record.ID, 1, "chain", at)
 	process := *actor.SessionProcess
 	observation.Target.Process = &process
-	observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
+	observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.HandoffDeliveryEvidenceLauncherReceipt)
 	if _, err := newHandoffDeliveryService(stateRoot).ObserveManual(observation); err != nil {
 		t.Fatalf("manual handoff observation on the released generation: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestDirectHandoffChainThroughProductionCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := folded[observation.LifecycleID+"\x00"+observation.LineageID]
-	if got.SourceGeneration != 1 || got.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved ||
+	if got.SourceGeneration != 1 || got.OwnerClaimed.Status != issueopscontract.HandoffDeliveryStateObserved ||
 		!got.OwnerClaim.Claimed || got.OwnerClaim.Generation != 2 || got.OwnerActor == nil || got.OwnerActor.SessionID != actor.SessionID {
 		t.Fatalf("handoff observation after the chain=%+v", got)
 	}

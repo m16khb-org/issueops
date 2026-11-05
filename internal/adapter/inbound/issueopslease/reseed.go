@@ -10,20 +10,23 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-type ReseedHandler struct {
+type reseedHandler struct {
 	service     *leaseapp.ReseedService
-	nextCommand ClaimCommand
+	nextCommand claimCommand
 }
 
-// ClaimCommand renders the claim the reseeding actor runs next from the
+// claimCommand renders the claim the reseeding actor runs next from the
 // canonical worktree root.
-type ClaimCommand func(id string, generation uint64, actor issueopscontract.NativeActor, root string) string
+type claimCommand func(id string, generation uint64, actor issueopscontract.NativeActor, root string) string
 
-func NewReseedHandler(service *leaseapp.ReseedService, nextCommand ClaimCommand) issueopscontract.ExecutionReseedHandler {
-	return ReseedHandler{service: service, nextCommand: nextCommand}.Handle
+// NewReseedHandler adapts service to an execution reseed handler. nextCommand
+// renders the claim command returned to the reseeding actor; the handler fails
+// with ErrReseedHandlerUnavailable when either argument is nil.
+func NewReseedHandler(service *leaseapp.ReseedService, nextCommand claimCommand) issueopscontract.ExecutionReseedHandler {
+	return reseedHandler{service: service, nextCommand: nextCommand}.Handle
 }
 
-func (h ReseedHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionReseedRequest) (issueopscontract.ExecutionReplaceResult, error) {
+func (h reseedHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionReseedRequest) (issueopscontract.ExecutionReplaceResult, error) {
 	if h.service == nil || h.nextCommand == nil {
 		return issueopscontract.ExecutionReplaceResult{ID: request.ID, Action: issueopscontract.ExecutionReplaceReseed}, issueopscontract.ErrReseedHandlerUnavailable
 	}

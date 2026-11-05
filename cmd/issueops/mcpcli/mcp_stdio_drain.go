@@ -3,6 +3,7 @@ package mcpcli
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -73,7 +74,8 @@ func (inflight *inflightRequests) forget(key string) {
 	inflight.changed = make(chan struct{})
 }
 
-func (inflight *inflightRequests) waitIdle(limit time.Duration) {
+// waitIdle returns when no request is pending, after limit, or when ctx ends.
+func (inflight *inflightRequests) waitIdle(ctx context.Context, limit time.Duration) {
 	deadline := time.NewTimer(limit)
 	defer deadline.Stop()
 	for {
@@ -87,6 +89,8 @@ func (inflight *inflightRequests) waitIdle(limit time.Duration) {
 		select {
 		case <-changed:
 		case <-deadline.C:
+			return
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -144,6 +148,7 @@ func jsonRPCIDKey(raw json.RawMessage) string {
 // drainingReader는 한 줄씩 읽어 요청을 기록하고, 입력 EOF는 기록한 요청이 모두
 // 응답된 뒤에 돌려준다.
 type drainingReader struct {
+	ctx      context.Context
 	source   *bufio.Reader
 	closer   io.Closer
 	buffered []byte
@@ -155,7 +160,7 @@ func (reader *drainingReader) Read(p []byte) (int, error) {
 		line, err := reader.source.ReadBytes('\n')
 		if len(line) == 0 {
 			if errors.Is(err, io.EOF) {
-				reader.inflight.waitIdle(mcpInputEOFDrainLimit)
+				reader.inflight.waitIdle(reader.ctx, mcpInputEOFDrainLimit)
 			}
 			return 0, err
 		}

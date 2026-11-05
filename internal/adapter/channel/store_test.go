@@ -15,7 +15,7 @@ import (
 )
 
 func storeForTest() Store {
-	return Store{Root: filepath.Join(statestore.StateDir(), "channel"), Clock: time.Now, Sleep: func(ctx context.Context, d time.Duration) error { time.Sleep(d); return ctx.Err() }, WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
+	return Store{Root: filepath.Join(statestore.Dir(), "channel"), Clock: time.Now, Sleep: func(ctx context.Context, d time.Duration) error { time.Sleep(d); return ctx.Err() }, WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
 }
 
 func TestSendRecvRoundTripAcrossChannelIsolation(t *testing.T) {

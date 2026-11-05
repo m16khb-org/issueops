@@ -16,10 +16,10 @@ import (
 func awaitFixture(t *testing.T, linkVerified bool) string {
 	t.Helper()
 	root := t.TempDir()
-	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: 1, ID: "io-await1", Repo: t.TempDir(), Phase: issueopscontract.IssueOpsPhaseImplement,
+	record := issueopscontract.Record{
+		OK: true, SchemaVersion: 1, ID: "io-await1", Repo: t.TempDir(), Phase: issueopscontract.PhaseImplement,
 		IssueURL: lbIssueURL, CreatedAt: "2026-08-09T00:00:00Z", UpdatedAt: "2026-08-09T00:00:00Z",
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
+		BranchPrepare: &issueopscontract.BranchPrepare{
 			Provider: "github", IssueURL: lbIssueURL, Branch: lbBranch,
 			BaseBranch: "main", BaseSHA: lbSealedBase, LinkVerified: linkVerified,
 			CreatedAt: "2026-08-09T00:00:00Z",

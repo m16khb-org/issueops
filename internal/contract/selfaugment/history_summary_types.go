@@ -5,7 +5,9 @@ import (
 	selfverifycontract "issueops/internal/contract/selfverify"
 )
 
-type SelfAugmentSummary struct {
+// Summary 타입은 자기 검증 루프 실행 결과의 집계 요약이다.
+// 단계 통과/실패 수, 목표별 점수, 실패 원인 분류, 느린 단계 통계를 담고 종료 가능 여부 판단의 근거가 된다.
+type Summary struct {
 	TotalRuns            int                                                 `json:"total_runs"`
 	TotalSteps           int                                                 `json:"total_steps"`
 	PassedSteps          int                                                 `json:"passed_steps"`
@@ -30,18 +32,21 @@ type SelfAugmentSummary struct {
 	StepLabels           []string                                            `json:"step_labels"`
 	PlannedSteps         int                                                 `json:"planned_steps"`
 	NotRunSteps          []string                                            `json:"not_run_steps"`
-	SlowestSteps         []SelfAugmentSlowStep                               `json:"slowest_steps"`
-	StepDurationStats    []SelfAugmentStepDurationStat                       `json:"step_duration_stats"`
+	SlowestSteps         []SlowStep                                          `json:"slowest_steps"`
+	StepDurationStats    []StepDurationStat                                  `json:"step_duration_stats"`
 }
 
-type SelfAugmentSlowStep struct {
+// SlowStep 타입은 한 반복에서 측정된 단계 하나의 소요 시간(밀리초)을 기록한다.
+type SlowStep struct {
 	Iteration  int    `json:"iteration"`
 	Seed       int64  `json:"seed"`
 	Label      string `json:"label"`
 	DurationMS int64  `json:"duration_ms"`
 }
 
-type SelfAugmentStepDurationStat struct {
+// StepDurationStat 타입은 단계 레이블별 소요 시간(밀리초) 통계이다.
+// 실행 횟수, 재사용된 횟수, 최소/최대/평균/p95 값을 담는다.
+type StepDurationStat struct {
 	Label             string  `json:"label"`
 	Count             int     `json:"count"`
 	ReusedCount       int     `json:"reused_count"`

@@ -8,7 +8,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-var testIssueOpsRuntime IssueOpsCLIDeps
+var testIssueOpsRuntime Deps
 
 func testIssueOpsCommand() command {
 	return command{Runtime: testIssueOpsRuntime, Gates: testIssueOpsGates, VerifyChild: testRemoteVerifier().Child}

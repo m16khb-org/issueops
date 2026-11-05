@@ -1,5 +1,6 @@
 package mcp
 
+// CommandPolicyInputSchema returns the shared input schema of the command policy tools: workspace root, cwd, argv, timeout and the network/write/shell permissions.
 func CommandPolicyInputSchema() map[string]any {
 	return map[string]any{
 		"type":     "object",
@@ -19,6 +20,7 @@ func CommandPolicyInputSchema() map[string]any {
 	}
 }
 
+// CommandPolicyTools returns the command_policy_check and command_fake_run tools; both evaluate policy without executing the command.
 func CommandPolicyTools() []Tool {
 	return []Tool{
 		{
@@ -36,6 +38,7 @@ func CommandPolicyTools() []Tool {
 	}
 }
 
+// CommandPolicyAuditTools returns the command_policy_audit tool, which evaluates policy and appends a redacted audit record without executing the command.
 func CommandPolicyAuditTools() []Tool {
 	return []Tool{
 		{

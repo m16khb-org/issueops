@@ -9,7 +9,7 @@ import (
 
 func TestFailedRiskRaceCannotReplaceFullSuite(t *testing.T) {
 	var fullSuiteCalls int
-	deps := SelfVerifyStepDeps{
+	deps := StepDeps{
 		IssueOpsRoot: func() string { return "/repo" },
 		ValidateRiskQATier: func(string) RiskQAEvidence {
 			return RiskQAEvidence{Step: contract.StepResult{Label: "risk QA tier", OK: false}, CoversFullGoTest: true}
@@ -36,7 +36,7 @@ func TestFailedGoldenCommandKeepsMeasuredEvidence(t *testing.T) {
 	// Given
 	want := contract.StepResult{Label: "contract golden tests", Command: "go test", DurationMS: 149, Error: "fixture failure", Stderr: "failed"}
 	calls := 0
-	deps := SelfVerifyStepDeps{
+	deps := StepDeps{
 		IssueOpsRoot: func() string { return "/repo" },
 		RunCommandStep: func(_ string, _ string, _ time.Duration, _ string, _ string, _ ...string) contract.StepResult {
 			calls++
@@ -55,7 +55,7 @@ func TestFailedGoldenCommandKeepsMeasuredEvidence(t *testing.T) {
 
 func TestRiskEvidenceIsLocalToEachPlannedRun(t *testing.T) {
 	fullCalls := 0
-	deps := SelfVerifyStepDeps{
+	deps := StepDeps{
 		IssueOpsRoot: func() string { return "/repo" },
 		ValidateRiskQATier: func(string) RiskQAEvidence {
 			return RiskQAEvidence{Step: contract.StepResult{OK: true, Command: "go test -race ./... -count=1"}, CoversFullGoTest: true}
@@ -85,7 +85,7 @@ func TestRiskEvidenceIsLocalToEachPlannedRun(t *testing.T) {
 func TestPlannedGoBuildStepHasTwoMinuteTimeout(t *testing.T) {
 	var gotLabel string
 	var gotTimeout time.Duration
-	deps := SelfVerifyStepDeps{RunCommandStep: func(_ string, label string, timeout time.Duration, _ string, _ string, _ ...string) contract.StepResult {
+	deps := StepDeps{RunCommandStep: func(_ string, label string, timeout time.Duration, _ string, _ string, _ ...string) contract.StepResult {
 		gotLabel, gotTimeout = label, timeout
 		return contract.StepResult{OK: true}
 	}}

@@ -260,7 +260,7 @@ type fixedClock struct{ at time.Time }
 
 func (c fixedClock) Now() time.Time { return c.at }
 
-func tracedLiveInspector(trace *[]string) ActorVerifier {
+func tracedLiveInspector(trace *[]string) actorVerifier {
 	return func(_ context.Context, actor completioncontract.Actor, _ []completioncontract.ProcessReceipt) (completioncontract.Actor, error) {
 		*trace = append(*trace, "process")
 		return actor, nil

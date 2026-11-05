@@ -1,6 +1,10 @@
+// Package doctor implements the harness doctor use case: it gathers
+// observations through injected effects, evaluates them with the doctor domain
+// rules, and returns one sorted health report. It sits in the application layer.
 package doctor
 
 import (
+	"context"
 	"fmt"
 	doctorcontract "issueops/internal/contract/doctor"
 	operationalhealthcontract "issueops/internal/contract/operationalhealth"
@@ -13,7 +17,11 @@ import (
 	"issueops/internal/domain/operationalhealth"
 )
 
-func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
+// Run produces the harness doctor report for req.RepoRoot. It returns an
+// unhealthy result with the error when the root cannot be normalized; otherwise
+// the error is nil and findings are carried by Checks and Issues, sorted by
+// severity, code, and path.
+func (service Service) Run(ctx context.Context, req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 	root, err := service.Effects.NormalizeRoot(req.RepoRoot)
 	if err != nil {
 		return doctorcontract.HarnessDoctorResult{OK: false, Kind: "harness_doctor", StateDir: service.Effects.StateDir()}, err
@@ -30,7 +38,7 @@ func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontr
 		Issues:       []doctorcontract.HarnessDoctorIssue{},
 		GeneratedAt:  service.Effects.Now().UTC().Format(time.RFC3339Nano),
 	}
-	AddCheck(&result, "binary", true, "issueops command is running")
+	addCheck(&result, "binary", true, "issueops command is running")
 
 	stateDoctor, stateDoctorErr := service.Effects.StateDoctor()
 	service.addStateStoreFindings(&result, req, stateDoctor, stateDoctorErr)
@@ -45,7 +53,7 @@ func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontr
 	lifecycleFindings := doctordomain.EvaluateLifecycle(root, lifecycle, err != nil)
 	result.Checks = append(result.Checks, lifecycleFindings.Checks...)
 	result.Issues = append(result.Issues, lifecycleFindings.Issues...)
-	findings := doctordomain.Evaluate(service.observe(req, root))
+	findings := doctordomain.Evaluate(service.observe(ctx, req, root))
 	result.Checks = append(result.Checks, findings.Checks...)
 	result.Issues = append(result.Issues, findings.Issues...)
 	result.PipeCapacityBytes = findings.PipeCapacityBytes
@@ -55,7 +63,7 @@ func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontr
 	return result, nil
 }
 
-func (service Service) observe(req doctorcontract.HarnessDoctorRequest, root string) doctordomain.Observations {
+func (service Service) observe(ctx context.Context, req doctorcontract.HarnessDoctorRequest, root string) doctordomain.Observations {
 	observations := doctordomain.Observations{Root: root}
 	observations.ProjectDocs = service.Effects.ProjectDocs(root)
 	observations.RuntimeState = service.Effects.RuntimeState(root)
@@ -63,7 +71,7 @@ func (service Service) observe(req doctorcontract.HarnessDoctorRequest, root str
 	if !req.StaticOnly {
 		capacity, err := service.Effects.PipeCapacity()
 		observations.Pipe = &doctordomain.PipeObservation{Capacity: capacity, Error: err}
-		gateways := service.Effects.MCPGateways(req.Home)
+		gateways := service.Effects.MCPGateways(ctx, req.Home)
 		observations.Gateways = &gateways
 	}
 	observations.Native = service.Effects.NativeIntegrations(req.Home)
@@ -83,21 +91,21 @@ func sortIssues(issues []doctorcontract.HarnessDoctorIssue) {
 	})
 }
 
-func (service Service) addStateStoreFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.StateDoctorResult, stateDoctorErr error) {
+func (service Service) addStateStoreFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.DoctorResult, stateDoctorErr error) {
 	if stateDoctorErr != nil {
-		AddIssue(result, "state_doctor_error", "error", "state doctor could not inspect the user-state store", service.Effects.StateDir(), &doctorcontract.HarnessDoctorFix{Description: "Check user-state directory permissions or set ISSUEOPS_STATE_DIR to a writable location."})
+		addIssue(result, "state_doctor_error", "error", "state doctor could not inspect the user-state store", service.Effects.StateDir(), &doctorcontract.HarnessDoctorFix{Description: "Check user-state directory permissions or set ISSUEOPS_STATE_DIR to a writable location."})
 		return
 	}
-	AddCheck(result, "state_store", stateDoctor.Healthy, stateDoctor.StateDir)
+	addCheck(result, "state_store", stateDoctor.Healthy, stateDoctor.StateDir)
 	for _, issue := range stateDoctor.Issues {
 		if req.OperationalSnapshot != nil && doctordomain.IsUnexpectedStateArtifact(issue.Code) {
 			continue
 		}
-		AddIssue(result, "state_"+issue.Code, issue.Severity, issue.Message, issue.Path, &doctorcontract.HarnessDoctorFix{Command: "issueops state doctor --json", Description: "Inspect state-store integrity details with the narrow state doctor."})
+		addIssue(result, "state_"+issue.Code, issue.Severity, issue.Message, issue.Path, &doctorcontract.HarnessDoctorFix{Command: "issueops state doctor --json", Description: "Inspect state-store integrity details with the narrow state doctor."})
 	}
 }
 
-func addOperationalFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.StateDoctorResult, stateDoctorErr error) {
+func addOperationalFindings(result *doctorcontract.HarnessDoctorResult, req doctorcontract.HarnessDoctorRequest, stateDoctor statecontract.DoctorResult, stateDoctorErr error) {
 	snapshot := cloneOperationalSnapshot(*req.OperationalSnapshot)
 	if stateDoctorErr == nil {
 		for _, issue := range stateDoctor.Issues {
@@ -107,10 +115,10 @@ func addOperationalFindings(result *doctorcontract.HarnessDoctorResult, req doct
 		}
 	}
 	op := operationalhealth.Classify(snapshot, req.OperationalOptions)
-	AddCheck(result, "operational_state", op.Healthy, fmt.Sprintf("findings=%d", len(op.Findings)))
+	addCheck(result, "operational_state", op.Healthy, fmt.Sprintf("findings=%d", len(op.Findings)))
 	for _, finding := range op.Findings {
 		severity := operationalhealth.SeverityForFinding(finding.Code)
-		AddIssue(result, finding.Code, severity, operationalFindingSummary(finding), finding.Path, &doctorcontract.HarnessDoctorFix{Description: "Inspect exact operational identities and reconcile this finding before continuing."})
+		addIssue(result, finding.Code, severity, operationalFindingSummary(finding), finding.Path, &doctorcontract.HarnessDoctorFix{Description: "Inspect exact operational identities and reconcile this finding before continuing."})
 	}
 }
 
@@ -126,11 +134,11 @@ func operationalFindingSummary(finding operationalhealthcontract.Finding) string
 	return fmt.Sprintf("%s %s: %s", resourceKind, resourceID, finding.Summary)
 }
 
-func AddCheck(r *doctorcontract.HarnessDoctorResult, name string, healthy bool, summary string) {
+func addCheck(r *doctorcontract.HarnessDoctorResult, name string, healthy bool, summary string) {
 	r.Checks = append(r.Checks, doctorcontract.HarnessDoctorCheck{Name: name, Healthy: healthy, Summary: summary})
 }
 
-func AddIssue(r *doctorcontract.HarnessDoctorResult, code, severity, summary, path string, fix *doctorcontract.HarnessDoctorFix) {
+func addIssue(r *doctorcontract.HarnessDoctorResult, code, severity, summary, path string, fix *doctorcontract.HarnessDoctorFix) {
 	r.Issues = append(r.Issues, doctorcontract.HarnessDoctorIssue{Code: code, Severity: severity, Summary: summary, Path: path, Fix: fix})
 }
 

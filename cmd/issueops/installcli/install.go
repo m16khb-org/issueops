@@ -17,7 +17,12 @@ import (
 	"issueops/internal/port"
 )
 
-func (c Command) runInstall(args []string) error {
+// RunInstall parses args as the install flags and installs issueops for the
+// user (and the project with --project-local). It resolves the MCP transport,
+// path mode and optional command-file adoption, prepares the native install
+// request and activation step, then plans and applies the changes; --dry-run
+// only reports the plan and --json prints the result as JSON.
+func (c Command) RunInstall(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	projectLocal := fs.Bool("project-local", false, "also write project-local .mcp.json/.claude settings and project skill links; default is user/global only")
 	dryRun := fs.Bool("dry-run", false, "plan files and links without writing them")

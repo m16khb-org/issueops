@@ -21,6 +21,9 @@ var (
 	_ authorityport.RecordReader = Repository{}
 )
 
+// Within reads the grant record stored under key and passes it to fn (nil when
+// absent). When fn returns a new record it is written in the same span; a nil
+// record from fn writes nothing. Errors from fn are returned unchanged.
 func (r Repository) Within(ctx context.Context, key string, fn func(*contract.Record) (*contract.Record, error)) error {
 	if err := ctx.Err(); err != nil {
 		return err

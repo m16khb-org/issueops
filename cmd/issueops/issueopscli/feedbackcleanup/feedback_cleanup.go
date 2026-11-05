@@ -17,21 +17,24 @@ import (
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
 
+// Deps 타입은 feedback·cleanup 명령의 출력, 플래그 해석, 원격 검증, provider 조회,
+// 고아 정리 훅을 주입한다. 일부 필드는 테스트가 운영 기본값을 약화하지 않고 관측하려고
+// 둔다.
 type Deps struct {
 	ParseFlags   func(fs *flag.FlagSet, args []string) (bool, error)
-	PrintResult  func(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error
+	PrintResult  func(record issueopscontract.Record, jsonOut bool, err error) error
 	PrintJSON    func(value any) error
 	PrintError   func(err error) error
-	VerifyMerged func(issueopscontract.IssueOpsRemoteArtifactVerification) error
+	VerifyMerged func(issueopscontract.RemoteArtifactVerification) error
 	// ObserveArtifactMerged는 cleanup abandon 전용이다. VerifyMerged는 조회
 	// 실패와 미병합을 모두 error로 뭉개는데, 미병합을 요구하는 게이트는 둘을
 	// 구분해야 한다. 관측에 성공한 경우에만 (merged, nil)이 오고, 조회가
 	// 실패하면 error가 오며 그때 병합 여부는 미상이다. nil이면 abandon의
 	// artifact 게이트는 통과가 아니라 거부다(#342, fail-closed).
-	ObserveArtifactMerged func(issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error)
+	ObserveArtifactMerged func(issueopscontract.RemoteArtifactVerification) (bool, error)
 	// VerifyMergedHead는 cleanup remote-branch 전용이다. 게이트 ⑧·⑨·⑩이
 	// 같은 readback을 공유해야 하므로 머지 여부와 head ref 정체를 함께 받는다.
-	VerifyMergedHead func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error)
+	VerifyMergedHead func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error)
 	Provider         func(provider string) (port.IssueProvider, error)
 	// CleanupFinishGit and InspectCleanupProcesses expose the finish oracle's
 	// read-only local observers to status tests without weakening production
@@ -43,6 +46,9 @@ type Deps struct {
 	Provenance              provenanceport.Observer
 }
 
+// RunFeedback 메서드는 issueops feedback의 add와 mark-issue-updated 하위 명령을
+// 실행한다. 인자가 없거나 도움말이면 사용법을 출력하고, 알 수 없는 하위 명령이면
+// 오류를 돌려준다.
 func (command Command) RunFeedback(args []string, deps Deps) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops feedback add --id ID --source TEXT --body TEXT --host HOST --session-id SESSION --cwd PATH [--agent-id ID] [--classification TEXT] [--json]\n       issueops feedback mark-issue-updated --id ID --host HOST --session-id SESSION --cwd PATH [--agent-id ID] [--json]")
@@ -77,11 +83,14 @@ func (command Command) RunFeedback(args []string, deps Deps) error {
 	}
 }
 
-func (command Command) localActor(actor actorflags.Flags) issueopscontract.IssueOpsActor {
+func (command Command) localActor(actor actorflags.Flags) issueopscontract.Actor {
 	ancestry, _ := command.Operations.ObserveNativeProcessAncestry(os.Getpid())
 	return actor.ActorWithAncestry(ancestry)
 }
 
+// RunCleanup 메서드는 issueops cleanup의 하위 명령(status, remote-branch,
+// linked-branch, finish, abandon, close-children, orphan)을 해당 실행기로
+// 보낸다. 인자가 없거나 도움말이면 사용법을 출력한다.
 func (command Command) RunCleanup(args []string, deps Deps) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops cleanup status --id ID [--merged] [--json]\n       issueops cleanup close-children --id ID --merged [--confirm] [--json]\n       issueops cleanup orphan --id ID --repo ROOT --worktree PATH --branch NAME --provider github|gitlab --kind pr|mr --artifact-url URL [--apply --confirm --fingerprint SHA256] [--json]\n       issueops cleanup remote-branch --id ID (--preview | --apply --confirm --fingerprint SHA256) [--superseded-by URL] [--json]\n       issueops cleanup linked-branch --id ID (--preview | --apply --confirm --fingerprint SHA256) [--json]\n       issueops cleanup finish --id ID [--provider github|gitlab] (--preview | --apply --confirm --fingerprint SHA256) [--superseded-by URL] [--keep-remote-branch] [--json]\n       issueops cleanup abandon --id ID --reason TEXT (--preview | --apply --confirm --fingerprint SHA256) [--json]")
@@ -156,7 +165,7 @@ func (command Command) runCleanupCloseChildren(args []string, deps Deps) error {
 	if help, err := deps.ParseFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := command.Operations.CloseIssueOpsChildren(command.Operations.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCloseChildrenRequest{
+	result, err := command.Operations.CloseIssueOpsChildren(command.Operations.IssueOpsStateRoot(), *id, issueopscontract.CloseChildrenRequest{
 		MergeEvidenceRequested: *merged,
 		Confirm:                *confirm,
 	}, deps)
@@ -201,7 +210,7 @@ func runOrphanCleanup(args []string, deps Deps) error {
 		RepoRoot:     *repo,
 		WorktreePath: *worktree,
 		Branch:       *branch,
-		Artifact: issueopscontract.IssueOpsRemoteArtifactVerification{
+		Artifact: issueopscontract.RemoteArtifactVerification{
 			Provider: *provider,
 			Kind:     *kind,
 			URL:      *artifactURL,

@@ -8,8 +8,8 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 )
 
-func publicationIntentSnapshot(intent contract.Intent) (issueops.IssueOpsRecord, contract.IntentPayload, error) {
-	var record issueops.IssueOpsRecord
+func publicationIntentSnapshot(intent contract.Intent) (issueops.Record, contract.IntentPayload, error) {
+	var record issueops.Record
 	if len(intent.Record.Raw) == 0 {
 		return record, contract.IntentPayload{}, fmt.Errorf("publication record raw bytes are required")
 	}
@@ -23,7 +23,7 @@ func publicationIntentSnapshot(intent contract.Intent) (issueops.IssueOpsRecord,
 	if err := json.Unmarshal(intent.Raw, &payload); err != nil {
 		return record, payload, fmt.Errorf("decode remote publication intent: %w", err)
 	}
-	if payload.SchemaVersion != issueops.IssueOpsSchemaVersion || payload.OperationID == "" || payload.OperationID != intent.OperationID || payload.Generation == 0 {
+	if payload.SchemaVersion != issueops.SchemaVersion || payload.OperationID == "" || payload.OperationID != intent.OperationID || payload.Generation == 0 {
 		return record, payload, fmt.Errorf("remote publication intent state is invalid")
 	}
 	return record, payload, nil

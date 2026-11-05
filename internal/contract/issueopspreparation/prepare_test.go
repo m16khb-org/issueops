@@ -51,7 +51,7 @@ func TestPrepareContractClonesMutableAuthority(t *testing.T) {
 }
 
 func TestPreparationClonePreservesIndependentFinishAttempt(t *testing.T) {
-	original := Snapshot{Record: leasecontract.Record{CleanupAttempt: &model.IssueOpsCleanupAttempt{Operation: "finish", Token: "original", StartedAt: "2026-09-29T00:00:00Z"}}}
+	original := Snapshot{Record: leasecontract.Record{CleanupAttempt: &model.CleanupAttempt{Operation: "finish", Token: "original", StartedAt: "2026-09-29T00:00:00Z"}}}
 	cloned := original.Clone()
 	cloned.Record.CleanupAttempt.Token = "replacement"
 	cloned.Record.CleanupAttempt.StartedAt = "2026-09-29T01:00:00Z"

@@ -85,7 +85,7 @@ func TestDoctorInstancesKeepLifecycleLoopAndStateTogether(t *testing.T) {
 		go func(i int) {
 			defer group.Done()
 			for range 3 {
-				result, err := services[i].Run(doctorcontract.HarnessDoctorRequest{RepoRoot: ".", Home: home, IssueOpsRoot: harness, StaticOnly: true})
+				result, err := services[i].Run(t.Context(), doctorcontract.HarnessDoctorRequest{RepoRoot: ".", Home: home, IssueOpsRoot: harness, StaticOnly: true})
 				check(i, result, err)
 			}
 		}(i)

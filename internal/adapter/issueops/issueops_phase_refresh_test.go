@@ -28,7 +28,7 @@ func TestIssueOpsRefreshesAISlopCleanEvidenceFromFeedback(t *testing.T) {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
 
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestIssueOpsRefreshesAISlopCleanEvidenceFromFeedback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     record.IssueURL,
 		Branch:       branch,
@@ -60,22 +60,22 @@ func TestIssueOpsRefreshesAISlopCleanEvidenceFromFeedback(t *testing.T) {
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
 
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.PhaseAISlopClean), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseFeedback), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.PhaseFeedback), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
 	originalFingerprint := record.AISlopCleanFingerprint
 
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 2\n")
-	refreshed, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	refreshed, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.PhaseAISlopClean), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if refreshed.Phase != issueops.IssueOpsPhaseFeedback {
+	if refreshed.Phase != issueops.PhaseFeedback {
 		t.Fatalf("refresh should preserve feedback phase, got %+v", refreshed)
 	}
 	if refreshed.AISlopCleanFingerprint == "" || refreshed.AISlopCleanFingerprint == originalFingerprint {

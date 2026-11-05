@@ -1,10 +1,12 @@
+// Package qualitycatalog defines the catalog of quality improvement candidates
+// and applies plan status onto it. It is a pure domain package.
 package qualitycatalog
 
 import (
 	contract "issueops/internal/contract/qualitycatalog"
 )
 
-const CandidateStatusOpen = "open"
+const candidateStatusOpen = "open"
 
 var resolvedCandidateIDs = map[string]bool{
 	"worker-stuck-running-detection": true,
@@ -23,6 +25,9 @@ var resolvedCandidateIDs = map[string]bool{
 	"coverage-issueops-transport-boundaries": true,
 }
 
+// CandidateSpec is the static definition of one quality improvement candidate
+// before it is scored. Impact, Feasibility, Novelty, and Risk are 0-100 inputs
+// to the candidate score.
 type CandidateSpec struct {
 	ID               string
 	Title            string
@@ -38,6 +43,9 @@ type CandidateSpec struct {
 	Evidence         []string
 }
 
+// CandidateSpecs returns every candidate definition in the catalog, including
+// ones already resolved. Specs that do not set a VerificationKind default to
+// ToolSignalKind.
 func CandidateSpecs() []CandidateSpec {
 	specs := []CandidateSpec{
 		{
@@ -123,6 +131,8 @@ func CandidateSpecs() []CandidateSpec {
 	return specs
 }
 
+// Candidates returns the open candidates as scored contract values, skipping
+// resolved ones. Each candidate's Score is derived from its spec weights.
 func Candidates() []contract.Candidate {
 	specs := CandidateSpecs()
 	out := make([]contract.Candidate, 0, len(specs))
@@ -134,8 +144,8 @@ func Candidates() []contract.Candidate {
 			ID:          spec.ID,
 			Title:       spec.Title,
 			Category:    spec.Category,
-			Status:      CandidateStatusOpen,
-			Score:       Score(spec.Impact, spec.Feasibility, spec.Novelty, spec.Risk),
+			Status:      candidateStatusOpen,
+			Score:       score(spec.Impact, spec.Feasibility, spec.Novelty, spec.Risk),
 			Impact:      spec.Impact,
 			Feasibility: spec.Feasibility,
 			Risk:        spec.Risk,
@@ -146,7 +156,7 @@ func Candidates() []contract.Candidate {
 	return out
 }
 
-func Score(impact, feasibility, novelty, risk float64) float64 {
+func score(impact, feasibility, novelty, risk float64) float64 {
 	score := impact*0.38 + feasibility*0.30 + novelty*0.20 + (100-risk)*0.12
 	if score > 100 {
 		return 100

@@ -25,7 +25,7 @@ func testCleanupCommand() Command {
 			MaterialWarning: (materialapp.TrackedMaterials{Files: issueopscore.MaterialFiles{}}).Warning,
 			Records:         issueopscore.CleanupRecordStore{StateRoot: stateRoot}, Acquire: (issueopscore.CleanupLifetimeLock{StateRoot: stateRoot}).Acquire,
 			Observe: evidence.Observe,
-			Plan: func(ctx context.Context, record issueopscontract.IssueOpsRecord, request issueopscontract.CleanupFinishRequest) (issueopscontract.CleanupFinishInventory, issueopscontract.CleanupFinishResult) {
+			Plan: func(ctx context.Context, record issueopscontract.Record, request issueopscontract.CleanupFinishRequest) (issueopscontract.CleanupFinishInventory, issueopscontract.CleanupFinishResult) {
 				return (cleanupapp.FinishPreviewer{Environment: issueopscore.CleanupFinishEnvironment{RunGit: func(dir string, args ...string) (int, string) { return runtime.Git(ctx, dir, args...) }}, Workspace: runtime.Workspace}).Plan(ctx, record, request)
 			},
 			Fingerprint: issueopscore.CleanupFinishFingerprint, NewAttempt: issueopscore.NewCleanupAttempt,
@@ -56,7 +56,7 @@ func testCleanupCommand() Command {
 	}
 	return Command{Invoke: func(d Deps) cleanupapp.Invocation {
 		stateRoot := issueOpsStateRootForTest()
-		return cleanupapp.Invocation{Read: func(id string) (issueopscontract.IssueOpsRecord, error) {
+		return cleanupapp.Invocation{Read: func(id string) (issueopscontract.Record, error) {
 			return issueopscore.ReadIssueOps(stateRoot, id)
 		}, Provider: d.Provider, CurrentDirectory: os.Getwd, Provenance: d.Provenance, MergeVerificationAvailable: d.VerifyMergedHead != nil,
 			RunFinish: func(ctx context.Context, req issueopscontract.CleanupFinishRequest, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
@@ -70,7 +70,7 @@ func testCleanupCommand() Command {
 			},
 		}
 	}, Operations: CleanupDeps{
-		Status: func(ctx context.Context, root, id string, merged bool, d Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
+		Status: func(ctx context.Context, root, id string, merged bool, d Deps) (issueopscontract.CleanupStatus, error) {
 			service := cleanupapp.StatusService{
 				Records:    issueopscore.CycleRecordStore{StateRoot: root},
 				Structural: cleanupapp.StructuralStatus{Environment: issueopscore.CleanupStatusEnvironment{RunGit: preflightadapter.GitCmd, ReadGit: preflightadapter.GitOut}},
@@ -81,14 +81,14 @@ func testCleanupCommand() Command {
 			}
 			return service.Status(ctx, id, merged)
 		},
-		AddIssueOpsFeedbackWithActor: func(root, id, source, body, classification string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		AddIssueOpsFeedbackWithActor: func(root, id, source, body, classification string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.AddFeedback(issueopscore.NewReviewMutationStore(&actor), root, id, source, body, classification)
 		},
-		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, d Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+		CloseIssueOpsChildren: func(root, id string, req issueopscontract.CloseChildrenRequest, d Deps) (issueopscontract.CloseChildrenResult, error) {
 			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: d.Provider, VerifyMerged: d.VerifyMerged, Now: time.Now}).Close(context.Background(), id, req.MergeEvidenceRequested, req.Confirm)
 		},
 		IssueOpsStateRoot: issueOpsStateRootForTest,
-		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: func(root, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: func(root, id string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return reviewapp.MarkContractFeedbackIssueUpdated(issueopscore.NewReviewMutationStore(&actor), root, id)
 		},
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,

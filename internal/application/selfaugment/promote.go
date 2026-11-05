@@ -8,14 +8,19 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
+// PromoteDeps supplies the state directory and snapshot/state accessors
+// PromoteBaseline needs.
 type PromoteDeps struct {
 	StateDir      func() string
-	ReadSnapshot  func(string) (contract.SelfAugmentStateSnapshot, error)
-	WriteSnapshot func(string, string, contract.SelfAugmentStateSnapshot) error
-	ReadState     func(string) (state.StateResult, error)
+	ReadSnapshot  func(string) (contract.StateSnapshot, error)
+	WriteSnapshot func(string, string, contract.StateSnapshot) error
+	ReadState     func(string) (state.Result, error)
 }
 
-func PromoteBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool, deps PromoteDeps) (contract.SelfAugmentPromoteResult, error) {
+// PromoteBaseline copies the summary snapshot at fromKey to baselineKey. Without
+// confirm it only previews the promotion; with confirm it writes the baseline and
+// reports its path and size. A failed source is refused unless allowFailedSource is set.
+func PromoteBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool, deps PromoteDeps) (contract.PromoteResult, error) {
 	result, err := domain.PreparePromotion(fromKey, baselineKey, confirm, deps.StateDir())
 	if err != nil {
 		return result, err

@@ -11,32 +11,32 @@ import (
 func TestPhaseCompletionRoutesWithoutUnneededObservations(t *testing.T) {
 	calls := []string{}
 	observations := cycleport.PhaseCompletionReadiness{
-		Compatibility: func(model.IssueOpsRecord) model.IssueOpsReadiness {
+		Compatibility: func(model.Record) model.Readiness {
 			calls = append(calls, "compatibility")
-			return model.IssueOpsReadiness{Ready: true}
+			return model.Readiness{Ready: true}
 		},
-		AISlopClean: func(model.IssueOpsRecord) model.IssueOpsReadiness {
+		AISlopClean: func(model.Record) model.Readiness {
 			calls = append(calls, "clean")
-			return model.IssueOpsReadiness{Ready: true}
+			return model.Readiness{Ready: true}
 		},
-		PR: func(model.IssueOpsRecord) model.IssueOpsReadiness {
+		PR: func(model.Record) model.Readiness {
 			calls = append(calls, "pr")
-			return model.IssueOpsReadiness{Ready: true}
+			return model.Readiness{Ready: true}
 		},
-		RemoteArtifactMissing: func(model.IssueOpsRecord) []string {
+		RemoteArtifactMissing: func(model.Record) []string {
 			calls = append(calls, "remote")
 			return []string{"remote_artifact"}
 		},
 	}
-	record := model.IssueOpsRecord{}
-	if got := PhaseCompletion(record, model.IssueOpsPhaseProblem, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"intent_contract"}) || len(calls) != 0 {
+	record := model.Record{}
+	if got := phaseCompletion(record, model.PhaseProblem, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"intent_contract"}) || len(calls) != 0 {
 		t.Fatalf("problem completion=%+v calls=%v", got, calls)
 	}
-	if got := PhaseCompletion(record, model.IssueOpsPhasePlan, observations); !got.Ready || !reflect.DeepEqual(calls, []string{"compatibility"}) {
+	if got := phaseCompletion(record, model.PhasePlan, observations); !got.Ready || !reflect.DeepEqual(calls, []string{"compatibility"}) {
 		t.Fatalf("plan completion=%+v calls=%v", got, calls)
 	}
 	calls = nil
-	if got := PhaseCompletion(record, model.IssueOpsPhaseDone, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"prior_phase_pr", "remote_artifact"}) || !reflect.DeepEqual(calls, []string{"remote"}) {
+	if got := phaseCompletion(record, model.PhaseDone, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"prior_phase_pr", "remote_artifact"}) || !reflect.DeepEqual(calls, []string{"remote"}) {
 		t.Fatalf("done completion=%+v calls=%v", got, calls)
 	}
 }

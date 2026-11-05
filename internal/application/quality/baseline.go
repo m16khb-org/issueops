@@ -10,10 +10,13 @@ import (
 	domain "issueops/internal/domain/quality"
 )
 
+// SNRBaselineStore persists the code signal-to-noise baseline through the state store.
+// CanonicalRepository resolves the repository identity that keys the record; ReadState and
+// WriteState access the underlying state entries.
 type SNRBaselineStore struct {
 	CanonicalRepository func(string) (string, error)
-	ReadState           func(string) (state.StateResult, error)
-	WriteState          func(string, string) (state.StateResult, error)
+	ReadState           func(string) (state.Result, error)
+	WriteState          func(string, string) (state.Result, error)
 }
 
 func (store SNRBaselineStore) identity(root string) (string, string, error) {
@@ -23,6 +26,10 @@ func (store SNRBaselineStore) identity(root string) (string, string, error) {
 	}
 	return repository, domain.SNRBaselineKey(repository), nil
 }
+
+// Read returns the stored SNR ratio baseline for the repository at root. The bool is false
+// when no baseline exists yet; an error means the store is unconfigured or the record is
+// unreadable, malformed, or belongs to another repository.
 func (store SNRBaselineStore) Read(root string) (float64, bool, error) {
 	if store.ReadState == nil {
 		return 0, false, fmt.Errorf("quality SNR baseline store is not configured")

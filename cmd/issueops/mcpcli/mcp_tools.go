@@ -34,12 +34,13 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
+// MCPToolCall 타입은 MCP tools/call 요청에서 꺼낸 도구 이름과 인자 맵이다.
 type MCPToolCall struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
 }
 
-type MCPToolOutcome struct {
+type mcpToolOutcome struct {
 	Handled bool
 	Direct  bool
 	IsError bool
@@ -48,8 +49,8 @@ type MCPToolOutcome struct {
 	Err     *jsonrpc.Error
 }
 
-// MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
-// cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
+// MCPDependencies 타입은 MCP 서버 하나가 쓰는 의존성 묶음이며 서버를 만들 때 고정된다. 요청 간에
+// package-global dependency cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
 	APIDoc        apidocapp.Service
 	DefaultTarget string
@@ -72,7 +73,7 @@ type MCPDependencies struct {
 	ProjectDocs      docsapp.Service
 	State            StateDependencies
 	Resources        resources.Config
-	SelfVerify       func(verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error)
+	SelfVerify       func(verifyapp.LoopRequest) (augmentcontract.Result, error)
 	Catalog          mcpcontract.Catalog
 	SelfHistory      augmentapp.HistoryService
 	SelfState        SelfStateDependencies
@@ -99,8 +100,8 @@ type MCPDependencies struct {
 	Caller        *issueopscontract.VerifiedActor
 }
 
-func mcpToolPayload(payload any) MCPToolOutcome {
-	return MCPToolOutcome{Handled: true, Payload: payload}
+func mcpToolPayload(payload any) mcpToolOutcome {
+	return mcpToolOutcome{Handled: true, Payload: payload}
 }
 
 // mcpToolErrorPayload reports a tool-level FAILURE (not-found, validation,
@@ -108,16 +109,16 @@ func mcpToolPayload(payload any) MCPToolOutcome {
 // JSON-RPC protocol error: the payload is serialized as text content and the
 // result is flagged isError, mirroring the CLI's {ok:false,error:...} body.
 // Genuine JSON-RPC schema/param violations still use mcpToolFailure(-32602).
-func mcpToolErrorPayload(payload any) MCPToolOutcome {
-	return MCPToolOutcome{Handled: true, IsError: true, Payload: payload}
+func mcpToolErrorPayload(payload any) mcpToolOutcome {
+	return mcpToolOutcome{Handled: true, IsError: true, Payload: payload}
 }
 
-func mcpToolDirect(result any) MCPToolOutcome {
-	return MCPToolOutcome{Handled: true, Direct: true, Result: result}
+func mcpToolDirect(result any) mcpToolOutcome {
+	return mcpToolOutcome{Handled: true, Direct: true, Result: result}
 }
 
-func mcpToolFailure(err *jsonrpc.Error) MCPToolOutcome {
-	return MCPToolOutcome{Handled: true, Err: err}
+func mcpToolFailure(err *jsonrpc.Error) mcpToolOutcome {
+	return mcpToolOutcome{Handled: true, Err: err}
 }
 
 func newProtocolError(code int64, message string, data any) *jsonrpc.Error {
@@ -158,6 +159,7 @@ func validateMCPToolArguments(schema map[string]any, name string, arguments map[
 	)
 }
 
+// TextResult 함수는 text 하나를 담은 MCP 텍스트 content 결과를 만든다.
 func TextResult(text string) map[string]any {
 	return map[string]any{"content": []map[string]any{{"type": "text", "text": text}}}
 }

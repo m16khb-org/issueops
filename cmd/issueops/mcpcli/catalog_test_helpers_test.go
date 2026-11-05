@@ -31,7 +31,7 @@ func testCallSDKTool(t *testing.T, params json.RawMessage) (any, *jsonrpc.Error)
 	deps.State = publicStateForTest()
 	deps.SelfHistory = historyServiceForTest()
 	deps.SelfState = selfStateForTest()
-	deps.SelfPlanning = planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)
+	deps.SelfPlanning = planningForTest(IssueOpsRoot(), statestore.Dir(), Version)
 	return callSDKTool(t, params, deps)
 }
 
@@ -66,10 +66,10 @@ func callSDKTool(t *testing.T, params json.RawMessage, deps MCPDependencies) (an
 }
 
 func historyServiceForTest() augmentapp.HistoryService {
-	return augmentapp.HistoryService{StateDir: statestore.StateDir, List: statestore.NewService().List, Read: statestore.NewService().Read, Delete: statestore.NewService().Delete}
+	return augmentapp.HistoryService{StateDir: statestore.Dir, List: statestore.NewService().List, Read: statestore.NewService().Read, Delete: statestore.NewService().Delete}
 }
-func testHandleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
-	return handleSelfLoopMCPToolCall(context.Background(), call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
+func testHandleSelfLoopMCPToolCall(call MCPToolCall) mcpToolOutcome {
+	return handleSelfLoopMCPToolCall(context.Background(), call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.Dir(), Version)})
 }
 
 func selfStateForTest() SelfStateDependencies {
@@ -77,22 +77,22 @@ func selfStateForTest() SelfStateDependencies {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}
 	return SelfStateDependencies{
-		SavePlan: func(_ context.Context, result *contract.SelfAugmentPlanResult, key string) error {
-			return augmentapp.SavePlan(result, key, augmentapp.SavePlanDeps{Now: time.Now, Encode: func(snapshot contract.SelfAugmentPlanStateSnapshot) ([]byte, error) {
+		SavePlan: func(_ context.Context, result *contract.PlanResult, key string) error {
+			return augmentapp.SavePlan(result, key, augmentapp.SavePlanDeps{Now: time.Now, Encode: func(snapshot contract.PlanStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
-			}, Write: func(key, content string) (statecontract.StateResult, error) {
+			}, Write: func(key, content string) (statecontract.Result, error) {
 				return statestore.NewService().Write(context.Background(), key, content)
-			}, StateDir: statestore.StateDir})
+			}, StateDir: statestore.Dir})
 		},
-		SaveSummary: func(_ context.Context, result *contract.SelfAugmentResult, key string) error {
-			return verifyapp.SaveSummary(result, key, verifyapp.SaveSummaryDeps{Now: time.Now, Encode: func(snapshot contract.SelfAugmentStateSnapshot) ([]byte, error) {
+		SaveSummary: func(_ context.Context, result *contract.Result, key string) error {
+			return verifyapp.SaveSummary(result, key, verifyapp.SaveSummaryDeps{Now: time.Now, Encode: func(snapshot contract.StateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
-			}, Write: func(key, content string) (statecontract.StateResult, error) {
+			}, Write: func(key, content string) (statecontract.Result, error) {
 				return statestore.NewService().Write(context.Background(), key, content)
-			}, StateDir: statestore.StateDir})
+			}, StateDir: statestore.Dir})
 		},
-		Promote: func(_ context.Context, from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
-			return augmentapp.PromoteBaseline(from, to, confirm, allowFailed, augmentapp.PromoteDeps{StateDir: statestore.StateDir, ReadSnapshot: snapshots.Read, WriteSnapshot: snapshots.Write, ReadState: statestore.NewService().Read})
+		Promote: func(_ context.Context, from, to string, confirm, allowFailed bool) (contract.PromoteResult, error) {
+			return augmentapp.PromoteBaseline(from, to, confirm, allowFailed, augmentapp.PromoteDeps{StateDir: statestore.Dir, ReadSnapshot: snapshots.Read, WriteSnapshot: snapshots.Write, ReadState: statestore.NewService().Read})
 		},
 	}
 }

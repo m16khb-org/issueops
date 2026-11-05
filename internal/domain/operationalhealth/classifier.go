@@ -1,3 +1,7 @@
+// Package operationalhealth 패키지는 로컬 IssueOps 운영 상태가 건강한지
+// 분류하는 domain 규칙을 소유한다. cycle, worktree, branch, 상태 파일의 스냅샷을
+// 받아 cycle 권한(live, preserved, unknown, dead)을 판정하고 잔여물과 불명확한
+// 인벤토리를 finding으로 모으며, 스냅샷 수집은 어댑터가 맡는다.
 package operationalhealth
 
 import (
@@ -7,6 +11,9 @@ import (
 	"strings"
 )
 
+// EvaluateCycleAuthority 함수는 cycle의 phase, lease, 실행 정체성, 완료 기록,
+// opts의 보존 목록으로 그 cycle이 아직 권한을 가진 live인지, 보존 대상인지,
+// 이미 죽었는지, 판단할 수 없는지 돌려준다. 정체성이 불완전하면 항상 unknown이다.
 func EvaluateCycleAuthority(cycle operationalhealthcontract.Cycle, opts Options) operationalhealthcontract.CycleAuthority {
 	phase := strings.TrimSpace(cycle.Phase)
 	status := strings.TrimSpace(cycle.LeaseStatus)
@@ -151,6 +158,9 @@ func validateBranchResidues(builder *findingBuilder, snapshot Snapshot, activeRe
 	}
 }
 
+// Classify 함수는 snapshot을 규칙에 따라 훑어 운영 finding을 모은 결과를
+// 돌려준다. opts.Now가 없으면 시간 판단을 할 수 없으므로 inventory unknown
+// finding을 남긴다. finding이 없을 때만 Healthy가 참이다.
 func Classify(snapshot Snapshot, opts Options) operationalhealthcontract.Result {
 	builder := findingBuilder{seen: map[string]struct{}{}}
 	if opts.Now.IsZero() {
@@ -208,6 +218,8 @@ func Classify(snapshot Snapshot, opts Options) operationalhealthcontract.Result 
 	return operationalhealthcontract.Result{Healthy: len(findings) == 0, Findings: findings}
 }
 
+// SeverityForFinding 함수는 finding 코드의 심각도를 돌려준다. 인벤토리를 알 수
+// 없는 경우는 error이고 나머지는 warning이다.
 func SeverityForFinding(code string) string {
 	if code == operationalhealthcontract.FindingInventoryUnknown {
 		return "error"

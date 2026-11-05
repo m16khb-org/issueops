@@ -7,9 +7,9 @@ import (
 )
 
 // StampForwardTransition records the observed completion and entry timestamps.
-func StampForwardTransition(ledger issueopscontract.IssueOpsPhaseLedger, previousPhase, newPhase issueopscontract.IssueOpsPhase, now string, artifacts []string) issueopscontract.IssueOpsPhaseLedger {
+func StampForwardTransition(ledger issueopscontract.PhaseLedger, previousPhase, newPhase issueopscontract.Phase, now string, artifacts []string) issueopscontract.PhaseLedger {
 	if ledger == nil {
-		ledger = issueopscontract.IssueOpsPhaseLedger{}
+		ledger = issueopscontract.PhaseLedger{}
 	}
 	previous := ledger[previousPhase]
 	previous.Phase = previousPhase
@@ -49,9 +49,9 @@ func clearStaleLedgerNotes(notes []string) []string {
 }
 
 // MarkLedgerStale preserves the audit entry while invalidating its completion.
-func MarkLedgerStale(ledger issueopscontract.IssueOpsPhaseLedger, note string, phases ...issueopscontract.IssueOpsPhase) issueopscontract.IssueOpsPhaseLedger {
+func MarkLedgerStale(ledger issueopscontract.PhaseLedger, note string, phases ...issueopscontract.Phase) issueopscontract.PhaseLedger {
 	if ledger == nil {
-		ledger = issueopscontract.IssueOpsPhaseLedger{}
+		ledger = issueopscontract.PhaseLedger{}
 	}
 	for _, phase := range phases {
 		entry := ledger[phase]

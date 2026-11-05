@@ -35,7 +35,7 @@ func TestPathIsSchemaChangeAlsoAcceptsWindowsSeparators(t *testing.T) {
 	if !PathIsSchemaChange("db/migrations/001.rb") {
 		t.Fatal("the slash form must keep classifying")
 	}
-	if got := ClassifyChangeTier([]string{`db\migrations\001.rb`}); got != ChangeTierSchemaAuth {
+	if got := ClassifyChangeTier([]string{`db\migrations\001.rb`}); got != changeTierSchemaAuth {
 		t.Fatalf("tier = %q, want schema-auth", got)
 	}
 }
@@ -50,27 +50,27 @@ func TestClassifyChangeTierRanksSchemaAuthAboveContractAndDocs(t *testing.T) {
 		{
 			name:  "docs only",
 			paths: []string{".issueops/ADR.md", "README.md", "skills/x/SKILL.md", "docs/assets/note.md"},
-			want:  ChangeTierDocsOnly,
+			want:  changeTierDocsOnly,
 		},
 		{
 			name:  "contract surface",
 			paths: []string{"internal/contract/issueops/types.go", "internal/adapter/x.go"},
-			want:  ChangeTierContract,
+			want:  changeTierContract,
 		},
 		{
 			name:  "usage golden is contract surface",
 			paths: []string{"cmd/issueops/testdata/usage.golden.txt"},
-			want:  ChangeTierContract,
+			want:  changeTierContract,
 		},
 		{
 			name:  "schema outranks contract",
 			paths: []string{"internal/contract/issueops/types.go", "db/migrations/001.sql"},
-			want:  ChangeTierSchemaAuth,
+			want:  changeTierSchemaAuth,
 		},
 		{
 			name:  "auth directory outranks docs",
 			paths: []string{".issueops/CAUTIONS.md", "internal/auth/token.go"},
-			want:  ChangeTierSchemaAuth,
+			want:  changeTierSchemaAuth,
 		},
 		{
 			name:  "plain code",
@@ -93,38 +93,38 @@ func TestClassifyChangeTierDoesNotMatchAuthSubstrings(t *testing.T) {
 		"internal/author/render.go", "pkg/oauthclient/client.go",
 		"internal/authoring/x.go", "internal/permissionset/x.go",
 	} {
-		if got := ClassifyChangeTier([]string{path}); got == ChangeTierSchemaAuth {
+		if got := ClassifyChangeTier([]string{path}); got == changeTierSchemaAuth {
 			t.Fatalf("%s must not be schema-auth (substring match)", path)
 		}
 	}
-	if got := ClassifyChangeTier([]string{"docs/authoring.md"}); got != ChangeTierDocsOnly {
+	if got := ClassifyChangeTier([]string{"docs/authoring.md"}); got != changeTierDocsOnly {
 		t.Fatalf("docs/authoring.md = %q, want docs-only", got)
 	}
 	for _, path := range []string{
 		"internal/auth/token.go", "api/authz/policy.go", "svc/authn/x.go",
 		"app/permissions/x.go", "ops/credentials/x.go",
 	} {
-		if got := ClassifyChangeTier([]string{path}); got != ChangeTierSchemaAuth {
+		if got := ClassifyChangeTier([]string{path}); got != changeTierSchemaAuth {
 			t.Fatalf("%s = %q, want schema-auth (exact segment)", path, got)
 		}
 	}
 }
 
 func TestReviewLensesForTierNarrowsDocsOnlyAndLeadsWithCompat(t *testing.T) {
-	if got := ReviewLensesForTier(ChangeTierDocsOnly); !reflect.DeepEqual(got, []string{"side-effect"}) {
+	if got := ReviewLensesForTier(changeTierDocsOnly); !reflect.DeepEqual(got, []string{"side-effect"}) {
 		t.Fatalf("docs-only lenses = %v, want [side-effect]", got)
 	}
-	contract := ReviewLensesForTier(ChangeTierContract)
+	contract := ReviewLensesForTier(changeTierContract)
 	if len(contract) != 4 || contract[0] != "compat" {
 		t.Fatalf("contract lenses = %v, want four lenses led by compat", contract)
 	}
-	for _, tier := range []ChangeTier{ChangeTierSchemaAuth, ChangeTierDefault} {
+	for _, tier := range []ChangeTier{changeTierSchemaAuth, ChangeTierDefault} {
 		if got := ReviewLensesForTier(tier); len(got) != 4 {
 			t.Fatalf("%s lenses = %v, want all four", tier, got)
 		}
 	}
 	// 병렬 허용 여부는 코드가 아니라 issueops-verify 스킬 문장이 소유한다.
-	for _, tier := range []ChangeTier{ChangeTierDocsOnly, ChangeTierContract, ChangeTierSchemaAuth, ChangeTierDefault} {
+	for _, tier := range []ChangeTier{changeTierDocsOnly, changeTierContract, changeTierSchemaAuth, ChangeTierDefault} {
 		for _, lens := range ReviewLensesForTier(tier) {
 			if lens == "parallel-allowed" {
 				t.Fatalf("%s must not carry a parallel marker", tier)
@@ -140,7 +140,7 @@ func TestPathIsFrontendChangeMatchesExtensionsAndSegments(t *testing.T) {
 		"styles/main.css", "theme/app.scss", "vendor/old.less", "public/index.html",
 		"components/Button.go", "pages/api.go", "styles/tokens.json",
 	} {
-		if !PathIsFrontendChange(path) {
+		if !pathIsFrontendChange(path) {
 			t.Fatalf("%s must be a frontend change", path)
 		}
 	}
@@ -148,7 +148,7 @@ func TestPathIsFrontendChangeMatchesExtensionsAndSegments(t *testing.T) {
 		"", "README.md", "internal/adapter/user.go", "internal/componentsx/a.go",
 		"pkg/pageset/b.go", "cmd/publicity/c.go",
 	} {
-		if PathIsFrontendChange(path) {
+		if pathIsFrontendChange(path) {
 			t.Fatalf("%s must not be a frontend change", path)
 		}
 	}
@@ -157,16 +157,16 @@ func TestPathIsFrontendChangeMatchesExtensionsAndSegments(t *testing.T) {
 // 알려진 오탐과 누락을 여기 고정한다. 신호는 라우팅 힌트이므로 오탐 비용은
 // `Not Run` 한 줄이고 누락 비용은 QA 미제안이다.
 func TestPathIsFrontendChangeKnownFalsePositivesAndNegatives(t *testing.T) {
-	if !PathIsFrontendChange("skills/aside-functional-qa/testdata/client-qa-fixture.html") {
+	if !pathIsFrontendChange("skills/aside-functional-qa/testdata/client-qa-fixture.html") {
 		t.Fatal("documented false positive: an .html test fixture trips the signal")
 	}
 	// 변경 집합은 미추적 파일도 포함하므로, 워크트리에 남은 도구 산출물도 신호를
 	// 켠다. coverage.html이 대표적이다. 비용은 QA를 Not Run으로 적는 한 줄이다.
-	if !PathIsFrontendChange("coverage.html") {
+	if !pathIsFrontendChange("coverage.html") {
 		t.Fatal("documented false positive: a leftover coverage report trips the signal")
 	}
 	for _, missed := range []string{"app/Home.js", "src/ui/store.ts", "src/app.component.ts"} {
-		if PathIsFrontendChange(missed) {
+		if pathIsFrontendChange(missed) {
 			t.Fatalf("documented false negative changed: %s now matches", missed)
 		}
 	}
@@ -177,7 +177,7 @@ func TestHasFrontendChangeIsIndependentOfTier(t *testing.T) {
 	if !HasFrontendChange(paths) {
 		t.Fatal("one frontend path is enough")
 	}
-	if got := ClassifyChangeTier(paths); got != ChangeTierDocsOnly && got != ChangeTierDefault {
+	if got := ClassifyChangeTier(paths); got != changeTierDocsOnly && got != ChangeTierDefault {
 		t.Fatalf("the frontend signal must not change the tier ranking, got %q", got)
 	}
 	if HasFrontendChange([]string{"internal/a.go"}) || HasFrontendChange(nil) {
@@ -187,7 +187,7 @@ func TestHasFrontendChangeIsIndependentOfTier(t *testing.T) {
 
 func TestCatalogAssemblyChangesRemainPublicContractChanges(t *testing.T) {
 	for _, name := range []string{"internal/adapter/inbound/catalog/cli/usage.go", "internal/adapter/inbound/catalog/mcp/catalog.go"} {
-		if got := ClassifyChangeTier([]string{name}); got != ChangeTierContract {
+		if got := ClassifyChangeTier([]string{name}); got != changeTierContract {
 			t.Errorf("catalog %s classified %s", name, got)
 		}
 	}

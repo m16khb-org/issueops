@@ -7,11 +7,11 @@ package qualitycatalog
 type VerificationKind string
 
 const (
-	// ToolSignalKind: a code/correctness change whose VerifyWith MUST name an
+	// ToolSignalKind is a code/correctness change whose VerifyWith MUST name an
 	// executable external signal (test/build/lint/contract/smoke/coverage run or
 	// a CLI command) — never model self-critique.
 	ToolSignalKind VerificationKind = "tool_signal"
-	// DocArtifactKind: a documentation/governance change whose verification is a
+	// DocArtifactKind is a documentation/governance change whose verification is a
 	// concrete produced artifact (ADR entry, README section, checklist, matrix,
 	// transcript). Explicitly EXEMPT from the executable-signal rule and labeled
 	// as such, so it is not falsely claimed to be tool-gated.

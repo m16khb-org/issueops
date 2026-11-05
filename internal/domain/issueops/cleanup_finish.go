@@ -7,6 +7,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// CleanupFinishObservation supplies the facts cleanup finish observes outside
+// the domain: the default branch, worktree and workspace state, and the
+// readability and OID of the remote branch. A failed observation stays
+// distinct from an absent resource.
 type CleanupFinishObservation struct {
 	SupersedeError                                            string
 	DefaultBranch                                             string
@@ -19,7 +23,11 @@ type CleanupFinishObservation struct {
 	RemoteOID                                                 string
 }
 
-func CleanupFinishTargets(record model.IssueOpsRecord) model.CleanupFinishInventory {
+// CleanupFinishTargets builds the local part of the cleanup finish inventory
+// from record: the branch (the workspace branch wins), the remote artifact
+// URL, and the worktree root (falling back to the recorded worktree path).
+// Filesystem and git observations are filled in by the caller.
+func CleanupFinishTargets(record model.Record) model.CleanupFinishInventory {
 	inventory := model.CleanupFinishInventory{ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch)}
 	if record.RemoteArtifact != nil {
 		inventory.RemoteURL = record.RemoteArtifact.URL
@@ -36,7 +44,12 @@ func CleanupFinishTargets(record model.IssueOpsRecord) model.CleanupFinishInvent
 	return inventory
 }
 
-func BuildCleanupFinishPreview(record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) model.CleanupFinishResult {
+// BuildCleanupFinishPreview evaluates every cleanup finish gate against
+// record, the request, the inventory, and the observed facts. The result
+// lists the failed gates in Missing and is OK only when none failed. It also
+// reports a retargeted base branch and a kept remote branch when the request
+// allows them.
+func BuildCleanupFinishPreview(record model.Record, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) model.CleanupFinishResult {
 	result := model.CleanupFinishResult{
 		OK: true, ID: record.ID, Preview: !req.Apply, Missing: []string{},
 		WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch,
@@ -66,8 +79,8 @@ func BuildCleanupFinishPreview(record model.IssueOpsRecord, req model.CleanupFin
 }
 
 // cleanupFinishLifecycleMissing checks phase, lease, merge, completion, and issue-closed gates.
-func cleanupFinishLifecycleMissing(missing []string, record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) []string {
-	if record.Phase != model.IssueOpsPhaseDone {
+func cleanupFinishLifecycleMissing(missing []string, record model.Record, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) []string {
+	if record.Phase != model.PhaseDone {
 		missing = append(missing, "phase_done")
 	}
 	if record.Execution != nil && record.Execution.Lease.Status != model.LeaseStatusReleased {
@@ -86,7 +99,7 @@ func cleanupFinishLifecycleMissing(missing []string, record model.IssueOpsRecord
 }
 
 // cleanupFinishBaseMissing classifies the merged base branch and records a retargeted base when permitted.
-func cleanupFinishBaseMissing(missing []string, result *model.CleanupFinishResult, record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) []string {
+func cleanupFinishBaseMissing(missing []string, result *model.CleanupFinishResult, record model.Record, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) []string {
 	prepared := PreparedBaseBranch(record)
 	if prepared == "" {
 		return missing
@@ -97,7 +110,7 @@ func cleanupFinishBaseMissing(missing []string, result *model.CleanupFinishResul
 		missing = append(missing, "merged_base_branch_unobserved")
 	case inventory.SupersededBy != "":
 	default:
-		if slugs := ClassifyCleanupMergedBase(prepared, base, observed.DefaultBranch, observed.PreparedBasePresent, observed.BaseObserved); len(slugs) > 0 {
+		if slugs := classifyCleanupMergedBase(prepared, base, observed.DefaultBranch, observed.PreparedBasePresent, observed.BaseObserved); len(slugs) > 0 {
 			missing = append(missing, slugs...)
 		} else if base != prepared {
 			result.RetargetedBase = &model.CleanupRetargetedBase{PreparedBase: prepared, ObservedBase: base, DefaultBranch: observed.DefaultBranch, PreparedBaseRemoteAbsent: true}
@@ -107,7 +120,7 @@ func cleanupFinishBaseMissing(missing []string, result *model.CleanupFinishResul
 }
 
 // hasUnclosedChildTask reports whether any child link lacks close verification.
-func hasUnclosedChildTask(links []model.IssueOpsIssueLink) bool {
+func hasUnclosedChildTask(links []model.IssueLink) bool {
 	for _, link := range links {
 		if link.Type == "child" && strings.TrimSpace(link.CloseVerifiedAt) == "" {
 			return true
@@ -149,7 +162,7 @@ func cleanupFinishBranchMissing(missing []string, result *model.CleanupFinishRes
 
 // A missing prepared parent permits only a provider retarget to the observed
 // default branch. Failed remote observation cannot erase known base drift.
-func ClassifyCleanupMergedBase(prepared, observed, defaultBranch string, preparedPresent, observable bool) []string {
+func classifyCleanupMergedBase(prepared, observed, defaultBranch string, preparedPresent, observable bool) []string {
 	if prepared == "" || observed == prepared {
 		return nil
 	}
@@ -162,19 +175,26 @@ func ClassifyCleanupMergedBase(prepared, observed, defaultBranch string, prepare
 	return []string{"base_branch_drifted"}
 }
 
-func PreparedBaseBranch(record model.IssueOpsRecord) string {
+// PreparedBaseBranch returns the trimmed base branch sealed by branch
+// prepare, or an empty string when the record has no preparation.
+func PreparedBaseBranch(record model.Record) string {
 	if record.BranchPrepare == nil {
 		return ""
 	}
 	return strings.TrimSpace(record.BranchPrepare.BaseBranch)
 }
 
-func PreparedBaseRef(record model.IssueOpsRecord) string {
+// PreparedBaseRef returns the prepared base branch stripped of a refs/heads/
+// or origin/ prefix, so it can be compared with a remote branch name.
+func PreparedBaseRef(record model.Record) string {
 	base := strings.TrimPrefix(PreparedBaseBranch(record), "refs/heads/")
 	return strings.TrimSpace(strings.TrimPrefix(base, "origin/"))
 }
 
-func ValidateCleanupSupersedeInput(record model.IssueOpsRecord, candidate string, configured bool) error {
+// ValidateCleanupSupersedeInput checks that a superseding artifact can be
+// verified: a candidate was given, provider observation is configured, and
+// the record knows the original artifact URL.
+func ValidateCleanupSupersedeInput(record model.Record, candidate string, configured bool) error {
 	if strings.TrimSpace(candidate) == "" {
 		return fmt.Errorf("no superseding artifact was provided")
 	}

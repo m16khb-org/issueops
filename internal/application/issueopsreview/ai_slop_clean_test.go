@@ -28,17 +28,17 @@ func TestRecordAISlopCleanEvidenceRejectsBeforeSecondReadOrWrite(t *testing.T) {
 			store := reviewport.AISlopCleanStore{
 				ReviewMutationStore: reviewport.ReviewMutationStore{
 					WithLock: func(_, _ string, fn func() error) error { return fn() },
-					Read: func(_, _ string) (model.IssueOpsRecord, error) {
+					Read: func(_, _ string) (model.Record, error) {
 						reads++
-						return model.IssueOpsRecord{ID: "io-1"}, nil
+						return model.Record{ID: "io-1"}, nil
 					},
-					ValidateMutation: func(model.IssueOpsRecord) error { return tc.actorErr },
-					Write: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+					ValidateMutation: func(model.Record) error { return tc.actorErr },
+					Write: func(_ string, record model.Record) (model.Record, error) {
 						writes++
 						return record, nil
 					},
 				},
-				Refresh: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+				Refresh: func(_ string, record model.Record) (model.Record, error) {
 					refreshes++
 					return record, nil
 				},
@@ -56,18 +56,18 @@ func TestRecordAISlopCleanEvidenceWritesNormalizedEvidenceOnce(t *testing.T) {
 	store := reviewport.AISlopCleanStore{
 		ReviewMutationStore: reviewport.ReviewMutationStore{
 			WithLock: func(_, _ string, fn func() error) error { return fn() },
-			Read: func(_, _ string) (model.IssueOpsRecord, error) {
+			Read: func(_, _ string) (model.Record, error) {
 				reads++
-				return model.IssueOpsRecord{ID: "io-1", Phase: model.IssueOpsPhaseImplement}, nil
+				return model.Record{ID: "io-1", Phase: model.PhaseImplement}, nil
 			},
-			ValidateMutation: func(model.IssueOpsRecord) error { return nil },
-			Write: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+			ValidateMutation: func(model.Record) error { return nil },
+			Write: func(_ string, record model.Record) (model.Record, error) {
 				writes++
 				return record, nil
 			},
 			Now: func() string { return "2026-09-28T00:00:00Z" },
 		},
-		Refresh: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Refresh: func(_ string, record model.Record) (model.Record, error) {
 			t.Fatal("refresh should not run")
 			return record, nil
 		},
@@ -84,17 +84,17 @@ func TestRecordAISlopCleanEvidenceRefreshesCompletedPhase(t *testing.T) {
 	store := reviewport.AISlopCleanStore{
 		ReviewMutationStore: reviewport.ReviewMutationStore{
 			WithLock: func(_, _ string, fn func() error) error { return fn() },
-			Read: func(_, _ string) (model.IssueOpsRecord, error) {
+			Read: func(_, _ string) (model.Record, error) {
 				reads++
-				return model.IssueOpsRecord{ID: "io-1", Phase: model.IssueOpsPhaseFeedback, AISlopCleanAt: "already-cleaned"}, nil
+				return model.Record{ID: "io-1", Phase: model.PhaseFeedback, AISlopCleanAt: "already-cleaned"}, nil
 			},
-			ValidateMutation: func(model.IssueOpsRecord) error { return nil },
-			Write: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+			ValidateMutation: func(model.Record) error { return nil },
+			Write: func(_ string, record model.Record) (model.Record, error) {
 				writes++
 				return record, nil
 			},
 		},
-		Refresh: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Refresh: func(_ string, record model.Record) (model.Record, error) {
 			refreshes++
 			if !reflect.DeepEqual(record.AISlopCleanCategories, []string{"dead-code"}) || !reflect.DeepEqual(record.AISlopCleanVerification, []string{"go test"}) {
 				t.Fatalf("refresh record=%+v", record)

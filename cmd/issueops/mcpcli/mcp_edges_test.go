@@ -275,7 +275,7 @@ func TestResolveHandlerGroupRejectsUnmappedToolsAndGroupsIgnoreForeignNames(t *t
 
 func TestGroupOutcomeHelpersWrapErrorsAsToolErrorsAndPassPayloads(t *testing.T) {
 	boom := errors.New("disk full")
-	for name, outcome := range map[string]func(any, error, string) MCPToolOutcome{
+	for name, outcome := range map[string]func(any, error, string) mcpToolOutcome{
 		"gates": gatesMCPOutcome, "loop": loopMCPOutcome, "channel": channelMCPOutcome,
 	} {
 		failed := outcome(nil, boom, "Op failed")

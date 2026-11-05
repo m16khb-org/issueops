@@ -7,10 +7,10 @@ import (
 	"issueops/internal/port"
 )
 
-// JoinErrors collapses a slice of errors into a single semicolon-joined error,
+// joinErrors collapses a slice of errors into a single semicolon-joined error,
 // skipping nils, and returns nil when no non-nil error is present. Both host
 // installers share this so error fan-in stays identical across hosts.
-func JoinErrors(errs []error) error {
+func joinErrors(errs []error) error {
 	parts := make([]string, 0, len(errs))
 	for _, err := range errs {
 		if err != nil {
@@ -26,7 +26,7 @@ func JoinErrors(errs []error) error {
 // Plan accumulates the files, links, messages, and errors produced by a host
 // installer's steps so each step stays a single call instead of repeating the
 // append-file / append-error boilerplate. Finish folds the accumulated errors
-// into the result via JoinErrors so the OK flag and error fan-in are computed
+// into the result via joinErrors so the OK flag and error fan-in are computed
 // identically for every host.
 type Plan struct {
 	result port.HostInstallResult
@@ -92,7 +92,7 @@ func (p *Plan) Messages(msgs []string) {
 func (p *Plan) Finish() (port.HostInstallResult, error) {
 	if len(p.errs) > 0 {
 		p.result.OK = false
-		return p.result, JoinErrors(p.errs)
+		return p.result, joinErrors(p.errs)
 	}
 	return p.result, nil
 }

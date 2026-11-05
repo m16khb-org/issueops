@@ -11,14 +11,14 @@ import (
 
 const covAbandonToken = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
-func covAbandonReceipt(step string) *model.IssueOpsCleanupAbandonFailure {
-	return &model.IssueOpsCleanupAbandonFailure{
+func covAbandonReceipt(step string) *model.CleanupAbandonFailure {
+	return &model.CleanupAbandonFailure{
 		Step: step, Branch: "task",
 		Fingerprint: strings.Repeat("a", 64), RecordSHA: strings.Repeat("b", 64), InventorySHA256: strings.Repeat("c", 64),
 	}
 }
 
-var covAbandonEvidence = CleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
+var covAbandonEvidence = cleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
 
 func TestCleanupAbandonRemoteFlagsAndPreviewCommand(t *testing.T) {
 	if got := CleanupAbandonRemoteFlags(model.CleanupAbandonRequest{}); got != "" {
@@ -39,27 +39,27 @@ func TestCleanupAbandonRemoteFlagsAndPreviewCommand(t *testing.T) {
 }
 
 func TestCleanupAbandonFailureInventoryMatchesNilReceiptAlwaysMatches(t *testing.T) {
-	if !CleanupAbandonFailureInventoryMatches(model.IssueOpsRecord{}, model.CleanupAbandonInventory{Branch: "x"}, CleanupAbandonFailureEvidence{}) {
+	if !cleanupAbandonFailureInventoryMatches(model.Record{}, model.CleanupAbandonInventory{Branch: "x"}, cleanupAbandonFailureEvidence{}) {
 		t.Fatal("no receipt must not block")
 	}
 }
 
 func TestCleanupAbandonFailureInventoryMatchesRejectsMalformedReceipt(t *testing.T) {
 	inv := model.CleanupAbandonInventory{Branch: "task"}
-	for name, mutate := range map[string]func(*model.IssueOpsCleanupAbandonFailure){
-		"short fingerprint":   func(f *model.IssueOpsCleanupAbandonFailure) { f.Fingerprint = "abc" },
-		"non-hex record sha":  func(f *model.IssueOpsCleanupAbandonFailure) { f.RecordSHA = strings.Repeat("z", 64) },
-		"short inventory sha": func(f *model.IssueOpsCleanupAbandonFailure) { f.InventorySHA256 = "" },
-		"other branch":        func(f *model.IssueOpsCleanupAbandonFailure) { f.Branch = "other" },
-		"unknown step":        func(f *model.IssueOpsCleanupAbandonFailure) { f.Step = "teleport" },
-		"paired oids differ": func(f *model.IssueOpsCleanupAbandonFailure) {
+	for name, mutate := range map[string]func(*model.CleanupAbandonFailure){
+		"short fingerprint":   func(f *model.CleanupAbandonFailure) { f.Fingerprint = "abc" },
+		"non-hex record sha":  func(f *model.CleanupAbandonFailure) { f.RecordSHA = strings.Repeat("z", 64) },
+		"short inventory sha": func(f *model.CleanupAbandonFailure) { f.InventorySHA256 = "" },
+		"other branch":        func(f *model.CleanupAbandonFailure) { f.Branch = "other" },
+		"unknown step":        func(f *model.CleanupAbandonFailure) { f.Step = "teleport" },
+		"paired oids differ": func(f *model.CleanupAbandonFailure) {
 			f.WorktreeHead, f.BranchOID = "one", "two"
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			failure := covAbandonReceipt("record_delete")
 			mutate(failure)
-			if CleanupAbandonFailureInventoryMatches(model.IssueOpsRecord{CleanupAbandonFailure: failure}, inv, covAbandonEvidence) {
+			if cleanupAbandonFailureInventoryMatches(model.Record{CleanupAbandonFailure: failure}, inv, covAbandonEvidence) {
 				t.Fatal("malformed receipt accepted")
 			}
 		})
@@ -102,8 +102,8 @@ func TestCleanupAbandonFailureInventoryMatchesByStep(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			failure := covAbandonReceipt(tc.step)
 			failure.WorktreeHead, failure.BranchOID = tc.orig.worktree, tc.orig.branch
-			record := model.IssueOpsRecord{CleanupAbandonFailure: failure}
-			if got := CleanupAbandonFailureInventoryMatches(record, inv(tc.now), covAbandonEvidence); got != tc.wantFits {
+			record := model.Record{CleanupAbandonFailure: failure}
+			if got := cleanupAbandonFailureInventoryMatches(record, inv(tc.now), covAbandonEvidence); got != tc.wantFits {
 				t.Fatalf("got %t want %t", got, tc.wantFits)
 			}
 		})
@@ -111,42 +111,42 @@ func TestCleanupAbandonFailureInventoryMatchesByStep(t *testing.T) {
 }
 
 func TestCleanupAbandonPartialBranchRetry(t *testing.T) {
-	base := func() (model.IssueOpsRecord, model.CleanupAbandonInventory) {
+	base := func() (model.Record, model.CleanupAbandonInventory) {
 		failure := covAbandonReceipt("branch_delete")
 		failure.WorktreeHead, failure.BranchOID = "h", "h"
-		return model.IssueOpsRecord{CleanupAbandonFailure: failure}, model.CleanupAbandonInventory{Branch: "task", BranchOID: "h"}
+		return model.Record{CleanupAbandonFailure: failure}, model.CleanupAbandonInventory{Branch: "task", BranchOID: "h"}
 	}
 	record, inv := base()
-	if !CleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
+	if !cleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
 		t.Fatal("branch-only residue after worktree removal must be retryable")
 	}
 	record.CleanupAbandonFailure.Step = "applying"
-	if !CleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
+	if !cleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
 		t.Fatal("applying step must be retryable")
 	}
-	for name, mutate := range map[string]func(*model.IssueOpsRecord, *model.CleanupAbandonInventory, *CleanupAbandonFailureEvidence){
-		"no receipt": func(r *model.IssueOpsRecord, _ *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+	for name, mutate := range map[string]func(*model.Record, *model.CleanupAbandonInventory, *cleanupAbandonFailureEvidence){
+		"no receipt": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			r.CleanupAbandonFailure = nil
 		},
-		"worktree present": func(_ *model.IssueOpsRecord, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"worktree present": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.WorktreePresent = true
 		},
-		"branch absent": func(_ *model.IssueOpsRecord, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"branch absent": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.BranchOID = ""
 		},
-		"other step": func(r *model.IssueOpsRecord, _ *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"other step": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			r.CleanupAbandonFailure.Step = "record_delete"
 		},
-		"different worktree": func(_ *model.IssueOpsRecord, _ *model.CleanupAbandonInventory, e *CleanupAbandonFailureEvidence) {
+		"different worktree": func(_ *model.Record, _ *model.CleanupAbandonInventory, e *cleanupAbandonFailureEvidence) {
 			e.SameWorktree = false
 		},
-		"branch renamed": func(_ *model.IssueOpsRecord, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"branch renamed": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.Branch = "other"
 		},
-		"oid moved": func(_ *model.IssueOpsRecord, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"oid moved": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.BranchOID = "m"
 		},
-		"recorded head differs": func(r *model.IssueOpsRecord, _ *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"recorded head differs": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			r.CleanupAbandonFailure.WorktreeHead = "other"
 		},
 	} {
@@ -154,7 +154,7 @@ func TestCleanupAbandonPartialBranchRetry(t *testing.T) {
 			record, inv := base()
 			ev := covAbandonEvidence
 			mutate(&record, &inv, &ev)
-			if CleanupAbandonPartialBranchRetry(record, inv, ev) {
+			if cleanupAbandonPartialBranchRetry(record, inv, ev) {
 				t.Fatal("must not be a partial branch retry")
 			}
 		})
@@ -162,7 +162,7 @@ func TestCleanupAbandonPartialBranchRetry(t *testing.T) {
 }
 
 func TestCleanupAbandonRemovalPlanListsOnlyExistingResources(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-1", Execution: &model.Execution{
+	record := model.Record{ID: "io-1", Execution: &model.Execution{
 		Pending: &model.ExternalIntent{OperationID: " op-a "},
 		Failure: &model.ExecutionFailure{OperationID: "op-a"},
 	}}
@@ -171,17 +171,17 @@ func TestCleanupAbandonRemovalPlanListsOnlyExistingResources(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v want %v", got, want)
 	}
-	got = CleanupAbandonRemovalPlan(model.IssueOpsRecord{ID: "io-2"}, model.CleanupAbandonInventory{Branch: "task"})
+	got = CleanupAbandonRemovalPlan(model.Record{ID: "io-2"}, model.CleanupAbandonInventory{Branch: "task"})
 	if !reflect.DeepEqual(got, []string{"record:io-2"}) {
 		t.Fatalf("record-only plan: %v", got)
 	}
 }
 
 func TestCleanupAbandonIntentOperationIDsDedupesAndSkipsBlank(t *testing.T) {
-	if got := CleanupAbandonIntentOperationIDs(model.IssueOpsRecord{}); got != nil {
+	if got := CleanupAbandonIntentOperationIDs(model.Record{}); got != nil {
 		t.Fatalf("no execution: %v", got)
 	}
-	record := model.IssueOpsRecord{Execution: &model.Execution{Pending: &model.ExternalIntent{OperationID: "  "}, Failure: &model.ExecutionFailure{OperationID: "op-f"}}}
+	record := model.Record{Execution: &model.Execution{Pending: &model.ExternalIntent{OperationID: "  "}, Failure: &model.ExecutionFailure{OperationID: "op-f"}}}
 	if got := CleanupAbandonIntentOperationIDs(record); !reflect.DeepEqual(got, []string{"op-f"}) {
 		t.Fatalf("blank pending skipped: %v", got)
 	}
@@ -196,12 +196,12 @@ func TestCleanupAbandonIntentOperationIDsDedupesAndSkipsBlank(t *testing.T) {
 }
 
 func TestCleanupAbandonUnresolvedChildren(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		IssueURL: "https://x/issues/1",
-		ChildCycles: []model.IssueOpsChildCycleRef{
+		ChildCycles: []model.ChildCycleRef{
 			{CycleID: " c1 "}, {CycleID: "c2"}, {CycleID: "  "},
 		},
-		IssueLinks: []model.IssueOpsIssueLink{
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: " https://x/issues/2 "},
 			{Type: "child", URL: "https://x/issues/3", CloseVerifiedAt: "2026-01-01T00:00:00Z"},
 			{Type: "child", URL: "https://x/issues/1"},
@@ -217,16 +217,16 @@ func TestCleanupAbandonUnresolvedChildren(t *testing.T) {
 	if want := []string{"https://x/issues/2", "https://x/issues/1"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("without own url, self link counts: got %v want %v", got, want)
 	}
-	if got := CleanupAbandonUnresolvedChildren(model.IssueOpsRecord{}, nil); len(got) != 0 {
+	if got := CleanupAbandonUnresolvedChildren(model.Record{}, nil); len(got) != 0 {
 		t.Fatalf("empty: %v", got)
 	}
 }
 
 func TestValidateCleanupAbandonReason(t *testing.T) {
-	if err := ValidateCleanupAbandonReason("  duplicate of #12  "); err != nil {
+	if err := validateCleanupAbandonReason("  duplicate of #12  "); err != nil {
 		t.Fatalf("plain reason rejected: %v", err)
 	}
-	if err := ValidateCleanupAbandonReason(strings.Repeat("a", CleanupAbandonReasonLimit)); err != nil {
+	if err := validateCleanupAbandonReason(strings.Repeat("a", CleanupAbandonReasonLimit)); err != nil {
 		t.Fatalf("limit-sized reason rejected: %v", err)
 	}
 	for name, reason := range map[string]string{
@@ -244,23 +244,23 @@ func TestValidateCleanupAbandonReason(t *testing.T) {
 		"tilde":        "~root",
 		"glob":         "a*b",
 	} {
-		if err := ValidateCleanupAbandonReason(reason); err == nil {
+		if err := validateCleanupAbandonReason(reason); err == nil {
 			t.Errorf("%s: reason %q accepted", name, reason)
 		}
 	}
-	err := ValidateCleanupAbandonReason("a;b")
+	err := validateCleanupAbandonReason("a;b")
 	if err == nil || !strings.Contains(err.Error(), "';'") {
 		t.Fatalf("error must name the offending rune: %v", err)
 	}
-	if err := ValidateCleanupAbandonReason("a\tb"); err == nil || !strings.Contains(err.Error(), "control") {
+	if err := validateCleanupAbandonReason("a\tb"); err == nil || !strings.Contains(err.Error(), "control") {
 		t.Fatalf("tab inside is a control char: %v", err)
 	}
 }
 
 func TestCleanupAbandonTargetsPrefersExecutionWorkspace(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-1", Repo: "acme/r", Branch: " rec-branch ", WorktreePath: " /rec ", Phase: model.IssueOpsPhaseDone}
+	record := model.Record{ID: "io-1", Repo: "acme/r", Branch: " rec-branch ", WorktreePath: " /rec ", Phase: model.PhaseDone}
 	inv := CleanupAbandonTargets(record)
-	if inv.LeaseStatus != "none" || inv.Branch != "rec-branch" || inv.WorktreeRoot != "/rec" || inv.Phase != string(model.IssueOpsPhaseDone) || inv.Repo != "acme/r" || inv.PendingOperationID != "" {
+	if inv.LeaseStatus != "none" || inv.Branch != "rec-branch" || inv.WorktreeRoot != "/rec" || inv.Phase != string(model.PhaseDone) || inv.Repo != "acme/r" || inv.PendingOperationID != "" {
 		t.Fatalf("record-only inventory: %+v", inv)
 	}
 	record.Execution = &model.Execution{
@@ -280,9 +280,9 @@ func TestCleanupAbandonTargetsPrefersExecutionWorkspace(t *testing.T) {
 }
 
 func TestCleanupAbandonResolvedChildrenCountsOnlyDone(t *testing.T) {
-	got := CleanupAbandonResolvedChildren([]model.IssueOpsRecord{
-		{ID: "done", Phase: model.IssueOpsPhaseDone},
-		{ID: "open", Phase: model.IssueOpsPhaseImplement},
+	got := CleanupAbandonResolvedChildren([]model.Record{
+		{ID: "done", Phase: model.PhaseDone},
+		{ID: "open", Phase: model.PhaseImplement},
 	})
 	if !got["done"] || got["open"] || len(got) != 1 {
 		t.Fatalf("resolved: %v", got)
@@ -290,13 +290,13 @@ func TestCleanupAbandonResolvedChildrenCountsOnlyDone(t *testing.T) {
 }
 
 func TestCleanupAbandonPendingErrorBlocksOnlyWhenIntentRemains(t *testing.T) {
-	if got := CleanupAbandonPendingError(model.IssueOpsRecord{ID: "io-1"}); got != "" {
+	if got := CleanupAbandonPendingError(model.Record{ID: "io-1"}); got != "" {
 		t.Fatalf("no execution = %q", got)
 	}
-	if got := CleanupAbandonPendingError(model.IssueOpsRecord{ID: "io-1", Execution: &model.Execution{}}); got != "" {
+	if got := CleanupAbandonPendingError(model.Record{ID: "io-1", Execution: &model.Execution{}}); got != "" {
 		t.Fatalf("no pending intent = %q", got)
 	}
-	record := model.IssueOpsRecord{ID: "io-1", Execution: &model.Execution{Pending: &model.ExternalIntent{Kind: "remote_pr_create"}}}
+	record := model.Record{ID: "io-1", Execution: &model.Execution{Pending: &model.ExternalIntent{Kind: "remote_pr_create"}}}
 	got := CleanupAbandonPendingError(record)
 	if !strings.Contains(got, `"remote_pr_create"`) || !strings.Contains(got, "issueops execution reconcile --id io-1 --preview --json") {
 		t.Fatalf("pending guidance = %q", got)
@@ -305,13 +305,13 @@ func TestCleanupAbandonPendingErrorBlocksOnlyWhenIntentRemains(t *testing.T) {
 
 func TestPlanCleanupAbandonRemoteReads(t *testing.T) {
 	all := model.CleanupAbandonRequest{ClosePR: true, CloseIssue: true, DeleteRemoteBranch: true}
-	if got := PlanCleanupAbandonRemoteReads(model.IssueOpsRecord{}, model.CleanupAbandonRequest{}, "task", true); got != (CleanupAbandonRemoteReads{}) {
+	if got := PlanCleanupAbandonRemoteReads(model.Record{}, model.CleanupAbandonRequest{}, "task", true); got != (CleanupAbandonRemoteReads{}) {
 		t.Fatalf("no request, no reads: %+v", got)
 	}
-	record := model.IssueOpsRecord{
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "u"},
+	record := model.Record{
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: "u"},
 		IssueURL:       "https://x/issues/1",
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: " main "},
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: " main "},
 	}
 	got := PlanCleanupAbandonRemoteReads(record, all, "task", true)
 	if got != (CleanupAbandonRemoteReads{Artifact: true, Issue: true, Branch: true}) {
@@ -321,7 +321,7 @@ func TestPlanCleanupAbandonRemoteReads(t *testing.T) {
 	if got.Artifact || got.Issue || got.ArtifactMissing != "remote_provider_unavailable" || got.IssueMissing != "remote_provider_unavailable" || !got.Branch {
 		t.Fatalf("provider unavailable must not block the branch read: %+v", got)
 	}
-	got = PlanCleanupAbandonRemoteReads(model.IssueOpsRecord{IssueURL: "  "}, all, "", true)
+	got = PlanCleanupAbandonRemoteReads(model.Record{IssueURL: "  "}, all, "", true)
 	if got.ArtifactMissing != "remote_artifact_required" || got.IssueMissing != "issue_url_required" || got.BranchMissing != "branch_recorded" {
 		t.Fatalf("missing prerequisites: %+v", got)
 	}
@@ -382,9 +382,9 @@ func TestBuildCleanupAbandonRemotePreviewRecordsEveryRefusalAndDropsEffects(t *t
 }
 
 func TestArmCleanupAbandonReleasesClaimableLease(t *testing.T) {
-	attempt := model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationAbandon, Token: covAbandonToken, StartedAt: "2026-01-02T03:04:05Z"}
-	failure := model.IssueOpsCleanupAbandonFailure{Step: model.CleanupFailureStepApplying}
-	record := model.IssueOpsRecord{Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusClaimable, ClaimTokenSHA256: "tok"}}}
+	attempt := model.CleanupAttempt{Operation: model.CleanupOperationAbandon, Token: covAbandonToken, StartedAt: "2026-01-02T03:04:05Z"}
+	failure := model.CleanupAbandonFailure{Step: model.CleanupFailureStepApplying}
+	record := model.Record{Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusClaimable, ClaimTokenSHA256: "tok"}}}
 	next, err := ArmCleanupAbandon(record, attempt, failure)
 	if err != nil {
 		t.Fatal(err)
@@ -406,35 +406,35 @@ func TestArmCleanupAbandonReleasesClaimableLease(t *testing.T) {
 	if err != nil || next.Execution.Lease.ReleasedAt != "earlier" {
 		t.Fatalf("non-claimable lease untouched: %v %+v", err, next.Execution.Lease)
 	}
-	next, err = ArmCleanupAbandon(model.IssueOpsRecord{}, attempt, failure)
+	next, err = ArmCleanupAbandon(model.Record{}, attempt, failure)
 	if err != nil || next.Execution != nil || next.CleanupAttempt == nil {
 		t.Fatalf("record without execution: %v %+v", err, next)
 	}
 }
 
 func TestArmCleanupAbandonRejections(t *testing.T) {
-	attempt := model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationAbandon, Token: covAbandonToken, StartedAt: "2026-01-02T03:04:05Z"}
+	attempt := model.CleanupAttempt{Operation: model.CleanupOperationAbandon, Token: covAbandonToken, StartedAt: "2026-01-02T03:04:05Z"}
 	finish := attempt
 	finish.Operation = model.CleanupOperationFinish
-	record := model.IssueOpsRecord{}
-	if got, err := ArmCleanupAbandon(record, finish, model.IssueOpsCleanupAbandonFailure{}); err == nil || got.CleanupAttempt != nil || got.CleanupAbandonFailure != nil {
+	record := model.Record{}
+	if got, err := ArmCleanupAbandon(record, finish, model.CleanupAbandonFailure{}); err == nil || got.CleanupAttempt != nil || got.CleanupAbandonFailure != nil {
 		t.Fatalf("non-abandon operation: %v %+v", err, got)
 	}
-	owned := model.IssueOpsRecord{CleanupAttempt: &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationFinish, Token: strings.Repeat("1", 64), StartedAt: "2026-01-01T00:00:00Z"}}
-	if got, err := ArmCleanupAbandon(owned, attempt, model.IssueOpsCleanupAbandonFailure{}); err == nil || got.CleanupAbandonFailure != nil || got.CleanupAttempt.Operation != model.CleanupOperationFinish {
+	owned := model.Record{CleanupAttempt: &model.CleanupAttempt{Operation: model.CleanupOperationFinish, Token: strings.Repeat("1", 64), StartedAt: "2026-01-01T00:00:00Z"}}
+	if got, err := ArmCleanupAbandon(owned, attempt, model.CleanupAbandonFailure{}); err == nil || got.CleanupAbandonFailure != nil || got.CleanupAttempt.Operation != model.CleanupOperationFinish {
 		t.Fatalf("finish owns cycle: %v", err)
 	}
 	bad := attempt
 	bad.Token = "short"
-	if _, err := ArmCleanupAbandon(record, bad, model.IssueOpsCleanupAbandonFailure{}); err == nil {
+	if _, err := ArmCleanupAbandon(record, bad, model.CleanupAbandonFailure{}); err == nil {
 		t.Fatal("invalid token accepted")
 	}
 }
 
 func TestApplyCleanupAbandonFailureDrainsAttemptOnlyWhenDrained(t *testing.T) {
-	attempt := &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationAbandon, Token: covAbandonToken, StartedAt: "2026-01-01T00:00:00Z"}
-	failure := model.IssueOpsCleanupAbandonFailure{Step: "branch_delete", At: "2026-02-02T00:00:00Z"}
-	record := model.IssueOpsRecord{CleanupAttempt: attempt, UpdatedAt: "old"}
+	attempt := &model.CleanupAttempt{Operation: model.CleanupOperationAbandon, Token: covAbandonToken, StartedAt: "2026-01-01T00:00:00Z"}
+	failure := model.CleanupAbandonFailure{Step: "branch_delete", At: "2026-02-02T00:00:00Z"}
+	record := model.Record{CleanupAttempt: attempt, UpdatedAt: "old"}
 	kept := ApplyCleanupAbandonFailure(record, failure, false)
 	if kept.CleanupAttempt != attempt || kept.CleanupAbandonFailure == nil || kept.CleanupAbandonFailure.Step != "branch_delete" || kept.UpdatedAt != failure.At {
 		t.Fatalf("undrained: %+v", kept)
@@ -451,11 +451,11 @@ func TestApplyCleanupAbandonFailureDrainsAttemptOnlyWhenDrained(t *testing.T) {
 func TestBuildCleanupAbandonPreviewReportsLeaseBranchAndReceiptGates(t *testing.T) {
 	failure := covAbandonReceipt("branch_delete")
 	failure.WorktreeHead, failure.BranchOID = "h", "h"
-	record := model.IssueOpsRecord{ID: "io-1", Branch: "task", WorktreePath: "/w",
+	record := model.Record{ID: "io-1", Branch: "task", WorktreePath: "/w",
 		Execution:             &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusActive}},
 		CleanupAbandonFailure: failure,
 		IssueURL:              "https://x/issues/1",
-		ChildCycles:           []model.IssueOpsChildCycleRef{{CycleID: "child-1"}},
+		ChildCycles:           []model.ChildCycleRef{{CycleID: "child-1"}},
 	}
 	inv := model.CleanupAbandonInventory{Branch: "task", WorktreeRoot: "/w", BranchOID: "other"}
 	_, res := BuildCleanupAbandonPreview(record, model.CleanupAbandonRequest{Reason: " why "}, inv, CleanupAbandonObservation{
@@ -469,7 +469,7 @@ func TestBuildCleanupAbandonPreviewReportsLeaseBranchAndReceiptGates(t *testing.
 		t.Fatalf("result: %+v", res)
 	}
 
-	_, res = BuildCleanupAbandonPreview(model.IssueOpsRecord{ID: "io-2", WorktreePath: "/w"}, model.CleanupAbandonRequest{Reason: "r", Apply: true},
+	_, res = BuildCleanupAbandonPreview(model.Record{ID: "io-2", WorktreePath: "/w"}, model.CleanupAbandonRequest{Reason: "r", Apply: true},
 		model.CleanupAbandonInventory{Branch: "task", BranchOID: "b"}, CleanupAbandonObservation{BranchObservable: true})
 	if got := strings.Join(res.Missing, ","); got != "worktree_registry_observable" || res.Preview {
 		t.Fatalf("unobservable registry: %v preview=%t", res.Missing, res.Preview)
@@ -479,7 +479,7 @@ func TestBuildCleanupAbandonPreviewReportsLeaseBranchAndReceiptGates(t *testing.
 func TestBuildCleanupAbandonPreviewPartialBranchRetryRestoresRecordedHead(t *testing.T) {
 	failure := covAbandonReceipt("branch_delete")
 	failure.WorktreeHead, failure.BranchOID = "oid", "oid"
-	record := model.IssueOpsRecord{ID: "io-1", Branch: "task", WorktreePath: "/w", CleanupAbandonFailure: failure}
+	record := model.Record{ID: "io-1", Branch: "task", WorktreePath: "/w", CleanupAbandonFailure: failure}
 	inv := model.CleanupAbandonInventory{Branch: "task", BranchOID: "oid"}
 	gotInv, res := BuildCleanupAbandonPreview(record, model.CleanupAbandonRequest{Reason: "r"}, inv, CleanupAbandonObservation{
 		BranchObservable: true, RegistryObservable: true, FailureEvidence: covAbandonEvidence,
@@ -496,7 +496,7 @@ func TestBuildCleanupAbandonPreviewPartialBranchRetryRestoresRecordedHead(t *tes
 }
 
 func TestBuildCleanupAbandonPreviewForwardsRemoteDiagnostics(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-1", Branch: "task", WorktreePath: "/w"}
+	record := model.Record{ID: "io-1", Branch: "task", WorktreePath: "/w"}
 	inv := model.CleanupAbandonInventory{Branch: "task"}
 	_, res := BuildCleanupAbandonPreview(record, model.CleanupAbandonRequest{Reason: "r", ClosePR: true}, inv, CleanupAbandonObservation{
 		BranchObservable: true, RemoteEffects: []string{"close_pr"}, RemoteArtifactState: "open", IssueState: "closed",

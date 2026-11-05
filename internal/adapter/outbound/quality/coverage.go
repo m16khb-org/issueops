@@ -21,6 +21,9 @@ import (
 	"time"
 )
 
+// RunGoTestCoverage returns go test coverage output for root. It serves a cached
+// result when the repository fingerprint is unchanged; otherwise it calls execute
+// under a bounded timeout and caches a successful result under cacheBase.
 func RunGoTestCoverage(root string, execute func(context.Context, string) (string, error), cacheBase func() (string, error)) (string, error) {
 	fingerprint, fingerprintErr := CoverageFingerprint(root)
 	if fingerprintErr == nil {
@@ -28,7 +31,7 @@ func RunGoTestCoverage(root string, execute func(context.Context, string) (strin
 			return output, nil
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), CoverageCommandTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), coverageCommandTimeout)
 	defer cancel()
 	output, err := execute(ctx, root)
 	if err == nil && fingerprintErr == nil {
@@ -37,20 +40,22 @@ func RunGoTestCoverage(root string, execute func(context.Context, string) (strin
 	return output, err
 }
 
-// CoverageCommandTimeout leaves bounded headroom above the measured 270-second
+// coverageCommandTimeout leaves bounded headroom above the measured 270-second
 // repository-wide warm-cache run. A two-minute deadline made a healthy first
 // collection fail before it could seed the exact-fingerprint cache.
-const CoverageCommandTimeout = 10 * time.Minute
-const CoverageCommandOutputLimit = 16 * 1024 * 1024
+const coverageCommandTimeout = 10 * time.Minute
+const coverageCommandOutputLimit = 16 * 1024 * 1024
 const coverageFingerprintGitOutputLimit = 64 * 1024 * 1024
 const coverageFingerprintFileLimit = 64 * 1024 * 1024
 const coverageFingerprintTotalFileLimit = 512 * 1024 * 1024
 const coverageFingerprintFileCountLimit = 10_000
 
+// ExecuteGoTestCoverage runs "go test -cover ./..." in root and returns its
+// combined output. Output beyond the size limit is an error.
 func ExecuteGoTestCoverage(ctx context.Context, root string) (string, error) {
 	cmd := exec.CommandContext(ctx, "go", "test", "-cover", "./...")
 	cmd.Dir = root
-	out := NewBoundedQualityBuffer(CoverageCommandOutputLimit)
+	out := newBoundedQualityBuffer(coverageCommandOutputLimit)
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	err := cmd.Run()
@@ -58,7 +63,7 @@ func ExecuteGoTestCoverage(ctx context.Context, root string) (string, error) {
 		return out.String(), ctx.Err()
 	}
 	if out.Truncated() {
-		return out.String(), fmt.Errorf("coverage command output exceeds %d bytes", CoverageCommandOutputLimit)
+		return out.String(), fmt.Errorf("coverage command output exceeds %d bytes", coverageCommandOutputLimit)
 	}
 	return out.String(), err
 }
@@ -71,17 +76,17 @@ type coverageCacheEntry struct {
 	Packages    []contract.CoveragePackage `json:"packages"`
 }
 
-type BoundedQualityBuffer struct {
+type boundedQualityBuffer struct {
 	buffer    bytes.Buffer
 	limit     int
 	truncated bool
 }
 
-func NewBoundedQualityBuffer(limit int) BoundedQualityBuffer {
-	return BoundedQualityBuffer{limit: limit}
+func newBoundedQualityBuffer(limit int) boundedQualityBuffer {
+	return boundedQualityBuffer{limit: limit}
 }
 
-func (buffer *BoundedQualityBuffer) Write(value []byte) (int, error) {
+func (buffer *boundedQualityBuffer) Write(value []byte) (int, error) {
 	size := len(value)
 	remaining := buffer.limit - buffer.buffer.Len()
 	if remaining > 0 {
@@ -96,9 +101,11 @@ func (buffer *BoundedQualityBuffer) Write(value []byte) (int, error) {
 	return size, nil
 }
 
-func (buffer *BoundedQualityBuffer) String() string  { return buffer.buffer.String() }
-func (buffer *BoundedQualityBuffer) Truncated() bool { return buffer.truncated }
+func (buffer *boundedQualityBuffer) String() string  { return buffer.buffer.String() }
+func (buffer *boundedQualityBuffer) Truncated() bool { return buffer.truncated }
 
+// DefaultCoverageCacheBase returns the per-user cache directory that stores
+// coverage cache entries.
 func DefaultCoverageCacheBase() (string, error) {
 	base, err := os.UserCacheDir()
 	if err != nil {
@@ -107,6 +114,9 @@ func DefaultCoverageCacheBase() (string, error) {
 	return filepath.Join(base, "issueops", "quality-coverage"), nil
 }
 
+// CoverageFingerprint returns a SHA-256 digest of everything that can change test
+// coverage: HEAD, the tracked diff, untracked file contents, the Go toolchain, and
+// Go-related environment variables. Oversized inputs are an error.
 func CoverageFingerprint(root string) (string, error) {
 	head, err := gitCoverageFingerprintInput(root, "rev-parse", "--verify", "HEAD")
 	if err != nil {
@@ -228,7 +238,7 @@ func hashCoverageFileContent(hasher io.Writer, path string) error {
 func gitCoverageFingerprintInput(root string, args ...string) ([]byte, error) {
 	command := exec.Command(gitbin.Path(), args...)
 	command.Dir = root
-	output := NewBoundedQualityBuffer(coverageFingerprintGitOutputLimit)
+	output := newBoundedQualityBuffer(coverageFingerprintGitOutputLimit)
 	command.Stdout = &output
 	command.Stderr = &output
 	if err := command.Run(); err != nil {
@@ -255,6 +265,8 @@ func coverageEnvironmentFingerprint() []string {
 	return result
 }
 
+// CoverageCachePath returns the cache file path for root under the base
+// directory that cacheBase supplies.
 func CoverageCachePath(root string, cacheBase func() (string, error)) (string, error) {
 	base, err := cacheBase()
 	if err != nil {

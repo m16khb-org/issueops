@@ -13,7 +13,7 @@ func newLedgerRecorderRecord(t *testing.T) (string, string) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-ledger"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "1-ledger"})
 	if err != nil {
 		t.Fatalf("start issueops: %v", err)
 	}
@@ -25,11 +25,11 @@ func TestRecordIssueOpsDomainReview(t *testing.T) {
 
 	stateRoot, id := newLedgerRecorderRecord(t)
 
-	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{}); err == nil {
+	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.DomainReviewRequest{}); err == nil {
 		t.Fatal("empty domain review request should be rejected")
 	}
 
-	rec, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{
+	rec, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.DomainReviewRequest{
 		Terminology:       []string{"ledger"},
 		ModelFit:          "fits the phase model",
 		Risks:             []string{"deadlock"},
@@ -49,7 +49,7 @@ func TestRecordIssueOpsDomainReview(t *testing.T) {
 	}
 }
 
-func issueOpsDomainReviewMissingForTest(r issueops.IssueOpsReadiness) bool {
+func issueOpsDomainReviewMissingForTest(r issueops.Readiness) bool {
 	return slices.Contains(r.Missing, "domain_review")
 }
 

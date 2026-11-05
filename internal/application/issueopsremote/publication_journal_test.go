@@ -18,7 +18,7 @@ import (
 // an existing payload, Delete drops it, and a failed transaction rolls back.
 type memoryPublicationStore struct {
 	persists int
-	record   model.IssueOpsRecord
+	record   model.Record
 	payload  map[string]contract.IntentPayload
 }
 
@@ -31,7 +31,7 @@ func (s *memoryPublicationStore) WithinTransaction(ctx context.Context, _ string
 	}
 	return nil
 }
-func (s *memoryPublicationStore) Read(context.Context, string) (model.IssueOpsRecord, error) {
+func (s *memoryPublicationStore) Read(context.Context, string) (model.Record, error) {
 	return s.record, nil
 }
 func (s *memoryPublicationStore) ReadPayload(_ context.Context, op string) (contract.IntentPayload, error) {
@@ -48,19 +48,19 @@ func (s *memoryPublicationStore) RecordSnapshot(context.Context, string) (contra
 func (s *memoryPublicationStore) PayloadRaw(_ context.Context, op string) ([]byte, error) {
 	return json.Marshal(s.payload[op])
 }
-func (s *memoryPublicationStore) DecodeSnapshot(intent contract.Intent) (model.IssueOpsRecord, contract.IntentPayload, error) {
-	var record model.IssueOpsRecord
+func (s *memoryPublicationStore) DecodeSnapshot(intent contract.Intent) (model.Record, contract.IntentPayload, error) {
+	var record model.Record
 	var payload contract.IntentPayload
 	if err := json.Unmarshal(intent.Record.Raw, &record); err != nil {
 		return record, payload, err
 	}
 	return record, payload, json.Unmarshal(intent.Raw, &payload)
 }
-func (s *memoryPublicationStore) Persist(_ context.Context, record model.IssueOpsRecord, mutation contract.IntentMutation) (model.IssueOpsRecord, error) {
+func (s *memoryPublicationStore) Persist(_ context.Context, record model.Record, mutation contract.IntentMutation) (model.Record, error) {
 	s.persists++
 	if mutation.RequireAbsent {
 		if _, exists := s.payload[mutation.OperationID]; exists {
-			return model.IssueOpsRecord{}, errors.New("intent already exists")
+			return model.Record{}, errors.New("intent already exists")
 		}
 	}
 	s.record = record
@@ -83,16 +83,16 @@ func (e journalEnvironment) NewOperationID() (string, error) {
 
 type journalAuthority struct{ err error }
 
-func (a journalAuthority) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+func (a journalAuthority) Authorize(context.Context, model.Record, model.Actor) error {
 	return a.err
 }
 
 const journalOp = "0123456789abcdef0123456789abcdef"
 
-func journalRecord() model.IssueOpsRecord {
+func journalRecord() model.Record {
 	holder := model.NativeActor{Host: "codex", SessionID: "s1", AgentID: "a1"}
-	return model.IssueOpsRecord{
-		ID: "cycle", Phase: model.IssueOpsPhasePR, IssueURL: "https://github.com/acme/app/issues/7",
+	return model.Record{
+		ID: "cycle", Phase: model.PhasePR, IssueURL: "https://github.com/acme/app/issues/7",
 		Execution: &model.Execution{
 			Workspace: model.Workspace{Root: "/wt"},
 			Lease:     model.WriteLease{Generation: 2, Status: model.LeaseStatusActive, Holder: &holder},

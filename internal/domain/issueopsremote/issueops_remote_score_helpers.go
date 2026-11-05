@@ -1,11 +1,11 @@
-package remote
+package issueopsremote
 
 import (
 	"sort"
 	"strings"
 )
 
-func issueOpsRemoteApplyInstructions(provider string, issues, labels []IssueOpsRemoteScoredItem) []string {
+func issueOpsRemoteApplyInstructions(provider string, issues, labels []ScoredItem) []string {
 	var instructions []string
 	if len(issues) > 0 {
 		switch provider {
@@ -30,7 +30,7 @@ func issueOpsRemoteApplyInstructions(provider string, issues, labels []IssueOpsR
 	return instructions
 }
 
-func issueOpsRemoteIssueApplyHint(provider string, item IssueOpsRemoteScoredItem) string {
+func issueOpsRemoteIssueApplyHint(provider string, item ScoredItem) string {
 	if provider == "gitlab" {
 		if ref := firstNonEmpty(item.URL, item.ID); ref != "" {
 			return "attach as GitLab linked item via issue links API: " + ref
@@ -53,7 +53,7 @@ func issueOpsRemoteLabelApplyHint(provider, name string) string {
 	return "apply GitHub label: " + name
 }
 
-func sortIssueOpsRemoteScoredItems(items []IssueOpsRemoteScoredItem) {
+func sortIssueOpsRemoteScoredItems(items []ScoredItem) {
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].Score == items[j].Score {
 			return firstNonEmpty(items[i].ID, items[i].Name, items[i].Title) < firstNonEmpty(items[j].ID, items[j].Name, items[j].Title)

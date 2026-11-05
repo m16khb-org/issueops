@@ -15,9 +15,11 @@ import (
 // actor verification.
 type NativeProcessInspector struct{}
 
+// Inspect observes the live state of the process named by receipt and returns its status
+// and current receipt, or ctx.Err() when ctx has already ended.
 func (NativeProcessInspector) Inspect(ctx context.Context, receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
 	if err := ctx.Err(); err != nil {
-		return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, err
+		return nativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, err
 	}
 	return InspectNativeProcessReceipt(receipt)
 }

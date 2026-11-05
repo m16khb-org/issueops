@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) augmentcontract.SelfAugmentRepoSignals {
+func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) augmentcontract.RepoSignals {
 	return (augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}).CollectSignals(root, docsIndexed, skills, geniusText)
 }
 

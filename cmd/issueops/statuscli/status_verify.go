@@ -1,6 +1,10 @@
+// Package statuscli implements the `system-status` and `verify-work` command
+// line handlers. It is a CLI-layer package that parses flags and prints the
+// results of application services.
 package statuscli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -8,8 +12,11 @@ import (
 	statusapp "issueops/internal/application/status"
 )
 
+// Command is the `system-status` CLI command; Service gathers the status.
 type Command struct{ Service statusapp.Service }
 
+// Run parses the system-status arguments and prints the status of the
+// repository from --repo or one positional path, as text or with --json.
 func (command Command) Run(args []string) error {
 	fs := flag.NewFlagSet("system-status", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
@@ -21,7 +28,7 @@ func (command Command) Run(args []string) error {
 	if positional != "" {
 		*repo = positional
 	}
-	status := command.Service.Run(*repo)
+	status := command.Service.Run(context.Background(), *repo)
 	if *jsonOut {
 		return printJSON(status)
 	}

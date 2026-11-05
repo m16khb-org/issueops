@@ -14,11 +14,11 @@ import (
 )
 
 func TestMCPSmokeExpectedMarkers(t *testing.T) {
-	markers := MCPSmokeExpectedMarkers()
-	if len(markers) == 0 || !MCPSmokeHasExpectedMarkers(strings.Join(markers, "\n")) {
+	markers := expectedMarkers()
+	if len(markers) == 0 || !hasExpectedMarkers(strings.Join(markers, "\n")) {
 		t.Fatal("expected marker set to satisfy marker check")
 	}
-	if MCPSmokeHasExpectedMarkers("atomic_commit_preflight only") {
+	if hasExpectedMarkers("atomic_commit_preflight only") {
 		t.Fatal("partial marker output should fail")
 	}
 }
@@ -26,7 +26,7 @@ func TestMCPSmokeExpectedMarkers(t *testing.T) {
 func TestValidateMCPSmokeContract(t *testing.T) {
 	stdout := validMCPSmokeStdout()
 	step := selfverify.StepResult{OK: true, Stdout: stdout}
-	ValidateMCPSmokeContract(&step)
+	validateMCPSmokeContract(&step)
 	if !step.OK || step.Error != "" {
 		t.Fatalf("valid contract failed: %#v", step)
 	}
@@ -41,7 +41,7 @@ func TestValidateMCPSmokeContract(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			step := selfverify.StepResult{OK: true, Stdout: tc.stdout}
-			ValidateMCPSmokeContract(&step)
+			validateMCPSmokeContract(&step)
 			if step.OK || !strings.Contains(step.Error, tc.want) {
 				t.Fatalf("got %#v, want error containing %q", step, tc.want)
 			}
@@ -116,7 +116,7 @@ func TestDepsDefaultsAndSmallHelpers(t *testing.T) {
 }
 
 func validMCPSmokeStdout() string {
-	markers := strings.Join(MCPSmokeExpectedMarkers(), " ") + strings.Repeat("x", 800)
+	markers := strings.Join(expectedMarkers(), " ") + strings.Repeat("x", 800)
 	var b strings.Builder
 	for i := 1; i <= 11; i++ {
 		fmt.Fprintf(&b, `{"id":%d,"text":%q}`+"\n", i, markers)

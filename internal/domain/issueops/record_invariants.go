@@ -9,7 +9,7 @@ import (
 )
 
 // ValidateRecordInvariants checks relationships between fields of a persisted cycle.
-func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
+func ValidateRecordInvariants(record issueopscontract.Record) error {
 	for _, op := range record.ChildCreateOperations {
 		if err := validateChildCreateOperationInvariants(op); err != nil {
 			return err
@@ -26,7 +26,7 @@ func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
 		}
 	}
 	if record.IssueCreateIntent != nil {
-		if err := ValidateIssueCreateIntentInvariants(*record.IssueCreateIntent); err != nil {
+		if err := validateIssueCreateIntentInvariants(*record.IssueCreateIntent); err != nil {
 			return err
 		}
 	}
@@ -39,7 +39,7 @@ func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
 }
 
 func validateChildCreateOperationInvariants(op issueopscontract.ChildCreateOperation) error {
-	if err := ValidateIssueCreateIntentInvariants(op.IssueOpsIssueCreateIntent); err != nil {
+	if err := validateIssueCreateIntentInvariants(op.IssueCreateIntent); err != nil {
 		return err
 	}
 	project, err := childProjectAuthority(op.ParentURL, op.Provider)
@@ -58,10 +58,10 @@ func validateChildCreateOperationInvariants(op issueopscontract.ChildCreateOpera
 	return nil
 }
 
-func validatePlanPrepInvariants(prep issueopscontract.IssueOpsPlanPrep) error {
+func validatePlanPrepInvariants(prep issueopscontract.PlanPrep) error {
 	for _, item := range []struct {
 		name  string
-		value issueopscontract.IssueOpsPlanPrepItem
+		value issueopscontract.PlanPrepItem
 	}{
 		{name: "prior_decisions", value: prep.PriorDecisions},
 		{name: "related_issues", value: prep.RelatedIssues},
@@ -75,7 +75,7 @@ func validatePlanPrepInvariants(prep issueopscontract.IssueOpsPlanPrep) error {
 	return nil
 }
 
-func validatePlanPrepItem(name string, item issueopscontract.IssueOpsPlanPrepItem) error {
+func validatePlanPrepItem(name string, item issueopscontract.PlanPrepItem) error {
 	switch item.Status {
 	case "evidence":
 		if len(item.Evidence) == 0 || strings.TrimSpace(item.WaiveReason) != "" {

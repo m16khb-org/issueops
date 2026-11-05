@@ -10,27 +10,27 @@ func TestStrictPRReadinessFlagsTargetBranchMismatch(t *testing.T) {
 	t.Parallel()
 
 	repo := initIssueOpsRepo(t)
-	base := issueops.IssueOpsRecord{
+	base := issueops.Record{
 		OK:                 true,
 		Repo:               repo,
 		Branch:             "main",
-		Phase:              issueops.IssueOpsPhasePR,
+		Phase:              issueops.PhasePR,
 		IssueURL:           "https://github.com/example/repo/issues/1",
 		PlanPath:           "plans/demo.md",
 		WorktreePath:       repo,
 		Intent:             issueOpsIntentContractForTest(),
 		ArchitectureReview: issueOpsArchitectureReviewForTest(),
-		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
+		BranchPrepare:      &issueops.BranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
 	}
 
 	mismatch := base
-	mismatch.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/1", TargetBranch: "develop", VerifiedAt: "2026-06-29T00:00:00Z"}
+	mismatch.RemoteArtifact = &issueops.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/1", TargetBranch: "develop", VerifiedAt: "2026-06-29T00:00:00Z"}
 	if ready := IssueOpsStrictPRReadiness(mismatch); !containsString(ready.Missing, "target_branch_match") {
 		t.Fatalf("strict PR readiness must flag target_branch_match when target != base: %#v", ready.Missing)
 	}
 
 	match := base
-	match.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/1", TargetBranch: "main", VerifiedAt: "2026-06-29T00:00:00Z"}
+	match.RemoteArtifact = &issueops.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/1", TargetBranch: "main", VerifiedAt: "2026-06-29T00:00:00Z"}
 	if ready := IssueOpsStrictPRReadiness(match); containsString(ready.Missing, "target_branch_match") {
 		t.Fatalf("matching target/base must not flag target_branch_match: %#v", ready.Missing)
 	}

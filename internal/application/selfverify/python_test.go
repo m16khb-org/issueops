@@ -12,7 +12,7 @@ import (
 )
 
 func TestPythonRerunUsesTheExpandedSuiteRunner(t *testing.T) {
-	command, ok := domain.SelfVerifyStepRerunCommand("Python script tests")
+	command, ok := domain.StepRerunCommand("Python script tests")
 	if !ok || command != "python3 scripts/python_suite_runner.py" {
 		t.Fatalf("Python rerun lost skill suites: %q, %v", command, ok)
 	}
@@ -22,7 +22,7 @@ func TestPythonScriptTestsUseRepositoryDiscoveryAndPropagateFailure(t *testing.T
 	for _, ok := range []bool{false, true} {
 		t.Run(map[bool]string{false: "fail", true: "pass"}[ok], func(t *testing.T) {
 			calls := 0
-			deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
+			deps := StepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 				calls++
 				if root != "/repo" || label != "Python script tests" || timeout != 5*time.Minute || stdin != "" || name != "python3" || len(args) < 3 || args[0] != "-c" || !reflect.DeepEqual(args[2:], []string{"scripts/python_suite_runner.py"}) {
 					t.Fatalf("unexpected Python command: %s %s %s %s %v", root, label, timeout, name, args)
@@ -46,7 +46,7 @@ func TestPythonScriptTestsUseRepositoryDiscoveryAndPropagateFailure(t *testing.T
 				steps = append(steps, contract.StepResult{Label: label, OK: true})
 			}
 			steps[2] = step
-			summary := SummarizeSelfVerification(augment.SelfAugmentResult{OK: ok, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}, 95)
+			summary := SummarizeSelfVerification(augment.Result{OK: ok, Iterations: 1, Runs: []augment.Iteration{{Iteration: 1, Steps: steps}}}, 95)
 			if summary.TerminationEligible != ok || (ok && summary.MinimumGoalScore != 100) || (!ok && summary.FailedStep != "Python script tests") {
 				t.Fatal(summary)
 			}

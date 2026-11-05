@@ -26,6 +26,8 @@ func (r *repeatedFlag) Set(value string) error {
 	return nil
 }
 
+// Run 함수는 `issueops loop`의 하위 명령(start, record-attempt, status 등)을 args[0]으로
+// 골라 실행한다. 도움말 인자는 usage를 출력하고, 알 수 없는 하위 명령은 오류를 돌려준다.
 func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		loopUsage()

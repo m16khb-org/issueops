@@ -2,7 +2,10 @@ package issueops
 
 import model "issueops/internal/contract/issueops"
 
-func ApplyCleanupFinishFailure(record model.IssueOpsRecord, failure model.IssueOpsCleanupFinishFailure, drained bool) model.IssueOpsRecord {
+// ApplyCleanupFinishFailure stores failure as the cleanup finish receipt and
+// stamps the record with its time. It also clears the cleanup attempt when
+// the apply drained.
+func ApplyCleanupFinishFailure(record model.Record, failure model.CleanupFinishFailure, drained bool) model.Record {
 	record.CleanupFinishFailure = &failure
 	record.UpdatedAt = failure.At
 	if drained {

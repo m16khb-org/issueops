@@ -12,7 +12,7 @@ import (
 )
 
 func TestCanStageIsSealedAfterExecutionPrepare(t *testing.T) {
-	released := issueopscontract.IssueOpsRecord{
+	released := issueopscontract.Record{
 		Execution: &issueopscontract.Execution{
 			Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 		},
@@ -22,13 +22,13 @@ func TestCanStageIsSealedAfterExecutionPrepare(t *testing.T) {
 			t.Fatalf("prepared execution must seal %s artifacts", name)
 		}
 	}
-	if !CanStage(issueopscontract.IssueOpsRecord{}, "plan") {
+	if !CanStage(issueopscontract.Record{}, "plan") {
 		t.Fatal("record without an execution must accept staged artifacts")
 	}
 }
 
 func TestCanStageRejectsTerminalRecordWithoutExecution(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{Phase: issueopscontract.IssueOpsPhaseDone}
+	record := issueopscontract.Record{Phase: issueopscontract.PhaseDone}
 	if CanStage(record, "plan") {
 		t.Fatal("terminal record must reject new staged artifacts")
 	}

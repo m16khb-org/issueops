@@ -9,7 +9,7 @@ import (
 
 // renderProjectDocsAppendRecordFile renders a standalone modular record file
 // with canonical frontmatter (folder-first layout, one file per record).
-func renderProjectDocsAppendRecordFile(kind, name, description string, req projectdocscontract.ProjectDocsAppendRequest, now time.Time) string {
+func renderProjectDocsAppendRecordFile(kind, name, description string, req projectdocscontract.AppendRequest, now time.Time) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "---\nname: %s\ndescription: %s\n---\n\n", name, description)
 	fmt.Fprintf(&b, "# %s\n\n", strings.TrimSpace(req.Title))
@@ -18,7 +18,7 @@ func renderProjectDocsAppendRecordFile(kind, name, description string, req proje
 	return b.String()
 }
 
-func renderProjectDocsAppendFields(kind string, req projectdocscontract.ProjectDocsAppendRequest) string {
+func renderProjectDocsAppendFields(kind string, req projectdocscontract.AppendRequest) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "- Kind: `%s`\n", kind)
 	if source := strings.TrimSpace(req.Source); source != "" {

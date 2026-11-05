@@ -100,7 +100,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 			if _, err := os.Stat(prepared.LauncherPath); !os.IsNotExist(err) {
 				t.Fatalf("receiver did not delete launcher before exec: %v", err)
 			}
-			receipt, err := ReadBootstrapReceipt(prepared.ReceiptPath)
+			receipt, err := readBootstrapReceipt(prepared.ReceiptPath)
 			if err != nil || receipt.Status != "ok" || receipt.CWD != worktree || receipt.WindowID != testWindow || receipt.WorkspaceID != testWorkspace || receipt.SurfaceID != testSurface {
 				t.Fatalf("receipt=%+v err=%v", receipt, err)
 			}
@@ -196,7 +196,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 			t.Fatalf("recovery artifact missing %s: %v", path, err)
 		}
 	}
-	receipt, err := ReadBootstrapReceipt(prepared.ReceiptPath)
+	receipt, err := readBootstrapReceipt(prepared.ReceiptPath)
 	if err != nil || receipt.Status != "identity_mismatch" || receipt.CWD != wrong {
 		t.Fatalf("receipt=%+v err=%v", receipt, err)
 	}
@@ -241,7 +241,7 @@ func TestPrivateLauncherRejectsWrongAmbientCmuxScope(t *testing.T) {
 	if _, err := os.Stat(capture); !os.IsNotExist(err) {
 		t.Fatal("host executed after ambient scope mismatch")
 	}
-	receipt, err := ReadBootstrapReceipt(prepared.ReceiptPath)
+	receipt, err := readBootstrapReceipt(prepared.ReceiptPath)
 	if err != nil || receipt.Status != "identity_mismatch" || receipt.WorkspaceID == testWorkspace {
 		t.Fatalf("receipt=%+v err=%v", receipt, err)
 	}

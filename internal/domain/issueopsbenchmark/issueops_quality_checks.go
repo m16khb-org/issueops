@@ -6,7 +6,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueopsbenchmark"
 )
 
-func issueOpsLabelDecisionEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsLabelDecisionEvidenceComplete(artifact issueopscontract.Artifact) bool {
 	text := artifact.IssueDraft + "\n" + artifact.ProblemSummary
 	hasDecision := containsAllFold(text, "selected label", "rejected label") ||
 		containsAllFold(text, "선택 라벨", "거절 라벨")
@@ -15,7 +15,7 @@ func issueOpsLabelDecisionEvidenceComplete(artifact issueopscontract.IssueOpsBen
 		containsAnyFold(text, "manual override", "수동 override", "수동 판단")
 }
 
-func issueOpsHierarchyEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsHierarchyEvidenceComplete(artifact issueopscontract.Artifact) bool {
 	text := artifact.TaskBreakdown + "\n" + artifact.Plan
 	hasChildWork := containsAnyFold(text, "sub-issue", "subissue", "child item", "child work item") &&
 		containsAnyFold(text, "link-child", "provider-native", "github sub-issue", "gitlab child")
@@ -97,19 +97,19 @@ func issueOpsChildTaskDependencyClassificationComplete(text string) bool {
 	)
 }
 
-func issueOpsDraftIssueCompletionEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsDraftIssueCompletionEvidenceComplete(artifact issueopscontract.Artifact) bool {
 	return containsAllFold(artifact.CompletionHygiene, "draft issue completion record", "final diff", "evidence", "labels", "children", "unresolved follow-up") &&
 		containsAnyFold(artifact.CompletionHygiene, "pr url", "mr url")
 }
 
-func issueOpsReviewAgentThreadEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsReviewAgentThreadEvidenceComplete(artifact issueopscontract.Artifact) bool {
 	text := artifact.ReviewFeedbackEvidence
 	return containsAnyFold(text, "kodus", "gemini code assist", "review-agent") &&
 		containsAllFold(text, "thread reply", "resolution") &&
 		containsAnyFold(text, "resolveReviewThread", "resolved=true")
 }
 
-func detectIssueOpsQualityCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) []string {
+func detectIssueOpsQualityCriticalFailures(fixture issueopscontract.Fixture, artifact issueopscontract.Artifact, routingComplete bool) []string {
 	var failures []string
 	for _, rule := range fixture.CriticalFailures {
 		ruleText := strings.ToLower(rule)
@@ -120,7 +120,7 @@ func detectIssueOpsQualityCriticalFailures(fixture issueopscontract.IssueOpsBenc
 	return failures
 }
 
-func issueOpsArtifactCriticalFailure(ruleText string, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+func issueOpsArtifactCriticalFailure(ruleText string, artifact issueopscontract.Artifact) bool {
 	switch {
 	case strings.Contains(ruleText, "intelligent label") && !issueOpsLabelDecisionEvidenceComplete(artifact):
 		return true
@@ -134,7 +134,7 @@ func issueOpsArtifactCriticalFailure(ruleText string, artifact issueopscontract.
 	return false
 }
 
-func issueOpsFixtureCriticalFailure(ruleText string, fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) bool {
+func issueOpsFixtureCriticalFailure(ruleText string, fixture issueopscontract.Fixture, artifact issueopscontract.Artifact, routingComplete bool) bool {
 	switch {
 	case strings.Contains(ruleText, "skips pioneer method") && !PioneerSkillEvidenceComplete(fixture, artifact):
 		return true

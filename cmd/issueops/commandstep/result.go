@@ -1,3 +1,5 @@
+// Package commandstep prints self-verify step results for CLI commands that
+// run verification gates.
 package commandstep
 
 import (
@@ -7,6 +9,8 @@ import (
 	"strings"
 )
 
+// PrintStep prints a one-line outcome for step, followed by indented stdout
+// and stderr when the step failed.
 func PrintStep(step selfverify.StepResult) {
 	if step.OK {
 		fmt.Printf("→ %s ok (%dms)\n", step.Label, step.DurationMS)
@@ -21,6 +25,8 @@ func PrintStep(step selfverify.StepResult) {
 	}
 }
 
+// IndentLines splits s into lines, indents each by two spaces, and joins them
+// with newlines. Blank input yields an empty string.
 func IndentLines(s string) string {
 	lines := splitLines(s)
 	for i, line := range lines {

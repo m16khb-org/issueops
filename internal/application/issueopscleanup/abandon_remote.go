@@ -10,11 +10,16 @@ import (
 	"issueops/internal/port"
 )
 
+// AbandonRemoteObserver reads remote artifact, issue and branch state for the
+// abandon preview, using RemoteRef to look up the remote branch OID.
 type AbandonRemoteObserver struct {
 	RemoteRef func(context.Context, string, string) (string, error)
 }
 
-func (s AbandonRemoteObserver) Observe(ctx context.Context, record model.IssueOpsRecord, req model.CleanupAbandonRequest, provider port.IssueProvider, inventory model.CleanupAbandonInventory) (model.CleanupAbandonInventory, domain.CleanupAbandonObservation) {
+// Observe reads only the remote facts the request needs (artifact state,
+// issue state, remote branch OID) and returns the inventory and observation
+// with them applied. Read failures are recorded as facts, not returned.
+func (s AbandonRemoteObserver) Observe(ctx context.Context, record model.Record, req model.CleanupAbandonRequest, provider port.IssueProvider, inventory model.CleanupAbandonInventory) (model.CleanupAbandonInventory, domain.CleanupAbandonObservation) {
 	plan := domain.PlanCleanupAbandonRemoteReads(record, req, inventory.Branch, provider != nil)
 	var facts domain.CleanupAbandonRemoteFacts
 	read := func(kind, url string) (string, error) {

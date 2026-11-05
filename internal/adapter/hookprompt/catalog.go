@@ -1,3 +1,5 @@
+// Package hookprompt renders the user-facing views of the project document
+// catalog that host lifecycle hooks inject.
 package hookprompt
 
 import (
@@ -16,7 +18,7 @@ func RenderProjectDocCatalogOmissions(omissions projectdoc.CatalogOmissions) str
 
 // RenderProjectDocCatalogUserView returns the one-line notice the user sees
 // when the catalog is injected. The document list itself is model-facing only.
-func RenderProjectDocCatalogUserView(repoName string, docs []projectdoc.ProjectDocCatalogEntry) string {
+func RenderProjectDocCatalogUserView(repoName string, docs []projectdoc.CatalogEntry) string {
 	if len(docs) == 0 {
 		return ""
 	}

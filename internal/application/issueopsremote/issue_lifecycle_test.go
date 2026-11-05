@@ -53,14 +53,14 @@ type createHarness struct {
 	env      *createEnv
 	requests []port.IssueProviderCreateIssueRequest
 	ctxErrs  []error
-	verified []model.IssueOpsRemoteArtifactVerificationRequest
-	verifyFn func(model.IssueOpsRemoteArtifactVerificationRequest) error
+	verified []model.RemoteArtifactVerificationRequest
+	verifyFn func(model.RemoteArtifactVerificationRequest) error
 	creator  *IssueCreator
 }
 
 func newCreateHarness(t *testing.T, result port.IssueProviderCreateIssueResult, createErr error) *createHarness {
 	t.Helper()
-	record := model.IssueOpsRecord{ID: "io-create", Repo: "/repo"}
+	record := model.Record{ID: "io-create", Repo: "/repo"}
 	store, _ := newArtifactStoreForTest(record)
 	h := &createHarness{store: store}
 	h.env = &createEnv{inferred: "github", authority: testAuthority}
@@ -69,7 +69,7 @@ func newCreateHarness(t *testing.T, result port.IssueProviderCreateIssueResult, 
 		h.ctxErrs = append(h.ctxErrs, ctx.Err())
 		return result, createErr
 	}
-	verify := func(_ context.Context, req model.IssueOpsRemoteArtifactVerificationRequest) error {
+	verify := func(_ context.Context, req model.RemoteArtifactVerificationRequest) error {
 		h.verified = append(h.verified, req)
 		if h.verifyFn != nil {
 			return h.verifyFn(req)
@@ -84,7 +84,7 @@ func confirmCmd() IssueCreateCommand {
 	return IssueCreateCommand{ID: "io-create", Title: "이슈 제목", Template: "implementation_task", Fields: issueFields, Labels: []string{" bug "}, Assignees: []string{"me"}, Confirm: true}
 }
 
-func (h *createHarness) intent() *model.IssueOpsIssueCreateIntent {
+func (h *createHarness) intent() *model.IssueCreateIntent {
 	return h.store.records["io-create"].IssueCreateIntent
 }
 
@@ -210,7 +210,7 @@ func TestIssueCreateProviderErrorInPreviewLeavesRecordUntouched(t *testing.T) {
 func TestIssueCreateRecordsVerificationFailureWithObservedURL(t *testing.T) {
 	h := newCreateHarness(t, port.IssueProviderCreateIssueResult{OK: true, URL: testIssueURL}, nil)
 	boom := errors.New("label drift")
-	h.verifyFn = func(model.IssueOpsRemoteArtifactVerificationRequest) error { return boom }
+	h.verifyFn = func(model.RemoteArtifactVerificationRequest) error { return boom }
 	if _, err := h.creator.Create(context.Background(), confirmCmd()); !errors.Is(err, boom) {
 		t.Fatalf("err = %v", err)
 	}
@@ -304,7 +304,7 @@ func (c *candidateFake) Find(_ context.Context, provider string, req port.IssueP
 }
 
 func newReconciler(h *createHarness, candidates IssueCandidateSource) *IssueReconciler {
-	return NewIssueReconciler(h.store, candidates, NewIssueCreateIntents(h.store, fixedNow), func(ctx context.Context, req model.IssueOpsRemoteArtifactVerificationRequest) error {
+	return NewIssueReconciler(h.store, candidates, NewIssueCreateIntents(h.store, fixedNow), func(ctx context.Context, req model.RemoteArtifactVerificationRequest) error {
 		h.verified = append(h.verified, req)
 		if h.verifyFn != nil {
 			return h.verifyFn(req)
@@ -453,7 +453,7 @@ func TestIssueReconcileRecordsMismatchOnlyWhenConfirmed(t *testing.T) {
 func TestIssueReconcileRecordsLiveVerificationFailure(t *testing.T) {
 	h, body := strandedIntent(t)
 	boom := errors.New("assignee drift")
-	h.verifyFn = func(model.IssueOpsRemoteArtifactVerificationRequest) error { return boom }
+	h.verifyFn = func(model.RemoteArtifactVerificationRequest) error { return boom }
 	finder := &candidateFake{result: port.IssueProviderFindIssueCreateCandidatesResult{Candidates: []port.IssueProviderIssueCreateCandidate{{URL: testIssueURL, Title: "이슈 제목", Body: body}}}}
 	_, err := newReconciler(h, finder).Reconcile(context.Background(), "io-create", true)
 	if !errors.Is(err, boom) {
@@ -465,10 +465,10 @@ func TestIssueReconcileRecordsLiveVerificationFailure(t *testing.T) {
 }
 
 func TestIssueCreateIntentsRejectOutcomeAndCompletionWithoutIntent(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-bare"}
+	record := model.Record{ID: "io-bare"}
 	store, _ := newArtifactStoreForTest(record)
 	intents := NewIssueCreateIntents(store, fixedNow)
-	if _, err := intents.Outcome(context.Background(), "io-bare", model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked}); err == nil || !strings.Contains(err.Error(), "no pending issue create intent") {
+	if _, err := intents.Outcome(context.Background(), "io-bare", model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked}); err == nil || !strings.Contains(err.Error(), "no pending issue create intent") {
 		t.Fatalf("outcome err = %v", err)
 	}
 	if _, err := intents.Complete(context.Background(), "io-bare", testIssueURL, "now"); err == nil || !strings.Contains(err.Error(), "no pending issue create intent") {
@@ -486,17 +486,17 @@ type failingUpdateStore struct {
 	err             error
 }
 
-func (s *failingUpdateStore) Update(ctx context.Context, id string, transition RecordTransition) (model.IssueOpsRecord, error) {
+func (s *failingUpdateStore) Update(ctx context.Context, id string, transition RecordTransition) (model.Record, error) {
 	s.updates++
 	if s.updates == s.failAt {
-		return model.IssueOpsRecord{}, s.err
+		return model.Record{}, s.err
 	}
 	return s.artifactStoreForTest.Update(ctx, id, transition)
 }
 
 func TestIssueCreateJoinsOutcomePersistenceFailureWithProviderError(t *testing.T) {
 	providerErr, storeErr := errors.New("gh exploded"), errors.New("disk full")
-	base, _ := newArtifactStoreForTest(model.IssueOpsRecord{ID: "io-create", Repo: "/repo"})
+	base, _ := newArtifactStoreForTest(model.Record{ID: "io-create", Repo: "/repo"})
 	// Update 1 seals the intent; update 2 records the provider failure.
 	store := &failingUpdateStore{artifactStoreForTest: base, failAt: 2, err: storeErr}
 	env := &createEnv{inferred: "github", authority: testAuthority}
@@ -527,7 +527,7 @@ func TestIssueReconcileReleasesASettledCrashedCreate(t *testing.T) {
 		return h
 	}
 	none := &candidateFake{}
-	settled := func(context.Context, model.IssueOpsRecord) (bool, error) { return true, nil }
+	settled := func(context.Context, model.Record) (bool, error) { return true, nil }
 
 	h := crashed(t, model.IssueCreateIntentPending)
 	preview, err := newReconciler(h, none).WithCrashSettlement(settled).Reconcile(context.Background(), "io-create", false)
@@ -542,7 +542,7 @@ func TestIssueReconcileReleasesASettledCrashedCreate(t *testing.T) {
 	// A newer attempt (another reconcile released and create-issue started
 	// again) must not be overwritten by a release settled on the old one.
 	h = crashed(t, model.IssueCreateIntentPending)
-	racing := func(_ context.Context, record model.IssueOpsRecord) (bool, error) {
+	racing := func(_ context.Context, record model.Record) (bool, error) {
 		newer := h.store.records["io-create"]
 		intent := *newer.IssueCreateIntent
 		intent.Attempt++
@@ -556,7 +556,7 @@ func TestIssueReconcileReleasesASettledCrashedCreate(t *testing.T) {
 	}
 
 	h = crashed(t, model.IssueCreateIntentPending)
-	unsettled := func(context.Context, model.IssueOpsRecord) (bool, error) { return false, nil }
+	unsettled := func(context.Context, model.Record) (bool, error) { return false, nil }
 	if _, err := newReconciler(h, none).WithCrashSettlement(unsettled).Reconcile(context.Background(), "io-create", true); err == nil || !strings.Contains(err.Error(), "re-run this reconcile") || h.intent().Status != model.IssueCreateIntentPending {
 		t.Fatalf("unsettled: err=%v status=%s", err, h.intent().Status)
 	}

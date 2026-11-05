@@ -1,4 +1,4 @@
-// Package worker는 worker capability의 DTO를 소유한다.
+// Package worker 패키지는 worker capability의 DTO를 소유한다.
 //
 // 값을 만들어내는 쪽은 I/O를 하지만, 결과를 읽고 전달하는 쪽은 그 구현을
 // 알 필요가 없다.
@@ -6,7 +6,9 @@ package worker
 
 import policycontract "issueops/internal/contract/policy"
 
-type WorkerJob struct {
+// Job is the persisted record of one local worker job. Command is an argv run
+// without a shell; Result is set once the command has finished.
+type Job struct {
 	OK           bool                             `json:"ok"`
 	ID           string                           `json:"id"`
 	Kind         string                           `json:"kind"`
@@ -23,10 +25,10 @@ type WorkerJob struct {
 	Result       *policycontract.CommandRunResult `json:"result,omitempty"`
 }
 
-// WorkerQueueStats is a status histogram over all worker jobs (A2/G6). Depth is
+// QueueStats is a status histogram over all worker jobs (A2/G6). Depth is
 // the saturation signal — only non-terminal work (queued+running) — so a backlog
 // is visible before jobs time out, unlike the raw per-status counts alone.
-type WorkerQueueStats struct {
+type QueueStats struct {
 	Queued    int `json:"queued"`
 	Running   int `json:"running"`
 	Succeeded int `json:"succeeded"`
@@ -36,20 +38,22 @@ type WorkerQueueStats struct {
 	Depth     int `json:"depth"`
 }
 
-type WorkerListResult struct {
-	OK        bool        `json:"ok"`
-	WorkerDir string      `json:"worker_dir"`
-	Jobs      []WorkerJob `json:"jobs"`
+// ListResult is a listing of worker jobs rooted at WorkerDir.
+type ListResult struct {
+	OK        bool   `json:"ok"`
+	WorkerDir string `json:"worker_dir"`
+	Jobs      []Job  `json:"jobs"`
 	// Queue is the saturation histogram; populated by ListWorkerJobs (the full
 	// listing) and left nil by DetectStuckWorkerJobs, whose Jobs is only the
 	// fixed subset and would make a histogram misleading.
-	Queue *WorkerQueueStats `json:"queue,omitempty"`
+	Queue *QueueStats `json:"queue,omitempty"`
 }
 
+// Worker job statuses. Queued and running are non-terminal; the rest are final.
 const (
-	WorkerStatusQueued    = "queued"
-	WorkerStatusRunning   = "running"
-	WorkerStatusSucceeded = "succeeded"
-	WorkerStatusFailed    = "failed"
-	WorkerStatusCancelled = "cancelled"
+	StatusQueued    = "queued"
+	StatusRunning   = "running"
+	StatusSucceeded = "succeeded"
+	StatusFailed    = "failed"
+	StatusCancelled = "cancelled"
 )

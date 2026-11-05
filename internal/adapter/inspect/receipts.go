@@ -541,7 +541,7 @@ func normalizeVersion(raw string) string {
 	return strings.TrimSpace(raw)
 }
 
-// CommandHostVersion은 허용된 host 실행 파일의 `--version` 출력에서 현재 host
+// CommandHostVersion 함수는 허용된 host 실행 파일의 `--version` 출력에서 현재 host
 // 버전을 읽는다. receipt 신선도 검사에서만 호출하며 실행 파일을 찾지 못하거나
 // 실패하면 빈 문자열을 돌려준다.
 func CommandHostVersion(host string) string {

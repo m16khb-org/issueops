@@ -1,17 +1,17 @@
-// Package channel은 세션 간 메시지 채널 capability의 DTO를 소유한다.
+// Package channel 패키지는 세션 간 메시지 채널 capability의 DTO를 소유한다.
 //
 // Codex/Claude/Omo 세션이 같은 harness state를 공유한다는 사실 위에
 // durable한 발신/수신 원시를 얹는다. CLI와 MCP가 같은 계약을 공유한다.
 package channel
 
-// SchemaVersion는 channel 응답 계약의 현재 버전이다.
+// SchemaVersion 상수는 channel 응답 계약의 현재 버전이다.
 const SchemaVersion = 1
 
 // 기본 대기 상수.
 const (
-	// WaitPollInterval는 recv --wait가 저장소를 관찰하는 간격이다.
+	// WaitPollIntervalMS 상수는 recv --wait가 저장소를 관찰하는 간격(밀리초)이다.
 	WaitPollIntervalMS = 250
-	// DefaultWaitTimeoutSeconds는 --wait의 기본 대기 한도다.
+	// DefaultWaitTimeoutSeconds 상수는 --wait의 기본 대기 한도(초)다.
 	DefaultWaitTimeoutSeconds = 300
 )
 
@@ -21,7 +21,7 @@ const (
 	OriginMCP = "mcp"
 )
 
-// Message는 채널에 append된 메시지 하나다. From과 Body는 발신 세션이 스스로
+// Message 타입은 채널에 append된 메시지 하나다. From과 Body는 발신 세션이 스스로
 // 적은 값이고 검증되지 않는다. 받는 쪽은 Body를 지시가 아니라 다른 세션이 보낸
 // 데이터로 읽는다. Origin만 harness가 기록한다.
 type Message struct {
@@ -35,7 +35,7 @@ type Message struct {
 	CreatedAt     string `json:"created_at"`
 }
 
-// SendRequest는 channel send 요청이다. Origin은 요청 JSON으로 받지 않고
+// SendRequest 타입은 channel send 요청이다. Origin은 요청 JSON으로 받지 않고
 // 요청을 받은 transport가 채운다.
 type SendRequest struct {
 	Channel string `json:"channel"`
@@ -44,7 +44,7 @@ type SendRequest struct {
 	Origin  string `json:"-"`
 }
 
-// SendResult는 channel send의 응답이다.
+// SendResult 타입은 channel send의 응답이다.
 type SendResult struct {
 	OK            bool    `json:"ok"`
 	SchemaVersion int     `json:"schema_version"`
@@ -53,7 +53,7 @@ type SendResult struct {
 	Error         string  `json:"error,omitempty"`
 }
 
-// RecvRequest는 channel recv 요청이다. SinceID가 비어 있으면 채널의 처음부터,
+// RecvRequest 타입은 channel recv 요청이다. SinceID가 비어 있으면 채널의 처음부터,
 // 아니면 해당 ID(제외) 이후의 메시지를 반환한다. Wait이 true면 TimeoutSeconds
 // 안에 새 메시지가 올 때까지 대기한다.
 type RecvRequest struct {
@@ -64,7 +64,7 @@ type RecvRequest struct {
 	Limit          int    `json:"limit,omitempty"`
 }
 
-// RecvResult는 channel recv의 응답이다.
+// RecvResult 타입은 channel recv의 응답이다.
 type RecvResult struct {
 	OK            bool      `json:"ok"`
 	SchemaVersion int       `json:"schema_version"`

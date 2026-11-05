@@ -9,6 +9,11 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
+// EvaluateAutoresearchGate decides whether an autoresearch candidate is kept.
+// It collects discard reasons: missing id, hypothesis, target dimensions or
+// edit surface, a failing or regressed candidate run, changed paths outside
+// the declared edit surface, and regressions on the targeted dimensions. The
+// candidate is kept only when there are no reasons.
 func EvaluateAutoresearchGate(req contract.IssueOpsAutoresearchGateRequest) contract.IssueOpsAutoresearchGateResult {
 	compare := CompareRuns(req.BaselineRun, req.CandidateRun)
 	result := contract.IssueOpsAutoresearchGateResult{
@@ -58,7 +63,7 @@ func EvaluateAutoresearchGate(req contract.IssueOpsAutoresearchGateRequest) cont
 	return result
 }
 
-func compareIssueOpsDimensionRegressions(baseline, candidate contract.IssueOpsBenchmarkRunResult) []string {
+func compareIssueOpsDimensionRegressions(baseline, candidate contract.RunResult) []string {
 	baselineScores := issueOpsDimensionMinimums(baseline)
 	candidateScores := issueOpsDimensionMinimums(candidate)
 	var regressions []string
@@ -78,7 +83,7 @@ func compareIssueOpsDimensionRegressions(baseline, candidate contract.IssueOpsBe
 	return regressions
 }
 
-func issueOpsTargetDimensionRegressions(targets []string, baseline, candidate contract.IssueOpsBenchmarkRunResult) []string {
+func issueOpsTargetDimensionRegressions(targets []string, baseline, candidate contract.RunResult) []string {
 	baselineScores := issueOpsDimensionMinimums(baseline)
 	candidateScores := issueOpsDimensionMinimums(candidate)
 	var regressions []string
@@ -149,7 +154,7 @@ func normalizeIssueOpsPath(path string) string {
 	return strings.Trim(path, "/")
 }
 
-func issueOpsDimensionMinimums(run contract.IssueOpsBenchmarkRunResult) map[string]float64 {
+func issueOpsDimensionMinimums(run contract.RunResult) map[string]float64 {
 	minimums := make(map[string]float64)
 	seen := make(map[string]bool)
 	for _, score := range run.Scores {

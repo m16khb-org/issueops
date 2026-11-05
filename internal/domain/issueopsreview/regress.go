@@ -9,6 +9,7 @@ import (
 
 const regressCap = 5
 
+// NormalizeRegressionReason trims the regression reason and rejects an empty one.
 func NormalizeRegressionReason(reason string) (string, error) {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
@@ -38,6 +39,8 @@ func CheckRegression(snapshot reviewcontract.RegressionPreconditions) error {
 	return nil
 }
 
+// CheckRegressionChildren rejects a regression while any child cycle is still active,
+// listing their IDs.
 func CheckRegressionChildren(activeChildIDs []string) error {
 	if len(activeChildIDs) > 0 {
 		return fmt.Errorf("children_active: %s", strings.Join(activeChildIDs, ", "))
@@ -45,6 +48,9 @@ func CheckRegressionChildren(activeChildIDs []string) error {
 	return nil
 }
 
+// BuildRegressionChange builds the change that sends a cycle from fromPhase back to
+// grill: it records the stop reason as a scope decision, marks the plan and
+// compatibility-review phases stale, and clears the architecture approval and review.
 func BuildRegressionChange(fromPhase, reason, at string) reviewcontract.RegressionChange {
 	return reviewcontract.RegressionChange{
 		FromPhase: fromPhase, ToPhase: "grill", EventReason: reason, At: at,

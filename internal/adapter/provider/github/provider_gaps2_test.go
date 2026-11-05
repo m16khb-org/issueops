@@ -184,11 +184,11 @@ func TestVerifyChildHierarchyRejectsMalformedURLsAndGhFailure(t *testing.T) {
 
 func TestCloseChildRejectsForeignProjectAndUnattachedChild(t *testing.T) {
 	p := NewProvider()
-	if _, err := p.CloseChild(port.IssueProviderCloseChildRequest{ParentIssueURL: gapParentURL, ChildURL: "https://github.com/other/repo/issues/3", Confirm: true}); err == nil || !strings.Contains(err.Error(), "must match linked parent issue project") {
+	if _, err := p.CloseChild(t.Context(), port.IssueProviderCloseChildRequest{ParentIssueURL: gapParentURL, ChildURL: "https://github.com/other/repo/issues/3", Confirm: true}); err == nil || !strings.Contains(err.Error(), "must match linked parent issue project") {
 		t.Fatalf("err = %v", err)
 	}
 	repo := fakeGhRepo(t, "#!/bin/sh\necho \"$*\" >> calls\nprintf '[{\"id\":1,\"number\":5,\"state\":\"open\"}]'\n")
-	if _, err := p.CloseChild(port.IssueProviderCloseChildRequest{Repo: repo, ParentIssueURL: gapParentURL, ChildURL: "https://github.com/acme/repo/issues/3", Confirm: true}); err == nil || !strings.Contains(err.Error(), "hierarchy verification failed") {
+	if _, err := p.CloseChild(t.Context(), port.IssueProviderCloseChildRequest{Repo: repo, ParentIssueURL: gapParentURL, ChildURL: "https://github.com/acme/repo/issues/3", Confirm: true}); err == nil || !strings.Contains(err.Error(), "hierarchy verification failed") {
 		t.Fatalf("err = %v", err)
 	}
 	calls, _ := os.ReadFile(filepath.Join(repo, "calls"))
@@ -215,7 +215,7 @@ esac
 		return port.IssueProviderCloseChildRequest{Repo: repo, ParentIssueURL: gapParentURL, ChildURL: "https://github.com/acme/repo/issues/3", Confirm: true}
 	}
 	repo := fakeGhRepo(t, script("closed", "closed"))
-	res, err := NewProvider().CloseChild(req(repo))
+	res, err := NewProvider().CloseChild(t.Context(), req(repo))
 	if err != nil || !res.AlreadyClosed || !res.Closed || !res.HierarchyVerified {
 		t.Fatalf("res %+v err %v", res, err)
 	}
@@ -223,7 +223,7 @@ esac
 		t.Fatalf("already-closed child was patched: %q", calls)
 	}
 	repo = fakeGhRepo(t, script("open", "open"))
-	if _, err := NewProvider().CloseChild(req(repo)); err == nil || !strings.Contains(err.Error(), "close verification failed: state=open") {
+	if _, err := NewProvider().CloseChild(t.Context(), req(repo)); err == nil || !strings.Contains(err.Error(), "close verification failed: state=open") {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -236,7 +236,7 @@ func TestCloseChildPreviewObservesRemoteStateBestEffort(t *testing.T) {
 echo "$*" >> calls
 printf '%s' '[{"id":1,"number":3,"state":"CLOSED","html_url":"https://github.com/acme/repo/issues/3"}]'
 `)
-	res, err := NewProvider().CloseChild(req(repo))
+	res, err := NewProvider().CloseChild(t.Context(), req(repo))
 	if err != nil || !res.OK || !res.HierarchyVerified || !res.AlreadyClosed || res.State != "CLOSED" || res.Closed {
 		t.Fatalf("res %+v err %v", res, err)
 	}
@@ -244,7 +244,7 @@ printf '%s' '[{"id":1,"number":3,"state":"CLOSED","html_url":"https://github.com
 		t.Fatalf("preview must be read-only: %q", calls)
 	}
 	repo = fakeGhRepo(t, "#!/bin/sh\nexit 1\n")
-	res, err = NewProvider().CloseChild(req(repo))
+	res, err = NewProvider().CloseChild(t.Context(), req(repo))
 	if err != nil || !res.OK || res.HierarchyVerified || res.State != "" || res.ChildURL != "https://github.com/acme/repo/issues/3" {
 		t.Fatalf("observation failure must leave state unknown: %+v err %v", res, err)
 	}

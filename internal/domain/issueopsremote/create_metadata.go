@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"fmt"
@@ -6,15 +6,16 @@ import (
 	"unicode/utf8"
 )
 
-// MaxProviderTitleChars is the stricter provider title limit (GitLab 255
+// maxProviderTitleChars is the stricter provider title limit (GitLab 255
 // characters, GitHub 256). A longer title is refused locally because the
 // provider refusal arrives after the create intent is recorded, which leaves
 // the outcome unknown and forces reconciliation.
-const MaxProviderTitleChars = 255
+const maxProviderTitleChars = 255
 
+// ValidateProviderTitleLength refuses a title longer than the stricter provider limit so the provider cannot reject it after the create intent is recorded. kind names the artifact in the error.
 func ValidateProviderTitleLength(kind, title string) error {
-	if n := utf8.RuneCountInString(strings.TrimSpace(title)); n > MaxProviderTitleChars {
-		return fmt.Errorf("%s title has %d characters; GitLab allows %d and GitHub 256, so shorten --title", kind, n, MaxProviderTitleChars)
+	if n := utf8.RuneCountInString(strings.TrimSpace(title)); n > maxProviderTitleChars {
+		return fmt.Errorf("%s title has %d characters; GitLab allows %d and GitHub 256, so shorten --title", kind, n, maxProviderTitleChars)
 	}
 	return nil
 }
@@ -41,6 +42,7 @@ func ValidateProviderBodyLength(provider, kind, body string) error {
 	return nil
 }
 
+// ValidateConfirmCreateMetadata requires at least one label and one assignee (after CleanValues) when confirm is set. Without confirm it accepts anything.
 func ValidateConfirmCreateMetadata(confirm bool, labels, assignees []string) error {
 	if !confirm {
 		return nil

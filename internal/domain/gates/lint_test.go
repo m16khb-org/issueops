@@ -119,14 +119,14 @@ func TestLintStaticWarnsWhenExpectDescribesAnExitStatus(t *testing.T) {
 // `sh script.sh` (the form project docs often give) is denied; the message
 // names the form that runs. Denials without a remedy carry no hint.
 func TestDeniedMessageNamesTheShellInterpreterRemedy(t *testing.T) {
-	if got := DeniedMessage([]string{"command_not_in_read_only_allowlist", "shell_interpreter_not_allowed"}); !strings.Contains(got, "run an executable script directly") {
+	if got := deniedMessage([]string{"command_not_in_read_only_allowlist", "shell_interpreter_not_allowed"}); !strings.Contains(got, "run an executable script directly") {
 		t.Fatalf("shell denial: %q", got)
 	}
-	if got := DeniedMessage([]string{"write_not_allowed"}); got != "check denied by policy: write_not_allowed" {
+	if got := deniedMessage([]string{"write_not_allowed"}); got != "check denied by policy: write_not_allowed" {
 		t.Fatalf("other denial: %q", got)
 	}
 	// A Codex run checked a worktree ledger with the source checkout as root.
-	if got := DeniedMessage([]string{"cwd_outside_workspace", "path_outside_workspace"}); !strings.Contains(got, "canonical worktree as both") {
+	if got := deniedMessage([]string{"cwd_outside_workspace", "path_outside_workspace"}); !strings.Contains(got, "canonical worktree as both") {
 		t.Fatalf("workspace denial: %q", got)
 	}
 }
@@ -148,7 +148,7 @@ func TestLedgerLintCandidatesFlagsRepeatedGateID(t *testing.T) {
 // newlines before matching.
 func TestLintStaticFlagsNewlineBeforeEndAnchor(t *testing.T) {
 	gate := Gate{ID: "G1", CheckCmd: "./hello.sh", Expect: `/\Ahello\n\z/`}
-	if DecideCheck(gate.Expect, "hello\n", "", 0, false).Passed {
+	if decideCheck(gate.Expect, "hello\n", "", 0, false).Passed {
 		t.Fatal("premise: the pattern matches trimmed output")
 	}
 	result, _ := LintStatic(LintCandidate{Source: "g.md", Gate: gate})
@@ -158,7 +158,7 @@ func TestLintStaticFlagsNewlineBeforeEndAnchor(t *testing.T) {
 }
 
 func TestDeniedMessageNamesTheNetworkRemedy(t *testing.T) {
-	if got := DeniedMessage([]string{"network_not_allowed"}); !strings.Contains(got, "node --test") || !strings.Contains(got, "--network") {
+	if got := deniedMessage([]string{"network_not_allowed"}); !strings.Contains(got, "node --test") || !strings.Contains(got, "--network") {
 		t.Fatalf("message %q", got)
 	}
 }

@@ -8,12 +8,12 @@ import (
 )
 
 func TestChildPRGateMissingPreservesValidationMatrix(t *testing.T) {
-	children := []model.IssueOpsChildStatusEntry{
-		{CycleID: "active", Phase: model.IssueOpsPhaseImplement},
-		{CycleID: "unvalidated", Phase: model.IssueOpsPhaseDone},
-		{CycleID: "rejected", Phase: model.IssueOpsPhaseDone, ValidationVerdict: "rejected"},
-		{CycleID: "dropped", Phase: model.IssueOpsPhaseImplement, ValidationVerdict: "dropped", ValidationReason: "scope removed from parent", ValidatedAt: "now"},
-		{CycleID: "malformed", Phase: model.IssueOpsPhaseImplement, ValidationVerdict: "dropped"},
+	children := []model.ChildStatusEntry{
+		{CycleID: "active", Phase: model.PhaseImplement},
+		{CycleID: "unvalidated", Phase: model.PhaseDone},
+		{CycleID: "rejected", Phase: model.PhaseDone, ValidationVerdict: "rejected"},
+		{CycleID: "dropped", Phase: model.PhaseImplement, ValidationVerdict: "dropped", ValidationReason: "scope removed from parent", ValidatedAt: "now"},
+		{CycleID: "malformed", Phase: model.PhaseImplement, ValidationVerdict: "dropped"},
 	}
 	want := []string{"child_incomplete:active", "child_unvalidated:unvalidated", "child_rejected_unresolved:rejected", "child_incomplete:malformed"}
 	if got := ChildPRGateMissing(children); !reflect.DeepEqual(got, want) {

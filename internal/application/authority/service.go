@@ -1,3 +1,6 @@
+// Package authority is the application service that issues, verifies and
+// rotates the capability grants binding a caller's native process ancestry to a
+// repository scope.
 package authority
 
 import (
@@ -29,6 +32,8 @@ type Service struct {
 	entropy    io.Reader
 }
 
+// New returns a Service over the given grant repository, process inspector,
+// credential files, clock, workspace scope resolver and entropy source.
 func New(repository authorityport.Repository, inspector authorityport.ProcessInspector, files authorityport.CredentialFiles, now func() time.Time, scopes authorityport.ScopeResolver, entropy io.Reader) *Service {
 	return &Service{repository: repository, inspector: inspector, files: files, now: now, scopes: scopes, entropy: entropy}
 }
@@ -113,7 +118,7 @@ func (s *Service) Bind(ctx context.Context, use contract.Use) (context.Context, 
 	if err != nil {
 		return ctx, model.VerifiedActor{}, err
 	}
-	record, err := s.check(ctx, bound, s.recordReader(), s.now())
+	record, err := s.checkBound(ctx, bound, s.recordReader(), s.now())
 	if err != nil {
 		return ctx, model.VerifiedActor{}, err
 	}
@@ -132,7 +137,7 @@ func (s *Service) BindSpan(ctx context.Context, reader authorityport.RecordReade
 		return nil, err
 	}
 	at := s.now()
-	if _, err := s.check(ctx, bound, reader, at); err != nil {
+	if _, err := s.checkBound(ctx, bound, reader, at); err != nil {
 		return nil, err
 	}
 	return context.WithValue(ctx, spanKey{}, &spanState{binding: bound, reader: reader, at: at}), nil
@@ -156,7 +161,7 @@ func (s *Service) Verify(ctx context.Context, actor model.NativeActor) (model.Ve
 	if span, _ := ctx.Value(spanKey{}).(*spanState); span != nil && span.binding == bound {
 		reader, at = span.reader, span.at
 	}
-	record, err := s.check(ctx, bound, reader, at)
+	record, err := s.checkBound(ctx, bound, reader, at)
 	if err != nil {
 		return model.VerifiedActor{}, err
 	}
@@ -166,6 +171,9 @@ func (s *Service) Verify(ctx context.Context, actor model.NativeActor) (model.Ve
 	return capabilityActor(record), nil
 }
 
+// Check verifies that use carries a valid, unexpired capability for its
+// workspace scope and that the grant's session process is still alive. It reads
+// the grant through reader, which lets guard rechecks share a span's snapshot.
 func (s *Service) Check(ctx context.Context, use contract.Use, reader authorityport.RecordReader) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -174,7 +182,7 @@ func (s *Service) Check(ctx context.Context, use contract.Use, reader authorityp
 	if err != nil {
 		return err
 	}
-	_, err = s.check(ctx, bound, reader, s.now())
+	_, err = s.checkBound(ctx, bound, reader, s.now())
 	return err
 }
 
@@ -194,7 +202,7 @@ func (s *Service) resolveBinding(ctx context.Context, use contract.Use) (*bindin
 	return &binding{use: use, scope: scope}, nil
 }
 
-func (s *Service) check(ctx context.Context, bound *binding, reader authorityport.RecordReader, at time.Time) (contract.Record, error) {
+func (s *Service) checkBound(ctx context.Context, bound *binding, reader authorityport.RecordReader, at time.Time) (contract.Record, error) {
 	if reader == nil {
 		return contract.Record{}, domain.Invalid("authority grant store is unavailable")
 	}

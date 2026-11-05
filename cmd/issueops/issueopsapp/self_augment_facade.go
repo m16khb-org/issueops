@@ -13,19 +13,19 @@ func runSelfAugment(args []string) error {
 		RunLesson: runSelfAugmentLesson,
 		RunVerify: runSelfVerify,
 		Plan:      planSelfAugmentation,
-		SavePlan: func(result *augmentcontract.SelfAugmentPlanResult, key string) error {
-			return newSelfWorkflowState(statestore.StateDir()).SavePlan(context.Background(), result, key)
+		SavePlan: func(result *augmentcontract.PlanResult, key string) error {
+			return newSelfWorkflowState(statestore.Dir()).SavePlan(context.Background(), result, key)
 		},
 		PrintJSON: printJSON,
 	})
 }
 
-func planSelfAugmentation(req augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult {
-	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).Plan(req)
+func planSelfAugmentation(req augmentcontract.PlanRequest) augmentcontract.PlanResult {
+	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.Dir(), version).Plan(req)
 }
 
 func runSelfAugmentLesson(args []string) error {
-	return augmentlesson.Run(args, augmentlesson.Deps{Save: func(req augmentcontract.SelfAugmentLessonRequest) (augmentcontract.SelfAugmentLessonResult, error) {
-		return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).SaveLesson(context.Background(), req)
+	return augmentlesson.Run(args, augmentlesson.Deps{Save: func(req augmentcontract.LessonRequest) (augmentcontract.LessonResult, error) {
+		return newSelfWorkflowPlanning(issueOpsRoot(), statestore.Dir(), version).SaveLesson(context.Background(), req)
 	}, PrintJSON: printJSON})
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func TestEvidenceTailUTF8Safe(t *testing.T) {
-	got := EvidenceTail(strings.Repeat("가", 100), 200)
+	got := evidenceTail(strings.Repeat("가", 100), 200)
 	if !utf8.ValidString(got) {
 		t.Fatalf("evidence tail is not valid UTF-8: %q", got)
 	}

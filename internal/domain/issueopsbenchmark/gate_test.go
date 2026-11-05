@@ -8,10 +8,10 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
-func runWith(ok bool, avg, min float64, crit int, scores ...contract.IssueOpsDimensionScore) contract.IssueOpsBenchmarkRunResult {
-	return contract.IssueOpsBenchmarkRunResult{
+func runWith(ok bool, avg, min float64, crit int, scores ...contract.IssueOpsDimensionScore) contract.RunResult {
+	return contract.RunResult{
 		OK: ok, AverageScore: avg, MinimumScore: min, CriticalFailureCount: crit,
-		Scores: []contract.IssueOpsBenchmarkScore{{DimensionScores: scores}},
+		Scores: []contract.Score{{DimensionScores: scores}},
 	}
 }
 
@@ -84,7 +84,7 @@ func TestCompareRuns(t *testing.T) {
 	}
 	cases := []struct {
 		name         string
-		base, cand   contract.IssueOpsBenchmarkRunResult
+		base, cand   contract.RunResult
 		ok, improved bool
 	}{
 		{"strictly better", runWith(true, 80, 70, 1), runWith(true, 90, 70, 0), true, true},
@@ -100,8 +100,8 @@ func TestCompareRuns(t *testing.T) {
 			t.Errorf("%s: %+v", c.name, r)
 		}
 	}
-	r := CompareRuns(contract.IssueOpsBenchmarkRunResult{ID: "b", AverageScore: 50, MinimumScore: 10, CriticalFailureCount: 2},
-		contract.IssueOpsBenchmarkRunResult{ID: "c", AverageScore: 70, MinimumScore: 30, CriticalFailureCount: 1})
+	r := CompareRuns(contract.RunResult{ID: "b", AverageScore: 50, MinimumScore: 10, CriticalFailureCount: 2},
+		contract.RunResult{ID: "c", AverageScore: 70, MinimumScore: 30, CriticalFailureCount: 1})
 	if r.BaselineID != "b" || r.CandidateID != "c" || r.AverageScoreDelta != 20 || r.MinimumScoreDelta != 20 || r.CriticalFailureDelta != -1 {
 		t.Fatalf("%+v", r)
 	}

@@ -1,4 +1,4 @@
-// Package sqlstore는 issueops state root를 위한 공용 SQLite 기반 record store다.
+// Package sqlstore 패키지는 issueops state root를 위한 공용 SQLite 기반 record store다.
 // state root 디렉터리 하나는 SQLite 파일 두 개를 소유한다. issueops.db는 모든
 // record를 (bucket, id, data-JSON) row로 보관하고, issueops.lock.db는 프로세스
 // 간 span lock을 실어 나르기 위해서만 존재한다. read-modify-write span은
@@ -52,7 +52,7 @@ const (
 
 var sqliteFileSuffixes = [...]string{"", "-wal", "-shm", "-journal"}
 
-// DB는 state root 디렉터리 하나에 대한 핸들이다.
+// DB 타입은 state root 디렉터리 하나에 대한 핸들이다.
 type DB struct {
 	dir      string
 	data     *sql.DB
@@ -81,7 +81,7 @@ type dbTestHooks struct {
 
 type spanChainKey struct{}
 
-// NestedSpanError는 전파된 span chain에서 이미 활성인 root로 다시 진입하려는
+// NestedSpanError 타입은 전파된 span chain에서 이미 활성인 root로 다시 진입하려는
 // 시도를 보고한다.
 type NestedSpanError struct {
 	ActiveDirs   []string
@@ -92,6 +92,8 @@ func (e *NestedSpanError) Error() string {
 	return fmt.Sprintf("sqlstore nested span: root %q is already active in %v", e.RequestedDir, e.ActiveDirs)
 }
 
+// RawCASError 타입은 raw-byte 비교(CompareAndApply)가 기대한 record와 달라 실패했음을 보고하며,
+// 어느 (Bucket, ID) row에서 실패했는지 담는다.
 type RawCASError struct {
 	Bucket string
 	ID     string
@@ -101,6 +103,7 @@ func (e *RawCASError) Error() string {
 	return fmt.Sprintf("sqlstore raw CAS failed for row %s/%s", e.Bucket, e.ID)
 }
 
+// FailedBucket 메서드는 raw CAS가 실패한 row의 bucket을 반환한다.
 func (e *RawCASError) FailedBucket() string { return e.Bucket }
 
 var _ port.TransactionalRecordStore = (*DB)(nil)
@@ -112,7 +115,7 @@ var (
 	handlesMu sync.Mutex
 )
 
-// Open은 dir에 대한 캐시된 핸들을 반환하며, 디렉터리와 두 SQLite 파일이 없으면
+// Open 함수는 dir에 대한 캐시된 핸들을 반환하며, 디렉터리와 두 SQLite 파일이 없으면
 // 생성한다. 핸들은 절대 경로 디렉터리별로 캐시되므로 한 프로세스의 모든
 // 호출자가 같은 in-process span mutex를 공유한다. 이미 제거된 root의 핸들은
 // 다음 Open에서 닫고 축출해 임시 state root가 연결과 goroutine을 누적하지
@@ -319,14 +322,14 @@ func openSQLite(path, params string) (*sql.DB, error) {
 	return db, nil
 }
 
-// WithSpan은 root 하나의 read-modify-write span을 직렬화하고, 순서 있는
+// WithSpan 메서드는 root 하나의 read-modify-write span을 직렬화하고, 순서 있는
 // active-root chain을 전파하며, 로컬 대기와 SQLite lock 대기 모두 ctx를
 // 따르게 한다.
 func (d *DB) WithSpan(ctx context.Context, fn func(context.Context) error) error {
-	return d.withSpan(ctx, time.Now, fn)
+	return d.withSpanAt(ctx, time.Now, fn)
 }
 
-func (d *DB) withSpan(ctx context.Context, now func() time.Time, fn func(context.Context) error) (err error) {
+func (d *DB) withSpanAt(ctx context.Context, now func() time.Time, fn func(context.Context) error) (err error) {
 	if ctx == nil {
 		return fmt.Errorf("sqlstore span context is required")
 	}
@@ -361,9 +364,9 @@ func spanOutcome(err error) string {
 	case err == nil:
 		return SpanOutcomeSuccess
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
-		return SpanOutcomeCanceled
+		return spanOutcomeCanceled
 	case isNestedSpanError(err):
-		return SpanOutcomeNested
+		return spanOutcomeNested
 	default:
 		return SpanOutcomeError
 	}
@@ -552,7 +555,7 @@ func isSQLiteLockContention(err error) bool {
 	return primaryCode == int(sqlite3.SQLITE_BUSY) || primaryCode == int(sqlite3.SQLITE_LOCKED)
 }
 
-// Get은 (bucket, id)의 record 데이터와 존재 여부를 반환한다.
+// Get 메서드는 (bucket, id)의 record 데이터와 존재 여부를 반환한다.
 func (d *DB) Get(bucket, id string) ([]byte, bool, error) {
 	var data []byte
 	err := d.data.QueryRow(`SELECT data FROM records WHERE bucket = ? AND id = ?`, bucket, id).Scan(&data)
@@ -565,7 +568,7 @@ func (d *DB) Get(bucket, id string) ([]byte, bool, error) {
 	return data, true, nil
 }
 
-// Put은 (bucket, id)의 record 데이터를 upsert한다.
+// Put 메서드는 (bucket, id)의 record 데이터를 upsert한다.
 func (d *DB) Put(bucket, id string, data []byte) error {
 	release, err := d.acquireRecordWriter(context.Background())
 	if err != nil {
@@ -579,6 +582,8 @@ func (d *DB) Put(bucket, id string, data []byte) error {
 	})
 }
 
+// Mutate 메서드는 state 포트의 mutation을 record 포트의 mutation으로 변환해 Apply로 하나의
+// 트랜잭션에 commit한다.
 func (d *DB) Mutate(ctx context.Context, mutations []stateport.Mutation) error {
 	converted := make([]port.RecordMutation, 0, len(mutations))
 	for _, mutation := range mutations {
@@ -593,7 +598,7 @@ func (d *DB) Mutate(ctx context.Context, mutations []stateport.Mutation) error {
 	return d.Apply(ctx, converted)
 }
 
-// Apply는 모든 mutation을 issueops.db 트랜잭션 하나로 commit한다.
+// Apply 메서드는 모든 mutation을 issueops.db 트랜잭션 하나로 commit한다.
 func (d *DB) Apply(ctx context.Context, mutations []port.RecordMutation) error {
 	if len(mutations) == 0 {
 		return nil
@@ -620,7 +625,7 @@ func (d *DB) Apply(ctx context.Context, mutations []port.RecordMutation) error {
 	return d.commitData(ctx, tx)
 }
 
-// CompareAndApply는 raw-byte 비교와 write를 하나의 data.sqlite transaction으로
+// CompareAndApply 메서드는 raw-byte 비교와 write를 하나의 data.sqlite transaction으로
 // 묶는다. 권한 CAS는 앞선 Get으로 비교를 분리하면 안 된다.
 func (d *DB) CompareAndApply(ctx context.Context, expected []port.ExpectedRecord, mutations []port.RecordMutation) error {
 	if len(mutations) == 0 {
@@ -632,7 +637,7 @@ func (d *DB) CompareAndApply(ctx context.Context, expected []port.ExpectedRecord
 	return d.CompareAndApplyFunc(ctx, expected, func() ([]port.RecordMutation, error) { return mutations, nil })
 }
 
-// CompareAndApplyFunc는 raw CAS가 성공한 뒤에만 encoder가 mutation을 만들게 해,
+// CompareAndApplyFunc 메서드는 raw CAS가 성공한 뒤에만 encoder가 mutation을 만들게 해,
 // stale snapshot에서 만든 payload가 transaction 밖으로 새지 않게 한다.
 func (d *DB) CompareAndApplyFunc(ctx context.Context, expected []port.ExpectedRecord, build func() ([]port.RecordMutation, error)) error {
 	if build == nil {
@@ -735,7 +740,7 @@ func applyMutationsTx(ctx context.Context, tx *sql.Tx, mutations []port.RecordMu
 	return nil
 }
 
-// Delete는 (bucket, id)의 record를 제거한다. 없는 record를 삭제해도 오류가
+// Delete 메서드는 (bucket, id)의 record를 제거한다. 없는 record를 삭제해도 오류가
 // 아니다.
 func (d *DB) Delete(bucket, id string) error {
 	release, err := d.acquireRecordWriter(context.Background())
@@ -766,7 +771,7 @@ func (d *DB) DeleteBefore(ctx context.Context, bucket, beforeID string) error {
 	})
 }
 
-// List는 bucket의 id를 오름차순으로 반환한다.
+// List 메서드는 bucket의 id를 오름차순으로 반환한다.
 func (d *DB) List(bucket string) ([]string, error) {
 	rows, err := d.data.Query(`SELECT id FROM records WHERE bucket = ? ORDER BY id`, bucket)
 	if err != nil {
@@ -784,7 +789,7 @@ func (d *DB) List(bucket string) ([]string, error) {
 	return ids, rows.Err()
 }
 
-// GetAll은 bucket의 모든 record를 id 순으로 반환한다.
+// GetAll 메서드는 bucket의 모든 record를 id 순으로 반환한다.
 func (d *DB) GetAll(bucket string) ([]port.RecordRow, error) {
 	rows, err := d.data.Query(`SELECT id, data FROM records WHERE bucket = ? ORDER BY id`, bucket)
 	if err != nil {

@@ -45,7 +45,7 @@ func TestAppendIsIdempotentAndBounded(t *testing.T) {
 	if err2 != nil || changed2 || len(again.RoutingTrace) != 1 {
 		t.Fatalf("duplicate append must be a no-op: changed=%v err=%v trace=%d", changed2, err2, len(again.RoutingTrace))
 	}
-	full := issueopsroutingcontract.Record{RoutingTrace: make([]issueopsroutingcontract.Entry, MaxTraceEntries)}
+	full := issueopsroutingcontract.Record{RoutingTrace: make([]issueopsroutingcontract.Entry, maxTraceEntries)}
 	if _, changed3, err3 := Append(full, entry); err3 == nil || changed3 || !strings.Contains(err3.Error(), "trace is full") {
 		t.Fatalf("bounded trace must reject: changed=%v err=%v", changed3, err3)
 	}

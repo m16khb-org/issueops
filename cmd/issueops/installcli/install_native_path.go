@@ -91,7 +91,7 @@ func (c Command) planInstallCommandPath(result *port.NativeInstallResult, req po
 	return err
 }
 
-func (transaction *installPathTransaction) apply(result *port.NativeInstallResult) error {
+func (transaction *installPathTransaction) Apply(result *port.NativeInstallResult) error {
 	if transaction.managed {
 		plan, err := transaction.command.Apply()
 		result.CommandPath = managedCommandPathResult(plan)
@@ -114,11 +114,7 @@ func (transaction *installPathTransaction) apply(result *port.NativeInstallResul
 	return err
 }
 
-func (transaction *installPathTransaction) Apply(result *port.NativeInstallResult) error {
-	return transaction.apply(result)
-}
-
-func (transaction *installPathTransaction) rollback(result *port.NativeInstallResult) error {
+func (transaction *installPathTransaction) Rollback(result *port.NativeInstallResult) error {
 	var errs []error
 	errs = transaction.rollbackShortShim(errs)
 	errs = transaction.rollbackCommandLink(errs)
@@ -186,26 +182,18 @@ func (transaction *installPathTransaction) rollbackCreatedDirectories(errs []err
 	return errs
 }
 
-func (transaction *installPathTransaction) Rollback(result *port.NativeInstallResult) error {
-	return transaction.rollback(result)
-}
-
 func installPathDirectoryExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
 
-func (transaction *installPathTransaction) finalize(result *port.NativeInstallResult) error {
+func (transaction *installPathTransaction) Finalize(result *port.NativeInstallResult) error {
 	if !transaction.managed || transaction.command == nil {
 		return nil
 	}
 	plan, err := transaction.command.Finalize()
 	result.CommandPath = managedCommandPathResult(plan)
 	return err
-}
-
-func (transaction *installPathTransaction) Finalize(result *port.NativeInstallResult) error {
-	return transaction.finalize(result)
 }
 
 func managedCommandPathResult(plan installcontract.ManagedCommandPathPlan) *port.ManagedCommandPathResult {

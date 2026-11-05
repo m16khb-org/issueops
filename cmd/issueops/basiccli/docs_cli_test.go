@@ -16,7 +16,7 @@ func TestRunDocs_printsJSON_whenJSONFlagIsSet(t *testing.T) {
 	})
 
 	// 검증
-	var result docs.DocsIndexResult
+	var result docs.IndexResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode docs json: %v\n%s", err, out)
 	}
@@ -72,7 +72,7 @@ func TestRunDocsWithRoot_rejectsInvalidFlag(t *testing.T) {
 	}
 }
 
-func docsIndexHasRel(result docs.DocsIndexResult, rel string) bool {
+func docsIndexHasRel(result docs.IndexResult, rel string) bool {
 	for _, doc := range result.Docs {
 		if doc.RelPath == rel {
 			return true

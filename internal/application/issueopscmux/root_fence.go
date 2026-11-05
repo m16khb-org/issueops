@@ -1,3 +1,6 @@
+// Package issueopscmux is the application service that hands an IssueOps
+// execution off to a new cmux workspace: it validates the released root,
+// stages and audits the external calls, and confirms the launcher receipt.
 package issueopscmux
 
 import (
@@ -15,18 +18,18 @@ type rootFence struct {
 	env                                                                              port.RootEnvironment
 }
 
-func openRootFence(env port.RootEnvironment, stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest) (*rootFence, issueopscontract.IssueOpsRecord, error) {
+func openRootFence(env port.RootEnvironment, stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest) (*rootFence, issueopscontract.Record, error) {
 	record, err := env.Read(stateRoot, request.ID)
 	if err != nil {
-		return nil, issueopscontract.IssueOpsRecord{}, err
+		return nil, issueopscontract.Record{}, err
 	}
 	identity, err := validateReleasedRoot(env, record, request.Generation, request.CWD)
 	if err != nil {
-		return nil, issueopscontract.IssueOpsRecord{}, err
+		return nil, issueopscontract.Record{}, err
 	}
 	handle, err := identity.Pin()
 	if err != nil {
-		return nil, issueopscontract.IssueOpsRecord{}, fmt.Errorf("open cmux handoff canonical worktree: %w", err)
+		return nil, issueopscontract.Record{}, fmt.Errorf("open cmux handoff canonical worktree: %w", err)
 	}
 	fence := &rootFence{
 		stateRoot: stateRoot, lifecycleID: request.ID, generation: request.Generation,
@@ -37,25 +40,25 @@ func openRootFence(env port.RootEnvironment, stateRoot string, request issueopsc
 	checked, err := fence.Check()
 	if err != nil {
 		handle.Close()
-		return nil, issueopscontract.IssueOpsRecord{}, err
+		return nil, issueopscontract.Record{}, err
 	}
 	return fence, checked, nil
 }
 
-func (fence *rootFence) Check() (issueopscontract.IssueOpsRecord, error) {
+func (fence *rootFence) Check() (issueopscontract.Record, error) {
 	record, err := fence.env.Read(fence.stateRoot, fence.lifecycleID)
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{}, err
+		return issueopscontract.Record{}, err
 	}
 	if record.Execution == nil || record.Execution.Workspace.Root != fence.workspaceRoot || record.WorktreePath != fence.worktreePath {
-		return issueopscontract.IssueOpsRecord{}, fmt.Errorf("cmux handoff durable worktree path changed")
+		return issueopscontract.Record{}, fmt.Errorf("cmux handoff durable worktree path changed")
 	}
 	currentIdentity, err := validateReleasedRoot(fence.env, record, fence.generation, fence.requestedCWD)
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{}, err
+		return issueopscontract.Record{}, err
 	}
 	if !fence.rootHandle.Matches(currentIdentity) {
-		return issueopscontract.IssueOpsRecord{}, fmt.Errorf("cmux handoff canonical worktree filesystem identity changed")
+		return issueopscontract.Record{}, fmt.Errorf("cmux handoff canonical worktree filesystem identity changed")
 	}
 	return record, nil
 }
@@ -66,7 +69,7 @@ func (fence *rootFence) Close() {
 	}
 }
 
-func validateReleasedRoot(env port.RootEnvironment, record issueopscontract.IssueOpsRecord, generation uint64, requestedCWD string) (port.Directory, error) {
+func validateReleasedRoot(env port.RootEnvironment, record issueopscontract.Record, generation uint64, requestedCWD string) (port.Directory, error) {
 	if err := domain.ValidateCmuxReleasedRecord(record, generation); err != nil {
 		return nil, err
 	}

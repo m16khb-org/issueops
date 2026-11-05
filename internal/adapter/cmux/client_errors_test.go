@@ -28,7 +28,7 @@ func okPreflightSteps() []runnerStep {
 
 func TestPreflightRejectsIncompleteRequestsBeforeAnyCommandOrObservation(t *testing.T) {
 	observed := 0
-	observer := func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+	observer := func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 		observed++
 		return endpointFixture(), nil
 	}
@@ -73,8 +73,8 @@ func TestPreflightEndpointObservationFailuresAndRestartAbort(t *testing.T) {
 	t.Run("first observation fails before any command", func(t *testing.T) {
 		runner := &queueRunner{t: t}
 		boom := errors.New("socket gone")
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
-			return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{}, boom
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
+			return issueops.HandoffDeliveryEndpointIncarnation{}, boom
 		}}
 		if _, err := client.Preflight(t.Context(), preflightRequestFixture()); !errors.Is(err, boom) || len(runner.seen) != 0 {
 			t.Fatalf("err=%v commands=%d", err, len(runner.seen))
@@ -84,10 +84,10 @@ func TestPreflightEndpointObservationFailuresAndRestartAbort(t *testing.T) {
 		runner := &queueRunner{t: t, steps: okPreflightSteps()}
 		boom := errors.New("socket gone")
 		calls := 0
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			if calls == 2 {
-				return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{}, boom
+				return issueops.HandoffDeliveryEndpointIncarnation{}, boom
 			}
 			return endpointFixture(), nil
 		}}
@@ -98,7 +98,7 @@ func TestPreflightEndpointObservationFailuresAndRestartAbort(t *testing.T) {
 	t.Run("endpoint replaced during preflight", func(t *testing.T) {
 		runner := &queueRunner{t: t, steps: okPreflightSteps()}
 		calls := 0
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			endpoint := endpointFixture()
 			endpoint.Inode += uint64(calls)
@@ -179,7 +179,7 @@ func TestCreateWorkspaceRefusesBeforeCreateWhenEndpointAlreadyChanged(t *testing
 	runner := &queueRunner{t: t}
 	moved := endpointFixture()
 	moved.Inode++
-	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
+	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
 	_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 	var mutation *cmuxport.MutationError
 	if err == nil || errors.As(err, &mutation) || len(runner.seen) != 0 {
@@ -291,7 +291,7 @@ func TestSendRejectsIncompleteTargetsAndEndpointChangesBeforeTyping(t *testing.T
 		runner := &queueRunner{t: t}
 		moved := endpointFixture()
 		moved.Inode++
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
 		_, err := client.Send(t.Context(), cmuxcontract.SendRequest{Created: createdFixture(), Command: "run"})
 		var mutation *cmuxport.MutationError
 		if err == nil || errors.As(err, &mutation) || len(runner.seen) != 0 {
@@ -322,7 +322,7 @@ func TestSendClassifiesFailuresAndRequiresQueuedFieldAndStableEndpoint(t *testin
 	t.Run("endpoint replaced after send", func(t *testing.T) {
 		runner := &queueRunner{t: t, steps: []runnerStep{{args: sendArgs("run\\n"), stdout: sendReceiptFixture(testWindow, testWorkspace, testSurface)}}}
 		calls := 0
-		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			endpoint := endpointFixture()
 			if calls > 1 {
@@ -410,7 +410,7 @@ func TestExecRunnerCapturesOutputAndFiltersAmbientCmuxScope(t *testing.T) {
 	t.Setenv("CMUX_SOCKET_PATH", "/ambient-path.sock")
 	t.Setenv("ISSUEOPS_RUNNER_PASSTHROUGH", "kept")
 	executable, args := shellCommand(t, `printf '%s|%s|%s|%s|%s' "${CMUX_SOCKET_PATH-unset}" "${CMUX_WORKSPACE_ID-unset}" "${CMUX_SURFACE_ID-unset}" "${CMUX_SOCKET-unset}" "$ISSUEOPS_RUNNER_PASSTHROUGH"; printf warn >&2`)
-	output, err := ExecRunner{}.Run(t.Context(), CommandRequest{
+	output, err := ExecRunner{}.Run(t.Context(), commandRequest{
 		Executable: executable,
 		Args:       args,
 		Env:        map[string]string{"CMUX_SOCKET_PATH": "/explicit.sock", "CMUX_SOCKET": ""},
@@ -429,14 +429,14 @@ func TestExecRunnerCapturesOutputAndFiltersAmbientCmuxScope(t *testing.T) {
 
 func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 	t.Run("missing executable was never invoked", func(t *testing.T) {
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/nonexistent/cmux", Timeout: time.Second})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: "/nonexistent/cmux", Timeout: time.Second})
 		if err == nil || output.Invoked {
 			t.Fatalf("output=%+v err=%v", output, err)
 		}
 	})
 	t.Run("non-zero exit keeps stderr in error and marks invoked", func(t *testing.T) {
 		executable, args := shellCommand(t, "printf 'denied \\n' >&2; printf partial; exit 3")
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 5 * time.Second})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 5 * time.Second})
 		if err == nil || !output.Invoked || !strings.Contains(err.Error(), "denied") || !strings.Contains(err.Error(), "exit status 3") || string(output.Stdout) != "partial" {
 			t.Fatalf("output=%+v err=%v", output, err)
 		}
@@ -444,7 +444,7 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 	t.Run("deadline kills a hung command", func(t *testing.T) {
 		started := time.Now()
 		executable, args := shellCommand(t, "exec sleep 30")
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 10*time.Second {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
 		}
@@ -455,7 +455,7 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 		// The background sleep inherits stdout; without a group kill and
 		// WaitDelay, Wait blocks until it exits and then it writes the marker.
 		executable, args := shellCommand(t, "(sleep 1; touch '"+filepath.ToSlash(marker)+"') & sleep 30")
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 2500*time.Millisecond {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
 		}
@@ -489,8 +489,8 @@ func TestCommandEnvironmentDropsAmbientCmuxScopeAndAppliesOnlyNonEmptyOverrides(
 func TestCreateAndSendPropagateEndpointObservationFailureWithoutRunningCommands(t *testing.T) {
 	boom := errors.New("socket unavailable")
 	runner := &queueRunner{t: t}
-	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
-		return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{}, boom
+	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
+		return issueops.HandoffDeliveryEndpointIncarnation{}, boom
 	}}
 	if _, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath}); !errors.Is(err, boom) {
 		t.Fatalf("create err=%v", err)
@@ -510,7 +510,7 @@ func TestExecRunnerCapsOutputAtOneMiBAndFails(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			executable, args := shellCommand(t, script)
-			output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 10 * time.Second})
+			output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 10 * time.Second})
 			if err == nil || !strings.Contains(err.Error(), "exceeded 1 MiB") || !output.Invoked {
 				t.Fatalf("invoked=%v err=%v", output.Invoked, err)
 			}

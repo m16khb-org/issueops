@@ -1,3 +1,5 @@
+// Package issueopsretention holds the domain rule that decides which issueops
+// cycle records are old and finished enough to prune.
 package issueopsretention
 
 import (
@@ -6,6 +8,10 @@ import (
 	issueopsretentioncontract "issueops/internal/contract/issueopsretention"
 )
 
+// IsPrunable reports whether record may be deleted by retention: the cycle is
+// done with no cleanup attempt, any lease is released, any issue creation and
+// remote artifact completion is finished, and its UpdatedAt parses and is
+// before cutoff.
 func IsPrunable(record issueopsretentioncontract.Record, cutoff time.Time) bool {
 	if record.CleanupAttempt != nil {
 		return false

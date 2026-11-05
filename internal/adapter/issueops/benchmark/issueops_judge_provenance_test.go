@@ -7,11 +7,11 @@ import (
 )
 
 func TestValidateJudgeProvenanceFailsClosed(t *testing.T) {
-	read := func(stateRoot, id string) (benchmarkcontract.IssueOpsBenchmarkRunResult, error) {
+	read := func(stateRoot, id string) (benchmarkcontract.RunResult, error) {
 		if id == "prior-run" {
-			return benchmarkcontract.IssueOpsBenchmarkRunResult{ID: id}, nil
+			return benchmarkcontract.RunResult{ID: id}, nil
 		}
-		return benchmarkcontract.IssueOpsBenchmarkRunResult{}, fmt.Errorf("not found")
+		return benchmarkcontract.RunResult{}, fmt.Errorf("not found")
 	}
 	const scored = "scored-run"
 

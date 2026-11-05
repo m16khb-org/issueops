@@ -6,8 +6,10 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func NewPlanSnapshot(result contract.SelfAugmentPlanResult, generatedAt time.Time) contract.SelfAugmentPlanStateSnapshot {
-	return contract.SelfAugmentPlanStateSnapshot{
+// NewPlanSnapshot converts result into its schema-version-1 state snapshot, recording open and
+// satisfied candidate IDs and stamping generatedAt in RFC 3339 form.
+func NewPlanSnapshot(result contract.PlanResult, generatedAt time.Time) contract.PlanStateSnapshot {
+	return contract.PlanStateSnapshot{
 		SchemaVersion:         1,
 		Kind:                  contract.SelfAugmentationPlanKind,
 		LoopKind:              result.LoopKind,
@@ -27,7 +29,9 @@ func NewPlanSnapshot(result contract.SelfAugmentPlanResult, generatedAt time.Tim
 	}
 }
 
-func CandidateIDsByStatus(candidates []contract.SelfAugmentCandidate, status string) []string {
+// CandidateIDsByStatus returns the IDs of candidates whose Status equals status, in input order, as
+// a non-nil slice.
+func CandidateIDsByStatus(candidates []contract.Candidate, status string) []string {
 	ids := []string{}
 	for _, candidate := range candidates {
 		if candidate.Status == status {

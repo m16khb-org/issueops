@@ -1,3 +1,7 @@
+// Package install is the application layer of the native install: Service validates
+// the install request, then drives every host installer, and RunTransaction wraps the
+// filesystem, host-config, and native-activation steps in one rollback boundary.
+// Host-specific writes live behind the port.HostInstaller and transaction interfaces.
 package install
 
 import (
@@ -8,6 +12,7 @@ import (
 	"issueops/internal/port"
 )
 
+// Environment is the filesystem view Service needs to normalize paths and validate the runtime before any host is touched.
 type Environment interface {
 	AbsClean(string) string
 	ResolveStableRoot(string) (string, error)
@@ -15,11 +20,15 @@ type Environment interface {
 	ListSkills(string) ([]string, error)
 }
 
+// Service runs a native install across every configured host installer.
 type Service struct {
 	Environment Environment
 	Installers  []port.HostInstaller
 }
 
+// Install normalizes request paths, validates the runtime and skill list, then runs each host installer
+// and merges their results. It fails when root is empty, no installer is configured, or validation fails;
+// the returned result is OK only when every installer succeeded.
 func (service Service) Install(request port.NativeInstallRequest) (port.NativeInstallResult, error) {
 	if request.Root == "" {
 		return port.NativeInstallResult{OK: false}, fmt.Errorf("root is required")

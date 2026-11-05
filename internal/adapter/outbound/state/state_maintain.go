@@ -11,11 +11,17 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
+// MaintenanceStores locates the SQLite stores that state maintenance covers: the
+// base state directory, issueops_v1, the worker store, loop, and every project
+// store.
 type MaintenanceStores struct {
 	base       string
 	workerRoot string
 }
 
+// NewMaintenanceStores returns the store locator for base. workerOverride, when
+// set, replaces the default worker store directory (base/worker) with its
+// absolute path.
 func NewMaintenanceStores(base, workerOverride string) MaintenanceStores {
 	workerRoot := filepath.Join(base, "worker")
 	if dir := workerOverride; dir != "" {
@@ -55,6 +61,9 @@ func (stores MaintenanceStores) projectRoots() ([]string, error) {
 	return roots, nil
 }
 
+// Roots returns every store root to maintain: the fixed roots followed by each
+// discovered project store. A failure while scanning the projects directory is an
+// error.
 func (stores MaintenanceStores) Roots() ([]string, error) {
 	roots := []string{stores.base, filepath.Join(stores.base, "issueops_v1"), stores.workerRoot, filepath.Join(stores.base, "loop")}
 	projectRoots, err := stores.projectRoots()
@@ -64,11 +73,14 @@ func (stores MaintenanceStores) Roots() ([]string, error) {
 	return append(roots, projectRoots...), nil
 }
 
+// Exists reports whether root contains an issueops.db store.
 func (MaintenanceStores) Exists(root string) bool {
 	_, err := os.Stat(filepath.Join(root, "issueops.db"))
 	return err == nil
 }
 
+// Maintain opens the store in root and runs its maintenance (WAL checkpoint and
+// file mode enforcement), returning the result.
 func (MaintenanceStores) Maintain(root string) (statecontract.StoreMaintainResult, error) {
 	database, err := sqlstore.Open(root)
 	if err != nil {

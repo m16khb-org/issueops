@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidateRecordInvariantsRequiresCompletedIssueURLMatch(t *testing.T) {
-	completed := &issueopscontract.IssueOpsIssueCreateIntent{
+	completed := &issueopscontract.IssueCreateIntent{
 		Status:       issueopscontract.IssueCreateIntentCompleted,
 		CanonicalURL: "https://example.test/issues/1",
 	}
@@ -21,7 +21,7 @@ func TestValidateRecordInvariantsRequiresCompletedIssueURLMatch(t *testing.T) {
 		{name: "mismatched", url: "https://example.test/issues/2", wantError: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			record := issueopscontract.IssueOpsRecord{IssueURL: test.url, IssueCreateIntent: completed}
+			record := issueopscontract.Record{IssueURL: test.url, IssueCreateIntent: completed}
 			err := ValidateRecordInvariants(record)
 			if (err != nil) != test.wantError {
 				t.Fatalf("ValidateRecordInvariants error = %v, wantError = %t", err, test.wantError)
@@ -31,14 +31,14 @@ func TestValidateRecordInvariantsRequiresCompletedIssueURLMatch(t *testing.T) {
 }
 
 func TestValidateRecordInvariantsRejectsPlanPrepEvidenceAndWaiverConflict(t *testing.T) {
-	cases := []issueopscontract.IssueOpsPlanPrepItem{
+	cases := []issueopscontract.PlanPrepItem{
 		{Status: "evidence", Evidence: []string{"source"}, WaiveReason: "not needed"},
 		{Status: "waived"},
 		{Status: "waived", Evidence: []string{"source"}, WaiveReason: "not needed"},
 	}
 	for index, item := range cases {
-		record := issueopscontract.IssueOpsRecord{
-			PlanPrep: &issueopscontract.IssueOpsPlanPrep{PriorDecisions: item},
+		record := issueopscontract.Record{
+			PlanPrep: &issueopscontract.PlanPrep{PriorDecisions: item},
 		}
 		if err := ValidateRecordInvariants(record); err == nil {
 			t.Fatalf("case %d accepted invalid plan preparation: %+v", index, item)

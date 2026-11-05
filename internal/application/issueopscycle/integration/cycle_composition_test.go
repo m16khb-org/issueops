@@ -25,12 +25,12 @@ func testCycleReadiness() cycle.Readiness {
 		ObserveChanges: observer.Observe, ChangedPaths: changes.ChangedPaths,
 		ChildMissing: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).PRMissing}
 }
-func testCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {
+func testCyclePhaseService(actor *model.Actor) cycle.PhaseService {
 	store := core.NewReviewMutationStore(actor)
 	return cycle.PhaseService{Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: testCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: testReadinessGit().Head, Fingerprint: testChangeReader().ChangeFingerprint}}
 }
 
-func advancePhaseForTest(root, id, to string) (model.IssueOpsRecord, error) {
+func advancePhaseForTest(root, id, to string) (model.Record, error) {
 	record, _, err := testCyclePhaseService(nil).AdvanceReport(root, id, to)
 	return record, err
 }

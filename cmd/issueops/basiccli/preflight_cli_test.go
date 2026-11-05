@@ -16,7 +16,7 @@ func TestRunPreflightPrintsJSONForExplicitTarget(t *testing.T) {
 		return RunPreflight([]string{"--json", repo})
 	})
 
-	var result preflight.PreflightResult
+	var result preflight.Result
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode preflight JSON: %v\n%s", err, out)
 	}
@@ -48,7 +48,7 @@ func TestRunPreflightDefaultsTargetFromEnvironment(t *testing.T) {
 		return RunPreflight(nil)
 	})
 
-	var result preflight.PreflightResult
+	var result preflight.Result
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode preflight JSON: %v\n%s", err, out)
 	}

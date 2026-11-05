@@ -1,3 +1,6 @@
+// Package riskqa plans the risk-based QA tier for a change and executes the
+// planned commands. It is an application-layer service; path scoping and
+// command running are injected.
 package riskqa
 
 import (
@@ -10,15 +13,22 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
-const AggregateOutputBudgetBytes = 8 * 1024
+const aggregateOutputBudgetBytes = 8 * 1024
 
+// ExecuteDeps supplies the effects Execute needs: plan the tier for a root,
+// run one planned command, render the plan, and read the clock.
 type ExecuteDeps struct {
-	Plan       func(string) riskqacontract.RiskQATierPlan
+	Plan       func(string) riskqacontract.TierPlan
 	Run        func(string, string) selfverifycontract.StepResult
-	RenderPlan func(riskqacontract.RiskQATierPlan) string
+	RenderPlan func(riskqacontract.TierPlan) string
 	Now        func() time.Time
 }
 
+// Execute plans the risk QA tier for root and runs each planned command in
+// order, stopping at the first failure. It returns one step result whose
+// stdout is the plan plus command output, trimmed to the aggregate output
+// budget with the scope JSON always kept. A scope error or an empty command
+// list returns without running anything.
 func Execute(root string, deps ExecuteDeps) selfverifycontract.StepResult {
 	started := deps.Now()
 	plan := deps.Plan(root)
@@ -31,7 +41,7 @@ func Execute(root string, deps ExecuteDeps) selfverifycontract.StepResult {
 		}{plan.Scope})
 		suffix = "\n" + string(encoded)
 	}
-	budget := AggregateOutputBudgetBytes - len(suffix)
+	budget := aggregateOutputBudgetBytes - len(suffix)
 	stdoutParts := []string{planJSON}
 	commands := []string{}
 	if (plan.Scope != nil && plan.Scope.Error != "") || len(plan.Commands) == 0 {

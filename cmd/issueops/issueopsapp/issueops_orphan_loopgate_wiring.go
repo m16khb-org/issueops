@@ -14,7 +14,7 @@ import (
 func newIssueOpsCLIGates() issueopscli.LoopGateDeps {
 	gate := newGateReadiness()
 	return issueopscli.LoopGateDeps{
-		AdvancePhaseReport: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsTrackedMaterials, error) {
+		AdvancePhaseReport: func(stateRoot, id, to string, actor issueopscontract.Actor) (issueopscontract.Record, issueopscontract.TrackedMaterials, error) {
 			return gate.AdvancePhaseReport(stateRoot, id, to, actor)
 		},
 		StrictPRReadinessWithState: gate.StrictPRReadinessWithState,

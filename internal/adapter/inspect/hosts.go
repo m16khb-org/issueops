@@ -81,7 +81,7 @@ func observeSkill(skillPath, sourcePath, observedAt string) (installed, linked i
 		broken := observation(inspectcontract.ObservationFailed, skillPath, observedAt, "broken_symlink")
 		return broken, broken
 	}
-	if Exists(filepath.Join(skillPath, "SKILL.md")) {
+	if exists(filepath.Join(skillPath, "SKILL.md")) {
 		installed = observation(inspectcontract.ObservationVerified, skillPath, observedAt, "")
 	} else {
 		installed = observation(inspectcontract.ObservationFailed, skillPath, observedAt, "skill_md_missing")

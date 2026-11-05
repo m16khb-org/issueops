@@ -36,7 +36,7 @@ func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
 		t.Fatal(err)
 	}
 	payload := publicationcontract.IntentPayload{
-		SchemaVersion: contract.IssueOpsSchemaVersion, OperationID: operationID, Generation: 1,
+		SchemaVersion: contract.SchemaVersion, OperationID: operationID, Generation: 1,
 		Provider: "github", Kind: "pr", InvocationState: "unknown",
 		Request: publicationcontract.ProviderCreateRequest{Labels: []string{"enhancement"}},
 	}
@@ -73,12 +73,12 @@ func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
 	}
 }
 
-func newPendingPublicationFixture(t *testing.T) (string, *remoteapp.PublicationJournal, contract.IssueOpsRecord, publicationcontract.IntentPayload) {
+func newPendingPublicationFixture(t *testing.T) (string, *remoteapp.PublicationJournal, contract.Record, publicationcontract.IntentPayload) {
 	t.Helper()
 	root := t.TempDir()
 	fixture := newClaimableExecutionFixture(t, root, "196-publication-receipt")
 	actor := executionActor("codex", "publication-owner")
-	fixture.record.Phase = contract.IssueOpsPhasePR
+	fixture.record.Phase = contract.PhasePR
 	fixture.record.IssueURL = "https://github.com/example/issueops/issues/69"
 	fixture.record.Execution.Lease.Status = contract.LeaseStatusActive
 	fixture.record.Execution.Lease.ClaimedAt = "2026-09-28T00:00:00Z"
@@ -94,7 +94,7 @@ func newPendingPublicationFixture(t *testing.T) (string, *remoteapp.PublicationJ
 		t.Fatal(err)
 	}
 	payload := publicationcontract.IntentPayload{
-		SchemaVersion: contract.IssueOpsSchemaVersion, OperationID: operationID, Generation: 1,
+		SchemaVersion: contract.SchemaVersion, OperationID: operationID, Generation: 1,
 		Provider: "github", Kind: "pr", InvocationState: "unknown",
 		Request: publicationcontract.ProviderCreateRequest{
 			Labels: []string{"enhancement"}, Assignees: []string{"maintainer"}, BaseBranch: "main",
@@ -139,7 +139,7 @@ func TestPublicationRepositoryReceiptPreservesActiveLease(t *testing.T) {
 	if after.RemoteArtifact == nil || after.RemoteArtifact.URL != "https://github.com/example/issueops/pull/196" || after.RemoteArtifact.VerifiedAt != "2026-09-28T01:02:03Z" {
 		t.Fatalf("receipt not persisted: %+v", after.RemoteArtifact)
 	}
-	if after.Execution.Pending != nil || after.Execution.Failure != nil || !reflect.DeepEqual(after.Execution.Lease, before.Execution.Lease) || after.Phase != contract.IssueOpsPhasePR {
+	if after.Execution.Pending != nil || after.Execution.Failure != nil || !reflect.DeepEqual(after.Execution.Lease, before.Execution.Lease) || after.Phase != contract.PhasePR {
 		t.Fatalf("publication changed execution lifecycle: %+v", after.Execution)
 	}
 	db, err := sqlstore.Open(root)

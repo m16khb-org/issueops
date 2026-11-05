@@ -1,3 +1,6 @@
+// Package authority provides the file, SQLite and Git backed implementations of
+// the authority ports: grant record storage, credential file management and
+// workspace scope resolution. It is an outbound adapter.
 package authority
 
 import (

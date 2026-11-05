@@ -16,6 +16,10 @@ type GitObserver struct {
 	Run func(dir string, args ...string) (int, string, string)
 }
 
+// Observe collects the git facts for target in parallel: repository root,
+// branch, upstream and ahead/behind counts, status, history, and remotes. A
+// target that is not inside a git repository yields an observation with GitOK
+// false and the error detail.
 func (observer GitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation {
 	run := observer.Run
 	if run == nil {

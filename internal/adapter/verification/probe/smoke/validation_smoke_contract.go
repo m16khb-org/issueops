@@ -9,7 +9,7 @@ import (
 	inspect "issueops/internal/contract/inspect"
 )
 
-func inspectSmokeValidationErrors(info inspect.InspectInfo, stdout, root string) []string {
+func inspectSmokeValidationErrors(info inspect.Info, stdout, root string) []string {
 	errs := []string{}
 	if !info.OK {
 		errs = append(errs, "inspect ok=false")
@@ -26,7 +26,7 @@ func inspectSmokeValidationErrors(info inspect.InspectInfo, stdout, root string)
 	return errs
 }
 
-func docsIndexSmokeValidationErrors(index docs.DocsIndexResult, root string) []string {
+func docsIndexSmokeValidationErrors(index docs.IndexResult, root string) []string {
 	errs := []string{}
 	if !index.OK {
 		errs = append(errs, "docs index ok=false")

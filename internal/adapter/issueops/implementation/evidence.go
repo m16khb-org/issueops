@@ -1,3 +1,7 @@
+// Package implementation observes whether a lifecycle record's worktree holds
+// implementation work: it reads git diff and status (or walks the file tree
+// outside git), lists the changed paths, and fingerprints their content so the
+// ai-slop-clean seal can detect later edits.
 package implementation
 
 import (
@@ -11,16 +15,23 @@ import (
 	"issueops/internal/adapter/issueops/pathutil"
 	"issueops/internal/adapter/issueops/readinesspaths"
 	model "issueops/internal/contract/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
+// Reader observes a record's worktree through injected git commands: GitCmd
+// returns trimmed output and GitCmdRaw returns it untrimmed, which porcelain
+// status parsing needs.
 type Reader struct {
 	GitCmd    func(string, ...string) (int, string, string)
 	GitCmdRaw func(string, ...string) (int, string, string)
 }
 
-func (r Reader) HasEvidence(record model.IssueOpsRecord) bool {
+// HasEvidence reports whether the record's worktree contains implementation
+// changes, either committed since the diff base or present in the working tree.
+// Changes to the linked plan or material derived from it do not count. Outside
+// a git worktree it falls back to scanning the file tree.
+func (r Reader) HasEvidence(record model.Record) bool {
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if worktree == "" || !readinesspaths.WorktreePathValid(worktree) {
 		return false
@@ -37,10 +48,10 @@ func (r Reader) HasEvidence(record model.IssueOpsRecord) bool {
 	return fileTreeHasImplementationChange(record, worktree)
 }
 
-// ChangedPaths는 현재 변경 집합의 repo-상대 경로를 정렬해 반환한다.
+// ChangedPaths 메서드는 현재 변경 집합의 repo-상대 경로를 정렬해 반환한다.
 // ChangeFingerprint가 해시하는 것과 같은 집합이므로, fingerprint를 봉인하는
 // 게이트가 "어떤 파일이 그 fingerprint에 들어 있는지"를 되물을 수 있다.
-func (r Reader) ChangedPaths(record model.IssueOpsRecord) []string {
+func (r Reader) ChangedPaths(record model.Record) []string {
 	gitRoot := r.changeGitRoot(record)
 	if gitRoot == "" {
 		return nil
@@ -48,7 +59,7 @@ func (r Reader) ChangedPaths(record model.IssueOpsRecord) []string {
 	return r.changedPathsIn(record, gitRoot)
 }
 
-func (r Reader) changeGitRoot(record model.IssueOpsRecord) string {
+func (r Reader) changeGitRoot(record model.Record) string {
 	gitRoot := readinesspaths.StrictGitRoot(record)
 	if gitRoot == "" {
 		return ""
@@ -59,7 +70,7 @@ func (r Reader) changeGitRoot(record model.IssueOpsRecord) string {
 	return gitRoot
 }
 
-func (r Reader) changedPathsIn(record model.IssueOpsRecord, gitRoot string) []string {
+func (r Reader) changedPathsIn(record model.Record, gitRoot string) []string {
 	paths := map[string]bool{}
 	if base := r.DiffBaseRef(record, gitRoot); base != "" {
 		_, names, _ := r.GitCmd(gitRoot, "diff", "--name-only", base+"..HEAD", "--")
@@ -83,7 +94,11 @@ func (r Reader) changedPathsIn(record model.IssueOpsRecord, gitRoot string) []st
 	return ordered
 }
 
-func (r Reader) ChangeFingerprint(record model.IssueOpsRecord) string {
+// ChangeFingerprint returns a SHA-256 over the content of every changed path
+// (committed since the diff base plus working-tree changes), or "" when there
+// is no git root, no change, or a file cannot be read. Verification reports are
+// excluded and deleted files are hashed as deleted.
+func (r Reader) ChangeFingerprint(record model.Record) string {
 	gitRoot := r.changeGitRoot(record)
 	if gitRoot == "" {
 		return ""
@@ -99,6 +114,10 @@ func (r Reader) ChangeFingerprint(record model.IssueOpsRecord) string {
 	return fingerprint
 }
 
+// ObservedPathsIn lists the sorted repo-relative paths changed since base
+// (when base is non-empty) plus the working tree under gitRoot. The boolean is
+// false when either git command fails, so callers can tell failure from an
+// empty change set.
 func (r Reader) ObservedPathsIn(gitRoot, base string) ([]string, bool) {
 	paths := map[string]bool{}
 	if base != "" {
@@ -140,7 +159,7 @@ func fingerprintPaths(
 	var b strings.Builder
 	b.WriteString("issueops-ai-slop-clean:v1\n")
 	for _, rel := range ordered {
-		if remote.IsVerificationReportPath(rel) {
+		if issueopsremote.IsVerificationReportPath(rel) {
 			// The report is written after the clean seal by verify, docs, and
 			// complete; it is not part of the reviewed change.
 			continue
@@ -165,6 +184,9 @@ func fingerprintPaths(
 	return hex.EncodeToString(sum[:]), true
 }
 
+// PorcelainPath extracts the path from one `git status --porcelain=v1` line,
+// taking the destination of a rename and stripping quotes. It returns "" for
+// lines too short to carry a path.
 func PorcelainPath(line string) string {
 	line = strings.TrimRight(line, "\r")
 	if len(line) < 4 {
@@ -177,7 +199,9 @@ func PorcelainPath(line string) string {
 	return strings.Trim(path, `"`)
 }
 
-func PathMatchesPlan(record model.IssueOpsRecord, worktree, path string) bool {
+// PathMatchesPlan reports whether path, resolved against worktree when
+// relative, is the record's linked plan file.
+func PathMatchesPlan(record model.Record, worktree, path string) bool {
 	planPath := strings.TrimSpace(record.PlanPath)
 	if planPath == "" || path == "" {
 		return false
@@ -193,7 +217,7 @@ func PathMatchesPlan(record model.IssueOpsRecord, worktree, path string) bool {
 	return path == planPath
 }
 
-func (r Reader) gitStatusHasImplementationChange(record model.IssueOpsRecord, worktree string) bool {
+func (r Reader) gitStatusHasImplementationChange(record model.Record, worktree string) bool {
 	out := r.gitStatusPorcelain(worktree)
 	for line := range strings.SplitSeq(out, "\n") {
 		path := PorcelainPath(line)
@@ -215,7 +239,7 @@ func (r Reader) gitStatusPorcelain(worktree string) string {
 	return out
 }
 
-func (r Reader) gitHeadDiffersFromBase(record model.IssueOpsRecord, worktree string) bool {
+func (r Reader) gitHeadDiffersFromBase(record model.Record, worktree string) bool {
 	ref := r.DiffBaseRef(record, worktree)
 	if ref == "" {
 		return false
@@ -230,7 +254,7 @@ func (r Reader) gitHeadDiffersFromBase(record model.IssueOpsRecord, worktree str
 	return false
 }
 
-func fileTreeHasImplementationChange(record model.IssueOpsRecord, worktree string) bool {
+func fileTreeHasImplementationChange(record model.Record, worktree string) bool {
 	found := false
 	_ = filepath.WalkDir(worktree, func(path string, d os.DirEntry, err error) error {
 		if err != nil || found {
@@ -250,7 +274,9 @@ func fileTreeHasImplementationChange(record model.IssueOpsRecord, worktree strin
 	return found
 }
 
-func (r Reader) DiffBaseRef(record model.IssueOpsRecord, root string) string {
+// DiffBaseRef returns the first base ref from the record's branch preparation
+// that resolves to a commit in root, or "" when none does.
+func (r Reader) DiffBaseRef(record model.Record, root string) string {
 	sha, branch := "", ""
 	if record.BranchPrepare != nil {
 		sha, branch = record.BranchPrepare.BaseSHA, record.BranchPrepare.BaseBranch
@@ -268,6 +294,8 @@ func (r Reader) DiffBaseRef(record model.IssueOpsRecord, root string) string {
 	return ""
 }
 
+// FingerprintSnapshot hashes the given repo-relative paths under root the same
+// way ChangeFingerprint does. The boolean is false when a file cannot be read.
 func FingerprintSnapshot(root string, paths []string) (string, bool) {
 	return fingerprintPaths(root, paths, os.ReadFile)
 }
@@ -280,9 +308,9 @@ func cleanRelativePath(path string) string {
 	return filepath.ToSlash(path)
 }
 
-// ObservedChangedPaths는 ChangedPaths와 같은 관측이되 git 루트를 찾았는지를 함께
+// ObservedChangedPaths 메서드는 ChangedPaths와 같은 관측이되 git 루트를 찾았는지를 함께
 // 돌려준다. 호출자가 nil과 빈 슬라이스 구분에 기대지 않도록 명시 값으로 넘긴다.
-func (r Reader) ObservedChangedPaths(record model.IssueOpsRecord) ([]string, bool) {
+func (r Reader) ObservedChangedPaths(record model.Record) ([]string, bool) {
 	gitRoot := r.changeGitRoot(record)
 	if gitRoot == "" {
 		return nil, false
@@ -294,7 +322,7 @@ func (r Reader) ObservedChangedPaths(record model.IssueOpsRecord) ([]string, boo
 // linked plan, or a tracked material copy a phase transition derived from the
 // plan and the record (#513). Such a path alone never satisfies
 // implementation_changes.
-func pathIsPlanningMaterial(record model.IssueOpsRecord, worktree, path string) bool {
+func pathIsPlanningMaterial(record model.Record, worktree, path string) bool {
 	if PathMatchesPlan(record, worktree, path) {
 		return true
 	}
@@ -311,5 +339,5 @@ func pathIsPlanningMaterial(record model.IssueOpsRecord, worktree, path string) 
 	if strings.TrimSpace(issueURL) == "" && record.BranchPrepare != nil {
 		issueURL = record.BranchPrepare.IssueURL
 	}
-	return remote.IsTrackedMaterialPath(issueURL, rel)
+	return issueopsremote.IsTrackedMaterialPath(issueURL, rel)
 }

@@ -12,9 +12,9 @@ import (
 
 func approx(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 
-func completeArtifact() contract.IssueOpsBenchmarkArtifact {
+func completeArtifact() contract.Artifact {
 	const guide = "skills/issueops-create-issue/SKILL.md; skills/issueops-create-pr/SKILL.md"
-	return contract.IssueOpsBenchmarkArtifact{
+	return contract.Artifact{
 		ProblemSummary: "문제 요약",
 		IssueDraft: "## Summary 요약\nBackground 배경\nAcceptance Criteria\nScope\nVerification\n" +
 			"selected label: a, rejected label: b, threshold score, manual override",
@@ -39,8 +39,8 @@ func completeArtifact() contract.IssueOpsBenchmarkArtifact {
 	}
 }
 
-func baseFixture() contract.IssueOpsBenchmarkFixture {
-	return contract.IssueOpsBenchmarkFixture{ID: "fx"}
+func baseFixture() contract.Fixture {
+	return contract.Fixture{ID: "fx"}
 }
 
 func TestScoreArtifactCompleteArtifactPasses(t *testing.T) {
@@ -65,36 +65,36 @@ func TestScoreArtifactCompleteArtifactPasses(t *testing.T) {
 func TestScoreArtifactDimensionFailures(t *testing.T) {
 	cases := []struct {
 		name   string
-		mutate func(*contract.IssueOpsBenchmarkArtifact)
+		mutate func(*contract.Artifact)
 		failed string
 	}{
-		{"no intent", func(a *contract.IssueOpsBenchmarkArtifact) { a.ProblemSummary, a.IssueDraft = " ", "" }, "missing problem summary or issue draft"},
-		{"plan without verification", func(a *contract.IssueOpsBenchmarkArtifact) { a.Plan = "ship it" }, "plan missing verification commands"},
-		{"phase choices incomplete", func(a *contract.IssueOpsBenchmarkArtifact) { a.PhaseChoices = "proceed, revise, jump" }, "phase choices missing required options"},
-		{"branch not feature", func(a *contract.IssueOpsBenchmarkArtifact) { a.BranchName = "main" }, "issue branch or sibling worktree gate missing"},
-		{"worktree path lacks .worktrees", func(a *contract.IssueOpsBenchmarkArtifact) {
+		{"no intent", func(a *contract.Artifact) { a.ProblemSummary, a.IssueDraft = " ", "" }, "missing problem summary or issue draft"},
+		{"plan without verification", func(a *contract.Artifact) { a.Plan = "ship it" }, "plan missing verification commands"},
+		{"phase choices incomplete", func(a *contract.Artifact) { a.PhaseChoices = "proceed, revise, jump" }, "phase choices missing required options"},
+		{"branch not feature", func(a *contract.Artifact) { a.BranchName = "main" }, "issue branch or sibling worktree gate missing"},
+		{"worktree path lacks .worktrees", func(a *contract.Artifact) {
 			a.WorktreePath = filepath.FromSlash("/r/x")
 			a.ImplementationLocation = filepath.FromSlash("/r/x")
 		}, "issue branch or sibling worktree gate missing"},
-		{"impl outside worktree", func(a *contract.IssueOpsBenchmarkArtifact) { a.ImplementationLocation = filepath.FromSlash("/r") }, "implementation location is outside the isolated worktree"},
-		{"impl sibling prefix", func(a *contract.IssueOpsBenchmarkArtifact) {
+		{"impl outside worktree", func(a *contract.Artifact) { a.ImplementationLocation = filepath.FromSlash("/r") }, "implementation location is outside the isolated worktree"},
+		{"impl sibling prefix", func(a *contract.Artifact) {
 			a.ImplementationLocation = filepath.FromSlash("/r/.worktrees/x-other")
 		}, "implementation location is outside the isolated worktree"},
-		{"tdd without first", func(a *contract.IssueOpsBenchmarkArtifact) { a.TDDPlan = "failing test" }, "TDD plan missing failing-test-first evidence"},
-		{"issue lacks hangul", func(a *contract.IssueOpsBenchmarkArtifact) {
+		{"tdd without first", func(a *contract.Artifact) { a.TDDPlan = "failing test" }, "TDD plan missing failing-test-first evidence"},
+		{"issue lacks hangul", func(a *contract.Artifact) {
 			a.IssueDraft = "Summary Background Acceptance Criteria Scope Verification selected label rejected label score manual override"
 		}, "issue draft missing required sections, Korean text, guideline reference, or label scoring decision evidence"},
-		{"pr without issue link", func(a *contract.IssueOpsBenchmarkArtifact) {
+		{"pr without issue link", func(a *contract.Artifact) {
 			a.PRDraft = "Summary 요약 Changes Verified Reviewer focus"
 		}, "PR/MR draft missing required sections, issue link, Korean text, reviewer notes, or guideline reference"},
-		{"cleanup missing choices", func(a *contract.IssueOpsBenchmarkArtifact) { a.WorktreeCleanup = "clean; cleanup" }, "worktree cleanup status or choices missing"},
-		{"task breakdown no owns", func(a *contract.IssueOpsBenchmarkArtifact) {
+		{"cleanup missing choices", func(a *contract.Artifact) { a.WorktreeCleanup = "clean; cleanup" }, "worktree cleanup status or choices missing"},
+		{"task breakdown no owns", func(a *contract.Artifact) {
 			a.TaskBreakdown = "worker does parser; non-split reason: small"
 		}, "task breakdown missing bounded ownership or provider-native hierarchy"},
-		{"subagent prompts missing gate", func(a *contract.IssueOpsBenchmarkArtifact) {
+		{"subagent prompts missing gate", func(a *contract.Artifact) {
 			a.SubagentPrompts = "not alone; do not revert; own; report"
 		}, "subagent prompts missing coordination, context verification, or bounded review guidance"},
-		{"domain evidence missing", func(a *contract.IssueOpsBenchmarkArtifact) { a.DomainContractEvidence = "" }, "domain contract evidence missing invariants, exact mechanisms, equivalent behavior, or source lines"},
+		{"domain evidence missing", func(a *contract.Artifact) { a.DomainContractEvidence = "" }, "domain contract evidence missing invariants, exact mechanisms, equivalent behavior, or source lines"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -151,41 +151,41 @@ func TestScoreArtifactCriticalFailureRules(t *testing.T) {
 	cases := []struct {
 		name   string
 		rule   string
-		mutate func(*contract.IssueOpsBenchmarkArtifact)
+		mutate func(*contract.Artifact)
 		hit    bool
 	}{
-		{"source repo hit", "Works in source repo", func(a *contract.IssueOpsBenchmarkArtifact) { a.ImplementationLocation = filepath.FromSlash("/r") }, true},
-		{"source repo miss", "works in source repo", func(a *contract.IssueOpsBenchmarkArtifact) {}, false},
-		{"branch prompt hit", "skips branch prompt", func(a *contract.IssueOpsBenchmarkArtifact) { a.BranchName = " " }, true},
-		{"worker context hit", "worker starts without context check", func(a *contract.IssueOpsBenchmarkArtifact) { a.SubagentPrompts = "do work" }, true},
-		{"unbounded reviewer hit", "unbounded code-reviewer", func(a *contract.IssueOpsBenchmarkArtifact) { a.SubagentPrompts = "launch a code-reviewer" }, true},
-		{"dirty worktree removal hit", "removes dirty worktree", func(a *contract.IssueOpsBenchmarkArtifact) { a.WorktreeCleanup = "dirty tree, will remove" }, true},
-		{"dirty worktree removal miss", "removes dirty worktree", func(a *contract.IssueOpsBenchmarkArtifact) { a.WorktreeCleanup = "dirty tree kept" }, false},
-		{"korean hit", "not written in Korean", func(a *contract.IssueOpsBenchmarkArtifact) { a.PRDraft = "english only" }, true},
-		{"guideline hit", "missing issue/pr guideline reference", func(a *contract.IssueOpsBenchmarkArtifact) { a.GuidelineRef = "" }, true},
-		{"emoji over threshold", "excessive emoji", func(a *contract.IssueOpsBenchmarkArtifact) { a.IssueDraft += "🚀🚀🚀🚀" }, true},
-		{"emoji U+1F300 cyclone counts", "excessive emoji", func(a *contract.IssueOpsBenchmarkArtifact) { a.IssueDraft += strings.Repeat("\U0001F300", 4) }, true},
-		{"emoji U+2600 sun counts", "excessive emoji", func(a *contract.IssueOpsBenchmarkArtifact) { a.IssueDraft += strings.Repeat("\u2600", 4) }, true},
-		{"emoji U+27BF double curly loop counts", "excessive emoji", func(a *contract.IssueOpsBenchmarkArtifact) { a.IssueDraft += strings.Repeat("\u27BF", 4) }, true},
-		{"hangul syllable first 가 is Korean", "not written in Korean", func(a *contract.IssueOpsBenchmarkArtifact) { a.PRDraft = "\uAC00" }, false},
-		{"hangul syllable last 힣 is Korean", "not written in Korean", func(a *contract.IssueOpsBenchmarkArtifact) { a.PRDraft = "\uD7A3" }, false},
-		{"hangul jamo first ㄱ is Korean", "not written in Korean", func(a *contract.IssueOpsBenchmarkArtifact) { a.PRDraft = "\u3131" }, false},
-		{"hangul jamo last ㅎ is Korean", "not written in Korean", func(a *contract.IssueOpsBenchmarkArtifact) { a.PRDraft = "\u314E" }, false},
-		{"hangul vowel first ㅏ is Korean", "not written in Korean", func(a *contract.IssueOpsBenchmarkArtifact) { a.PRDraft = "\u314F" }, false},
-		{"hangul vowel last ㅣ is Korean", "not written in Korean", func(a *contract.IssueOpsBenchmarkArtifact) { a.PRDraft = "\u3163" }, false},
-		{"emoji at threshold", "excessive emoji", func(a *contract.IssueOpsBenchmarkArtifact) { a.IssueDraft += "🚀🚀"; a.PRDraft += "🚀" }, false},
-		{"api doc hit", "api doc gate skipped", func(a *contract.IssueOpsBenchmarkArtifact) { a.APIDocGateEvidence = "" }, true},
-		{"live evidence hit", "no live evidence", func(a *contract.IssueOpsBenchmarkArtifact) { a.LiveEvidenceMatrix = "" }, true},
-		{"review feedback hit", "ignores review feedback", func(a *contract.IssueOpsBenchmarkArtifact) { a.ReviewFeedbackEvidence = "" }, true},
-		{"review feedback agent-thread rule routed elsewhere", "ignores review feedback on review-agent threads", func(a *contract.IssueOpsBenchmarkArtifact) {
+		{"source repo hit", "Works in source repo", func(a *contract.Artifact) { a.ImplementationLocation = filepath.FromSlash("/r") }, true},
+		{"source repo miss", "works in source repo", func(a *contract.Artifact) {}, false},
+		{"branch prompt hit", "skips branch prompt", func(a *contract.Artifact) { a.BranchName = " " }, true},
+		{"worker context hit", "worker starts without context check", func(a *contract.Artifact) { a.SubagentPrompts = "do work" }, true},
+		{"unbounded reviewer hit", "unbounded code-reviewer", func(a *contract.Artifact) { a.SubagentPrompts = "launch a code-reviewer" }, true},
+		{"dirty worktree removal hit", "removes dirty worktree", func(a *contract.Artifact) { a.WorktreeCleanup = "dirty tree, will remove" }, true},
+		{"dirty worktree removal miss", "removes dirty worktree", func(a *contract.Artifact) { a.WorktreeCleanup = "dirty tree kept" }, false},
+		{"korean hit", "not written in Korean", func(a *contract.Artifact) { a.PRDraft = "english only" }, true},
+		{"guideline hit", "missing issue/pr guideline reference", func(a *contract.Artifact) { a.GuidelineRef = "" }, true},
+		{"emoji over threshold", "excessive emoji", func(a *contract.Artifact) { a.IssueDraft += "🚀🚀🚀🚀" }, true},
+		{"emoji U+1F300 cyclone counts", "excessive emoji", func(a *contract.Artifact) { a.IssueDraft += strings.Repeat("\U0001F300", 4) }, true},
+		{"emoji U+2600 sun counts", "excessive emoji", func(a *contract.Artifact) { a.IssueDraft += strings.Repeat("\u2600", 4) }, true},
+		{"emoji U+27BF double curly loop counts", "excessive emoji", func(a *contract.Artifact) { a.IssueDraft += strings.Repeat("\u27BF", 4) }, true},
+		{"hangul syllable first 가 is Korean", "not written in Korean", func(a *contract.Artifact) { a.PRDraft = "\uAC00" }, false},
+		{"hangul syllable last 힣 is Korean", "not written in Korean", func(a *contract.Artifact) { a.PRDraft = "\uD7A3" }, false},
+		{"hangul jamo first ㄱ is Korean", "not written in Korean", func(a *contract.Artifact) { a.PRDraft = "\u3131" }, false},
+		{"hangul jamo last ㅎ is Korean", "not written in Korean", func(a *contract.Artifact) { a.PRDraft = "\u314E" }, false},
+		{"hangul vowel first ㅏ is Korean", "not written in Korean", func(a *contract.Artifact) { a.PRDraft = "\u314F" }, false},
+		{"hangul vowel last ㅣ is Korean", "not written in Korean", func(a *contract.Artifact) { a.PRDraft = "\u3163" }, false},
+		{"emoji at threshold", "excessive emoji", func(a *contract.Artifact) { a.IssueDraft += "🚀🚀"; a.PRDraft += "🚀" }, false},
+		{"api doc hit", "api doc gate skipped", func(a *contract.Artifact) { a.APIDocGateEvidence = "" }, true},
+		{"live evidence hit", "no live evidence", func(a *contract.Artifact) { a.LiveEvidenceMatrix = "" }, true},
+		{"review feedback hit", "ignores review feedback", func(a *contract.Artifact) { a.ReviewFeedbackEvidence = "" }, true},
+		{"review feedback agent-thread rule routed elsewhere", "ignores review feedback on review-agent threads", func(a *contract.Artifact) {
 			a.ReviewFeedbackEvidence = "classification valid; verification; thread reply; resolution"
 		}, true},
-		{"completion hygiene hit", "skips completion hygiene", func(a *contract.IssueOpsBenchmarkArtifact) { a.CompletionHygiene = "" }, true},
-		{"label hit", "no intelligent label decision", func(a *contract.IssueOpsBenchmarkArtifact) { a.IssueDraft = "plain" }, true},
-		{"hierarchy hit", "large issue hierarchy ignored", func(a *contract.IssueOpsBenchmarkArtifact) { a.TaskBreakdown = "worker owns parser" }, true},
-		{"draft completion hit", "draft issue completion missing", func(a *contract.IssueOpsBenchmarkArtifact) { a.CompletionHygiene = "final diff" }, true},
-		{"pioneer hit", "skips pioneer method", func(a *contract.IssueOpsBenchmarkArtifact) {}, true},
-		{"unrelated rule never fires", "something else entirely", func(a *contract.IssueOpsBenchmarkArtifact) { *a = contract.IssueOpsBenchmarkArtifact{} }, false},
+		{"completion hygiene hit", "skips completion hygiene", func(a *contract.Artifact) { a.CompletionHygiene = "" }, true},
+		{"label hit", "no intelligent label decision", func(a *contract.Artifact) { a.IssueDraft = "plain" }, true},
+		{"hierarchy hit", "large issue hierarchy ignored", func(a *contract.Artifact) { a.TaskBreakdown = "worker owns parser" }, true},
+		{"draft completion hit", "draft issue completion missing", func(a *contract.Artifact) { a.CompletionHygiene = "final diff" }, true},
+		{"pioneer hit", "skips pioneer method", func(a *contract.Artifact) {}, true},
+		{"unrelated rule never fires", "something else entirely", func(a *contract.Artifact) { *a = contract.Artifact{} }, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -249,7 +249,7 @@ func TestHierarchyEvidence(t *testing.T) {
 		{"none", "just do it", false},
 	}
 	for _, c := range cases {
-		if got := issueOpsHierarchyEvidenceComplete(contract.IssueOpsBenchmarkArtifact{TaskBreakdown: c.text}); got != c.want {
+		if got := issueOpsHierarchyEvidenceComplete(contract.Artifact{TaskBreakdown: c.text}); got != c.want {
 			t.Errorf("%s: got %v", c.name, got)
 		}
 	}
@@ -268,7 +268,7 @@ func TestLabelDecisionEvidence(t *testing.T) {
 		{"no override", "selected label x rejected label y score", false},
 	}
 	for _, c := range cases {
-		if got := issueOpsLabelDecisionEvidenceComplete(contract.IssueOpsBenchmarkArtifact{ProblemSummary: c.text}); got != c.want {
+		if got := issueOpsLabelDecisionEvidenceComplete(contract.Artifact{ProblemSummary: c.text}); got != c.want {
 			t.Errorf("%s: got %v", c.name, got)
 		}
 	}
@@ -286,7 +286,7 @@ func TestReviewPromptIsBounded(t *testing.T) {
 		"review everything":                                false,
 	}
 	for prompt, want := range cases {
-		if got := reviewPromptIsBounded(contract.IssueOpsBenchmarkArtifact{SubagentPrompts: prompt}); got != want {
+		if got := reviewPromptIsBounded(contract.Artifact{SubagentPrompts: prompt}); got != want {
 			t.Errorf("%q: got %v", prompt, got)
 		}
 	}
@@ -307,7 +307,7 @@ func TestWorkerPromptHasContextGate(t *testing.T) {
 		{"no head", "pwd branch worktree stop", "", false},
 	}
 	for _, c := range cases {
-		a := contract.IssueOpsBenchmarkArtifact{SubagentPrompts: c.prompt, WorktreePath: c.worktree}
+		a := contract.Artifact{SubagentPrompts: c.prompt, WorktreePath: c.worktree}
 		if got := workerPromptHasContextGate(a); got != c.want {
 			t.Errorf("%s: got %v", c.name, got)
 		}
@@ -347,7 +347,7 @@ func TestSummarizeDimensionScores(t *testing.T) {
 		{"first is min", []contract.IssueOpsDimensionScore{{Score: 10}, {Score: 90}}, 50, 10},
 	}
 	for _, c := range cases {
-		avg, min := SummarizeDimensionScores(c.in)
+		avg, min := summarizeDimensionScores(c.in)
 		if !approx(avg, c.avg) || !approx(min, c.min) {
 			t.Errorf("%s: %v %v", c.name, avg, min)
 		}
@@ -355,10 +355,10 @@ func TestSummarizeDimensionScores(t *testing.T) {
 }
 
 func TestSummarizeRunScores(t *testing.T) {
-	if a, m := SummarizeRunScores(nil); a != 0 || m != 0 {
+	if a, m := summarizeRunScores(nil); a != 0 || m != 0 {
 		t.Fatal("empty")
 	}
-	a, m := SummarizeRunScores([]contract.IssueOpsBenchmarkScore{
+	a, m := summarizeRunScores([]contract.Score{
 		{AverageScore: 100, MinimumScore: 100}, {AverageScore: 60, MinimumScore: 20}, {AverageScore: 80, MinimumScore: 80},
 	})
 	if !approx(a, 80) || !approx(m, 20) {
@@ -369,30 +369,30 @@ func TestSummarizeRunScores(t *testing.T) {
 func TestFinalizeRun(t *testing.T) {
 	cases := []struct {
 		name   string
-		scores []contract.IssueOpsBenchmarkScore
+		scores []contract.Score
 		ok     bool
 		crit   int
 	}{
-		{"all pass", []contract.IssueOpsBenchmarkScore{{Passed: true}, {Passed: true}}, true, 0},
-		{"one fails", []contract.IssueOpsBenchmarkScore{{Passed: true}, {}}, false, 0},
-		{"critical counted", []contract.IssueOpsBenchmarkScore{{Passed: true, CriticalFailures: []string{"a", "b"}}}, false, 2},
+		{"all pass", []contract.Score{{Passed: true}, {Passed: true}}, true, 0},
+		{"one fails", []contract.Score{{Passed: true}, {}}, false, 0},
+		{"critical counted", []contract.Score{{Passed: true, CriticalFailures: []string{"a", "b"}}}, false, 2},
 		{"empty run is ok", nil, true, 0},
 	}
 	for _, c := range cases {
-		r := FinalizeRun(contract.IssueOpsBenchmarkRunResult{Scores: c.scores, CriticalFailureCount: 99, FixtureCount: 99})
+		r := FinalizeRun(contract.RunResult{Scores: c.scores, CriticalFailureCount: 99, FixtureCount: 99})
 		if r.OK != c.ok || r.CriticalFailureCount != c.crit || r.FixtureCount != len(c.scores) {
 			t.Errorf("%s: %+v", c.name, r)
 		}
 	}
-	r := FinalizeRun(contract.IssueOpsBenchmarkRunResult{Scores: []contract.IssueOpsBenchmarkScore{{AverageScore: 90, MinimumScore: 70}, {AverageScore: 50, MinimumScore: 40}}})
+	r := FinalizeRun(contract.RunResult{Scores: []contract.Score{{AverageScore: 90, MinimumScore: 70}, {AverageScore: 50, MinimumScore: 40}}})
 	if !approx(r.AverageScore, 70) || !approx(r.MinimumScore, 40) {
 		t.Fatalf("%+v", r)
 	}
 }
 
 func TestScoreRunUsesArtifactsByFixtureID(t *testing.T) {
-	fixtures := []contract.IssueOpsBenchmarkFixture{{ID: "a"}, {ID: "b"}}
-	run := ScoreRun("run-1", fixtures, map[string]contract.IssueOpsBenchmarkArtifact{"a": completeArtifact()})
+	fixtures := []contract.Fixture{{ID: "a"}, {ID: "b"}}
+	run := ScoreRun("run-1", fixtures, map[string]contract.Artifact{"a": completeArtifact()})
 	if run.ID != "run-1" || run.FixtureCount != 2 || len(run.Scores) != 2 {
 		t.Fatalf("%+v", run)
 	}
@@ -405,15 +405,15 @@ func TestScoreRunUsesArtifactsByFixtureID(t *testing.T) {
 }
 
 func TestMergeScoreWithJudge(t *testing.T) {
-	det := func() contract.IssueOpsBenchmarkScore {
-		return contract.IssueOpsBenchmarkScore{DimensionScores: []contract.IssueOpsDimensionScore{
+	det := func() contract.Score {
+		return contract.Score{DimensionScores: []contract.IssueOpsDimensionScore{
 			{Dimension: "plan_quality", Score: 100, Evidence: "det"},
 			{Dimension: "tdd_quality", Score: 100, Evidence: "det2"},
 			{Dimension: "phase_control_quality", NotApplicable: true, Evidence: "na"},
 		}}
 	}
 	t.Run("judge lowers score and appends evidence", func(t *testing.T) {
-		judge := contract.IssueOpsBenchmarkScore{
+		judge := contract.Score{
 			DimensionScores: []contract.IssueOpsDimensionScore{
 				{Dimension: "plan_quality", Score: 60, Evidence: "weak"},
 				{Dimension: "phase_control_quality", Score: 0, Evidence: "ignored"},
@@ -436,25 +436,25 @@ func TestMergeScoreWithJudge(t *testing.T) {
 	t.Run("judge never raises score", func(t *testing.T) {
 		d := det()
 		d.DimensionScores[0].Score = 40
-		m := MergeScoreWithJudge(d, contract.IssueOpsBenchmarkScore{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "plan_quality", Score: 100, Evidence: "ok"}}})
+		m := MergeScoreWithJudge(d, contract.Score{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "plan_quality", Score: 100, Evidence: "ok"}}})
 		if m.DimensionScores[0].Score != 40 {
 			t.Fatalf("%+v", m.DimensionScores[0])
 		}
 	})
 	t.Run("agreeing judge passes", func(t *testing.T) {
-		m := MergeScoreWithJudge(det(), contract.IssueOpsBenchmarkScore{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "plan_quality", Score: 100, Evidence: "ok"}}})
+		m := MergeScoreWithJudge(det(), contract.Score{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "plan_quality", Score: 100, Evidence: "ok"}}})
 		if !m.Passed || !m.OK {
 			t.Fatalf("%+v", m)
 		}
 	})
 	t.Run("empty judge records failure", func(t *testing.T) {
-		m := MergeScoreWithJudge(det(), contract.IssueOpsBenchmarkScore{})
+		m := MergeScoreWithJudge(det(), contract.Score{})
 		if m.Passed || !reflect.DeepEqual(m.JudgeFailures, []string{"judge returned no dimension scores"}) {
 			t.Fatalf("%+v", m)
 		}
 	})
 	t.Run("judge failures and critical failures propagate", func(t *testing.T) {
-		m := MergeScoreWithJudge(det(), contract.IssueOpsBenchmarkScore{
+		m := MergeScoreWithJudge(det(), contract.Score{
 			DimensionScores:  []contract.IssueOpsDimensionScore{{Dimension: "plan_quality", Score: 100}},
 			JudgeFailures:    []string{"jf"},
 			CriticalFailures: []string{"cf"},
@@ -466,7 +466,7 @@ func TestMergeScoreWithJudge(t *testing.T) {
 	t.Run("deterministic failure blocks pass", func(t *testing.T) {
 		d := det()
 		d.DeterministicFailures = []string{"x"}
-		m := MergeScoreWithJudge(d, contract.IssueOpsBenchmarkScore{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "plan_quality", Score: 100}}})
+		m := MergeScoreWithJudge(d, contract.Score{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "plan_quality", Score: 100}}})
 		if m.Passed {
 			t.Fatal("must not pass")
 		}
@@ -474,10 +474,10 @@ func TestMergeScoreWithJudge(t *testing.T) {
 }
 
 func TestValidateJudgeScore(t *testing.T) {
-	if err := ValidateJudgeScore(contract.IssueOpsBenchmarkScore{}); err == nil || !strings.Contains(err.Error(), "dimension_scores") {
+	if err := ValidateJudgeScore(contract.Score{}); err == nil || !strings.Contains(err.Error(), "dimension_scores") {
 		t.Fatalf("%v", err)
 	}
-	if err := ValidateJudgeScore(contract.IssueOpsBenchmarkScore{DimensionScores: []contract.IssueOpsDimensionScore{{}}}); err != nil {
+	if err := ValidateJudgeScore(contract.Score{DimensionScores: []contract.IssueOpsDimensionScore{{}}}); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -1,5 +1,6 @@
 package mcp
 
+// Resources returns the fixed list of issueops:// resources the MCP server advertises.
 func Resources() []Resource {
 	return []Resource{
 		{URI: "issueops://commit-policy", Name: "Commit policy", Description: "Conventional Commit + Lore body policy.", MimeType: "text/markdown"},

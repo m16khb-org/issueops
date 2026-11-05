@@ -49,7 +49,7 @@ func (cli command) runIssueOpsBranch(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.PrepareIssueOpsBranchWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsBranchPrepareRequest{
+	record, err := cli.Runtime.PrepareIssueOpsBranchWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.BranchPrepareRequest{
 		Provider:        *provider,
 		IssueURL:        *issueURL,
 		Branch:          *branch,
@@ -61,22 +61,22 @@ func (cli command) runIssueOpsBranch(args []string) error {
 		LinkVerified:    *linkVerified,
 	}, actor.actor())
 	if err == nil && *jsonOut {
-		return printJSON(issueopscontract.BranchPrepareAck(record))
+		return printJSON(issueopscontract.NewBranchPrepareAck(record))
 	}
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
 // printIssueOpsResult answers a record mutation. --json prints the compact
 // acknowledgement; the full record stays one `status` call away.
-func printIssueOpsResult(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
+func printIssueOpsResult(record issueopscontract.Record, jsonOut bool, err error) error {
 	if err == nil && jsonOut {
-		return printJSON(issueopscontract.MutationAck(record))
+		return printJSON(issueopscontract.NewMutationAck(record))
 	}
 	return printIssueOpsRecord(record, jsonOut, err)
 }
 
 // printIssueOpsRecord prints the whole record (the `status` read).
-func printIssueOpsRecord(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
+func printIssueOpsRecord(record issueopscontract.Record, jsonOut bool, err error) error {
 	if err != nil {
 		if jsonOut {
 			return reportIssueOpsError(err)
@@ -137,7 +137,7 @@ func (cli command) runIssueOpsBranchRetarget(args []string) error {
 		return err
 	}
 	record, err := cli.Runtime.RetargetIssueOpsBranchWithActor(cli.Runtime.IssueOpsStateRoot(), *id,
-		issueopscontract.IssueOpsBranchRetargetRequest{BaseBranch: *baseBranch, Reason: *reason}, actor.actor())
+		issueopscontract.BranchRetargetRequest{BaseBranch: *baseBranch, Reason: *reason}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 

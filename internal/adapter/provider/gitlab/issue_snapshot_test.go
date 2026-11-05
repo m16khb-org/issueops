@@ -14,7 +14,7 @@ if [ "$*" != "api projects/acme%2Frepo/issues/69 --hostname gitlab.example.com" 
 printf '%s' '{"web_url":"https://gitlab.example.com/acme/repo/-/issues/69","description":"AC-01","state":"opened"}'
 `)
 	t.Setenv("PATH", binDir+string(filepath.ListSeparator)+t.TempDir())
-	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.ExecutionIssueSnapshotRequest{
+	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.SnapshotRequest{
 		Repo: repo, URL: "https://gitlab.example.com/acme/repo/-/issues/69",
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ if [ "$*" != "api projects/acme%2Frepo/issues/69 --hostname gitlab.example.com" 
 printf '%s' '{"web_url":"https://gitlab.example.com/acme/repo/-/issues/69","description":"AC-01","state":"opened"}'
 `)
 	t.Setenv("PATH", binDir+string(filepath.ListSeparator)+t.TempDir())
-	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.ExecutionIssueSnapshotRequest{
+	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.SnapshotRequest{
 		Repo: repo, URL: "https://gitlab.example.com/acme/repo/-/work_items/69",
 	})
 	if err != nil {

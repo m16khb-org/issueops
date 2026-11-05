@@ -64,10 +64,10 @@ func TestJSONLineObserverEmitsOnlyActionableRedactedSpanEvents(t *testing.T) {
 func TestStoreScopesSpanObservationByCapability(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-observe01"
-	data, err := json.Marshal(issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	data, err := json.Marshal(issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func TestStoreScopesSpanObservationByCapability(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		id,
-		func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+		func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 			record.Branch = "observed"
 			return record, true, nil
 		},
@@ -107,10 +107,10 @@ func TestStoreScopesSpanObservationByCapability(t *testing.T) {
 func seedObservedRecord(t testing.TB, id string) string {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
-	data, err := json.Marshal(issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	data, err := json.Marshal(issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -133,13 +133,13 @@ func TestStoreWritesCommitInsideObservedSpan(t *testing.T) {
 		observations = append(observations, observation)
 	})}
 	ctx := context.Background()
-	if _, err := store.Update(ctx, stateRoot, id, func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	if _, err := store.Update(ctx, stateRoot, id, func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		record.Branch = "observed"
 		return record, true, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.UpdateRelated(ctx, stateRoot, id, "artifact_stage_v1", func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+	if _, err := store.UpdateRelated(ctx, stateRoot, id, "artifact_stage_v1", func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 		return []byte(`{"stage":1}`), false, nil
 	}); err != nil {
 		t.Fatal(err)
@@ -147,7 +147,7 @@ func TestStoreWritesCommitInsideObservedSpan(t *testing.T) {
 	if data, found, err := store.ReadRelated(ctx, stateRoot, id, "artifact_stage_v1"); err != nil || !found || string(data) != `{"stage":1}` {
 		t.Fatalf("related put data=%q found=%v err=%v", data, found, err)
 	}
-	if _, err := store.UpdateRelated(ctx, stateRoot, id, "artifact_stage_v1", func(_ issueopscontract.IssueOpsRecord, _ []byte, _ bool) ([]byte, bool, error) {
+	if _, err := store.UpdateRelated(ctx, stateRoot, id, "artifact_stage_v1", func(_ issueopscontract.Record, _ []byte, _ bool) ([]byte, bool, error) {
 		return nil, true, nil
 	}); err != nil {
 		t.Fatal(err)
@@ -176,7 +176,7 @@ func TestJSONLineObserverEmitsStageFieldsFromSQLiteSpan(t *testing.T) {
 	stateRoot := seedObservedRecord(t, id)
 	var output bytes.Buffer
 	store := Store{Scope: "routing", Observer: NewJSONLineObserver(&output, time.Nanosecond)}
-	if _, err := store.Update(context.Background(), stateRoot, id, func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
+	if _, err := store.Update(context.Background(), stateRoot, id, func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
 		record.Branch = "stage-fields"
 		return record, true, nil
 	}); err != nil {

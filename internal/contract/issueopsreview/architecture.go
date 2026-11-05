@@ -1,6 +1,9 @@
+// Package issueopsreview defines the contract types for the independent reviews an
+// IssueOps cycle records (architecture, compatibility, devil's advocate), their
+// publication-gate evidence, and the local change observation inputs.
 package issueopsreview
 
-// ArchitectureReview는 plan 단계가 승인한 아키텍처 문서의 검토 기록이다.
+// ArchitectureReview 타입은 plan 단계가 승인한 아키텍처 문서의 검토 기록이다.
 // ReviewedArchitectureDigest는 승인한 문서의 sha256이고, 문서가 바뀌면
 // 승인은 stale이 된다.
 type ArchitectureReview struct {
@@ -21,7 +24,7 @@ type ArchitectureReview struct {
 	ReviewedAt                 string                    `json:"reviewed_at"`
 }
 
-// ArchitectureReviewRound는 재기록으로 대체된 이전 검토 기록이다.
+// ArchitectureReviewRound 타입은 재기록으로 대체된 이전 검토 기록이다.
 type ArchitectureReviewRound struct {
 	Approved                   bool     `json:"approved"`
 	Verification               []string `json:"verification,omitempty"`
@@ -34,6 +37,9 @@ type ArchitectureReviewRound struct {
 	ReviewedAt                 string   `json:"reviewed_at"`
 }
 
+// ArchitectureReviewRequest 타입은 아키텍처 검토를 기록하려는 호출자가 넘기는
+// 입력이다. Reviewer* 필드는 검토를 실제로 수행한 호스트, 모델, 노력 수준을
+// 남기는 감사용 필드다.
 type ArchitectureReviewRequest struct {
 	ProblemSummary       string
 	ProposedArchitecture string

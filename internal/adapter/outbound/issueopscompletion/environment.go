@@ -11,10 +11,16 @@ import (
 	"issueops/internal/adapter/outbound/gitbin"
 )
 
+// Environment gives the completion service access to the local filesystem and
+// git; it holds no state.
 type Environment struct{}
 
+// NewEnvironment returns the stateless local Environment.
 func NewEnvironment() Environment { return Environment{} }
 
+// PathsMatch reports whether two paths name the same location after trimming,
+// making them absolute, and resolving symlinks. Unresolvable paths compare by
+// their cleaned absolute form; a path that cannot be made absolute never matches.
 func (Environment) PathsMatch(left, right string) bool {
 	leftPath, err := filepath.Abs(strings.TrimSpace(left))
 	if err != nil {
@@ -33,6 +39,8 @@ func (Environment) PathsMatch(left, right string) bool {
 	return filepath.Clean(leftPath) == filepath.Clean(rightPath)
 }
 
+// CurrentHead returns the commit SHA of HEAD in the git worktree at root.
+// The error carries git's trimmed output.
 func (Environment) CurrentHead(ctx context.Context, root string) (string, error) {
 	command := exec.CommandContext(ctx, gitbin.Path(), "-C", root, "rev-parse", "HEAD")
 	output, err := command.CombinedOutput()
@@ -42,6 +50,9 @@ func (Environment) CurrentHead(ctx context.Context, root string) (string, error)
 	return strings.TrimSpace(string(output)), nil
 }
 
+// VerifyReport resolves path (relative paths are joined to root) to the
+// verification report's real location. It fails unless the report exists,
+// lies inside the canonical worktree root, and is a regular file.
 func (Environment) VerifyReport(root, path string) (string, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
@@ -76,6 +87,9 @@ func (Environment) VerifyReport(root, path string) (string, error) {
 	return resolved, nil
 }
 
+// ChangedPathsSince lists the slash-separated paths git reports as changed
+// between commits from and to under root, without rename detection. The
+// verification report itself is excluded so writing it never counts as a change.
 func (Environment) ChangedPathsSince(ctx context.Context, root, from, to, report string) ([]string, error) {
 	command := exec.CommandContext(ctx, gitbin.Path(), "-C", root, "diff", "--name-only", "--no-renames", strings.TrimSpace(from), strings.TrimSpace(to), "--")
 	output, err := command.Output()

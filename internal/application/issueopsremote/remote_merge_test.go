@@ -12,9 +12,9 @@ import (
 
 const mergeTestHead = "0123456789abcdef0123456789abcdef01234567"
 
-type mergeRecordReader struct{ record model.IssueOpsRecord }
+type mergeRecordReader struct{ record model.Record }
 
-func (r mergeRecordReader) Read(context.Context, string) (model.IssueOpsRecord, error) {
+func (r mergeRecordReader) Read(context.Context, string) (model.Record, error) {
 	return r.record, nil
 }
 
@@ -33,11 +33,11 @@ func (f *fakeMerger) MergePullRequest(_ context.Context, req port.IssueProviderP
 	return f.after, f.mergeErr
 }
 
-func completedMergeRecord() model.IssueOpsRecord {
+func completedMergeRecord() model.Record {
 	url := "https://github.com/acme/repo/pull/7"
-	return model.IssueOpsRecord{
-		ID: "io-merge", Repo: "/repo", Phase: model.IssueOpsPhaseDone,
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: url},
+	return model.Record{
+		ID: "io-merge", Repo: "/repo", Phase: model.PhaseDone,
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: url},
 		Execution: &model.Execution{
 			Lease:      model.WriteLease{Generation: 2, Status: model.LeaseStatusReleased},
 			Completion: &model.ExecutionCompletion{Generation: 2, FinalHead: mergeTestHead, RemoteArtifactURL: url},
@@ -53,7 +53,7 @@ func openState(mutate func(*model.RemotePullRequestMergeState)) model.RemotePull
 	return state
 }
 
-func runMerge(t *testing.T, record model.IssueOpsRecord, merger *fakeMerger, method string, confirm bool) (model.RemoteMergeResult, error) {
+func runMerge(t *testing.T, record model.Record, merger *fakeMerger, method string, confirm bool) (model.RemoteMergeResult, error) {
 	t.Helper()
 	service := NewRemoteMergeService(mergeRecordReader{record}, func(string) (port.IssueProviderPullRequestMerger, error) { return merger, nil })
 	return service.Merge(context.Background(), record.ID, method, confirm)
@@ -119,9 +119,9 @@ func TestRemoteMergeRecordsMergedReceipt(t *testing.T) {
 		merger := &fakeMerger{before: before, after: openState(func(s *model.RemotePullRequestMergeState) { s.State = "merged" })}
 		var recorded []string
 		service := NewRemoteMergeService(mergeRecordReader{completedMergeRecord()}, func(string) (port.IssueProviderPullRequestMerger, error) { return merger, nil }).
-			WithMergedReceipt(func(_ context.Context, id string) (model.IssueOpsRecord, error) {
+			WithMergedReceipt(func(_ context.Context, id string) (model.Record, error) {
 				recorded = append(recorded, id)
-				return model.IssueOpsRecord{}, nil
+				return model.Record{}, nil
 			})
 		if result, err := service.Merge(context.Background(), "io-merge", "", true); err != nil || !result.Merged || len(recorded) != 1 || recorded[0] != "io-merge" {
 			t.Fatalf("before=%s result=%+v err=%v recorded=%v", before.State, result, err, recorded)
@@ -129,17 +129,17 @@ func TestRemoteMergeRecordsMergedReceipt(t *testing.T) {
 	}
 	preview := &fakeMerger{before: openState(nil)}
 	service := NewRemoteMergeService(mergeRecordReader{completedMergeRecord()}, func(string) (port.IssueProviderPullRequestMerger, error) { return preview, nil }).
-		WithMergedReceipt(func(context.Context, string) (model.IssueOpsRecord, error) {
+		WithMergedReceipt(func(context.Context, string) (model.Record, error) {
 			t.Fatal("an open preview must not record a merge")
-			return model.IssueOpsRecord{}, nil
+			return model.Record{}, nil
 		})
 	if _, err := service.Merge(context.Background(), "io-merge", "", false); err != nil {
 		t.Fatal(err)
 	}
 	failing := &fakeMerger{before: openState(func(s *model.RemotePullRequestMergeState) { s.State = "merged" })}
 	service = NewRemoteMergeService(mergeRecordReader{completedMergeRecord()}, func(string) (port.IssueProviderPullRequestMerger, error) { return failing, nil }).
-		WithMergedReceipt(func(context.Context, string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{}, errors.New("locked")
+		WithMergedReceipt(func(context.Context, string) (model.Record, error) {
+			return model.Record{}, errors.New("locked")
 		})
 	if result, err := service.Merge(context.Background(), "io-merge", "", false); err != nil || !result.AlreadyMerged || len(result.Warnings) != 1 || !strings.HasPrefix(result.Warnings[0], "merged_receipt_not_recorded: locked") {
 		t.Fatalf("result=%+v err=%v", result, err)
@@ -179,13 +179,13 @@ func TestRemoteMergeIsIdempotentOnMergedArtifact(t *testing.T) {
 func TestRemoteMergeRequiresCompletedCycle(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		mutate func(*model.IssueOpsRecord)
+		mutate func(*model.Record)
 	}{
-		{"pr phase", func(r *model.IssueOpsRecord) { r.Phase = model.IssueOpsPhasePR }},
-		{"no completion", func(r *model.IssueOpsRecord) { r.Execution.Completion = nil }},
-		{"active lease", func(r *model.IssueOpsRecord) { r.Execution.Lease.Status = model.LeaseStatusActive }},
-		{"no artifact", func(r *model.IssueOpsRecord) { r.RemoteArtifact = nil }},
-		{"artifact drift", func(r *model.IssueOpsRecord) {
+		{"pr phase", func(r *model.Record) { r.Phase = model.PhasePR }},
+		{"no completion", func(r *model.Record) { r.Execution.Completion = nil }},
+		{"active lease", func(r *model.Record) { r.Execution.Lease.Status = model.LeaseStatusActive }},
+		{"no artifact", func(r *model.Record) { r.RemoteArtifact = nil }},
+		{"artifact drift", func(r *model.Record) {
 			r.Execution.Completion.RemoteArtifactURL = "https://github.com/acme/repo/pull/8"
 		}},
 	} {

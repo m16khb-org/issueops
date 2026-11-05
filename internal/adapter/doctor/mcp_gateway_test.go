@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	doctorcontract "issueops/internal/contract/doctor"
 	doctordomain "issueops/internal/domain/doctor"
 	"os"
@@ -32,7 +33,7 @@ func TestHarnessDoctorReportsMCPGatewayCheck(t *testing.T) {
 	var mu sync.Mutex
 	probed := []string{}
 	oldProbe, oldCount := probeMCPGateway, countMCPGatewayFDs
-	probeMCPGateway = func(target string) error {
+	probeMCPGateway = func(_ context.Context, target string) error {
 		mu.Lock()
 		probed = append(probed, target)
 		mu.Unlock()
@@ -64,7 +65,7 @@ func TestHarnessDoctorWarnsOnUnreachableMCPGateway(t *testing.T) {
 	home := t.TempDir()
 	writeClaudeMCPConfigForTest(t, home, loopbackGatewayConfigForTest)
 	oldProbe, oldCount := probeMCPGateway, countMCPGatewayFDs
-	probeMCPGateway = func(target string) error { return os.ErrDeadlineExceeded }
+	probeMCPGateway = func(_ context.Context, target string) error { return os.ErrDeadlineExceeded }
 	countMCPGatewayFDs = fixedGatewayFDCountForTest(24)
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
@@ -85,7 +86,7 @@ func TestHarnessDoctorWarnsOnMCPGatewayFDPressure(t *testing.T) {
 	home := t.TempDir()
 	writeClaudeMCPConfigForTest(t, home, loopbackGatewayConfigForTest)
 	oldProbe, oldCount := probeMCPGateway, countMCPGatewayFDs
-	probeMCPGateway = func(target string) error { return nil }
+	probeMCPGateway = func(_ context.Context, target string) error { return nil }
 	countMCPGatewayFDs = fixedGatewayFDCountForTest(doctordomain.MCPGatewayFDWarningThreshold)
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
@@ -116,8 +117,8 @@ func TestHarnessDoctorSkipsMCPGatewayWithoutConfig(t *testing.T) {
 	}
 }
 
-func fixedGatewayFDCountForTest(count int) func([]int) map[int]GatewayFDResult {
-	return func(ports []int) map[int]GatewayFDResult {
+func fixedGatewayFDCountForTest(count int) func(context.Context, []int) map[int]GatewayFDResult {
+	return func(_ context.Context, ports []int) map[int]GatewayFDResult {
 		counted := make(map[int]GatewayFDResult, len(ports))
 		for _, port := range ports {
 			counted[port] = GatewayFDResult{Count: count}

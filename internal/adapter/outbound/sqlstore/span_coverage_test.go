@@ -38,7 +38,7 @@ func TestSpanCompareAndApplyCommitIsAttributed(t *testing.T) {
 			// callback end, lock released, gate released.
 			clock := newScriptedClock(t, 0, 1, 2, 4, 9, 10, 11, 12)
 			ctx, observations := collectSpans(context.Background())
-			if err := database.withSpan(ctx, clock.now, func(spanCtx context.Context) error {
+			if err := database.withSpanAt(ctx, clock.now, func(spanCtx context.Context) error {
 				return write(spanCtx, database)
 			}); err != nil {
 				t.Fatal(err)
@@ -65,7 +65,7 @@ func TestSpanAutocommitDeletesAreUnknown(t *testing.T) {
 			seedRow(t, database, "seed")
 			clock := newScriptedClock(t, 0, 1, 2, 3, 4, 5)
 			ctx, observations := collectSpans(context.Background())
-			if err := database.withSpan(ctx, clock.now, func(context.Context) error {
+			if err := database.withSpanAt(ctx, clock.now, func(context.Context) error {
 				return write(database)
 			}); err != nil {
 				t.Fatal(err)
@@ -198,7 +198,7 @@ func TestSpanCommitChecksCancellationBeforeCommit(t *testing.T) {
 		t.Fatalf("canceled write left row found=%v err=%v", found, getErr)
 	}
 	got := onlySpan(t, *observations)
-	if got.Outcome != SpanOutcomeCanceled || got.CommitCount != 0 ||
+	if got.Outcome != spanOutcomeCanceled || got.CommitCount != 0 ||
 		got.Commit == nil || *got.Commit != 0 || got.CommitCoverage != SpanCommitCoverageComplete {
 		t.Fatalf("pre-commit cancellation still called Commit: %+v", got)
 	}
@@ -223,7 +223,7 @@ func TestSpanCancellationAfterCommitKeepsData(t *testing.T) {
 		t.Fatalf("post-commit cancellation lost data found=%v err=%v", found, getErr)
 	}
 	got := onlySpan(t, *observations)
-	if got.Outcome != SpanOutcomeCanceled || got.CommitCount != 1 || got.CommitCoverage != SpanCommitCoverageComplete {
+	if got.Outcome != spanOutcomeCanceled || got.CommitCount != 1 || got.CommitCoverage != SpanCommitCoverageComplete {
 		t.Fatalf("observation=%+v", got)
 	}
 }

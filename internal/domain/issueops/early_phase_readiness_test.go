@@ -8,10 +8,10 @@ import (
 )
 
 func TestPlanReadinessMissingKeepsIntentBeforeIssueAndPreparation(t *testing.T) {
-	if got := PlanReadinessMissing(model.IssueOpsRecord{}); !reflect.DeepEqual(got, []string{"intent_contract", "issue_url"}) {
+	if got := PlanReadinessMissing(model.Record{}); !reflect.DeepEqual(got, []string{"intent_contract", "issue_url"}) {
 		t.Fatalf("empty plan readiness=%v", got)
 	}
-	record := model.IssueOpsRecord{Intent: &model.IssueOpsIntentContract{RawRequest: "ask", InterpretedIntent: "outcome", SuccessCriteria: []string{"pass"}}}
+	record := model.Record{Intent: &model.IntentContract{RawRequest: "ask", InterpretedIntent: "outcome", SuccessCriteria: []string{"pass"}}}
 	want := []string{"issue_url", "plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey"}
 	if got := PlanReadinessMissing(record); !reflect.DeepEqual(got, want) {
 		t.Fatalf("standard plan readiness=%v, want %v", got, want)
@@ -19,7 +19,7 @@ func TestPlanReadinessMissingKeepsIntentBeforeIssueAndPreparation(t *testing.T) 
 }
 
 func TestGrillReadinessMissingCombinesPlanAndReviewEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{Intent: &model.IssueOpsIntentContract{IntentClass: "trivial"}}
+	record := model.Record{Intent: &model.IntentContract{IntentClass: "trivial"}}
 	want := []string{"issue_url", "branch", "split_decision", "domain_review"}
 	if got := GrillReadinessMissing(record); !reflect.DeepEqual(got, want) {
 		t.Fatalf("trivial grill readiness=%v, want %v", got, want)

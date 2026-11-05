@@ -18,9 +18,9 @@ import (
 )
 
 func TestApplyLLMEvalRendersPromptAndNeverPassesGateMode(t *testing.T) {
-	input := augment.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augment.SelfAugmentSummary{TerminationEligible: true}}
+	input := augment.Result{OK: true, TerminationEligible: true, Summary: augment.Summary{TerminationEligible: true}}
 	deps := LLMEvalDeps{
-		BuildPrompt: func(augment.SelfAugmentResult) (string, int, error) { return "evaluate this", 13, nil },
+		BuildPrompt: func(augment.Result) (string, int, error) { return "evaluate this", 13, nil },
 		BoundError:  func(string, error, string) string { t.Fatal("no error expected"); return "" },
 	}
 
@@ -50,25 +50,25 @@ func TestApplyLLMEvalRendersPromptAndNeverPassesGateMode(t *testing.T) {
 func TestSaveSummaryRecordsCheckpointFromStateWrite(t *testing.T) {
 	now := time.Date(2026, 10, 12, 3, 4, 5, 0, time.UTC)
 	var wroteKey, wroteBody string
-	result := augment.SelfAugmentResult{OK: true, LoopKind: "self_verification", BaseSeed: 7}
+	result := augment.Result{OK: true, LoopKind: "self_verification", BaseSeed: 7}
 	err := SaveSummary(&result, "", SaveSummaryDeps{
 		Now: func() time.Time { return now },
-		Encode: func(snapshot augment.SelfAugmentStateSnapshot) ([]byte, error) {
+		Encode: func(snapshot augment.StateSnapshot) ([]byte, error) {
 			if snapshot.GeneratedAt != now.Format(time.RFC3339Nano) || snapshot.BaseSeed != 7 || snapshot.LoopKind != "self_verification" {
 				t.Fatalf("snapshot = %+v", snapshot)
 			}
 			return []byte("encoded"), nil
 		},
-		Write: func(key, body string) (statecontract.StateResult, error) {
+		Write: func(key, body string) (statecontract.Result, error) {
 			wroteKey, wroteBody = key, body
-			return statecontract.StateResult{StateDir: "/state", Path: "/state/k.json", Record: statecontract.RecordEnvelope{Key: "canonical-key", Bytes: 7}}, nil
+			return statecontract.Result{StateDir: "/state", Path: "/state/k.json", Record: statecontract.RecordEnvelope{Key: "canonical-key", Bytes: 7}}, nil
 		},
 		StateDir: func() string { t.Fatal("StateDir is only for failures"); return "" },
 	})
 	if err != nil || wroteKey != "self-verify-latest" || wroteBody != "encoded" {
 		t.Fatalf("err=%v key=%q body=%q", err, wroteKey, wroteBody)
 	}
-	want := &augment.SelfAugmentStateCheckpoint{OK: true, Key: "canonical-key", StateDir: "/state", Path: "/state/k.json", Bytes: 7}
+	want := &augment.StateCheckpoint{OK: true, Key: "canonical-key", StateDir: "/state", Path: "/state/k.json", Bytes: 7}
 	if !reflect.DeepEqual(result.StateCheckpoint, want) {
 		t.Fatalf("checkpoint = %+v, want %+v", result.StateCheckpoint, want)
 	}
@@ -80,7 +80,7 @@ func TestValidateFormatReportsGofmtToolFailure(t *testing.T) {
 		ListTrackedGoFiles: func(context.Context, string) ([]string, error) { return []string{"a.go"}, nil },
 		ListUnformatted:    func(context.Context, string, []string) ([]string, error) { return nil, errors.New("gofmt crashed") },
 	})
-	if step.OK || step.Command != FormatCommand || !strings.Contains(step.Error, "gofmt -l: gofmt crashed") {
+	if step.OK || step.Command != formatCommand || !strings.Contains(step.Error, "gofmt -l: gofmt crashed") {
 		t.Fatalf("step = %+v", step)
 	}
 }
@@ -163,7 +163,7 @@ func (l *loopStepLog) EmitStepEnd(_ string, _, _ int, _ int64, index, _ int, _ v
 }
 
 // loopDeps wires every planned step to a recorder; failing maps a step label to a failure.
-func loopDeps(log *loopStepLog, failing map[string]bool, summary augment.SelfAugmentSummary) LoopDeps {
+func loopDeps(log *loopStepLog, failing map[string]bool, summary augment.Summary) LoopDeps {
 	step := func(label string) verify.StepResult {
 		log.labels = append(log.labels, label)
 		return verify.StepResult{Label: label, OK: !failing[label], Error: map[bool]string{true: label + " broke"}[failing[label]]}
@@ -181,8 +181,8 @@ func loopDeps(log *loopStepLog, failing map[string]bool, summary augment.SelfAug
 			log.printf = append(log.printf, fmt.Sprintf(format, args...))
 			return 0, nil
 		},
-		Summarize: func(augment.SelfAugmentResult, float64) augment.SelfAugmentSummary { return summary },
-		StepDeps: SelfVerifyStepDeps{
+		Summarize: func(augment.Result, float64) augment.Summary { return summary },
+		StepDeps: StepDeps{
 			IssueOpsRoot: func() string { return "/repo" },
 			RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, args ...string) verify.StepResult {
 				// binary drift needs a doctor JSON that proves a fresh binary
@@ -222,7 +222,7 @@ func loopDeps(log *loopStepLog, failing map[string]bool, summary augment.SelfAug
 func TestExecuteLoopPassingPassRunsEveryStepInPlanOrder(t *testing.T) {
 	log := &loopStepLog{}
 	result, err := ExecuteLoop(LoopRequest{BaseSeed: 5, TargetScore: 95, Verbose: true, Reporter: log},
-		loopDeps(log, nil, augment.SelfAugmentSummary{TerminationEligible: true}))
+		loopDeps(log, nil, augment.Summary{TerminationEligible: true}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func TestExecuteLoopPassingPassRunsEveryStepInPlanOrder(t *testing.T) {
 
 func TestExecuteLoopIneligibleSummaryIsNotOKEvenWhenEveryStepPasses(t *testing.T) {
 	log := &loopStepLog{}
-	result, err := ExecuteLoop(LoopRequest{TargetScore: 95}, loopDeps(log, nil, augment.SelfAugmentSummary{TerminationEligible: false}))
+	result, err := ExecuteLoop(LoopRequest{TargetScore: 95}, loopDeps(log, nil, augment.Summary{TerminationEligible: false}))
 	if err != nil || result.OK || result.TerminationEligible {
 		t.Fatalf("scores below target must withhold termination: ok=%v eligible=%v err=%v", result.OK, result.TerminationEligible, err)
 	}
@@ -263,7 +263,7 @@ func TestExecuteLoopFailFastStopsAtFirstFailureWhileCollectAllContinues(t *testi
 	failing := map[string]bool{"gofmt": true, "go build": true}
 
 	fast := &loopStepLog{}
-	result, err := ExecuteLoop(LoopRequest{TargetScore: 95, Reporter: fast}, loopDeps(fast, failing, augment.SelfAugmentSummary{FailedSteps: 1}))
+	result, err := ExecuteLoop(LoopRequest{TargetScore: 95, Reporter: fast}, loopDeps(fast, failing, augment.Summary{FailedSteps: 1}))
 	if !errors.Is(err, ErrSelfVerificationGateFailed) || !strings.Contains(err.Error(), "gofmt failed: gofmt broke") || result.OK {
 		t.Fatalf("fail fast: ok=%v err=%v", result.OK, err)
 	}
@@ -279,7 +279,7 @@ func TestExecuteLoopFailFastStopsAtFirstFailureWhileCollectAllContinues(t *testi
 	}
 
 	all := &loopStepLog{}
-	result, err = ExecuteLoop(LoopRequest{TargetScore: 95, CollectAllSteps: true}, loopDeps(all, failing, augment.SelfAugmentSummary{FailedSteps: 2}))
+	result, err = ExecuteLoop(LoopRequest{TargetScore: 95, CollectAllSteps: true}, loopDeps(all, failing, augment.Summary{FailedSteps: 2}))
 	if !errors.Is(err, ErrSelfVerificationGateFailed) || !strings.Contains(err.Error(), "gofmt failed") || strings.Contains(err.Error(), "go build failed") {
 		t.Fatalf("collect-all must report the first failure: %v", err)
 	}

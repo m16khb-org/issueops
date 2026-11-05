@@ -12,7 +12,7 @@ import (
 	loopcontract "issueops/internal/contract/looprun"
 )
 
-func testLoopStateRoot() string { return filepath.Join(statestore.StateDir(), "loop") }
+func testLoopStateRoot() string { return filepath.Join(statestore.Dir(), "loop") }
 func testLoopStore() Store {
 	return Store{Directory: testLoopStateRoot(), OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }, GetExisting: sqlstore.GetExisting, GetAllExisting: sqlstore.GetAllExisting}
 }
@@ -21,7 +21,7 @@ func testLoopIdentity() Identity {
 	return Identity{BaseDir: cwd, BaseError: err}
 }
 func testLoopService() loopapp.Service {
-	return loopapp.Service{Store: testLoopStore(), Identity: testLoopIdentity(), Clock: Clock{Time: time.Now}, SchemaVersion: LoopRunCurrentSchemaVersion}
+	return loopapp.Service{Store: testLoopStore(), Identity: testLoopIdentity(), Clock: Clock{Time: time.Now}, SchemaVersion: CurrentSchemaVersion}
 }
 func testLoopReader() loopapp.Reader {
 	return loopapp.Reader{Store: testLoopStore(), Identity: testLoopIdentity()}

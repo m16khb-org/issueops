@@ -15,11 +15,11 @@ import (
 func TestSealedArtifactDirUsesOnlyRecordField(t *testing.T) {
 	t.Parallel()
 
-	empty := issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21", Execution: &issueops.Execution{}}
+	empty := issueops.Record{IssueURL: "https://github.com/acme/repo/issues/21", Execution: &issueops.Execution{}}
 	if got := sealedArtifactDir(empty); got != "" {
 		t.Fatalf("empty artifact_dir must not be inferred from the issue URL, got %s", got)
 	}
-	filled := issueops.IssueOpsRecord{Execution: &issueops.Execution{Workspace: issueops.Workspace{ArtifactDir: ".issueops/issues/21/artifact"}}}
+	filled := issueops.Record{Execution: &issueops.Execution{Workspace: issueops.Workspace{ArtifactDir: ".issueops/issues/21/artifact"}}}
 	if got := sealedArtifactPath(filled, "/wt", "plan"); got != filepath.Join("/wt", ".issueops", "issues", "21", "artifact", "plan.md") {
 		t.Fatalf("artifact_dir must drive the sealed path, got %s", got)
 	}
@@ -28,13 +28,13 @@ func TestSealedArtifactDirUsesOnlyRecordField(t *testing.T) {
 func TestIssueArtifactDirForUsesLinkedIssueNumber(t *testing.T) {
 	t.Parallel()
 
-	if got := app.OwnerArtifactDir(issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21"}); got != ".issueops/issues/21/artifact" {
+	if got := app.OwnerArtifactDir(issueops.Record{IssueURL: "https://github.com/acme/repo/issues/21"}); got != ".issueops/issues/21/artifact" {
 		t.Fatalf("linked issue must pick the issue folder, got %q", got)
 	}
-	if got := app.OwnerArtifactDir(issueops.IssueOpsRecord{BranchPrepare: &issueops.IssueOpsBranchPrepare{IssueURL: "https://gitlab.example.com/g/p/-/work_items/7"}}); got != ".issueops/issues/7/artifact" {
+	if got := app.OwnerArtifactDir(issueops.Record{BranchPrepare: &issueops.BranchPrepare{IssueURL: "https://gitlab.example.com/g/p/-/work_items/7"}}); got != ".issueops/issues/7/artifact" {
 		t.Fatalf("branch prepare issue URL must be a fallback, got %q", got)
 	}
-	if got := app.OwnerArtifactDir(issueops.IssueOpsRecord{}); got != "" {
+	if got := app.OwnerArtifactDir(issueops.Record{}); got != "" {
 		t.Fatalf("no issue number must leave artifact_dir empty, got %q", got)
 	}
 }

@@ -11,7 +11,9 @@ import (
 	"strings"
 )
 
-func (Files) LoadFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixture, error) {
+// LoadFixtures 메서드는 dir 바로 아래의 *.json 파일을 fixture로 읽어 검증한 뒤 돌려준다.
+// 하위 디렉터리는 탐색하지 않으며, dir이 비어 있거나 파싱·검증에 실패한 파일이 있으면 에러를 돌려준다.
+func (Files) LoadFixtures(dir string) ([]issueopscontract.Fixture, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return nil, fmt.Errorf("fixtures path is required")
@@ -20,7 +22,7 @@ func (Files) LoadFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixtu
 	if err != nil {
 		return nil, err
 	}
-	var fixtures []issueopscontract.IssueOpsBenchmarkFixture
+	var fixtures []issueopscontract.Fixture
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
@@ -30,7 +32,7 @@ func (Files) LoadFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixtu
 		if err != nil {
 			return nil, err
 		}
-		var fixture issueopscontract.IssueOpsBenchmarkFixture
+		var fixture issueopscontract.Fixture
 		if err := json.Unmarshal(b, &fixture); err != nil {
 			return nil, fmt.Errorf("parse fixture %s: %w", path, err)
 		}

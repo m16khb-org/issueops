@@ -24,7 +24,7 @@ type recoveryChildProvider struct {
 	store            *testChildStore
 }
 
-func (p *recoveryChildProvider) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *recoveryChildProvider) CreateChild(_ context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	if !p.store.mu.TryLock() {
 		panic("provider called under record span")
 	}
@@ -68,7 +68,7 @@ func childRecoveryFixture(provider string) (*testChildStore, *recoveryChildProvi
 	if provider == "gitlab" {
 		parent = "https://gitlab.example.com/acme/repo/-/work_items/1"
 	}
-	store := &testChildStore{record: model.IssueOpsRecord{ID: "io-child", Repo: "/repo", Branch: "1-parent", IssueURL: parent, BranchPrepare: &model.IssueOpsBranchPrepare{Branch: "1-parent"}}}
+	store := &testChildStore{record: model.Record{ID: "io-child", Repo: "/repo", Branch: "1-parent", IssueURL: parent, BranchPrepare: &model.BranchPrepare{Branch: "1-parent"}}}
 	p := &recoveryChildProvider{store: store, snapshots: map[string]port.ChildSnapshot{}}
 	intents := &ChildCreateIntents{Store: store, Authority: testChildAuthority{}, Now: time.Now}
 	ids := 0
@@ -124,7 +124,7 @@ func TestChildPartialFailurePreviewAndRestartReconcileSameURL(t *testing.T) {
 			t.Run(name+"/"+failure, func(t *testing.T) {
 				store, p, creator, reconciler, cmd := childRecoveryFixture(name)
 				if failure == "receipt" {
-					store.before = func(r model.IssueOpsRecord) error {
+					store.before = func(r model.Record) error {
 						if r.ChildCreateOperations[0].Status == model.IssueCreateIntentCompleted {
 							return errors.New("disk full")
 						}
@@ -250,7 +250,7 @@ func TestChildReceiptFencesObservedGeneration(t *testing.T) {
 	store.mu.Lock()
 	store.record.Execution = &model.Execution{Lease: model.WriteLease{Generation: 2}}
 	store.mu.Unlock()
-	err := creator.Intents.Complete(context.Background(), observed, observed.ChildCreateOperations[0], result.ChildURL, model.IssueOpsActor{}, true)
+	err := creator.Intents.Complete(context.Background(), observed, observed.ChildCreateOperations[0], result.ChildURL, model.Actor{}, true)
 	if err == nil || len(store.read().IssueLinks) != 0 {
 		t.Fatalf("stale observation committed: %v", err)
 	}
@@ -322,7 +322,7 @@ func TestChildReconcileReleasesASettledCrashedCreate(t *testing.T) {
 		}
 		store.mu.Unlock()
 		p.search.Candidates, p.fail = nil, nil
-		reconciler.Settled = func(context.Context, model.IssueOpsRecord, model.ChildCreateOperation) (bool, error) {
+		reconciler.Settled = func(context.Context, model.Record, model.ChildCreateOperation) (bool, error) {
 			return settled, nil
 		}
 		return store, p, creator, reconciler, cmd, store.read().ChildCreateOperations[0]

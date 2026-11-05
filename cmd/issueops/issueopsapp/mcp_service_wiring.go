@@ -24,7 +24,7 @@ const (
 )
 
 func mcpServiceStateDir() string {
-	dir := statestore.StateDir()
+	dir := statestore.Dir()
 	if abs, err := filepath.Abs(dir); err == nil {
 		return abs
 	}

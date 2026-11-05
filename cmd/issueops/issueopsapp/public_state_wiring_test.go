@@ -46,7 +46,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 		raw := captureStdoutForContract(t, func() error {
 			return statecli.Run(cli[i], []string{"write", "--key", "shared", "--value", fmt.Sprintf("cli-%d", i), "--json"})
 		})
-		var write statecontract.StateResult
+		var write statecontract.Result
 		if err := json.Unmarshal([]byte(raw), &write); err != nil || write.StateDir != dirs[i] {
 			t.Fatalf("CLI write: %+v %v", write, err)
 		}
@@ -55,7 +55,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 			t.Fatal(rpcErr)
 		}
 		text := result.(map[string]any)["content"].([]map[string]any)[0]["text"].(string)
-		var read statecontract.StateResult
+		var read statecontract.Result
 		if err := json.Unmarshal([]byte(text), &read); err != nil || !reflect.DeepEqual(write, read) {
 			t.Fatalf("CLI/MCP: write=%+v read=%+v err=%v", write, read, err)
 		}
@@ -78,7 +78,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 					return
 				}
 				text := result.(map[string]any)["content"].([]map[string]any)[0]["text"].(string)
-				var read statecontract.StateResult
+				var read statecontract.Result
 				if err := json.Unmarshal([]byte(text), &read); err != nil || read.StateDir != dirs[i] || read.Record.Content != want {
 					t.Errorf("instance %d: %+v, %v", i, read, err)
 					return
@@ -107,7 +107,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 							t.Errorf("resource owner %d: %s", i, text)
 						}
 					} else {
-						var list statecontract.StateListResult
+						var list statecontract.ListResult
 						if err := json.Unmarshal([]byte(text), &list); err != nil || list.StateDir != dirs[i] || len(list.Keys) != 1 || list.Keys[0] != "shared" {
 							t.Errorf("resource owner %d: %+v, %v", i, list, err)
 						}
@@ -222,7 +222,7 @@ func TestPublicStatePrunePreviewAndMaintenanceUseCapturedRoots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var prune statecontract.StatePruneResult
+	var prune statecontract.PruneResult
 	if err := json.Unmarshal([]byte(preview.Content[0].(*mcp.TextContent).Text), &prune); err != nil || !prune.DryRun || !reflect.DeepEqual(prune.DeletedKeys, []string{"old"}) {
 		t.Fatalf("preview: %+v %v", prune, err)
 	}

@@ -30,14 +30,14 @@ func (fake *scriptedEffects) Dir() (string, error) {
 	return "/worker", nil
 }
 func (fake *scriptedEffects) EnsureDir(string) error { return fake.ensureErr }
-func (fake *scriptedEffects) Read(id string) (workercontract.WorkerJob, error) {
+func (fake *scriptedEffects) Read(id string) (workercontract.Job, error) {
 	job, ok := fake.jobs[id]
 	if !ok {
-		return workercontract.WorkerJob{}, errors.New("not found")
+		return workercontract.Job{}, errors.New("not found")
 	}
 	return job, nil
 }
-func (fake *scriptedEffects) Write(ctx context.Context, job workercontract.WorkerJob) error {
+func (fake *scriptedEffects) Write(ctx context.Context, job workercontract.Job) error {
 	if fake.writeErr != nil {
 		return fake.writeErr
 	}
@@ -49,8 +49,8 @@ func (fake *scriptedEffects) Run(policycontract.CommandPolicyRequest) policycont
 func (fake *scriptedEffects) ListIDs(string) ([]string, error) { return fake.ids, fake.listErr }
 func (fake *scriptedEffects) PIDAlive(pid int) bool            { return fake.alive[pid] }
 
-func newScripted(jobs ...workercontract.WorkerJob) *scriptedEffects {
-	fake := &scriptedEffects{workerEffects: workerEffects{jobs: map[string]workercontract.WorkerJob{}}, alive: map[int]bool{}}
+func newScripted(jobs ...workercontract.Job) *scriptedEffects {
+	fake := &scriptedEffects{workerEffects: workerEffects{jobs: map[string]workercontract.Job{}}, alive: map[int]bool{}}
 	for _, job := range jobs {
 		fake.jobs[job.ID] = job
 		fake.ids = append(fake.ids, job.ID)
@@ -87,7 +87,7 @@ func TestEnqueueStoresQueuedJobWithRedactedPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	stored, ok := fake.jobs[job.ID]
-	if !ok || stored.Status != workercontract.WorkerStatusQueued || stored.Kind != "build" || !stored.OK {
+	if !ok || stored.Status != workercontract.StatusQueued || stored.Kind != "build" || !stored.OK {
 		t.Fatalf("stored=%+v", stored)
 	}
 	if strings.Contains(stored.Payload, "ghp_abcdefghijklmnopqrstuvwxyz0123456789") {
@@ -99,14 +99,14 @@ func TestEnqueueStoresQueuedJobWithRedactedPayload(t *testing.T) {
 }
 
 func TestCancelTransitions(t *testing.T) {
-	queued := workercontract.WorkerJob{ID: "q", Status: workercontract.WorkerStatusQueued}
-	running := workercontract.WorkerJob{ID: "r", Status: workercontract.WorkerStatusRunning}
-	cancelled := workercontract.WorkerJob{ID: "c", Status: workercontract.WorkerStatusCancelled}
+	queued := workercontract.Job{ID: "q", Status: workercontract.StatusQueued}
+	running := workercontract.Job{ID: "r", Status: workercontract.StatusRunning}
+	cancelled := workercontract.Job{ID: "c", Status: workercontract.StatusCancelled}
 	fake := newScripted(queued, running, cancelled)
 	svc := Service{Effects: fake}
 
 	job, err := svc.Cancel(context.Background(), "q")
-	if err != nil || job.Status != workercontract.WorkerStatusCancelled || fake.jobs["q"].Status != workercontract.WorkerStatusCancelled {
+	if err != nil || job.Status != workercontract.StatusCancelled || fake.jobs["q"].Status != workercontract.StatusCancelled {
 		t.Fatalf("job=%+v err=%v", job, err)
 	}
 	if job.UpdatedAt != "2000-01-01T00:00:00Z" {
@@ -115,7 +115,7 @@ func TestCancelTransitions(t *testing.T) {
 
 	before := len(fake.events)
 	job, err = svc.Cancel(context.Background(), "c")
-	if err != nil || job.Status != workercontract.WorkerStatusCancelled {
+	if err != nil || job.Status != workercontract.StatusCancelled {
 		t.Fatalf("job=%+v err=%v", job, err)
 	}
 	for _, event := range fake.events[before:] {
@@ -125,10 +125,10 @@ func TestCancelTransitions(t *testing.T) {
 	}
 
 	job, err = svc.Cancel(context.Background(), "r")
-	if err == nil || !strings.Contains(err.Error(), "cannot be cancelled") || job.Status != workercontract.WorkerStatusRunning {
+	if err == nil || !strings.Contains(err.Error(), "cannot be cancelled") || job.Status != workercontract.StatusRunning {
 		t.Fatalf("job=%+v err=%v", job, err)
 	}
-	if fake.jobs["r"].Status != workercontract.WorkerStatusRunning {
+	if fake.jobs["r"].Status != workercontract.StatusRunning {
 		t.Fatal("running job must stay running")
 	}
 }
@@ -144,7 +144,7 @@ func TestCancelErrors(t *testing.T) {
 	if !errors.Is(err, dirErr) || job.ID != "x" || job.OK {
 		t.Fatalf("job=%+v err=%v", job, err)
 	}
-	queued := workercontract.WorkerJob{ID: "q", Status: workercontract.WorkerStatusQueued}
+	queued := workercontract.Job{ID: "q", Status: workercontract.StatusQueued}
 	fake = newScripted(queued)
 	writeErr := errors.New("write")
 	fake.writeErr = writeErr
@@ -160,7 +160,7 @@ func TestRunReadOnlyRecordsFailureResult(t *testing.T) {
 		t.Fatal(err)
 	}
 	stored := fake.jobs[job.ID]
-	if stored.Status != workercontract.WorkerStatusFailed || stored.OK || stored.Result == nil || stored.Result.OK {
+	if stored.Status != workercontract.StatusFailed || stored.OK || stored.Result == nil || stored.Result.OK {
 		t.Fatalf("stored=%+v", stored)
 	}
 	if len(stored.Command) != 1 || stored.Command[0] != "false" || stored.PID != 42 {
@@ -185,10 +185,10 @@ func TestRunReadOnlyErrors(t *testing.T) {
 }
 
 func TestDetectStuckMarksOnlyDeadRunningJobsNewestFirst(t *testing.T) {
-	deadOld := workercontract.WorkerJob{ID: "dead-old", Status: workercontract.WorkerStatusRunning, PID: 1, CreatedAt: "2000-01-01"}
-	deadNew := workercontract.WorkerJob{ID: "dead-new", Status: workercontract.WorkerStatusRunning, PID: 2, CreatedAt: "2000-01-02"}
-	live := workercontract.WorkerJob{ID: "live", Status: workercontract.WorkerStatusRunning, PID: 3, CreatedAt: "2000-01-03"}
-	queued := workercontract.WorkerJob{ID: "queued", Status: workercontract.WorkerStatusQueued, CreatedAt: "2000-01-04"}
+	deadOld := workercontract.Job{ID: "dead-old", Status: workercontract.StatusRunning, PID: 1, CreatedAt: "2000-01-01"}
+	deadNew := workercontract.Job{ID: "dead-new", Status: workercontract.StatusRunning, PID: 2, CreatedAt: "2000-01-02"}
+	live := workercontract.Job{ID: "live", Status: workercontract.StatusRunning, PID: 3, CreatedAt: "2000-01-03"}
+	queued := workercontract.Job{ID: "queued", Status: workercontract.StatusQueued, CreatedAt: "2000-01-04"}
 	fake := newScripted(deadOld, deadNew, live, queued)
 	fake.ids = append(fake.ids, "unreadable")
 	fake.alive[3] = true
@@ -201,17 +201,17 @@ func TestDetectStuckMarksOnlyDeadRunningJobsNewestFirst(t *testing.T) {
 		t.Fatalf("jobs=%+v", result.Jobs)
 	}
 	for _, job := range result.Jobs {
-		if job.Status != workercontract.WorkerStatusFailed || job.OK || fake.jobs[job.ID].Status != workercontract.WorkerStatusFailed {
+		if job.Status != workercontract.StatusFailed || job.OK || fake.jobs[job.ID].Status != workercontract.StatusFailed {
 			t.Fatalf("job=%+v", job)
 		}
 	}
-	if fake.jobs["live"].Status != workercontract.WorkerStatusRunning || fake.jobs["queued"].Status != workercontract.WorkerStatusQueued {
+	if fake.jobs["live"].Status != workercontract.StatusRunning || fake.jobs["queued"].Status != workercontract.StatusQueued {
 		t.Fatal("live/queued jobs must be untouched")
 	}
 }
 
 func TestDetectStuckSkipsJobsWhoseWriteFailsAndReportsListErrors(t *testing.T) {
-	dead := workercontract.WorkerJob{ID: "d", Status: workercontract.WorkerStatusRunning, PID: 9}
+	dead := workercontract.Job{ID: "d", Status: workercontract.StatusRunning, PID: 9}
 	fake := newScripted(dead)
 	fake.writeErr = errors.New("write")
 	result, err := (Service{Effects: fake}).DetectStuck(context.Background())
@@ -235,10 +235,10 @@ func TestDetectStuckSkipsJobsWhoseWriteFailsAndReportsListErrors(t *testing.T) {
 }
 
 func TestListSortsNewestFirstWithQueueStatsAndSkipsUnreadable(t *testing.T) {
-	jobs := []workercontract.WorkerJob{
-		{ID: "a", Status: workercontract.WorkerStatusQueued, CreatedAt: "2000-01-01"},
-		{ID: "b", Status: workercontract.WorkerStatusRunning, CreatedAt: "2000-01-03"},
-		{ID: "c", Status: workercontract.WorkerStatusSucceeded, CreatedAt: "2000-01-02"},
+	jobs := []workercontract.Job{
+		{ID: "a", Status: workercontract.StatusQueued, CreatedAt: "2000-01-01"},
+		{ID: "b", Status: workercontract.StatusRunning, CreatedAt: "2000-01-03"},
+		{ID: "c", Status: workercontract.StatusSucceeded, CreatedAt: "2000-01-02"},
 	}
 	fake := newScripted(jobs...)
 	fake.ids = append(fake.ids, "ghost")
@@ -268,7 +268,7 @@ func TestListAndReadErrorPaths(t *testing.T) {
 	if result, err := (Service{Effects: fake}).List(); !errors.Is(err, listErr) || result.Queue != nil {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	fake = newScripted(workercontract.WorkerJob{ID: "x", Kind: "k", UpdatedAt: time.Time{}.String()})
+	fake = newScripted(workercontract.Job{ID: "x", Kind: "k", UpdatedAt: time.Time{}.String()})
 	job, err := (Service{Effects: fake}).Read("x")
 	if err != nil || job.Kind != "k" {
 		t.Fatalf("job=%+v err=%v", job, err)

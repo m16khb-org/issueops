@@ -1,7 +1,8 @@
 package selfaugment
 
-// Goal evidence names the exact observable behind each score so an agent can
-// re-produce or refute it instead of treating the gate as decorative.
+// ImplementationEvidence returns the goal evidence line for the implementation goal. Goal evidence
+// names the exact observable behind each score so an agent can re-produce or refute it instead of
+// treating the gate as decorative.
 func ImplementationEvidence(passed bool) []string {
 	if passed {
 		return []string{"git status --porcelain non-empty: uncommitted implementation diff observed"}
@@ -9,6 +10,8 @@ func ImplementationEvidence(passed bool) []string {
 	return []string{"git status --porcelain empty: no uncommitted diff found; implement the selected candidate first"}
 }
 
+// VerificationEvidence returns the goal evidence line for the verification goal, naming the
+// self-verify-latest state it is derived from.
 func VerificationEvidence(passed bool) []string {
 	if passed {
 		return []string{"self-verify-latest state ok=true (from issueops self-verify --save-state)"}
@@ -16,6 +19,8 @@ func VerificationEvidence(passed bool) []string {
 	return []string{"self-verify-latest state absent or failing; run issueops self-verify --save-state after verification"}
 }
 
+// LearningEvidence returns the goal evidence line for the learning goal, naming the lesson state
+// keys it is derived from.
 func LearningEvidence(passed bool) []string {
 	if passed {
 		return []string{"augmentation lessons present under self-augment-lesson-* state keys"}

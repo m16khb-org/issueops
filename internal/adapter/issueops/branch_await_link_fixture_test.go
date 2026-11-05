@@ -25,7 +25,7 @@ func AwaitBranchLink(ctx context.Context, root string, req issueopscontract.Awai
 		deps.Sleep = SleepWithContext
 	}
 	return (branchapp.LinkAwaiter{
-		Load:                  func(id string) (issueopscontract.IssueOpsRecord, error) { return ReadIssueOps(root, id) },
+		Load:                  func(id string) (issueopscontract.Record, error) { return ReadIssueOps(root, id) },
 		RemoteRef:             (LinkedBranchRemoteRef{RunGit: deps.Git}).Observe,
 		ObserveLinkedBranches: deps.ObserveLinkedBranches, Sleep: deps.Sleep, Now: deps.Now,
 	}).Await(ctx, req)

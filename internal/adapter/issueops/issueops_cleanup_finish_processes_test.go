@@ -183,7 +183,7 @@ func TestCleanupFinishRequesterGatesRefuseSourceCheckout(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)
 	// codec은 Execution.Workspace.Root == SourceRoot를 저장 단계에서 거부하므로,
 	// 이 게이트에 닿는 것은 execution 없이 WorktreePath만 연결된 레코드다.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 		rec.Execution = nil
 		rec.WorktreePath = rec.Repo
 	})
@@ -208,7 +208,7 @@ func TestCleanupWorkspaceGatesRejectSourceCheckoutSymlinkAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	alias := filepath.Join(aliasLink, "source")
-	record := issueops.IssueOpsRecord{Repo: source}
+	record := issueops.Record{Repo: source}
 	_, missing := cleanupWorkspaceGatesForRecord(record, alias, quietCleanupProcesses())
 	if !containsString(missing, "worktree_is_source_checkout") {
 		t.Fatalf("a symlink alias of the source checkout must refuse: %v", missing)
@@ -223,7 +223,7 @@ func TestCleanupWorkspaceGatesRejectUnresolvedSourceIdentity(t *testing.T) {
 	if err := os.Symlink("loop", loop); err != nil {
 		t.Fatal(err)
 	}
-	record := issueops.IssueOpsRecord{Repo: source}
+	record := issueops.Record{Repo: source}
 	_, missing := cleanupWorkspaceGatesForRecord(record, loop, quietCleanupProcesses())
 	if !containsString(missing, "worktree_is_source_checkout") {
 		t.Fatalf("an unresolvable source identity must fail closed: %v", missing)

@@ -53,7 +53,7 @@ func TestRoutingHandlersDelegateRecordAndScore(t *testing.T) {
 		liveVerifier(),
 	))
 
-	actor := issueopscontract.IssueOpsActor{Host: "codex"}
+	actor := issueopscontract.Actor{Host: "codex"}
 	record, err := handlers.Record("/state", "io-3", "plan", "verified-execution", actor)
 	if err != nil {
 		t.Fatalf("record failed: %v", err)
@@ -98,7 +98,7 @@ func TestScorePropagatesReadState(t *testing.T) {
 
 func TestNilServiceFailsClosed(t *testing.T) {
 	handlers := NewHandlers(nil)
-	if _, err := handlers.Record("/state", "io-4", "plan", "verified-execution", issueopscontract.IssueOpsActor{}); err == nil {
+	if _, err := handlers.Record("/state", "io-4", "plan", "verified-execution", issueopscontract.Actor{}); err == nil {
 		t.Fatal("nil service must fail closed on record")
 	}
 	if _, _, err := handlers.Score("/state", "io-4", nil); err == nil {

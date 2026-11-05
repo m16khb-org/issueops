@@ -7,13 +7,17 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func ValidateHistoryRequest(limit int, retention contract.SelfAugmentHistoryRetentionOptions) error {
+// ValidateHistoryRequest rejects a negative limit and any inconsistent retention options (negative
+// retention limit, confirm without prune, prune without a positive limit).
+func ValidateHistoryRequest(limit int, retention contract.HistoryRetentionOptions) error {
 	if limit < 0 {
 		return fmt.Errorf("limit must be non-negative")
 	}
-	return ValidateHistoryRetention(retention.Limit, retention.PruneRequested, retention.Confirm)
+	return validateHistoryRetention(retention.Limit, retention.PruneRequested, retention.Confirm)
 }
 
+// ValidateComparisonRequest requires non-blank baseline and candidate keys and a non-negative
+// maxElapsedRegressionPct.
 func ValidateComparisonRequest(baselineKey, candidateKey string, maxElapsedRegressionPct float64) error {
 	if strings.TrimSpace(baselineKey) == "" {
 		return fmt.Errorf("baseline-key is required")
@@ -27,7 +31,10 @@ func ValidateComparisonRequest(baselineKey, candidateKey string, maxElapsedRegre
 	return nil
 }
 
-func HistorySnapshotDiagnostics(key string, snapshot contract.SelfAugmentStateSnapshot) (skipReason, warning string) {
+// HistorySnapshotDiagnostics classifies a stored snapshot for history listing. A non-empty
+// skipReason means the snapshot must be skipped (wrong kind or unsupported schema version); a
+// non-empty warning means it is listed but its generated_at is unparsable.
+func HistorySnapshotDiagnostics(key string, snapshot contract.StateSnapshot) (skipReason, warning string) {
 	if !IsSelfVerificationSummaryKind(snapshot.Kind) {
 		return "kind:" + snapshot.Kind, ""
 	}
@@ -40,16 +47,18 @@ func HistorySnapshotDiagnostics(key string, snapshot contract.SelfAugmentStateSn
 	return "", ""
 }
 
-func NewHistoryEntry(snapshot contract.SelfAugmentStateSnapshot) contract.SelfAugmentHistoryEntry {
+// NewHistoryEntry projects snapshot into a history listing entry, replacing missing step labels and
+// slowest steps with empty slices.
+func NewHistoryEntry(snapshot contract.StateSnapshot) contract.HistoryEntry {
 	labels := snapshot.Summary.StepLabels
 	if labels == nil {
 		labels = []string{}
 	}
 	slowest := snapshot.Summary.SlowestSteps
 	if slowest == nil {
-		slowest = []contract.SelfAugmentSlowStep{}
+		slowest = []contract.SlowStep{}
 	}
-	return contract.SelfAugmentHistoryEntry{
+	return contract.HistoryEntry{
 		GeneratedAt:  snapshot.GeneratedAt,
 		OK:           snapshot.OK,
 		Iterations:   snapshot.Iterations,

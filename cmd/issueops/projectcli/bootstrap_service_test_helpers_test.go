@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 
 func testLifecycleService() lifecycleapp.Service {
 	return lifecycleapp.Service{SchemaVersion: lifecyclemodel.ProjectLifecycleSchemaVersion, Effects: lifecyclefiles.ProfileFiles{
-		Normalize: repopath.NormalizeRoot, StateDir: statestore.StateDir(),
+		Normalize: repopath.NormalizeRoot, StateDir: statestore.Dir(),
 		ObserveFingerprint: func(root string) lifecyclecontract.ProjectFingerprint {
 			return fingerprint.ForRoot(root, projectdocs.ReadGitOriginURL)
 		},

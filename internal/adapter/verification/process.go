@@ -1,3 +1,7 @@
+// Package verification is the outbound adapter for the self-verification loop:
+// it runs commands with a timeout and a bounded output budget, lists tracked Go
+// files and gofmt findings, and locates the candidate source file. The
+// verification domain decides what the results mean.
 package verification
 
 import (
@@ -12,6 +16,8 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
+// Run executes name with args in dir and reports the outcome as a StepResult
+// labelled label. It is RunEnv without environment overrides.
 func Run(dir, label string, timeout time.Duration, stdin string, outputBudget int, name string, args ...string) contract.StepResult {
 	return RunEnv(dir, label, timeout, stdin, nil, outputBudget, name, args...)
 }
@@ -32,6 +38,11 @@ func SeededTempState(prefix string) func(seed int64) (string, error) {
 	}
 }
 
+// RunEnv executes name with args in dir under timeout, feeding stdin when it is
+// non-empty and merging env over the process environment when it is non-empty.
+// Stdout and stderr are each capped at outputBudget. The returned StepResult
+// carries the exit status, duration, captured output, and an error message that
+// reads "timeout after <timeout>" when the deadline expired.
 func RunEnv(dir, label string, timeout time.Duration, stdin string, env []string, outputBudget int, name string, args ...string) contract.StepResult {
 	started := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)

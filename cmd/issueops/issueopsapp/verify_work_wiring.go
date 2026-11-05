@@ -23,7 +23,7 @@ func newVerifyWorkService() verifyworkapp.Service {
 	return verifyworkapp.Service{
 		ResolveTarget:  pathutil.ResolveTarget,
 		GitStatus:      verifyworkadapter.GitStatus,
-		Preflight:      func(root string) preflightcontract.PreflightResult { return preflight.Check(root, harnessRoot) },
+		Preflight:      func(root string) preflightcontract.Result { return preflight.Check(root, harnessRoot) },
 		Guard:          guard.Check,
 		RunCommand:     policy.RunReadOnly,
 		ProjectSignals: projectdocsadapter.AnalyzeProjectSignals,

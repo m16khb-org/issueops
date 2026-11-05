@@ -18,9 +18,9 @@ func TestApplyLLMEvalAdmissionAndFailedPacketRespectGateMode(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
-			input := augment.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augment.SelfAugmentSummary{TerminationEligible: true}}
+			input := augment.Result{OK: true, TerminationEligible: true, Summary: augment.Summary{TerminationEligible: true}}
 			got, err := ApplyLLMEval(input, verify.LLMEvalOptions{Enabled: tc.enabled, Mode: tc.mode, TargetScore: 95}, LLMEvalDeps{
-				BuildPrompt: func(augment.SelfAugmentResult) (string, int, error) {
+				BuildPrompt: func(augment.Result) (string, int, error) {
 					calls++
 					return "", 17, errors.New("packet rejected")
 				},

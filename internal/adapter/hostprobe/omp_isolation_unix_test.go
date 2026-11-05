@@ -38,7 +38,7 @@ func TestOmpRunnerKeepsVersionAndEpisodeWritesInsidePrivateHomes(t *testing.T) {
 	roots := []string{filepath.Join(tempParent, "preflight"), filepath.Join(tempParent, "episode")}
 	nextRoot := 0
 	runner := newTestOmpRunner(harness, ompTestLifecycleExtension(harness), Dependencies{
-		Process: ExecRunner{},
+		Process: execRunner{},
 		LookPath: func(name string) (string, error) {
 			if name != "omp" {
 				t.Fatalf("looked up %q", name)

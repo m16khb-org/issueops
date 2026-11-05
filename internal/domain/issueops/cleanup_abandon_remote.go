@@ -13,7 +13,11 @@ type CleanupAbandonRemoteReads struct {
 	ArtifactMissing, IssueMissing, BranchMissing string
 }
 
-func PlanCleanupAbandonRemoteReads(record model.IssueOpsRecord, req model.CleanupAbandonRequest, branch string, providerAvailable bool) CleanupAbandonRemoteReads {
+// PlanCleanupAbandonRemoteReads decides, per requested remote effect (close
+// PR, close issue, delete remote branch), whether its provider read can run
+// or which gate blocks it. branch is the recorded cycle branch, which must
+// exist and must not be the prepared base branch.
+func PlanCleanupAbandonRemoteReads(record model.Record, req model.CleanupAbandonRequest, branch string, providerAvailable bool) CleanupAbandonRemoteReads {
 	var plan CleanupAbandonRemoteReads
 	if req.ClosePR {
 		switch {
@@ -48,11 +52,18 @@ func PlanCleanupAbandonRemoteReads(record model.IssueOpsRecord, req model.Cleanu
 	return plan
 }
 
+// CleanupAbandonRemoteFacts carries the provider readback results for the
+// remote effects: the artifact and issue states, the remote branch OID, and
+// the error of each read. A set error marks that observation unreadable.
 type CleanupAbandonRemoteFacts struct {
 	ArtifactState, IssueState, BranchOID   string
 	ArtifactError, IssueError, BranchError error
 }
 
+// BuildCleanupAbandonRemotePreview turns the read plan and facts into the
+// remote part of the preview. It copies the requested effects onto inventory,
+// records the remote missing gates and states in the returned observation,
+// and lists the planned effects only when no remote gate is missing.
 func BuildCleanupAbandonRemotePreview(req model.CleanupAbandonRequest, inventory model.CleanupAbandonInventory, plan CleanupAbandonRemoteReads, facts CleanupAbandonRemoteFacts) (model.CleanupAbandonInventory, CleanupAbandonObservation) {
 	var observed CleanupAbandonObservation
 	inventory.ClosePR, inventory.CloseIssue, inventory.DeleteRemoteBranch = req.ClosePR, req.CloseIssue, req.DeleteRemoteBranch

@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+// Status is the parsed `git status --short --branch` outcome: sorted,
+// deduplicated file lists and whether the working tree is clean.
 type Status struct {
 	Staged     []string
 	Unstaged   []string
@@ -20,6 +22,8 @@ var secretPathRe = sync.OnceValue(func() *regexp.Regexp {
 	return regexp.MustCompile(`(?i)(^|/)(\.env(\.|$)|id_rsa|id_dsa|id_ecdsa|id_ed25519|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*credentials.*|.*secret.*)`)
 })
 
+// AnalyzeStatus parses short-format git status lines into Status. It skips the
+// branch header, takes the new path of renames, and flags secret-like paths.
 func AnalyzeStatus(lines []string) Status {
 	var status Status
 	for _, line := range lines {
@@ -54,6 +58,8 @@ func AnalyzeStatus(lines []string) Status {
 	return status
 }
 
+// Warnings returns the preflight warning codes for a detached HEAD, a missing
+// upstream, and the presence of secret-like paths. It never returns nil.
 func Warnings(branch string, hasUpstream bool, secretLike []string) []string {
 	warnings := []string{}
 	if branch == "" {

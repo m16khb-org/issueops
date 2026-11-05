@@ -1,3 +1,5 @@
+// Package issueopsapp is the composition root of the issueops CLI: it wires the
+// application services, adapters and CLI packages together and runs the root command.
 package issueopsapp
 
 import (
@@ -28,12 +30,12 @@ func fprintString(w io.Writer, text string) {
 	_, _ = fmt.Fprint(w, text)
 }
 
-func newHarnessInspector() func(string) inspectcontract.InspectInfo {
+func newHarnessInspector() func(string) inspectcontract.Info {
 	inspector := newHarnessHostInspector()
-	return func(target string) inspectcontract.InspectInfo { return inspector(target, inspectcontract.Options{}) }
+	return func(target string) inspectcontract.Info { return inspector(target, inspectcontract.Options{}) }
 }
 
-func newHarnessHostInspector() func(string, inspectcontract.Options) inspectcontract.InspectInfo {
+func newHarnessHostInspector() func(string, inspectcontract.Options) inspectcontract.Info {
 	return harnessInspectorWithDefault(pathutil.ResolveTarget(""), "")
 }
 
@@ -44,13 +46,13 @@ func scopedHarnessInspector(defaultTarget string) func(string, string) any {
 	}
 }
 
-func harnessInspectorWithDefault(defaultTarget, receiptRoot string) func(string, inspectcontract.Options) inspectcontract.InspectInfo {
+func harnessInspectorWithDefault(defaultTarget, receiptRoot string) func(string, inspectcontract.Options) inspectcontract.Info {
 	root := issueOpsRoot()
 	home, _ := os.UserHomeDir()
 	// inspect reports the rule documents; dated history records live in
 	// `docs --all` (the full list was 2/3 of inspect's payload).
 	observer := inspect.Observer{ListDocs: newDocsService().ListCurrent, HostVersion: inspect.CommandHostVersion, ReceiptRoot: receiptRoot, OpencodeConfigRoot: opencodeConfigRoot}
-	return func(target string, options inspectcontract.Options) inspectcontract.InspectInfo {
+	return func(target string, options inspectcontract.Options) inspectcontract.Info {
 		if target == "" {
 			target = defaultTarget
 		}

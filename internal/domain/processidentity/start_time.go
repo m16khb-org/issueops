@@ -1,3 +1,5 @@
+// Package processidentity holds the domain rules that normalize process start
+// times so recorded process identities can be compared.
 package processidentity
 
 import (

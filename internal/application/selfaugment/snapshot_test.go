@@ -23,11 +23,11 @@ func TestSnapshotStoreRejectsReadAndDecodeFailures(t *testing.T) {
 		{`{"schema_version":1,"kind":"retired"}`, nil, "contains kind"},
 		{`{"kind":"self_verification_summary"}`, nil, "schema 0"},
 	} {
-		store := SnapshotStore{ReadState: func(key string) (state.StateResult, error) {
+		store := SnapshotStore{ReadState: func(key string) (state.Result, error) {
 			if key != "summary" {
 				t.Fatalf("key=%q", key)
 			}
-			return state.StateResult{Record: state.RecordEnvelope{Content: tc.content}}, tc.err
+			return state.Result{Record: state.RecordEnvelope{Content: tc.content}}, tc.err
 		}}
 		got, err := store.Read("summary")
 		if err == nil || !strings.Contains(err.Error(), tc.want) || got.Kind != "" {
@@ -41,7 +41,7 @@ func TestSnapshotStoreWritesOnlyValidEnvelopeAndPreservesErrors(t *testing.T) {
 		t.Run(failAt, func(t *testing.T) {
 			fault := errors.New("unavailable")
 			clockCalls, writeCalls := 0, 0
-			snapshot := contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary"}
+			snapshot := contract.StateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary"}
 			if failAt == "encode" {
 				snapshot.TargetScore = math.NaN()
 			}

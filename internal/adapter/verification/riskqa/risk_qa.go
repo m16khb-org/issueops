@@ -1,3 +1,5 @@
+// Package riskqa is the adapter that plans and executes the risk-based QA tiers
+// (race tests and vet) for self-verify, shelling out to go and git.
 package riskqa
 
 import (
@@ -19,10 +21,13 @@ const (
 	riskQAVetTimeout  = 120 * time.Second
 )
 
+// ValidateForSelfVerifyWithScope plans the QA tier from the paths changed since
+// baseRef, executes it, and returns the step result along with whether the plan
+// covers the full go test run.
 func ValidateForSelfVerifyWithScope(root, baseRef string) (verifycontract.StepResult, bool) {
 	deps := defaultDeps()
-	plan := PlanWithScope(root, baseRef)
-	deps.Plan = func(string) riskqacontract.RiskQATierPlan { return plan }
+	plan := planWithScope(root, baseRef)
+	deps.Plan = func(string) riskqacontract.TierPlan { return plan }
 	return ValidateWithDeps(root, deps), riskqadomain.CoversFullGoTest(plan)
 }
 
@@ -42,6 +47,8 @@ func defaultDeps() riskqaapp.ExecuteDeps {
 	}
 }
 
+// ValidateWithDeps executes the risk QA plan with deps, defaulting RenderPlan to
+// PlanJSON and Now to time.Now.
 func ValidateWithDeps(root string, deps riskqaapp.ExecuteDeps) verifycontract.StepResult {
 	if deps.RenderPlan == nil {
 		deps.RenderPlan = PlanJSON

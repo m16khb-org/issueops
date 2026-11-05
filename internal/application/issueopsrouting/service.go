@@ -1,3 +1,7 @@
+// Package issueopsrouting is the application service that records which skill
+// a cycle routed to at each phase and scores that routing trace against the
+// expected routes. It depends on the Repository port, a clock, a path matcher,
+// and an actor verifier, never on storage directly.
 package issueopsrouting
 
 import (
@@ -11,24 +15,31 @@ import (
 	authorityport "issueops/internal/port/authority"
 )
 
+// Service records and scores the routing trace of an issueops cycle. Build it
+// with NewService; its methods fail when required dependencies are nil.
 type Service struct {
 	repository Repository
-	clock      Clock
-	paths      PathMatcher
+	clock      clock
+	paths      pathMatcher
 	verifier   authorityport.ActorVerifier
 }
 
-func NewService(repository Repository, clock Clock, paths PathMatcher, verifier authorityport.ActorVerifier) *Service {
+// NewService returns a Service over repository, clock, and paths, with verifier checking the acting holder.
+func NewService(repository Repository, clock clock, paths pathMatcher, verifier authorityport.ActorVerifier) *Service {
 	return &Service{repository: repository, clock: clock, paths: paths, verifier: verifier}
 }
 
+// Record appends a routing entry for phase and skill to the cycle id's record
+// after checking that actor holds the cycle's lease. The entry is timestamped
+// by the service clock. It returns an error when dependencies are missing, the
+// phase/skill pair is invalid, or the actor is not the holder.
 func (service *Service) Record(
 	ctx context.Context,
 	stateRoot string,
 	id string,
 	phase string,
 	skill string,
-	actor issueopscontract.IssueOpsActor,
+	actor issueopscontract.Actor,
 ) (issueopsroutingcontract.Record, error) {
 	if service == nil || service.repository == nil || service.clock == nil || service.paths == nil {
 		return issueopsroutingcontract.Record{OK: false, ID: id}, fmt.Errorf(
@@ -56,6 +67,8 @@ func (service *Service) Record(
 	})
 }
 
+// Score compares the routing trace stored for cycle id with expected and
+// returns the scored result together with the number of recorded trace entries.
 func (service *Service) Score(
 	ctx context.Context,
 	stateRoot string,

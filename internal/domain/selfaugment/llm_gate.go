@@ -8,7 +8,10 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
-func ApplySelfVerifyLLMGate(result contract.SelfAugmentResult, targetScore float64) (contract.SelfAugmentResult, error) {
+// ApplySelfVerifyLLMGate enforces the LLM evaluation gate on result. Outside gate mode, or when the
+// evaluation passes targetScore, result is returned unchanged; otherwise result is marked not OK
+// and not termination eligible, and an error lists the failing reasons.
+func ApplySelfVerifyLLMGate(result contract.Result, targetScore float64) (contract.Result, error) {
 	if result.LLMEval == nil || result.LLMEval.Mode != "gate" {
 		return result, nil
 	}

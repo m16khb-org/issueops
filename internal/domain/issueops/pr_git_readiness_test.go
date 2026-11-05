@@ -8,13 +8,13 @@ import (
 )
 
 func TestPRGitReadinessMissingPreservesObservationOrder(t *testing.T) {
-	if missing, warnings := PRGitReadiness(model.IssueOpsRecord{}, PRGitFacts{}); !reflect.DeepEqual(missing, []string{"repo"}) || len(warnings) != 0 {
+	if missing, warnings := PRGitReadiness(model.Record{}, PRGitFacts{}); !reflect.DeepEqual(missing, []string{"repo"}) || len(warnings) != 0 {
 		t.Fatalf("missing root=%v warnings=%v", missing, warnings)
 	}
-	if missing, _ := PRGitReadiness(model.IssueOpsRecord{}, PRGitFacts{RootAvailable: true}); !reflect.DeepEqual(missing, []string{"repo_git"}) {
+	if missing, _ := PRGitReadiness(model.Record{}, PRGitFacts{RootAvailable: true}); !reflect.DeepEqual(missing, []string{"repo_git"}) {
 		t.Fatalf("invalid git root=%v", missing)
 	}
-	record := model.IssueOpsRecord{ID: "io-1", Branch: "feature", SourceMisdirectWarnings: 2}
+	record := model.Record{ID: "io-1", Branch: "feature", SourceMisdirectWarnings: 2}
 	facts := PRGitFacts{
 		RootAvailable: true, GitWorktree: true, CurrentBranch: "other", BaseRemoteRef: "origin/main", BaseAdvanced: true,
 		Upstream: "origin/feature", SyncUpstream: true, FetchFailed: true, FetchStderr: "offline", UpstreamCounts: "1 2",
@@ -36,19 +36,19 @@ func TestPRGitReadinessMissingPreservesObservationOrder(t *testing.T) {
 // Ahead only is an ordinary unpushed commit: no remedy text.
 func TestPRGitReadinessAheadOnlyKeepsTheBareCounts(t *testing.T) {
 	facts := PRGitFacts{RootAvailable: true, GitWorktree: true, FingerprintVerified: true, WorktreeClean: true, Upstream: "origin/feature", SyncUpstream: true, UpstreamCounts: "2 0"}
-	if _, warnings := PRGitReadiness(model.IssueOpsRecord{}, facts); !reflect.DeepEqual(warnings, []string{"branch divergence against upstream: ahead=2 behind=0"}) {
+	if _, warnings := PRGitReadiness(model.Record{}, facts); !reflect.DeepEqual(warnings, []string{"branch divergence against upstream: ahead=2 behind=0"}) {
 		t.Fatalf("warnings=%v", warnings)
 	}
 }
 
 func TestPRGitReadinessLocalSkipsSynchronization(t *testing.T) {
 	facts := PRGitFacts{RootAvailable: true, GitWorktree: true, FingerprintVerified: true, WorktreeClean: true, Upstream: "origin/feature"}
-	missing, warnings := PRGitReadiness(model.IssueOpsRecord{}, facts)
+	missing, warnings := PRGitReadiness(model.Record{}, facts)
 	if len(missing) != 0 || len(warnings) != 0 {
 		t.Fatalf("local readiness missing=%v warnings=%v", missing, warnings)
 	}
 	facts.Upstream = ""
-	if missing, _ := PRGitReadiness(model.IssueOpsRecord{}, facts); !reflect.DeepEqual(missing, []string{"upstream"}) {
+	if missing, _ := PRGitReadiness(model.Record{}, facts); !reflect.DeepEqual(missing, []string{"upstream"}) {
 		t.Fatalf("no upstream=%v", missing)
 	}
 }

@@ -26,7 +26,7 @@ func TestCandidatesProjectSpecsIntoOpenCandidates(t *testing.T) {
 		if candidate.ID != spec.ID || candidate.Title != spec.Title || candidate.Category != spec.Category {
 			t.Fatalf("candidate did not preserve identity: %#v from %#v", candidate, spec)
 		}
-		if candidate.Status != CandidateStatusOpen {
+		if candidate.Status != candidateStatusOpen {
 			t.Fatalf("candidate %s status = %q", candidate.ID, candidate.Status)
 		}
 		if candidate.Score <= 0 || candidate.Score > 100 {
@@ -68,13 +68,13 @@ func TestEveryQualitySpecVerifyWithIsGrounded(t *testing.T) {
 }
 
 func TestScoreClampsToRange(t *testing.T) {
-	if got := Score(200, 200, 200, -200); got != 100 {
+	if got := score(200, 200, 200, -200); got != 100 {
 		t.Fatalf("high score should clamp to 100, got %f", got)
 	}
-	if got := Score(-200, -200, -200, 500); got != 0 {
+	if got := score(-200, -200, -200, 500); got != 0 {
 		t.Fatalf("low score should clamp to 0, got %f", got)
 	}
-	if got := Score(80, 70, 60, 20); got <= 0 || got >= 100 {
+	if got := score(80, 70, 60, 20); got <= 0 || got >= 100 {
 		t.Fatalf("ordinary score should remain in range, got %f", got)
 	}
 }
@@ -93,7 +93,7 @@ func TestScoreWeights(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := Score(test.impact, test.feasibility, test.novelty, test.risk)
+			got := score(test.impact, test.feasibility, test.novelty, test.risk)
 			if diff := got - test.want; diff > 1e-9 || diff < -1e-9 {
 				t.Fatalf("Score = %v, want %v", got, test.want)
 			}

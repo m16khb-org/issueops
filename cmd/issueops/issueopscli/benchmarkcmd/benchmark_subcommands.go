@@ -97,7 +97,7 @@ func (c Command) runBenchmarkReliability(args []string) error {
 
 func (c Command) runBenchmarkConsensus(args []string) error {
 	fs := flag.NewFlagSet("issueops benchmark consensus", flag.ContinueOnError)
-	samplesPath := fs.String("samples", "", "offline-recorded judge samples JSON ({\"samples\":[{\"sample_id\":..,\"provenance\":..,\"score\":<IssueOpsBenchmarkScore>}]}); reads stdin when empty")
+	samplesPath := fs.String("samples", "", "offline-recorded judge samples JSON ({\"samples\":[{\"sample_id\":..,\"provenance\":..,\"score\":<Score>}]}); reads stdin when empty")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err

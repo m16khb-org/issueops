@@ -1,9 +1,13 @@
+// Package judgement holds the domain rules for host-agent judgement prompts
+// and for strictly decoding their structured JSON results.
 package judgement
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"unicode/utf8"
 
@@ -11,7 +15,10 @@ import (
 	"issueops/internal/domain/prompt"
 )
 
-func BuildJSONSchemaSection(example string, fieldTypes []string) prompt.PromptDataSection {
+// BuildJSONSchemaSection renders the prompt section instructing the host agent
+// to answer with exactly one JSON object. Non-empty fieldTypes become schema
+// bullet lines and a non-empty example is appended after them.
+func BuildJSONSchemaSection(example string, fieldTypes []string) prompt.DataSection {
 	lines := []string{
 		"Return exactly one JSON object matching this response schema.",
 		"Do not include prose before or after the JSON object.",
@@ -27,7 +34,7 @@ func BuildJSONSchemaSection(example string, fieldTypes []string) prompt.PromptDa
 	if example != "" {
 		lines = append(lines, "", "Example:", example)
 	}
-	return prompt.PromptDataSection{
+	return prompt.DataSection{
 		Title:   "Host-Agent Judgement Response Schema",
 		Content: strings.Join(lines, "\n"),
 	}
@@ -45,18 +52,21 @@ func DecodeStructuredJSONObject(label string, out []byte, target any) error {
 	if len(trimmed) == 0 {
 		return fmt.Errorf("%s output is empty", label)
 	}
-	if err := decodeStrictJSONObject(trimmed, target); err == nil {
+	err := decodeStrictJSONObject(trimmed, target)
+	if err == nil {
 		return nil
-	} else if fenced, ok, fenceErr := extractFencedJSON(trimmed); fenceErr != nil {
+	}
+	fenced, ok, fenceErr := extractFencedJSON(trimmed)
+	if fenceErr != nil {
 		return fmt.Errorf("%s output is not strict JSON: %w", label, fenceErr)
-	} else if ok {
+	}
+	if ok {
 		if err := decodeStrictJSONObject(fenced, target); err != nil {
 			return fmt.Errorf("%s fenced JSON is invalid: %w", label, err)
 		}
 		return nil
-	} else {
-		return fmt.Errorf("%s output is not strict JSON: %w; output=%s", label, err, boundedOutputText(string(trimmed)))
 	}
+	return fmt.Errorf("%s output is not strict JSON: %w; output=%s", label, err, boundedOutputText(string(trimmed)))
 }
 
 func decodeStrictJSONObject(out []byte, target any) error {
@@ -71,7 +81,7 @@ func decodeStrictJSONObject(out []byte, target any) error {
 	var trailing any
 	if err := dec.Decode(&trailing); err == nil {
 		return fmt.Errorf("multiple JSON values")
-	} else if err.Error() != "EOF" {
+	} else if !errors.Is(err, io.EOF) {
 		return err
 	}
 	return nil

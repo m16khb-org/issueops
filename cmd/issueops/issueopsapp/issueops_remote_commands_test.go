@@ -19,7 +19,7 @@ import (
 
 func TestBodySyncCommandCompositionValidatesBeforeProviderEffects(t *testing.T) {
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "69-body-command"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: t.TempDir(), Branch: "69-body-command"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,12 +81,12 @@ func TestBodySyncCommandCompositionValidatesBeforeProviderEffects(t *testing.T) 
 
 func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "70-command"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: t.TempDir(), Branch: "70-command"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/70"
-	record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "release", LinkVerified: true}
+	record.BranchPrepare = &model.BranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "release", LinkVerified: true}
 	if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}

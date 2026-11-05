@@ -9,7 +9,7 @@ import (
 
 // ProjectRemoteCompletion keeps only the verified artifact URL in the report
 // contract. Local evidence is retained in records and tracked materials.
-func ProjectRemoteCompletion(record model.IssueOpsRecord) model.RemoteCompletionSection {
+func ProjectRemoteCompletion(record model.Record) model.RemoteCompletionSection {
 	result := model.RemoteCompletionSection{}
 	if record.RemoteArtifact != nil {
 		result.RemoteArtifactURL = record.RemoteArtifact.URL
@@ -20,14 +20,18 @@ func ProjectRemoteCompletion(record model.IssueOpsRecord) model.RemoteCompletion
 	return result
 }
 
-func ValidateCompletionMerge(record model.IssueOpsRecord) error {
+// ValidateCompletionMerge requires a verified remote artifact before merge
+// evidence can be checked.
+func ValidateCompletionMerge(record model.Record) error {
 	if record.RemoteArtifact == nil {
 		return fmt.Errorf("cannot verify merge evidence before a verified remote artifact: publish the PR/MR first (remote create-pr, then remote verify-artifact), or end an unpublished cycle with cleanup abandon")
 	}
 	return nil
 }
 
-func ValidateReflectCompletion(record model.IssueOpsRecord) error {
+// ValidateReflectCompletion requires a linked issue and a verified remote
+// artifact before the completion is reflected into the issue.
+func ValidateReflectCompletion(record model.Record) error {
 	if strings.TrimSpace(record.IssueURL) == "" {
 		return fmt.Errorf("cannot reflect completion before a linked issue")
 	}
@@ -37,15 +41,19 @@ func ValidateReflectCompletion(record model.IssueOpsRecord) error {
 	return nil
 }
 
-func ValidateCloseIssue(record model.IssueOpsRecord) error {
+// ValidateCloseIssue requires a linked issue before the remote issue can be
+// closed.
+func ValidateCloseIssue(record model.Record) error {
 	if strings.TrimSpace(record.IssueURL) == "" {
 		return fmt.Errorf("cannot close before a linked issue")
 	}
 	return nil
 }
 
-func MarkRemoteCompletionReflected(record model.IssueOpsRecord, now string) model.IssueOpsRecord {
-	receipt := model.IssueOpsRemoteCompletion{}
+// MarkRemoteCompletionReflected stamps now as the time the completion was
+// reflected into the issue, keeping the other receipt fields.
+func MarkRemoteCompletionReflected(record model.Record, now string) model.Record {
+	receipt := model.RemoteCompletion{}
 	if record.RemoteCompletion != nil {
 		receipt = *record.RemoteCompletion
 	}
@@ -55,8 +63,10 @@ func MarkRemoteCompletionReflected(record model.IssueOpsRecord, now string) mode
 	return record
 }
 
-func MarkRemoteIssueClosed(record model.IssueOpsRecord, now string) model.IssueOpsRecord {
-	receipt := model.IssueOpsRemoteCompletion{}
+// MarkRemoteIssueClosed stamps now as the time the remote issue was closed.
+// An earlier close time is kept.
+func MarkRemoteIssueClosed(record model.Record, now string) model.Record {
+	receipt := model.RemoteCompletion{}
 	if record.RemoteCompletion != nil {
 		receipt = *record.RemoteCompletion
 	}
@@ -71,8 +81,8 @@ func MarkRemoteIssueClosed(record model.IssueOpsRecord, now string) model.IssueO
 // MarkRemoteMerged records that merge-pr read the PR/MR back merged. QA: every
 // agent saw next name merge-pr again after the merge; next does not read the
 // provider, so the merge needs a receipt of its own.
-func MarkRemoteMerged(record model.IssueOpsRecord, now string) model.IssueOpsRecord {
-	receipt := model.IssueOpsRemoteCompletion{}
+func MarkRemoteMerged(record model.Record, now string) model.Record {
+	receipt := model.RemoteCompletion{}
 	if record.RemoteCompletion != nil {
 		receipt = *record.RemoteCompletion
 	}

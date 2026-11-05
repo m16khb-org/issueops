@@ -1,7 +1,7 @@
 package policy
 
-// PolicyOverrides is the workspace-local JSON shape for additive command rules.
-type PolicyOverrides struct {
+// Overrides is the workspace-local JSON shape for additive command rules.
+type Overrides struct {
 	AdditionalShellInterpreters   []string            `json:"additional_shell_interpreters,omitempty"`
 	AdditionalNetworkCommands     []string            `json:"additional_network_commands,omitempty"`
 	AdditionalNetworkSubcommands  map[string][]string `json:"additional_network_subcommands,omitempty"`

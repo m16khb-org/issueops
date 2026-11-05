@@ -143,7 +143,7 @@ type driftingStore struct {
 	reads int
 }
 
-func (s *driftingStore) Read(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+func (s *driftingStore) Read(ctx context.Context, id string) (model.Record, error) {
 	s.reads++
 	record, err := s.testChildStore.Read(ctx, id)
 	if s.reads == 1 {
@@ -181,10 +181,10 @@ type failingSecondRead struct {
 	reads int
 }
 
-func (s *failingSecondRead) Read(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+func (s *failingSecondRead) Read(ctx context.Context, id string) (model.Record, error) {
 	s.reads++
 	if s.reads > 1 {
-		return model.IssueOpsRecord{}, s.err
+		return model.Record{}, s.err
 	}
 	return s.testChildStore.Read(ctx, id)
 }

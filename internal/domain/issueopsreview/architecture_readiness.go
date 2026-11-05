@@ -7,6 +7,8 @@ import (
 	issueopsdomain "issueops/internal/domain/issueops"
 )
 
+// ArchitectureReviewMissing 함수는 아키텍처 리뷰가 게이트를 통과하기 위해 아직 채워야 할
+// 항목 키를 돌려준다. 리뷰가 없으면 architecture_review 하나만 담긴다.
 func ArchitectureReviewMissing(review *reviewcontract.ArchitectureReview) []string {
 	if review == nil {
 		return []string{"architecture_review"}
@@ -36,7 +38,7 @@ func architectureApprovalMissing(review *reviewcontract.ArchitectureReview) []st
 	if !review.Approved {
 		return []string{"architecture_approval"}
 	}
-	if !HasArchitectureReviewEvidence(review.Verification) {
+	if !hasArchitectureReviewEvidence(review.Verification) {
 		return []string{"architecture_review_evidence"}
 	}
 	return nil
@@ -57,7 +59,7 @@ func architectureApprovedPlanMissing(review *reviewcontract.ArchitectureReview) 
 	return missing
 }
 
-// ArchitectureReviewStale은 승인한 아키텍처 문서가 지금 문서와 달라졌는지 말한다.
+// ArchitectureReviewStale 함수는 승인한 아키텍처 문서가 지금 문서와 달라졌는지 말한다.
 // 승인 기록이 없거나 아직 승인되지 않았으면 다른 키가 이미 막고 있으므로 false다.
 // 부모 리뷰를 승계한 위임 자식은 자기 문서를 검토하지 않았으므로 digest 게이트에서 빠진다.
 func ArchitectureReviewStale(review *reviewcontract.ArchitectureReview, currentDigest string, digestErr error) bool {

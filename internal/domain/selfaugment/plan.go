@@ -2,17 +2,24 @@ package selfaugment
 
 import contract "issueops/internal/contract/selfaugment"
 
+// PlanFacts carries the observed repository and workflow facts that NewPlan scores into goals: the
+// GENIUS_THINK text, repo signals, and whether docs are indexed, an implementation diff exists,
+// verification passed and lessons were captured.
 type PlanFacts struct {
 	GeniusText          string
-	Signals             contract.SelfAugmentRepoSignals
+	Signals             contract.RepoSignals
 	DocsOK              bool
 	ImplementationDelta bool
 	VerificationPassed  bool
 	LessonsCaptured     bool
 }
 
-func NewPlan(req contract.SelfAugmentPlanRequest, facts PlanFacts, candidates []contract.SelfAugmentCandidate, lessonCounts map[string]int) contract.SelfAugmentPlanResult {
-	goals := []contract.SelfAugmentGoal{
+// NewPlan builds the self-augmentation plan for req: it scores the four goals from facts, applies
+// lesson penalties to candidates, orders them with open candidates first by score, and selects the
+// top open one. It reorders candidates in place; termination is eligible only when every goal
+// passes.
+func NewPlan(req contract.PlanRequest, facts PlanFacts, candidates []contract.Candidate, lessonCounts map[string]int) contract.PlanResult {
+	goals := []contract.Goal{
 		{
 			Name: "curriculum_selection", KoreanName: "개선 목표 선별", TargetScore: req.TargetScore,
 			Score:       ScoreBool(facts.Signals.HasGeniusThink && facts.DocsOK),
@@ -39,12 +46,12 @@ func NewPlan(req contract.SelfAugmentPlanRequest, facts PlanFacts, candidates []
 		},
 	}
 	for i := range goals {
-		goals[i].Passed = GoalPassed(goals[i].Score, goals[i].TargetScore)
+		goals[i].Passed = goalPassed(goals[i].Score, goals[i].TargetScore)
 	}
 	warnings := ApplyLessonPenalties(candidates, lessonCounts)
-	PrioritizeCandidates(candidates)
-	selected := SelectedCandidate(candidates)
-	return contract.SelfAugmentPlanResult{
+	prioritizeCandidates(candidates)
+	selected := selectedCandidate(candidates)
+	return contract.PlanResult{
 		OK:                  true,
 		LoopKind:            "self_augmentation",
 		KoreanName:          contract.SelfAugmentationKoreanName,

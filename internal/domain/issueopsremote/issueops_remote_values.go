@@ -1,8 +1,8 @@
-package remote
+package issueopsremote
 
 import "strings"
 
-func SplitURLPath(path string) []string {
+func splitURLPath(path string) []string {
 	raw := strings.Split(strings.Trim(path, "/"), "/")
 	parts := make([]string, 0, len(raw))
 	for _, part := range raw {
@@ -14,6 +14,7 @@ func SplitURLPath(path string) []string {
 	return parts
 }
 
+// CleanValues trims values and drops empty, NUL-containing, and duplicate entries, keeping first-seen order. It never returns nil.
 func CleanValues(values []string) []string {
 	seen := map[string]bool{}
 	out := []string{}
@@ -28,7 +29,7 @@ func CleanValues(values []string) []string {
 	return out
 }
 
-func InvalidAssignee(values []string) string {
+func invalidAssignee(values []string) string {
 	for _, value := range values {
 		normalized := strings.ToLower(strings.TrimSpace(value))
 		switch normalized {

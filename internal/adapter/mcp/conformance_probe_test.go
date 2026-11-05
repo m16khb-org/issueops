@@ -23,7 +23,7 @@ import (
 func TestConformanceProbeWritesPrivateAtomicCapture(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "probe")
 	path := filepath.Join(dir, "result.json")
-	capture := ConformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: "<redacted>", SchemaSHA256: "schema", RunTokenSHA256: "token", Classification: fixturecontract.Classification(fixturecontract.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []fixturecontract.Diagnostic{}}
+	capture := conformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: "<redacted>", SchemaSHA256: "schema", RunTokenSHA256: "token", Classification: fixturecontract.Classification(fixturecontract.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []fixturecontract.Diagnostic{}}
 	if err := writeCapture(path, capture); err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestConformanceProbeWritesPrivateAtomicCapture(t *testing.T) {
 	if info, err := os.Stat(path); err != nil || osfile.Perm(path, info) != 0o600 {
 		t.Fatalf("file=%v err=%v", info, err)
 	}
-	var got ConformanceCapture
+	var got conformanceCapture
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func TestConformanceProbeWritesPrivateAtomicCapture(t *testing.T) {
 }
 
 func TestConformanceProbeRejectsMissingResultPath(t *testing.T) {
-	if err := writeCapture("", ConformanceCapture{}); err == nil {
+	if err := writeCapture("", conformanceCapture{}); err == nil {
 		t.Fatal("missing path accepted")
 	}
 }
@@ -99,7 +99,7 @@ func TestConformanceProbeSDKRoundTripCapturesOnlyRenamedProbe(t *testing.T) {
 	if err != nil || result.IsError {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	var capture ConformanceCapture
+	var capture conformanceCapture
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -135,7 +135,7 @@ func TestConformanceProbeSDKRoundTripCapturesOnlyRenamedProbe(t *testing.T) {
 func TestConformanceProbeSDKSecondCallReportsMultipleCallsWithoutOverwritingCapture(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "capture.json")
 	config := testProbeConfig(t, path)
-	server, err := NewConformanceProbeServer(config)
+	server, err := newConformanceProbeServer(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +199,7 @@ func TestConformanceProbeSDKRejectsWrongToolAndMalformedResultCollision(t *testi
 		t.Fatal(err)
 	}
 	config := testProbeConfig(t, path)
-	server, err := NewConformanceProbeServer(config)
+	server, err := newConformanceProbeServer(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestConformanceProbeSDKRejectsWrongToolAndMalformedResultCollision(t *testi
 
 func TestConformanceProbeRejectsStaleRunTokenWithoutOverwritingCapture(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "capture.json")
-	stale := ConformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: map[string]any{}, SchemaSHA256: "schema", RunTokenSHA256: fmtHash(sha256.Sum256([]byte("old-run-token"))), Classification: fixturecontract.Classification(fixturecontract.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []fixturecontract.Diagnostic{}}
+	stale := conformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: map[string]any{}, SchemaSHA256: "schema", RunTokenSHA256: fmtHash(sha256.Sum256([]byte("old-run-token"))), Classification: fixturecontract.Classification(fixturecontract.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []fixturecontract.Diagnostic{}}
 	if err := writeCapture(path, stale); err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +229,7 @@ func TestConformanceProbeRejectsStaleRunTokenWithoutOverwritingCapture(t *testin
 	}
 	config := testProbeConfig(t, path)
 	config.RunToken = "new-run-token"
-	server, err := NewConformanceProbeServer(config)
+	server, err := newConformanceProbeServer(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestConformanceProbeRejectsStaleRunTokenWithoutOverwritingCapture(t *testin
 func TestConformanceProbeCopiesSourceSchemaBeforeAdvertising(t *testing.T) {
 	source := map[string]any{"type": "object", "properties": map[string]any{"first": map[string]any{"type": "string"}}}
 	config := newTestProbeConfig(t, "empty_object", "harness_probe_empty_object", source, map[string]any{}, filepath.Join(t.TempDir(), "capture.json"), "token")
-	server, err := NewConformanceProbeServer(config)
+	server, err := newConformanceProbeServer(config)
 	if err != nil {
 		t.Fatal(err)
 	}

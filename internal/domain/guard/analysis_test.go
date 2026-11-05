@@ -34,15 +34,15 @@ func TestRelevantPathAndSourceClassification(t *testing.T) {
 }
 
 func TestModePreservesStagedPriority(t *testing.T) {
-	if got := Mode(guardcontract.GuardCheckRequest{Files: []string{"a.go"}, Staged: true}); got != "staged" {
+	if got := Mode(guardcontract.CheckRequest{Files: []string{"a.go"}, Staged: true}); got != "staged" {
 		t.Fatalf("mode = %q", got)
 	}
-	if got := Mode(guardcontract.GuardCheckRequest{All: true, Files: []string{"a.go"}}); got != "all" {
+	if got := Mode(guardcontract.CheckRequest{All: true, Files: []string{"a.go"}}); got != "all" {
 		t.Fatalf("all mode = %q", got)
 	}
 }
 
-func hasRule(findings []guardcontract.GuardFinding, rule string) bool {
+func hasRule(findings []guardcontract.Finding, rule string) bool {
 	for _, finding := range findings {
 		if finding.Rule == rule {
 			return true

@@ -8,27 +8,32 @@ import (
 	completionmodel "issueops/internal/contract/issueops"
 )
 
+// IssueProviderCreateError wraps a failed provider create. Invoked reports whether the provider
+// command actually ran, so callers can tell a failure that left nothing behind from one that may
+// have created the artifact.
 type IssueProviderCreateError struct {
 	Invoked bool
 	Err     error
 }
 
-type IssueProviderCreateIssueContexter interface {
-	CreateIssueContext(context.Context, IssueProviderCreateIssueRequest) (IssueProviderCreateIssueResult, error)
-}
-
+// IssueProviderIssueCreateCandidate is an existing issue that may be the result of an earlier,
+// interrupted create.
 type IssueProviderIssueCreateCandidate struct {
 	URL   string
 	Title string
 	Body  string
 }
 
+// IssueProviderFindIssueCreateCandidatesRequest asks for issues in Repo that carry Marker, the
+// idempotency marker embedded in the create request.
 type IssueProviderFindIssueCreateCandidatesRequest struct {
 	Repo             string
 	ProjectAuthority string
 	Marker           string
 }
 
+// IssueProviderIssueCreateReconciler finds issues left behind by an interrupted issue create so the
+// create can be settled instead of repeated.
 type IssueProviderIssueCreateReconciler interface {
 	FindIssueCreateCandidates(context.Context, IssueProviderFindIssueCreateCandidatesRequest) (IssueProviderFindIssueCreateCandidatesResult, error)
 }
@@ -52,6 +57,8 @@ type IssueProviderRecentIssueLister interface {
 	RecentIssuesLackMarker(context.Context, IssueProviderRecentIssuesRequest) (bool, error)
 }
 
+// IssueProviderFindIssueCreateCandidatesResult lists the matching candidates; Truncated means the
+// provider returned a partial set and the absence of a match proves nothing.
 type IssueProviderFindIssueCreateCandidatesResult struct {
 	Candidates []IssueProviderIssueCreateCandidate
 	Truncated  bool
@@ -103,6 +110,9 @@ type IssueProviderCreatePullRequestRequest struct {
 	CWD             string   `json:"cwd,omitempty"`
 }
 
+// IssueProviderReconcilePullRequestRequest describes the pull request or merge request an
+// interrupted remote create should have produced: branches, expected head SHA, title, body hash,
+// labels, assignees and draft state.
 type IssueProviderReconcilePullRequestRequest struct {
 	Repo            string
 	ProjectKey      string
@@ -116,6 +126,8 @@ type IssueProviderReconcilePullRequestRequest struct {
 	Draft           bool
 }
 
+// IssueProviderReconcilePullRequestCandidate is an existing pull request or merge request that may
+// be the result of an interrupted create, with the fields needed to compare it to the request.
 type IssueProviderReconcilePullRequestCandidate struct {
 	URL              string
 	ProjectKey       string
@@ -134,13 +146,17 @@ type IssueProviderReconcilePullRequestCandidate struct {
 	State string
 }
 
+// IssueProviderReconcilePullRequestResult lists the matching candidates; AuthoritativeZero is set
+// only when the provider proves that no such pull request exists.
 type IssueProviderReconcilePullRequestResult struct {
 	Candidates        []IssueProviderReconcilePullRequestCandidate
 	AuthoritativeZero bool
 }
 
+// IssueProviderRemoteCreateReconciler finds pull requests or merge requests left behind by an
+// interrupted remote create.
 type IssueProviderRemoteCreateReconciler interface {
-	ReconcilePullRequest(IssueProviderReconcilePullRequestRequest) (IssueProviderReconcilePullRequestResult, error)
+	ReconcilePullRequest(context.Context, IssueProviderReconcilePullRequestRequest) (IssueProviderReconcilePullRequestResult, error)
 }
 
 // IssueProviderCreateChildRequest describes a provider-native child work item
@@ -336,10 +352,10 @@ type IssueProviderMilestoneSetter interface {
 // is returned.
 type IssueProvider interface {
 	Name() string
-	CreateIssue(req IssueProviderCreateIssueRequest) (IssueProviderCreateIssueResult, error)
-	CreatePullRequest(req IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
-	CreateChild(req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
-	CloseChild(req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
+	CreateIssue(ctx context.Context, req IssueProviderCreateIssueRequest) (IssueProviderCreateIssueResult, error)
+	CreatePullRequest(ctx context.Context, req IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
+	CreateChild(ctx context.Context, req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
+	CloseChild(ctx context.Context, req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
 	CloseIssue(ctx context.Context, req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)
 	UpdateIssueBodySection(ctx context.Context, req IssueProviderUpdateIssueBodySectionRequest) (IssueProviderUpdateIssueBodySectionResult, error)
 }
@@ -350,7 +366,7 @@ type IssueProvider interface {
 // IssueProvider is implemented by every provider fake in the test suite, so
 // widening it would break them all. Callers type-assert and fail closed when an
 // adapter does not implement the capability, which is the same shape the
-// context and reconcile capabilities above already use.
+// reconcile capabilities above already use.
 
 // IssueProviderArtifactBodyRequest reads one remote artifact's current body.
 type IssueProviderArtifactBodyRequest struct {
@@ -369,6 +385,8 @@ type IssueProviderArtifactBody struct {
 	State    string `json:"state,omitempty"`
 }
 
+// IssueProviderArtifactBodyReader reads the live body and lifecycle state of a remote issue, pull
+// request or merge request.
 type IssueProviderArtifactBodyReader interface {
 	ReadArtifactBody(context.Context, IssueProviderArtifactBodyRequest) (IssueProviderArtifactBody, error)
 }
@@ -396,6 +414,8 @@ type IssueProviderReplaceArtifactBodyResult struct {
 	Preview            string `json:"preview,omitempty"`
 }
 
+// IssueProviderArtifactBodyReplacer replaces a remote artifact body and verifies the write by
+// reading it back; without Confirm it only previews.
 type IssueProviderArtifactBodyReplacer interface {
 	ReplaceArtifactBody(context.Context, IssueProviderReplaceArtifactBodyRequest) (IssueProviderReplaceArtifactBodyResult, error)
 }
@@ -409,12 +429,16 @@ type IssueProviderChildHierarchyRequest struct {
 	ChildURL       string `json:"child_url"`
 }
 
+// IssueProviderChildHierarchyResult reports whether the provider confirmed the parent and child
+// relationship.
 type IssueProviderChildHierarchyResult struct {
 	Provider string `json:"provider"`
 	OK       bool   `json:"ok"`
 	Verified bool   `json:"hierarchy_verified"`
 }
 
+// IssueProviderChildHierarchyVerifier checks that a child is a provider-native child of the given
+// parent issue.
 type IssueProviderChildHierarchyVerifier interface {
 	VerifyChildHierarchy(context.Context, IssueProviderChildHierarchyRequest) (IssueProviderChildHierarchyResult, error)
 }

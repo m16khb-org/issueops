@@ -24,7 +24,7 @@ import (
 
 // stubRuntimeCommand wires only the supplied runtime hooks; any other hook is nil
 // and would panic, which keeps these tests honest about what each command touches.
-func stubRuntimeCommand(runtime IssueOpsCLIDeps) command {
+func stubRuntimeCommand(runtime Deps) command {
 	runtime.IssueOpsStateRoot = func() string { return "/stub-root" }
 	runtime.ObserveNativeProcessAncestry = func(int) ([]issueopscontract.NativeProcessReceipt, error) { return nil, nil }
 	return command{Runtime: runtime}
@@ -64,7 +64,7 @@ func TestRoutingScoreReportsMissingPairingsAndRoutesErrors(t *testing.T) {
 	var gotExpected []issueopsroutingcontract.Expected
 	var result issueopsroutingcontract.Result
 	var fail error
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
+	cli := stubRuntimeCommand(Deps{
 		ScoreLiveRoutingFidelity: func(_, _ string, expected []issueopsroutingcontract.Expected) (issueopsroutingcontract.Result, int, error) {
 			gotExpected = expected
 			return result, 3, fail
@@ -108,7 +108,7 @@ func TestRoutingScoreReportsMissingPairingsAndRoutesErrors(t *testing.T) {
 }
 
 func TestBranchAwaitLinkFailsClosedAndReportsOutcome(t *testing.T) {
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{})
+	cli := stubRuntimeCommand(Deps{})
 	if _, err := runStub(t, cli, func(c command) error { return c.runIssueOpsBranchAwaitLink([]string{"--id", "c1"}) }); err == nil || !strings.Contains(err.Error(), "unavailable") {
 		t.Fatalf("missing await hook must fail closed, got %v", err)
 	}
@@ -161,7 +161,7 @@ func TestPruneValidatesMaxAgeAndDistinguishesPreviewPrunedAndIncomplete(t *testi
 	var gotConfirm bool
 	var result issueopsretentioncontract.Result
 	var fail error
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
+	cli := stubRuntimeCommand(Deps{
 		PruneIssueOps: func(_ string, age time.Duration, confirm bool) (issueopsretentioncontract.Result, error) {
 			gotAge, gotConfirm = age, confirm
 			return result, fail
@@ -217,7 +217,7 @@ func TestNextTextRendersStageLeaseReviewAndExits(t *testing.T) {
 		Exits:       issueopsnextcontract.Exits{AbandonCommand: "issueops abandon"},
 		Warnings:    []string{"stale base"},
 	}
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
+	cli := stubRuntimeCommand(Deps{
 		IssueOpsNext: func(_, cwd, id string) (issueopsnextcontract.Result, error) {
 			if cwd != "/somewhere" || id != "c7" {
 				t.Errorf("selection flags not forwarded: cwd=%q id=%q", cwd, id)
@@ -275,7 +275,7 @@ func TestNextLeaseHolderLabels(t *testing.T) {
 
 func TestNextRunReportsRuntimeFailure(t *testing.T) {
 	fail := errors.New("classify failed")
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
+	cli := stubRuntimeCommand(Deps{
 		IssueOpsNext: func(_, _, _ string) (issueopsnextcontract.Result, error) { return issueopsnextcontract.Result{}, fail },
 	})
 	out, err := runStub(t, cli, func(c command) error { return c.runIssueOpsNext([]string{"--cwd", "/x"}) })
@@ -295,7 +295,7 @@ func TestListRendersFlagsForEveryAttention(t *testing.T) {
 		},
 	}
 	var fail error
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
+	cli := stubRuntimeCommand(Deps{
 		ListIssueOpsCycles: func(_, repo string) (issueopsinventorycontract.ListResult, error) {
 			gotRepo = repo
 			return result, fail
@@ -326,13 +326,13 @@ func TestListRendersFlagsForEveryAttention(t *testing.T) {
 }
 
 func TestPhaseRejectsDoneAndReportsTrackedMaterials(t *testing.T) {
-	var materials issueopscontract.IssueOpsTrackedMaterials
+	var materials issueopscontract.TrackedMaterials
 	var fail error
 	called := false
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{})
-	cli.Gates = LoopGateDeps{AdvancePhaseReport: func(_, id, to string, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsTrackedMaterials, error) {
+	cli := stubRuntimeCommand(Deps{})
+	cli.Gates = LoopGateDeps{AdvancePhaseReport: func(_, id, to string, _ issueopscontract.Actor) (issueopscontract.Record, issueopscontract.TrackedMaterials, error) {
 		called = true
-		return issueopscontract.IssueOpsRecord{ID: id, Phase: issueopscontract.IssueOpsPhase(to), Repo: "/r"}, materials, fail
+		return issueopscontract.Record{ID: id, Phase: issueopscontract.Phase(to), Repo: "/r"}, materials, fail
 	}}
 	out, err := runStub(t, cli, func(c command) error { return c.runIssueOpsPhase([]string{"--id", "c1", "--to", " done ", "--json"}) })
 	if err == nil {
@@ -350,7 +350,7 @@ func TestPhaseRejectsDoneAndReportsTrackedMaterials(t *testing.T) {
 	if err != nil || strings.TrimSpace(out) != "c1 plan /r" {
 		t.Fatalf("plain advance output: err=%v out=%q", err, out)
 	}
-	materials = issueopscontract.IssueOpsTrackedMaterials{Written: []string{"docs/plan.md"}, Warnings: []string{"plan is thin"}}
+	materials = issueopscontract.TrackedMaterials{Written: []string{"docs/plan.md"}, Warnings: []string{"plan is thin"}}
 	out, err = runStub(t, cli, func(c command) error { return c.runIssueOpsPhase([]string{"--id", "c1", "--to", "plan"}) })
 	if err != nil {
 		t.Fatal(err)
@@ -373,16 +373,16 @@ func TestPhaseRejectsDoneAndReportsTrackedMaterials(t *testing.T) {
 }
 
 func TestPRReadinessStrictUsesGateAndReportsMissing(t *testing.T) {
-	lax := issueopscontract.IssueOpsReadiness{Ready: true}
-	strict := issueopscontract.IssueOpsReadiness{Ready: false, Missing: []string{"upstream sync", "plan path"}}
+	lax := issueopscontract.Readiness{Ready: true}
+	strict := issueopscontract.Readiness{Ready: false, Missing: []string{"upstream sync", "plan path"}}
 	var readErr error
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
-		ReadIssueOps: func(_, id string) (issueopscontract.IssueOpsRecord, error) {
-			return issueopscontract.IssueOpsRecord{ID: id}, readErr
+	cli := stubRuntimeCommand(Deps{
+		ReadIssueOps: func(_, id string) (issueopscontract.Record, error) {
+			return issueopscontract.Record{ID: id}, readErr
 		},
-		IssueOpsPRReadiness: func(issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness { return lax },
+		IssueOpsPRReadiness: func(issueopscontract.Record) issueopscontract.Readiness { return lax },
 	})
-	cli.Gates = LoopGateDeps{StrictPRReadinessWithState: func(string, issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness { return strict }}
+	cli.Gates = LoopGateDeps{StrictPRReadinessWithState: func(string, issueopscontract.Record) issueopscontract.Readiness { return strict }}
 	out, err := runStub(t, cli, func(c command) error { return c.runIssueOpsPRReadiness([]string{"--id", "c1"}) })
 	if err != nil || strings.TrimSpace(out) != "ready: true" {
 		t.Fatalf("lax readiness: err=%v out=%q", err, out)
@@ -413,7 +413,7 @@ func TestArtifactStageValidatesInputAndReportsStagedNames(t *testing.T) {
 	}
 	var stagedContent []byte
 	var stageErr, listErr error
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
+	cli := stubRuntimeCommand(Deps{
 		StageIssueOpsArtifact: func(_, id, name string, content []byte) (issueopsartifactcontract.Record, error) {
 			stagedContent = content
 			return issueopsartifactcontract.Record{ID: id}, stageErr
@@ -465,20 +465,20 @@ func TestArtifactStageValidatesInputAndReportsStagedNames(t *testing.T) {
 }
 
 func TestReviewRecordCommandsRejectUnknownSubcommandsAndMapFlags(t *testing.T) {
-	var gotImpl issueopscontract.IssueOpsImplementationReviewRequest
-	var gotDocs issueopscontract.IssueOpsProjectDocsReviewRequest
-	var gotSchema issueopscontract.IssueOpsSchemaEvidenceRequest
-	record := issueopscontract.IssueOpsRecord{ID: "c1", Phase: "feedback", Repo: "/r"}
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
-		RecordIssueOpsImplementationReviewWithActor: func(_, _ string, req issueopscontract.IssueOpsImplementationReviewRequest, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+	var gotImpl issueopscontract.ImplementationReviewRequest
+	var gotDocs issueopscontract.ProjectDocsReviewRequest
+	var gotSchema issueopscontract.SchemaEvidenceRequest
+	record := issueopscontract.Record{ID: "c1", Phase: "feedback", Repo: "/r"}
+	cli := stubRuntimeCommand(Deps{
+		RecordIssueOpsImplementationReviewWithActor: func(_, _ string, req issueopscontract.ImplementationReviewRequest, _ issueopscontract.Actor) (issueopscontract.Record, error) {
 			gotImpl = req
 			return record, nil
 		},
-		RecordIssueOpsProjectDocsReviewWithActor: func(_, _ string, req issueopscontract.IssueOpsProjectDocsReviewRequest, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsProjectDocsReviewWithActor: func(_, _ string, req issueopscontract.ProjectDocsReviewRequest, _ issueopscontract.Actor) (issueopscontract.Record, error) {
 			gotDocs = req
 			return record, nil
 		},
-		RecordIssueOpsSchemaEvidenceWithActor: func(_, _ string, req issueopscontract.IssueOpsSchemaEvidenceRequest, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsSchemaEvidenceWithActor: func(_, _ string, req issueopscontract.SchemaEvidenceRequest, _ issueopscontract.Actor) (issueopscontract.Record, error) {
 			gotSchema = req
 			return record, nil
 		},
@@ -524,14 +524,14 @@ func TestReviewRecordCommandsRejectUnknownSubcommandsAndMapFlags(t *testing.T) {
 
 func TestReviewMetricsTextAndErrors(t *testing.T) {
 	var fail error
-	result := issueopscontract.IssueOpsReviewMetricsResult{
-		Aggregate: issueopscontract.IssueOpsReviewMetricsAggregate{Cycles: 2, ReviewedCycles: 1, MeanRounds: 1.5, ReviseRatio: 0.25, StopRatio: 0},
-		Cycles:    []issueopscontract.IssueOpsReviewMetricsCycle{{ID: "c1", Phase: "pr", DevilsAdvocateRounds: 2, RegressCount: 1}},
+	result := issueopscontract.ReviewMetricsResult{
+		Aggregate: issueopscontract.ReviewMetricsAggregate{Cycles: 2, ReviewedCycles: 1, MeanRounds: 1.5, ReviseRatio: 0.25, StopRatio: 0},
+		Cycles:    []issueopscontract.ReviewMetricsCycle{{ID: "c1", Phase: "pr", DevilsAdvocateRounds: 2, RegressCount: 1}},
 		Warnings:  []string{"one cycle unreadable"},
 	}
 	var gotID, gotRepo string
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
-		IssueOpsReviewMetrics: func(_, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
+	cli := stubRuntimeCommand(Deps{
+		IssueOpsReviewMetrics: func(_, id, repo string) (issueopscontract.ReviewMetricsResult, error) {
 			gotID, gotRepo = id, repo
 			return result, fail
 		},
@@ -559,15 +559,15 @@ func TestReviewMetricsTextAndErrors(t *testing.T) {
 func TestChildStatusListAndValidationOutput(t *testing.T) {
 	var gotRepair bool
 	var fail error
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
-		IssueOpsChildStatusWithActor: func(_, _ string, repair bool, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStatusResult, error) {
+	cli := stubRuntimeCommand(Deps{
+		IssueOpsChildStatusWithActor: func(_, _ string, repair bool, _ issueopscontract.Actor) (issueopscontract.ChildStatusResult, error) {
 			gotRepair = repair
-			return issueopscontract.IssueOpsChildStatusResult{Children: []issueopscontract.IssueOpsChildStatusEntry{
+			return issueopscontract.ChildStatusResult{Children: []issueopscontract.ChildStatusEntry{
 				{CycleID: "k1", Phase: "plan", Branch: "5-k", ValidationVerdict: "accepted"},
 			}}, fail
 		},
-		DropIssueOpsChildWithActor: func(_, parent, child, reason string, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
-			return issueopscontract.IssueOpsChildValidationResult{ParentID: parent, ChildID: child}, fail
+		DropIssueOpsChildWithActor: func(_, parent, child, reason string, _ issueopscontract.Actor) (issueopscontract.ChildValidationResult, error) {
+			return issueopscontract.ChildValidationResult{ParentID: parent, ChildID: child}, fail
 		},
 	})
 	out, err := runStub(t, cli, func(c command) error { return c.runIssueOpsChildStatus([]string{"--parent", "p", "--repair"}, true) })
@@ -604,11 +604,11 @@ func TestChildStatusListAndValidationOutput(t *testing.T) {
 
 func TestStatusAndRecordRoutingRouteErrors(t *testing.T) {
 	fail := errors.New("no such cycle")
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
+	cli := stubRuntimeCommand(Deps{
 		IssueOpsStatus: func(string, string) (issueopsstatuscontract.Record, error) {
 			return issueopsstatuscontract.Record{}, fail
 		},
-		RecordIssueOpsRoutingWithActor: func(_, _, phase, skill string, _ issueopscontract.IssueOpsActor) (issueopsroutingcontract.Record, error) {
+		RecordIssueOpsRoutingWithActor: func(_, _, phase, skill string, _ issueopscontract.Actor) (issueopsroutingcontract.Record, error) {
 			return issueopsroutingcontract.Record{}, fail
 		},
 	})
@@ -653,9 +653,9 @@ func TestGeneratedInvocationFailsClosedBeforeObservation(t *testing.T) {
 	sha := strings.Repeat("a", 64)
 	execution := &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusActive, Generation: 2}}
 	var readErr error
-	var record issueopscontract.IssueOpsRecord
-	cli := stubRuntimeCommand(IssueOpsCLIDeps{
-		ReadIssueOps: func(_, id string) (issueopscontract.IssueOpsRecord, error) { return record, readErr },
+	var record issueopscontract.Record
+	cli := stubRuntimeCommand(Deps{
+		ReadIssueOps: func(_, id string) (issueopscontract.Record, error) { return record, readErr },
 	})
 	envelope := generatedEnvelope(testsupport.AbsPath("bin", "issueops"), sha, 2)
 	base := []string{"phase", "--to", "plan"}
@@ -681,13 +681,13 @@ func TestGeneratedInvocationFailsClosedBeforeObservation(t *testing.T) {
 	readErr = nil
 
 	// A cycle without execution state and without delegation has no lease authority.
-	record = issueopscontract.IssueOpsRecord{ID: "c1"}
+	record = issueopscontract.Record{ID: "c1"}
 	if _, _, err := cli.prepareGeneratedCommandInvocation(withID, Dependencies{}); err == nil || !strings.Contains(err.Error(), "requires IssueOps execution state") {
 		t.Fatalf("no execution state: %v", err)
 	}
 
 	// With authority but no observer configured the binary cannot be proven.
-	record = issueopscontract.IssueOpsRecord{ID: "c1", Execution: execution}
+	record = issueopscontract.Record{ID: "c1", Execution: execution}
 	_, generated, err = cli.prepareGeneratedCommandInvocation(withID, Dependencies{})
 	if !generated || !errors.As(err, &provenanceErr) || provenanceErr.Code != "generated_command_provenance_observation_failed" {
 		t.Fatalf("missing observer must fail closed: generated=%v err=%v", generated, err)
@@ -725,21 +725,21 @@ func TestGeneratedDelegatedBootstrapAuthorityRequiresMatchingActiveParentTopolog
 			t.Fatal(err)
 		}
 	}
-	newParent := func() issueopscontract.IssueOpsRecord {
-		return issueopscontract.IssueOpsRecord{
+	newParent := func() issueopscontract.Record {
+		return issueopscontract.Record{
 			ID: "parent", Branch: "1-parent",
-			ChildCycles: []issueopscontract.IssueOpsChildCycleRef{{CycleID: "child"}},
+			ChildCycles: []issueopscontract.ChildCycleRef{{CycleID: "child"}},
 			Execution: &issueopscontract.Execution{
 				Workspace: issueopscontract.Workspace{Root: parentTree},
 				Lease:     issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusActive, Generation: 1},
 			},
 		}
 	}
-	newChild := func() issueopscontract.IssueOpsRecord {
-		return issueopscontract.IssueOpsRecord{
+	newChild := func() issueopscontract.Record {
+		return issueopscontract.Record{
 			ID: "child", Branch: "2-child",
-			Delegation: &issueopscontract.IssueOpsDelegationContract{ParentCycleID: "parent"},
-			BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
+			Delegation: &issueopscontract.DelegationContract{ParentCycleID: "parent"},
+			BranchPrepare: &issueopscontract.BranchPrepare{
 				Branch: "2-child", BaseBranch: "1-parent", ParentWorktree: parentTree,
 			},
 		}
@@ -754,38 +754,38 @@ func TestGeneratedDelegatedBootstrapAuthorityRequiresMatchingActiveParentTopolog
 	tests := []struct {
 		name    string
 		args    []string
-		mutate  func(child, parent *issueopscontract.IssueOpsRecord)
-		parent  func(id string) (issueopscontract.IssueOpsRecord, error)
+		mutate  func(child, parent *issueopscontract.Record)
+		parent  func(id string) (issueopscontract.Record, error)
 		wantErr string
 	}{
 		{name: "branch prepare matches parent topology", args: branchPrepare("2-child", "1-parent", parentTree)},
 		{name: "execution prepare matches recorded topology", args: executionPrepare},
 		{name: "non-bootstrap command is not delegated authority", args: []string{"phase", "--id", "child", "--to", "plan"}, wantErr: "requires IssueOps execution state"},
 		{name: "child without delegation contract", args: branchPrepare("2-child", "1-parent", parentTree),
-			mutate: func(child, _ *issueopscontract.IssueOpsRecord) { child.Delegation = nil }, wantErr: "requires IssueOps execution state"},
+			mutate: func(child, _ *issueopscontract.Record) { child.Delegation = nil }, wantErr: "requires IssueOps execution state"},
 		{name: "parent unreadable", args: branchPrepare("2-child", "1-parent", parentTree),
-			parent: func(string) (issueopscontract.IssueOpsRecord, error) {
-				return issueopscontract.IssueOpsRecord{}, errors.New("gone")
+			parent: func(string) (issueopscontract.Record, error) {
+				return issueopscontract.Record{}, errors.New("gone")
 			}, wantErr: "active referenced parent execution"},
 		{name: "parent lease not active", args: branchPrepare("2-child", "1-parent", parentTree),
-			mutate: func(_, parent *issueopscontract.IssueOpsRecord) {
+			mutate: func(_, parent *issueopscontract.Record) {
 				parent.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
 			}, wantErr: "active referenced parent execution"},
 		{name: "parent has no execution", args: branchPrepare("2-child", "1-parent", parentTree),
-			mutate: func(_, parent *issueopscontract.IssueOpsRecord) { parent.Execution = nil }, wantErr: "active referenced parent execution"},
+			mutate: func(_, parent *issueopscontract.Record) { parent.Execution = nil }, wantErr: "active referenced parent execution"},
 		{name: "parent does not reference child", args: branchPrepare("2-child", "1-parent", parentTree),
-			mutate: func(_, parent *issueopscontract.IssueOpsRecord) { parent.ChildCycles = nil }, wantErr: "active referenced parent execution"},
+			mutate: func(_, parent *issueopscontract.Record) { parent.ChildCycles = nil }, wantErr: "active referenced parent execution"},
 		{name: "branch differs from child record", args: branchPrepare("9-other", "1-parent", parentTree), wantErr: "does not match parent topology"},
 		{name: "base differs from parent branch", args: branchPrepare("2-child", "main", parentTree), wantErr: "does not match parent topology"},
 		{name: "parent worktree differs", args: branchPrepare("2-child", "1-parent", otherTree), wantErr: "does not match parent topology"},
 		{name: "execution prepare without recorded branch prepare", args: executionPrepare,
-			mutate: func(child, _ *issueopscontract.IssueOpsRecord) { child.BranchPrepare = nil }, wantErr: "execution preparation does not match parent topology"},
+			mutate: func(child, _ *issueopscontract.Record) { child.BranchPrepare = nil }, wantErr: "execution preparation does not match parent topology"},
 		{name: "execution prepare base differs", args: executionPrepare,
-			mutate: func(child, _ *issueopscontract.IssueOpsRecord) { child.BranchPrepare.BaseBranch = "main" }, wantErr: "execution preparation does not match parent topology"},
+			mutate: func(child, _ *issueopscontract.Record) { child.BranchPrepare.BaseBranch = "main" }, wantErr: "execution preparation does not match parent topology"},
 		{name: "execution prepare parent worktree differs", args: executionPrepare,
-			mutate: func(child, _ *issueopscontract.IssueOpsRecord) { child.BranchPrepare.ParentWorktree = otherTree }, wantErr: "execution preparation does not match parent topology"},
+			mutate: func(child, _ *issueopscontract.Record) { child.BranchPrepare.ParentWorktree = otherTree }, wantErr: "execution preparation does not match parent topology"},
 		{name: "execution prepare branch differs", args: executionPrepare,
-			mutate: func(child, _ *issueopscontract.IssueOpsRecord) { child.BranchPrepare.Branch = "9-other" }, wantErr: "execution preparation does not match parent topology"},
+			mutate: func(child, _ *issueopscontract.Record) { child.BranchPrepare.Branch = "9-other" }, wantErr: "execution preparation does not match parent topology"},
 		{name: "repeated branch flag is ambiguous", args: append(branchPrepare("2-child", "1-parent", parentTree), "--branch", "3-sneaky"), wantErr: "malformed"},
 	}
 	for _, test := range tests {
@@ -794,7 +794,7 @@ func TestGeneratedDelegatedBootstrapAuthorityRequiresMatchingActiveParentTopolog
 			if test.mutate != nil {
 				test.mutate(&child, &parent)
 			}
-			cli := stubRuntimeCommand(IssueOpsCLIDeps{ReadIssueOps: func(_, id string) (issueopscontract.IssueOpsRecord, error) {
+			cli := stubRuntimeCommand(Deps{ReadIssueOps: func(_, id string) (issueopscontract.Record, error) {
 				if test.parent != nil {
 					return test.parent(id)
 				}

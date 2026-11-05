@@ -23,7 +23,7 @@ func (deps nativeIntegrationValidationDeps) withDefaults() nativeIntegrationVali
 		deps.readFile = os.ReadFile
 	}
 	if deps.duplicateWarningFixture == nil {
-		deps.duplicateWarningFixture = ClaudeMCPDuplicateWarningFixture
+		deps.duplicateWarningFixture = claudeMCPDuplicateWarningFixture
 	}
 	return deps
 }

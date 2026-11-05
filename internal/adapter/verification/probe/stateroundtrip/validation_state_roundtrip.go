@@ -1,3 +1,6 @@
+// Package stateroundtrip checks that state records and self-verification
+// snapshots round-trip through the issueops state store, as a
+// self-verification probe. It is an adapter-layer package.
 package stateroundtrip
 
 import (

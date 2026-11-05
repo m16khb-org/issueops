@@ -13,12 +13,12 @@ import (
 func workspaceLinkerForTest(root string) branchapp.WorkspaceLinker {
 	return branchapp.WorkspaceLinker{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, liveTestVerifier()), Files: LinkEnvironment{}, Now: time.Now}
 }
-func LinkIssueOpsPlan(root, id, planPath string) (model.IssueOpsRecord, error) {
+func LinkIssueOpsPlan(root, id, planPath string) (model.Record, error) {
 	return workspaceLinkerForTest(root).Plan(context.Background(), id, planPath, nil)
 }
-func LinkIssueOpsPlanWithActor(root, id, planPath string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func LinkIssueOpsPlanWithActor(root, id, planPath string, actor model.Actor) (model.Record, error) {
 	return workspaceLinkerForTest(root).Plan(context.Background(), id, planPath, &actor)
 }
-func LinkIssueOpsWorktree(root, id, worktreePath string) (model.IssueOpsRecord, error) {
+func LinkIssueOpsWorktree(root, id, worktreePath string) (model.Record, error) {
 	return workspaceLinkerForTest(root).Worktree(context.Background(), id, worktreePath, nil)
 }

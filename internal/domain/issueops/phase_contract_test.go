@@ -8,23 +8,23 @@ import (
 )
 
 func TestIssueOpsPhaseOrderingAndClassification(t *testing.T) {
-	if !issueopsdomain.KnownIssueOpsPhase(issueopscontract.IssueOpsPhaseProblem) || !issueopsdomain.KnownIssueOpsPhase(issueopscontract.IssueOpsPhaseDone) {
+	if !issueopsdomain.KnownIssueOpsPhase(issueopscontract.PhaseProblem) || !issueopsdomain.KnownIssueOpsPhase(issueopscontract.PhaseDone) {
 		t.Fatal("expected first and last phases to be known")
 	}
 	if issueopsdomain.KnownIssueOpsPhase("unknown") {
 		t.Fatal("unexpected unknown phase")
 	}
-	if issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseProblem) != 1 || issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseDone) != len(issueopscontract.IssueOpsPhases) {
-		t.Fatalf("unexpected phase ranks: problem=%d done=%d", issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseProblem), issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseDone))
+	if issueopsdomain.PhaseRank(issueopscontract.PhaseProblem) != 1 || issueopsdomain.PhaseRank(issueopscontract.PhaseDone) != len(issueopscontract.Phases) {
+		t.Fatalf("unexpected phase ranks: problem=%d done=%d", issueopsdomain.PhaseRank(issueopscontract.PhaseProblem), issueopsdomain.PhaseRank(issueopscontract.PhaseDone))
 	}
-	if issueopsdomain.IssueOpsPhaseRank("unknown") != 0 {
+	if issueopsdomain.PhaseRank("unknown") != 0 {
 		t.Fatal("unknown phase should have rank 0")
 	}
-	if !issueopsdomain.KnownIssueOpsPhase(issueopscontract.IssueOpsPhaseCompatibilityReview) {
+	if !issueopsdomain.KnownIssueOpsPhase(issueopscontract.PhaseCompatibilityReview) {
 		t.Fatal("compatibility-review phase should be known")
 	}
-	if issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseCompatibilityReview) <= issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhasePlan) ||
-		issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseCompatibilityReview) >= issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseImplement) {
-		t.Fatalf("compatibility-review should sit between plan and implement, got rank %d", issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseCompatibilityReview))
+	if issueopsdomain.PhaseRank(issueopscontract.PhaseCompatibilityReview) <= issueopsdomain.PhaseRank(issueopscontract.PhasePlan) ||
+		issueopsdomain.PhaseRank(issueopscontract.PhaseCompatibilityReview) >= issueopsdomain.PhaseRank(issueopscontract.PhaseImplement) {
+		t.Fatalf("compatibility-review should sit between plan and implement, got rank %d", issueopsdomain.PhaseRank(issueopscontract.PhaseCompatibilityReview))
 	}
 }

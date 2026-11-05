@@ -11,6 +11,8 @@ import (
 	"issueops/internal/domain/shelltoken"
 )
 
+// PrepareInit 함수는 gates init 요청을 검증하고 정리한다.
+// scope와 gate spec이 없으면 오류이며, File이 비어 있으면 scope에서 만든 .issueops/gates/<slug>.md를 기본 경로로 쓴다.
 func PrepareInit(req model.InitRequest) (model.InitRequest, model.InitResult, error) {
 	result := model.InitResult{SchemaVersion: model.SchemaVersion}
 	req.Scope = strings.TrimSpace(req.Scope)
@@ -33,6 +35,9 @@ func PrepareInit(req model.InitRequest) (model.InitRequest, model.InitResult, er
 	}
 	return req, result, nil
 }
+
+// RenderInitialLedger 함수는 요청의 scope와 gate spec들을 새 원장 파일 본문으로 만든다.
+// spec 하나라도 형식이 틀리면 오류를 돌려준다.
 func RenderInitialLedger(req model.InitRequest) (string, error) {
 	var body strings.Builder
 	fmt.Fprintf(&body, "# Gates: %s\n\n", req.Scope)
@@ -46,18 +51,24 @@ func RenderInitialLedger(req model.InitRequest) (string, error) {
 	}
 	return body.String(), nil
 }
+
+// ValidateCreate 함수는 init이 기존 원장을 덮어쓰지 않도록, file이 이미 있으면 오류를 돌려준다.
 func ValidateCreate(file string, exists bool) error {
 	if exists {
 		return fmt.Errorf("gate file already exists: %s; init never overwrites a ledger: check it with `issueops gates status --file %s --json`, or edit it and run `issueops gates lint --file %s --json`", file, file, file)
 	}
 	return nil
 }
+
+// CreatedLedger 함수는 body를 읽어 게이트 수를 센 뒤 생성 성공을 표시한 init 결과를 돌려준다.
 func CreatedLedger(result model.InitResult, body string) model.InitResult {
 	result.OK = true
 	result.Created = true
 	result.GateCount = len(Parse(body).Gates)
 	return result
 }
+
+// PrepareAbandon 함수는 gates abandon 요청에 file, gate ID, reason이 모두 있는지 확인한다.
 func PrepareAbandon(req model.AbandonRequest) (model.AbandonRequest, model.AbandonResult, error) {
 	result := model.AbandonResult{SchemaVersion: model.SchemaVersion, File: req.File, GateID: req.GateID}
 	if strings.TrimSpace(req.File) == "" {
@@ -71,6 +82,9 @@ func PrepareAbandon(req model.AbandonRequest) (model.AbandonRequest, model.Aband
 	}
 	return req, result, nil
 }
+
+// AbandonLedger 함수는 ledger에 ID가 req.GateID인 게이트가 있고 아직 포기되지 않았는지 확인한 뒤 ABANDON 라인을 덧붙인다.
+// 게이트가 없거나 이미 포기되었으면 오류를 돌려준다.
 func AbandonLedger(ledger *Ledger, req model.AbandonRequest) error {
 	found := false
 	for _, gate := range ledger.Gates {
@@ -85,9 +99,11 @@ func AbandonLedger(ledger *Ledger, req model.AbandonRequest) error {
 	if !found {
 		return fmt.Errorf("gate %s not found in %s", req.GateID, req.File)
 	}
-	AppendAbandon(ledger, req.GateID, req.Reason)
+	appendAbandon(ledger, req.GateID, req.Reason)
 	return nil
 }
+
+// RecordedAbandon 함수는 포기 기록에 성공했음을 표시한 abandon 결과를 돌려준다.
 func RecordedAbandon(result model.AbandonResult) model.AbandonResult {
 	result.OK = true
 	result.Recorded = true

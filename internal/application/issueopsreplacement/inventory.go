@@ -1,3 +1,5 @@
+// Package issueopsreplacement 패키지는 실행 lease 교체(preview, revoke, finalize)를
+// 담당하는 애플리케이션 서비스다. 작업공간과 프로세스 상태의 지문을 떠서 교체 대상이 바뀌지 않았는지 검증한다.
 package issueopsreplacement
 
 import (
@@ -10,7 +12,7 @@ import (
 	"issueops/internal/port"
 )
 
-func (s Service) inventory(record issueops.IssueOpsRecord, requester issueops.NativeActor) (string, error) {
+func (s Service) inventory(record issueops.Record, requester issueops.NativeActor) (string, error) {
 	snapshot, err := s.Workspace.WorkspaceSnapshot(record.Execution.Workspace)
 	if err != nil {
 		return "", err
@@ -34,7 +36,7 @@ func (s Service) inventory(record issueops.IssueOpsRecord, requester issueops.Na
 	return hashJSON(payload)
 }
 
-func (s Service) quiescence(record issueops.IssueOpsRecord, requester issueops.NativeActor) (string, error) {
+func (s Service) quiescence(record issueops.Record, requester issueops.NativeActor) (string, error) {
 	holder := record.Execution.Lease.Holder
 	if err := domain.ValidateReplacementHolderProcess(holder); err != nil {
 		return "", err
@@ -66,7 +68,7 @@ func (s Service) quiescence(record issueops.IssueOpsRecord, requester issueops.N
 }
 
 // requireQuiescentWorkspaceProcesses는 요청자 조상 체인을 제외한 워크스페이스 프로세스가 남아 있으면 오류를 돌려준다.
-func (s Service) requireQuiescentWorkspaceProcesses(record issueops.IssueOpsRecord, processSnapshot port.ReplacementProcessSnapshot, requester issueops.NativeActor) error {
+func (s Service) requireQuiescentWorkspaceProcesses(record issueops.Record, processSnapshot port.ReplacementProcessSnapshot, requester issueops.NativeActor) error {
 	inventoryOwners := map[int]bool{s.PID: true}
 	requesterOwners := map[int]bool{}
 	if requester.SessionProcess != nil {
@@ -117,7 +119,7 @@ func (s Service) refuseSelfRevoke(id string, lease issueops.WriteLease, actor is
 	}
 	return domain.ValidateReplacementSelfRevoke(id, lease.Generation, status)
 }
-func (s Service) validateCWD(record issueops.IssueOpsRecord, cwd string) error {
+func (s Service) validateCWD(record issueops.Record, cwd string) error {
 	sourceMatches := s.Workspace.SamePath(cwd, record.Execution.Workspace.SourceRoot)
 	workspaceMatches := false
 	if !sourceMatches {

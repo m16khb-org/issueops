@@ -13,6 +13,7 @@ import (
 	workercontract "issueops/internal/contract/worker"
 )
 
+// Run dispatches `issueops worker` subcommands: enqueue, run, status, list, cleanup-stuck, and cancel.
 func (command Command) Run(args []string) error {
 	if len(args) == 0 {
 		workerUsage()
@@ -108,7 +109,7 @@ func (command Command) readOnlyRequest(opts readOnlyOptions) policy.CommandPolic
 
 // printReadOnlyJob renders a successful job: the JSON document, or the
 // summary line plus the captured stdout/stderr.
-func printReadOnlyJob(job workercontract.WorkerJob, jsonOut bool) error {
+func printReadOnlyJob(job workercontract.Job, jsonOut bool) error {
 	if jsonOut {
 		return printJSON(job)
 	}
@@ -125,14 +126,14 @@ func printReadOnlyJob(job workercontract.WorkerJob, jsonOut bool) error {
 // readOnlyOutcome maps a printed job to the command's exit error. With
 // --json the printed job already carries the refusal, so the error is only
 // marked reported.
-func readOnlyOutcome(job workercontract.WorkerJob, jsonOut bool) error {
+func readOnlyOutcome(job workercontract.Job, jsonOut bool) error {
 	if job.Result == nil {
 		return nil
 	}
 	var failure error
 	switch {
 	case !job.Result.Policy.Allowed:
-		failure = policy.PolicyDeniedError{Reasons: job.Result.Policy.DenyReasons}
+		failure = policy.DeniedError{Reasons: job.Result.Policy.DenyReasons}
 	case job.Result.ExitCode != 0:
 		failure = fmt.Errorf("worker read-only command exited %d", job.Result.ExitCode)
 	default:
@@ -144,6 +145,8 @@ func readOnlyOutcome(job workercontract.WorkerJob, jsonOut bool) error {
 	return failure
 }
 
+// RunReadOnly runs `worker run`: it executes an argv-only read-only job and prints the resulting job record.
+// It returns an error when the job did not finish successfully.
 func (command Command) RunReadOnly(args []string) error {
 	opts, err := parseReadOnlyOptions(args)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"issueops/cmd/issueops/gatescli"
 	"issueops/cmd/issueops/jsonout"
 	"issueops/cmd/issueops/modelcli"
+	"issueops/cmd/issueops/projectcli"
 	"issueops/cmd/issueops/rootcmd"
 	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 	clicontract "issueops/internal/contract/cli"
@@ -19,6 +20,9 @@ import (
 
 var dependencyWiring sync.Once
 
+// RunRootCommand wires the harness dependencies once and runs the root
+// issueops command with args, returning the process exit code. Usage for a help
+// request is written to stdout.
 func RunRootCommand(args []string) int {
 	wireDependencies()
 	if rootcmd.HelpRequested(args) {
@@ -107,6 +111,10 @@ func rootSubcommandErrorExitCode(name string, err error) int {
 	case "model":
 		if _, ok := errors.AsType[modelcli.UsageError](err); ok {
 			return 2
+		}
+	case "project":
+		if exit, ok := errors.AsType[projectcli.ExitCodeError](err); ok {
+			return exit.Code
 		}
 	}
 	return 1

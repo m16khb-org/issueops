@@ -9,10 +9,10 @@ import (
 
 func TestServiceReadsAndProjectsStatusWithoutPersisting(t *testing.T) {
 	repository := &fakeRepository{
-		record: issueopscontract.IssueOpsRecord{
+		record: issueopscontract.Record{
 			OK:    true,
 			ID:    "io-status01",
-			Phase: issueopscontract.IssueOpsPhasePlan,
+			Phase: issueopscontract.PhasePlan,
 		},
 	}
 	projector := &fakeProjector{}
@@ -31,11 +31,11 @@ func TestServiceReadsAndProjectsStatusWithoutPersisting(t *testing.T) {
 }
 
 type fakeRepository struct {
-	record issueopscontract.IssueOpsRecord
+	record issueopscontract.Record
 	reads  int
 }
 
-func (repository *fakeRepository) Read(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
+func (repository *fakeRepository) Read(context.Context, string, string) (issueopscontract.Record, error) {
 	repository.reads++
 	return repository.record, nil
 }
@@ -44,7 +44,7 @@ type fakeProjector struct {
 	projections int
 }
 
-func (projector *fakeProjector) Project(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsRecord {
+func (projector *fakeProjector) Project(record issueopscontract.Record) issueopscontract.Record {
 	projector.projections++
 	record.SourceMisdirectWarnings++
 	return record

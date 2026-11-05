@@ -7,12 +7,18 @@ import (
 	"issueops/internal/domain/policy"
 )
 
+// PlanPrepItem is the recorded outcome of one plan-prep check: either Evidence
+// was supplied (Status "evidence") or the check was waived with WaiveReason
+// (Status "waived").
 type PlanPrepItem struct {
 	Status      string
 	Evidence    []string
 	WaiveReason string
 }
 
+// BuildPlanPrepItem normalizes the evidence and waive reason for the plan-prep
+// item name. Exactly one of them must be non-empty; the error names the CLI
+// flags to pass when both or neither are given.
 func BuildPlanPrepItem(name string, evidence []string, waiveReason string) (PlanPrepItem, error) {
 	evidence = CleanTextValues(evidence)
 	waiveReason = strings.TrimSpace(waiveReason)

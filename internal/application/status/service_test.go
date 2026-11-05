@@ -1,6 +1,7 @@
 package status
 
 import (
+	"context"
 	"errors"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
@@ -14,28 +15,28 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 	var calls []string
 	service := Service{
 		Home: "home", IssueOpsRoot: "harness", Version: "version",
-		Inspect: func(repo string) inspectcontract.InspectInfo {
+		Inspect: func(repo string) inspectcontract.Info {
 			calls = append(calls, "inspect:"+repo)
-			return inspectcontract.InspectInfo{Version: "observed"}
+			return inspectcontract.Info{Version: "observed"}
 		},
-		Doctor: func(req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
+		Doctor: func(_ context.Context, req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 			calls = append(calls, "doctor:"+req.RepoRoot)
 			if req.RepoRoot != "raw/../repo" || req.Home != "home" || req.IssueOpsRoot != "harness" || req.Version != "version" {
 				t.Fatalf("doctor request: %+v", req)
 			}
 			return doctorcontract.HarnessDoctorResult{OK: true, Healthy: false}, errors.New("")
 		},
-		State: func() (statecontract.StateListResult, error) {
+		State: func() (statecontract.ListResult, error) {
 			calls = append(calls, "state")
-			return statecontract.StateListResult{OK: true}, errors.New("state failed")
+			return statecontract.ListResult{OK: true}, errors.New("state failed")
 		},
-		Workers: func() (workercontract.WorkerListResult, error) {
+		Workers: func() (workercontract.ListResult, error) {
 			calls = append(calls, "workers")
-			return workercontract.WorkerListResult{OK: true}, errors.New("worker failed")
+			return workercontract.ListResult{OK: true}, errors.New("worker failed")
 		},
 		ResolveTarget: func(repo string) string { calls = append(calls, "resolve:"+repo); return "resolved" },
 	}
-	got := service.Run("raw/../repo")
+	got := service.Run(t.Context(), "raw/../repo")
 	wantCalls := []string{"inspect:raw/../repo", "doctor:raw/../repo", "state", "workers", "resolve:raw/../repo"}
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("calls: %v", calls)
@@ -47,15 +48,15 @@ func TestRunPreservesObservationOrderAndContinuesAfterErrors(t *testing.T) {
 
 func TestRunOKDoesNotRequireHealth(t *testing.T) {
 	service := Service{
-		Inspect: func(string) inspectcontract.InspectInfo { return inspectcontract.InspectInfo{} },
-		Doctor: func(doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
+		Inspect: func(string) inspectcontract.Info { return inspectcontract.Info{} },
+		Doctor: func(context.Context, doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 			return doctorcontract.HarnessDoctorResult{OK: true, Healthy: false}, nil
 		},
-		State:         func() (statecontract.StateListResult, error) { return statecontract.StateListResult{OK: true}, nil },
-		Workers:       func() (workercontract.WorkerListResult, error) { return workercontract.WorkerListResult{OK: true}, nil },
+		State:         func() (statecontract.ListResult, error) { return statecontract.ListResult{OK: true}, nil },
+		Workers:       func() (workercontract.ListResult, error) { return workercontract.ListResult{OK: true}, nil },
 		ResolveTarget: func(s string) string { return s },
 	}
-	if got := service.Run("repo"); !got.OK || got.Doctor.Healthy {
+	if got := service.Run(t.Context(), "repo"); !got.OK || got.Doctor.Healthy {
 		t.Fatalf("health replaced observation OK: %+v", got)
 	}
 }

@@ -35,7 +35,7 @@ func (cli command) runIssueOpsIntent(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsIntentWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsIntentRecordRequest{
+	record, err := cli.Runtime.RecordIssueOpsIntentWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IntentRecordRequest{
 		RawRequest:        *rawRequest,
 		InterpretedIntent: *interpretedIntent,
 		SuccessCriteria:   []string(successCriteria),
@@ -101,7 +101,7 @@ func printIssueOpsArchitectureReviewUsage() {
 	fmt.Print(catalogHelp("architecture review"))
 	fmt.Println()
 	fmt.Println("Approved reviews require --refactor-plan, at least one --alternative, at least one --risk, no --open-question, and one architecture-review evidence verification item.")
-	fmt.Printf("Use a verification item such as --verification %q alongside test commands.\n", issueopscontract.IssueOpsArchitectureReviewEvidenceExample)
+	fmt.Printf("Use a verification item such as --verification %q alongside test commands.\n", issueopscontract.ArchitectureReviewEvidenceExample)
 	fmt.Println("The review binds to the staged architecture artifact (issueops artifact stage --name architecture): its required sections must have content, and editing the document afterwards makes the approval stale.")
 	fmt.Println("Approval is recorded with the full architecture review payload; there is no approve-only merge step.")
 }

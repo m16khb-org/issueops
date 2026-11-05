@@ -15,6 +15,9 @@ import (
 // and attempt checks. The application must hold the cleanup lifetime lease.
 type CleanupRecordStore struct{ StateRoot string }
 
+// Load reads the cleanup snapshot of cycle id: the decoded record plus its raw stored
+// bytes as the revision that later compare-and-swap calls must present. A missing record
+// wraps fs.ErrNotExist.
 func (s CleanupRecordStore) Load(ctx context.Context, id string) (model.CleanupSnapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return model.CleanupSnapshot{}, err
@@ -36,7 +39,10 @@ func (s CleanupRecordStore) Load(ctx context.Context, id string) (model.CleanupS
 	return model.CleanupSnapshot{Record: record, Revision: string(raw)}, nil
 }
 
-func (s CleanupRecordStore) Arm(ctx context.Context, expected model.CleanupSnapshot, attempt model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
+// Arm records a finish or remote-branch cleanup attempt on the record guarded by the
+// expected snapshot revision. Abandon is refused here because it needs its sealed inventory
+// arm (ArmAbandon).
+func (s CleanupRecordStore) Arm(ctx context.Context, expected model.CleanupSnapshot, attempt model.CleanupAttempt) (model.CleanupSnapshot, error) {
 	if attempt.Operation == model.CleanupOperationAbandon {
 		return model.CleanupSnapshot{}, fmt.Errorf("abandon requires its sealed inventory arm")
 	}
@@ -51,6 +57,8 @@ func (s CleanupRecordStore) Arm(ctx context.Context, expected model.CleanupSnaps
 	return s.save(ctx, expected, next)
 }
 
+// Check verifies that the snapshot still owns the stored record: the revision is unchanged
+// and the attempt token matches. It writes nothing.
 func (s CleanupRecordStore) Check(ctx context.Context, expected model.CleanupSnapshot) error {
 	if _, err := cleanupSnapshotRecord(expected, true); err != nil {
 		return err
@@ -60,7 +68,9 @@ func (s CleanupRecordStore) Check(ctx context.Context, expected model.CleanupSna
 	return s.compare(ctx, expected, nil)
 }
 
-func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnapshot, failure model.IssueOpsCleanupFinishFailure, drained bool) (model.CleanupSnapshot, error) {
+// Fail records a finish failure on the cleanup record; drained says whether the
+// workspace processes were already stopped.
+func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnapshot, failure model.CleanupFinishFailure, drained bool) (model.CleanupSnapshot, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationFinish)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
@@ -68,7 +78,9 @@ func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnap
 	return s.save(ctx, expected, domain.ApplyCleanupFinishFailure(record, failure, drained))
 }
 
-func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) error {
+// Delete atomically removes the finished cycle record and its artifact stage and stores the
+// retained outcome summary in the same transaction.
+func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSnapshot, outcome model.CycleOutcome) error {
 	if _, err := cleanupOperationRecord(expected, model.CleanupOperationFinish); err != nil {
 		return err
 	}
@@ -83,7 +95,7 @@ func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSn
 	})
 }
 
-func (s CleanupRecordStore) save(ctx context.Context, expected model.CleanupSnapshot, next model.IssueOpsRecord) (model.CleanupSnapshot, error) {
+func (s CleanupRecordStore) save(ctx context.Context, expected model.CleanupSnapshot, next model.Record) (model.CleanupSnapshot, error) {
 	encoded, raw, err := encodeIssueOpsRecord(next)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
@@ -104,18 +116,18 @@ func (s CleanupRecordStore) compare(ctx context.Context, expected model.CleanupS
 	})
 }
 
-func cleanupSnapshotRecord(snapshot model.CleanupSnapshot, owned bool) (model.IssueOpsRecord, error) {
+func cleanupSnapshotRecord(snapshot model.CleanupSnapshot, owned bool) (model.Record, error) {
 	record, err := decodeIssueOpsRecord(snapshot.Record.ID, []byte(snapshot.Revision))
 	if err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	if owned {
-		expected := model.IssueOpsCleanupAttempt{}
+		expected := model.CleanupAttempt{}
 		if snapshot.Record.CleanupAttempt != nil {
 			expected = *snapshot.Record.CleanupAttempt
 		}
 		if err := domain.ValidateCleanupOwner(record, expected); err != nil {
-			return model.IssueOpsRecord{}, err
+			return model.Record{}, err
 		}
 	}
 	return record, nil
@@ -123,17 +135,19 @@ func cleanupSnapshotRecord(snapshot model.CleanupSnapshot, owned bool) (model.Is
 
 var _ port.CleanupFinishRecords = CleanupRecordStore{}
 
-func cleanupOperationRecord(snapshot model.CleanupSnapshot, operation model.CleanupOperation) (model.IssueOpsRecord, error) {
+func cleanupOperationRecord(snapshot model.CleanupSnapshot, operation model.CleanupOperation) (model.Record, error) {
 	record, err := cleanupSnapshotRecord(snapshot, true)
 	if err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	if err := domain.ValidateCleanupOperationAccess(record, operation); err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	return record, nil
 }
 
+// Release ends a remote-branch cleanup attempt at now, leaving the cycle record in place
+// without the attempt.
 func (s CleanupRecordStore) Release(ctx context.Context, expected model.CleanupSnapshot, now string) (model.CleanupSnapshot, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationRemoteBranch)
 	if err != nil {

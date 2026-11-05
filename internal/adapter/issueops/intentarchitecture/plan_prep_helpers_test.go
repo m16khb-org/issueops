@@ -12,7 +12,7 @@ import (
 // related-issue scoring, web research, and the codebase survey. Each item must
 // carry either evidence or a waive reason (mutually exclusive). The plan
 // readiness gate then checks these for non-trivial intent classes.
-func RecordPlanPrep(store Store, stateRoot, id string, req model.IssueOpsPlanPrepRequest) (model.IssueOpsRecord, error) {
+func RecordPlanPrep(store Store, stateRoot, id string, req model.PlanPrepRequest) (model.Record, error) {
 	return intentapp.RecordPlanPrep(intentport.Store{
 		Read:       store.Read,
 		TouchWrite: store.TouchWrite,

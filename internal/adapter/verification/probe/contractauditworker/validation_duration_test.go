@@ -37,7 +37,7 @@ func TestSuccessfulProbesPreserveCommandDurations(t *testing.T) {
 		result.Label = label
 		return result
 	}
-	deps := ValidationDeps{
+	deps := validationDeps{
 		MkdirTemp: func(string, string) (string, error) { return root, nil },
 		RemoveAll: func(string) error { return nil },
 		ReadFile: func(string) ([]byte, error) {
@@ -58,25 +58,25 @@ func TestSuccessfulProbesPreserveCommandDurations(t *testing.T) {
 		{
 			name: "contract", wantMs: 137,
 			run: func() selfverify.StepResult {
-				return ValidateContractCheckWithDeps("issueops", root, deps)
+				return validateContractCheckWithDeps("issueops", root, deps)
 			},
 		},
 		{
 			name: "conformance", wantMs: 149,
 			run: func() selfverify.StepResult {
-				return ValidateToolConformanceWithDeps("issueops", root, deps)
+				return validateToolConformanceWithDeps("issueops", root, deps)
 			},
 		},
 		{
 			name: "audit", wantMs: 163,
 			run: func() selfverify.StepResult {
-				return ValidateCommandAuditWithDeps("issueops", root, 1, deps)
+				return validateCommandAuditWithDeps("issueops", root, 1, deps)
 			},
 		},
 		{
 			name: "worker", wantMs: 60,
 			run: func() selfverify.StepResult {
-				return ValidateWorkerLifecycleWithDeps("issueops", root, 1, deps)
+				return validateWorkerLifecycleWithDeps("issueops", root, 1, deps)
 			},
 		},
 	}

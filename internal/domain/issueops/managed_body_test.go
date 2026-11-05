@@ -15,7 +15,7 @@ func TestMergeManagedSectionIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sec := RenderDevilsAdvocateSection(stopReview("gold-plating", "schedule optimism", "  "))
+	sec := renderDevilsAdvocateSection(stopReview("gold-plating", "schedule optimism", "  "))
 	body := "original body\n"
 
 	once := MergeManagedSection(body, sec, start, end)
@@ -26,7 +26,7 @@ func TestMergeManagedSectionIdempotent(t *testing.T) {
 		t.Fatalf("blank finding should be dropped: %q", once)
 	}
 
-	sec2 := RenderDevilsAdvocateSection(stopReview("new finding"))
+	sec2 := renderDevilsAdvocateSection(stopReview("new finding"))
 	twice := MergeManagedSection(once, sec2, start, end)
 	if strings.Count(twice, start) != 1 || strings.Count(twice, end) != 1 {
 		t.Fatalf("re-merge must not duplicate the block: %q", twice)
@@ -44,7 +44,7 @@ func TestMergeManagedSectionEmptyBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sec := RenderDevilsAdvocateSection(stopReview("x"))
+	sec := renderDevilsAdvocateSection(stopReview("x"))
 	got := MergeManagedSection("", sec, start, end)
 	if !strings.Contains(got, "x") || !strings.HasPrefix(got, start) {
 		t.Fatalf("empty body should become just the section: %q", got)
@@ -68,7 +68,7 @@ func completionFixture() completionmodel.RemoteCompletionSection {
 // 진행 결과 구간은 사람이 쓴 원고만 담는다. 하네스 값(해시, 최종 head, manifest,
 // plan·spec 전문, 빈 소제목)은 렌더하지 않는다(#513).
 func TestCompletionSectionIsHumanReadable(t *testing.T) {
-	got := RenderCompletionSection(completionFixture())
+	got := renderCompletionSection(completionFixture())
 	if !strings.HasPrefix(got, completionmodel.IssueBodyCompletionStartMarker+"\n") || !strings.HasSuffix(got, completionEndMarker) {
 		t.Fatalf("the managed region keeps both markers: %q", got)
 	}
@@ -116,12 +116,12 @@ func TestRenderSectionRoutesByKind(t *testing.T) {
 func TestCompletionAndDevilsAdvocateSectionsCoexist(t *testing.T) {
 	daStart, daEnd, _ := SectionMarkers(completionmodel.IssueBodySectionDevilsAdvocate)
 	coStart, coEnd, _ := SectionMarkers(completionmodel.IssueBodySectionCompletion)
-	body := MergeManagedSection("base\n", RenderDevilsAdvocateSection(stopReview("finding")), daStart, daEnd)
-	body = MergeManagedSection(body, RenderCompletionSection(completionFixture()), coStart, coEnd)
+	body := MergeManagedSection("base\n", renderDevilsAdvocateSection(stopReview("finding")), daStart, daEnd)
+	body = MergeManagedSection(body, renderCompletionSection(completionFixture()), coStart, coEnd)
 	if strings.Count(body, daStart) != 1 || strings.Count(body, coStart) != 1 {
 		t.Fatalf("both sections must coexist exactly once: %q", body)
 	}
-	body2 := MergeManagedSection(body, RenderCompletionSection(completionFixture()), coStart, coEnd)
+	body2 := MergeManagedSection(body, renderCompletionSection(completionFixture()), coStart, coEnd)
 	if !strings.Contains(body2, "finding") || strings.Count(body2, coStart) != 1 {
 		t.Fatalf("re-merging completion must preserve devils-advocate block: %q", body2)
 	}
@@ -137,7 +137,7 @@ func stopReview(findings ...string) SectionInput {
 // 계획 검토 구간은 라운드를 흐름 한 줄로 요약하고, 통과했으면 지적 원문을
 // 싣지 않는다. 지적 원문은 record와 plan-review.md에 있다(#513).
 func TestPlanReviewSectionSummarizesRounds(t *testing.T) {
-	got := RenderDevilsAdvocateSection(SectionInput{
+	got := renderDevilsAdvocateSection(SectionInput{
 		Section: completionmodel.IssueBodySectionDevilsAdvocate, Verdict: "pass", Findings: []string{"구현 메모"},
 		Rounds: []completionmodel.PlanReviewRound{{Verdict: "revise", Findings: 3}, {Verdict: "pass", Findings: 1}},
 	})
@@ -152,14 +152,14 @@ func TestPlanReviewSectionSummarizesRounds(t *testing.T) {
 	if strings.Contains(got, "구현 메모") || strings.Contains(got, "Devil") {
 		t.Fatalf("a passed review carries no finding text or English verdicts: %q", got)
 	}
-	stop := RenderDevilsAdvocateSection(stopReview("범위가 이슈와 다르다"))
+	stop := renderDevilsAdvocateSection(stopReview("범위가 이슈와 다르다"))
 	if !strings.Contains(stop, "1차 중단(지적 1건)") || !strings.Contains(stop, "- 범위가 이슈와 다르다") {
 		t.Fatalf("a stop lists its reasons: %q", stop)
 	}
 }
 
 func TestPlanReviewMasksHashesAndPaths(t *testing.T) {
-	got := RenderDevilsAdvocateSection(stopReview("plan digest " + strings.Repeat("ab", 32) + "와 커밋 " + strings.Repeat("cd", 20) + ", /Users/x/plan.md를 확인"))
+	got := renderDevilsAdvocateSection(stopReview("plan digest " + strings.Repeat("ab", 32) + "와 커밋 " + strings.Repeat("cd", 20) + ", /Users/x/plan.md를 확인"))
 	if sha256Hex.MatchString(got) || strings.Contains(got, strings.Repeat("cd", 20)) || strings.Contains(got, "/Users/") {
 		t.Fatalf("hashes and local paths must be masked: %q", got)
 	}

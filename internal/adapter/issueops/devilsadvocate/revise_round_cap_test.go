@@ -10,31 +10,31 @@ import (
 )
 
 // storeWithRounds는 이미 기록된 라운드를 가진 record를 돌려주는 최소 store다.
-func storeWithRounds(rounds ...model.IssueOpsDevilsAdvocateRound) (reviewport.DevilsAdvocateStore, *model.IssueOpsRecord) {
-	written := &model.IssueOpsRecord{}
-	var review *model.IssueOpsDevilsAdvocateReview
+func storeWithRounds(rounds ...model.DevilsAdvocateRound) (reviewport.DevilsAdvocateStore, *model.Record) {
+	written := &model.Record{}
+	var review *model.DevilsAdvocateReview
 	if len(rounds) > 0 {
 		current := rounds[len(rounds)-1]
-		review = &model.IssueOpsDevilsAdvocateReview{
+		review = &model.DevilsAdvocateReview{
 			Verdict: current.Verdict, Waived: current.Waived, WaiverRationale: current.WaiverRationale,
 			Findings: current.Findings, RecordedAt: current.RecordedAt,
-			History: append([]model.IssueOpsDevilsAdvocateRound{}, rounds[:len(rounds)-1]...),
+			History: append([]model.DevilsAdvocateRound{}, rounds[:len(rounds)-1]...),
 		}
 	}
 	return reviewport.DevilsAdvocateStore{
-		Read: func(_, id string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{OK: true, ID: id, PlanPath: "plans/demo.md", DevilsAdvocateReview: review}, nil
+		Read: func(_, id string) (model.Record, error) {
+			return model.Record{OK: true, ID: id, PlanPath: "plans/demo.md", DevilsAdvocateReview: review}, nil
 		},
-		TouchWrite: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(_ string, r model.Record) (model.Record, error) {
 			*written = r
 			return r, nil
 		},
-		PlanDigest: func(string, model.IssueOpsRecord) (string, error) { return "digest", nil },
+		PlanDigest: func(string, model.Record) (string, error) { return "digest", nil },
 	}, written
 }
 
-func reviseRound(findings string) model.IssueOpsDevilsAdvocateRound {
-	return model.IssueOpsDevilsAdvocateRound{Verdict: "revise", Findings: []string{findings}, RecordedAt: "2026-09-08T00:00:00Z"}
+func reviseRound(findings string) model.DevilsAdvocateRound {
+	return model.DevilsAdvocateRound{Verdict: "revise", Findings: []string{findings}, RecordedAt: "2026-09-08T00:00:00Z"}
 }
 
 // 같은 plan phase에서 revise가 다섯 번 나왔다면 계획이 수렴하지 않는 것이다.
@@ -89,7 +89,7 @@ func TestRecordAllowsWaivedReviseAndExcludesItFromTheCount(t *testing.T) {
 		t.Fatalf("a waived revise must be allowed past the cap: %v", err)
 	}
 
-	waived := model.IssueOpsDevilsAdvocateRound{Verdict: "revise", Waived: true, WaiverRationale: "override", RecordedAt: "2026-09-08T00:00:00Z"}
+	waived := model.DevilsAdvocateRound{Verdict: "revise", Waived: true, WaiverRationale: "override", RecordedAt: "2026-09-08T00:00:00Z"}
 	store, _ = storeWithRounds(reviseRound("one"), reviseRound("two"), waived, reviseRound("three"), reviseRound("four"), reviseRound("five"))
 	if _, err := Record(store, "state", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict: "revise", ReviewerContext: "subagent", Findings: []string{"six"},

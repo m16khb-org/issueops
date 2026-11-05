@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"time"
 
 	lifecyclecontract "issueops/internal/contract/lifecycle"
@@ -8,21 +9,25 @@ import (
 	doctordomain "issueops/internal/domain/doctor"
 )
 
+// Effects groups the side-effecting lookups the doctor service needs. The
+// composition root fills every field; the service never touches the filesystem,
+// clock, or processes directly.
 type Effects struct {
 	NormalizeRoot      func(string) (string, error)
 	StateDir           func() string
-	StateDoctor        func() (statecontract.StateDoctorResult, error)
+	StateDoctor        func() (statecontract.DoctorResult, error)
 	ValidateLifecycle  func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error)
 	ProjectDocs        func(string) doctordomain.ProjectDocsObservation
 	RuntimeState       func(string) doctordomain.RuntimeStateObservation
 	LoopContracts      func(string) doctordomain.LoopObservation
 	PipeCapacity       func() (int, error)
-	MCPGateways        func(string) doctordomain.GatewayObservation
+	MCPGateways        func(context.Context, string) doctordomain.GatewayObservation
 	NativeIntegrations func(string) doctordomain.NativeObservation
 	BinaryDrift        func(string) doctordomain.BinaryObservation
 	Now                func() time.Time
 }
 
+// Service runs the harness doctor using its Effects.
 type Service struct{ Effects Effects }
 
 func severityRank(severity string) int {

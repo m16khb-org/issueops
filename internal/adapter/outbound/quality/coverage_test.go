@@ -6,7 +6,7 @@ import (
 )
 
 func TestBoundedQualityBufferCapsCapturedBytes(t *testing.T) {
-	buffer := NewBoundedQualityBuffer(4)
+	buffer := newBoundedQualityBuffer(4)
 	if written, err := buffer.Write([]byte("abcdef")); err != nil || written != 6 {
 		t.Fatalf("write = %d, %v", written, err)
 	}
@@ -15,7 +15,7 @@ func TestBoundedQualityBufferCapsCapturedBytes(t *testing.T) {
 	}
 }
 func TestCoverageCommandTimeoutIncludesColdCacheHeadroom(t *testing.T) {
-	if CoverageCommandTimeout < 10*time.Minute {
-		t.Fatalf("coverage command timeout = %s, want at least 10m", CoverageCommandTimeout)
+	if coverageCommandTimeout < 10*time.Minute {
+		t.Fatalf("coverage command timeout = %s, want at least 10m", coverageCommandTimeout)
 	}
 }

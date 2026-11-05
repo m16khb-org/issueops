@@ -8,7 +8,7 @@ import (
 )
 
 func TestSelectPrunePreservesPrefixAgeCountAndInvalidTimestamp(t *testing.T) {
-	records := []statecontract.StateListEntry{
+	records := []statecontract.ListEntry{
 		{Key: "other-old", UpdatedAt: "2026-01-01T00:00:00Z"},
 		{Key: "trace-old", UpdatedAt: "2026-01-01T00:00:00Z"},
 		{Key: "trace-newer", UpdatedAt: "2026-01-03T00:00:00Z"},
@@ -26,7 +26,7 @@ func TestSelectPrunePreservesPrefixAgeCountAndInvalidTimestamp(t *testing.T) {
 	}
 }
 
-func pruneKeys(entries []statecontract.StateListEntry) []string {
+func pruneKeys(entries []statecontract.ListEntry) []string {
 	keys := make([]string, len(entries))
 	for i, entry := range entries {
 		keys[i] = entry.Key

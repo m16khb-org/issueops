@@ -10,6 +10,8 @@ import (
 	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
+// Snapshot is the pure input of the completion transition: the cycle phase, the
+// execution lease, any existing completion receipt, and the phase ledger.
 type Snapshot struct {
 	Phase      string
 	Lease      completioncontract.Lease
@@ -17,6 +19,8 @@ type Snapshot struct {
 	Ledger     map[string]completioncontract.LedgerEntry
 }
 
+// Outcome is the state after a completed transition: the done phase, the
+// released lease, the new completion receipt, and the updated phase ledger.
 type Outcome struct {
 	Phase      string
 	Lease      completioncontract.Lease
@@ -24,36 +28,47 @@ type Outcome struct {
 	Ledger     map[string]completioncontract.LedgerEntry
 }
 
+// DenyCode classifies why completion was refused so callers can branch on the
+// class of denial rather than on error text.
 type DenyCode string
 
+// The Deny constants are the denial classes ValidateActive reports: the cycle
+// is not in the pr phase, the caller is not the active lease holder, or the
+// command did not run from the canonical worktree.
 const (
-	DenyPhase     DenyCode = "phase"
+	denyPhase     DenyCode = "phase"
 	DenyAuthority DenyCode = "authority"
 	DenyCWD       DenyCode = "cwd"
 )
 
-type Denial struct {
+type denial struct {
 	Code  DenyCode
 	Cause error
 }
 
-func (d *Denial) Error() string { return d.Cause.Error() }
-func (d *Denial) Unwrap() error { return d.Cause }
+func (d *denial) Error() string { return d.Cause.Error() }
+func (d *denial) Unwrap() error { return d.Cause }
 
 func deny(code DenyCode, message string) error {
-	return &Denial{Code: code, Cause: errors.New(message)}
+	return &denial{Code: code, Cause: errors.New(message)}
 }
 
+// CodeOf returns the DenyCode carried by err, or an empty code when err is not a
+// completion denial.
 func CodeOf(err error) DenyCode {
-	if denial, ok := errors.AsType[*Denial](err); ok {
+	if denial, ok := errors.AsType[*denial](err); ok {
 		return denial.Code
 	}
 	return ""
 }
 
+// ValidateActive checks that the snapshot may complete under command: the cycle
+// is in the pr phase, the active lease generation and holder match the command's,
+// and canonicalCWD is true. A refusal is returned as a denial whose class CodeOf
+// reports.
 func ValidateActive(snapshot Snapshot, command completioncontract.Command, canonicalCWD bool) error {
 	if err := ValidatePhase(snapshot.Phase); err != nil {
-		return deny(DenyPhase, err.Error())
+		return deny(denyPhase, err.Error())
 	}
 	if snapshot.Lease.Status != "active" || snapshot.Lease.Generation != command.Generation || !sameActor(snapshot.Lease.Holder, &command.Actor) {
 		return deny(DenyAuthority, fmt.Sprintf("only the current holder may complete generation %d", command.Generation))

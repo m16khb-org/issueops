@@ -9,6 +9,10 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
+// RunGuard dispatches `issueops guard`. The only subcommand is check, which
+// guards staged files by default, explicit files, or all relevant files with
+// --all; it prints findings and returns the guard's error so the exit status
+// reflects blocking findings.
 func (command Command) RunGuard(args []string) error {
 	if len(args) == 0 {
 		guardUsage()
@@ -47,7 +51,7 @@ func (command Command) runGuardCheck(args []string) error {
 	if *all {
 		*staged = false
 	}
-	result, checkErr := command.Guard.CheckForCommand(guardcontract.GuardCheckRequest{RepoRoot: *repo, Staged: *staged, All: *all, Files: files})
+	result, checkErr := command.Guard.CheckForCommand(guardcontract.CheckRequest{RepoRoot: *repo, Staged: *staged, All: *all, Files: files})
 	if *jsonOut {
 		if err := printJSON(result); err != nil {
 			return err

@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"issueops/internal/domain/judgement"
 )
 
-func RenderIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (string, error) {
+func renderIssueOpsRemoteLLMJudgePrompt(req LLMJudgeRequest) (string, error) {
 	prompt, err := buildIssueOpsRemoteLLMJudgePrompt(req.Request)
 	if err != nil {
 		return "", err
@@ -14,12 +14,13 @@ func RenderIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (stri
 	return prompt, nil
 }
 
-func RenderIssueOpsRemoteJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (IssueOpsRemoteJudgePromptResult, error) {
-	prompt, err := RenderIssueOpsRemoteLLMJudgePrompt(req)
+// RenderIssueOpsRemoteJudgePrompt builds the host-agent judge prompt for req and marks it as a read-only background_join that must finish before remote_artifact_write.
+func RenderIssueOpsRemoteJudgePrompt(req LLMJudgeRequest) (JudgePromptResult, error) {
+	prompt, err := renderIssueOpsRemoteLLMJudgePrompt(req)
 	if err != nil {
-		return IssueOpsRemoteJudgePromptResult{}, err
+		return JudgePromptResult{}, err
 	}
-	return IssueOpsRemoteJudgePromptResult{
+	return JudgePromptResult{
 		OK:             true,
 		ExecutionClass: "background_join",
 		ReadOnly:       true,
@@ -28,30 +29,31 @@ func RenderIssueOpsRemoteJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (IssueOp
 	}, nil
 }
 
-func DecodeIssueOpsRemoteJudgeJSON(out []byte) (IssueOpsRemoteScoringResult, error) {
+// DecodeIssueOpsRemoteJudgeJSON strictly decodes the host agent's scoring JSON, which must be ok, background_join, read_only, and joined before remote_artifact_write, and returns it normalized (no nil slices).
+func DecodeIssueOpsRemoteJudgeJSON(out []byte) (ScoringResult, error) {
 	result, err := decodeStrictIssueOpsRemoteScoringResult(out)
 	if err != nil {
-		return IssueOpsRemoteScoringResult{}, err
+		return ScoringResult{}, err
 	}
 	return normalizeIssueOpsRemoteScoringResult(result), nil
 }
 
-func decodeStrictIssueOpsRemoteScoringResult(out []byte) (IssueOpsRemoteScoringResult, error) {
-	var result IssueOpsRemoteScoringResult
+func decodeStrictIssueOpsRemoteScoringResult(out []byte) (ScoringResult, error) {
+	var result ScoringResult
 	if err := judgement.DecodeStructuredJSONObject("issueops remote host-agent scoring", out, &result); err != nil {
-		return IssueOpsRemoteScoringResult{}, err
+		return ScoringResult{}, err
 	}
 	if !result.OK {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring output not ok")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring output not ok")
 	}
 	if result.ExecutionClass != "background_join" {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring execution_class must be background_join")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring execution_class must be background_join")
 	}
 	if !result.ReadOnly {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring read_only must be true")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring read_only must be true")
 	}
 	if result.JoinBefore != "remote_artifact_write" {
-		return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote host-agent scoring join_before must be remote_artifact_write")
+		return ScoringResult{}, fmt.Errorf("issueops remote host-agent scoring join_before must be remote_artifact_write")
 	}
 	return result, nil
 }

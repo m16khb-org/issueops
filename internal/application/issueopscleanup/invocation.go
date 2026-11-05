@@ -1,3 +1,8 @@
+// Package issueopscleanup implements the application layer of IssueOps cycle
+// cleanup: previewing and applying finish, abandon, remote-branch,
+// linked-branch and orphan cleanup, closing child tasks, and reporting cleanup
+// status. It orchestrates domain rules and ports under fingerprint, lifetime
+// and record-lock fences, and owns no I/O of its own.
 package issueopscleanup
 
 import (
@@ -15,7 +20,7 @@ import (
 // Invocation connects record/provider observations and next-command provenance
 // to the cleanup executors while preserving their observation and mutation fences.
 type Invocation struct {
-	Read                       func(string) (model.IssueOpsRecord, error)
+	Read                       func(string) (model.Record, error)
 	Provider                   func(string) (port.IssueProvider, error)
 	CurrentDirectory           func() (string, error)
 	Provenance                 provenanceport.Observer
@@ -26,6 +31,9 @@ type Invocation struct {
 	RunLinkedBranch            func(context.Context, model.CleanupLinkedBranchRequest) (model.CleanupLinkedBranchResult, error)
 }
 
+// Finish runs a cleanup finish for the record, resolving the provider (the
+// override, else the record's) and the current directory, and binds the next
+// command to provenance. Failures before the run are CleanupInvocationError.
 func (s Invocation) Finish(ctx context.Context, req model.CleanupFinishRequest, providerOverride string) (model.CleanupFinishResult, error) {
 	var empty model.CleanupFinishResult
 	record, err := s.Read(req.ID)
@@ -59,6 +67,10 @@ func (s Invocation) Finish(ctx context.Context, req model.CleanupFinishRequest, 
 	result.NextCommand = bound
 	return result, err
 }
+
+// RemoteBranch runs a remote-branch cleanup after checking the record's
+// provider and merge verification are available, and binds the next command to
+// provenance.
 func (s Invocation) RemoteBranch(ctx context.Context, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchResult, error) {
 	var empty model.CleanupRemoteBranchResult
 	record, err := s.Read(req.ID)
@@ -83,6 +95,9 @@ func (s Invocation) RemoteBranch(ctx context.Context, req model.CleanupRemoteBra
 	result.NextCommand = bound
 	return result, err
 }
+
+// Abandon runs a cleanup abandon and binds any next command it returns to
+// provenance, reading the record only when there is a command to bind.
 func (s Invocation) Abandon(ctx context.Context, req model.CleanupAbandonRequest) (model.CleanupAbandonResult, error) {
 	result, err := s.RunAbandon(ctx, req)
 	if result.NextCommand != "" {
@@ -98,6 +113,9 @@ func (s Invocation) Abandon(ctx context.Context, req model.CleanupAbandonRequest
 	}
 	return result, err
 }
+
+// LinkedBranch runs a linked-branch cleanup for the record and binds the next
+// command to provenance.
 func (s Invocation) LinkedBranch(ctx context.Context, req model.CleanupLinkedBranchRequest) (model.CleanupLinkedBranchResult, error) {
 	record, err := s.Read(req.ID)
 	if err != nil {
@@ -111,6 +129,9 @@ func (s Invocation) LinkedBranch(ctx context.Context, req model.CleanupLinkedBra
 	result.NextCommand = bound
 	return result, err
 }
+
+// BindNextCommand binds command to the record generation through observer when
+// the command needs provenance; otherwise it returns command unchanged.
 func BindNextCommand(ctx context.Context, command string, generation uint64, observer provenanceport.Observer) (string, error) {
 	if !domain.CleanupCommandNeedsProvenance(command, generation) {
 		return command, nil

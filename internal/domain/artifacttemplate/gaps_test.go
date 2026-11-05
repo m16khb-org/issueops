@@ -14,8 +14,8 @@ func TestOptionalSectionTitlesFollowContractOrderPerTemplate(t *testing.T) {
 		template IssueOpsTemplateKind
 		want     []string
 	}{
-		{"bug", IssueOpsArtifactIssue, IssueOpsTemplateBug, []string{"원인", "범위", "환경과 로그"}},
-		{"proposal", IssueOpsArtifactIssue, IssueOpsTemplateProposal, []string{"완료 기준", "위험", "열린 질문"}},
+		{"bug", IssueOpsArtifactIssue, issueOpsTemplateBug, []string{"원인", "범위", "환경과 로그"}},
+		{"proposal", IssueOpsArtifactIssue, issueOpsTemplateProposal, []string{"완료 기준", "위험", "열린 질문"}},
 		{"child defaults from kind", IssueOpsArtifactChild, "", []string{"검증"}},
 		{"pr", IssueOpsArtifactPR, IssueOpsTemplatePullRequest, []string{"대안과 선택 이유", "위험과 되돌리기", "호환성과 마이그레이션", "남은 일"}},
 		{"blank kind is an implementation issue", "", "", []string{"접근 방법과 대안", "위험", "열린 질문", "하위 Task"}},
@@ -57,7 +57,7 @@ func TestRenderNormalizesKindTemplateProviderAndDefaults(t *testing.T) {
 		t.Fatalf("child defaults = %+v", child)
 	}
 	issue := Render(IssueOpsTemplateInput{Provider: "github", Title: "i"})
-	if issue.Kind != IssueOpsArtifactIssue || issue.Template != IssueOpsTemplateImplementationTask || issue.OK {
+	if issue.Kind != IssueOpsArtifactIssue || issue.Template != issueOpsTemplateImplementationTask || issue.OK {
 		t.Fatalf("issue defaults = %+v", issue)
 	}
 	if want := []string{"acceptance", "background", "scope", "summary", "verification"}; !slices.Equal(issue.MissingRequiredFields, want) {
@@ -70,7 +70,7 @@ func TestRenderNormalizesKindTemplateProviderAndDefaults(t *testing.T) {
 
 func TestBugRenderFoldsFieldKeysAndMergesNormalizedDuplicates(t *testing.T) {
 	result := Render(IssueOpsTemplateInput{
-		Kind: IssueOpsArtifactIssue, Template: IssueOpsTemplateBug, Provider: "github", Title: "버그",
+		Kind: IssueOpsArtifactIssue, Template: issueOpsTemplateBug, Provider: "github", Title: "버그",
 		Fields: map[string]string{
 			"summary":             "요약",
 			"Reproduction Steps":  "1단계",
@@ -103,7 +103,7 @@ func TestBugRenderFoldsFieldKeysAndMergesNormalizedDuplicates(t *testing.T) {
 
 func TestBugMissingExpectedActualNamesBothUnderlyingFields(t *testing.T) {
 	result := Render(IssueOpsTemplateInput{
-		Kind: IssueOpsArtifactIssue, Template: IssueOpsTemplateBug, Provider: "github", Title: "버그",
+		Kind: IssueOpsArtifactIssue, Template: issueOpsTemplateBug, Provider: "github", Title: "버그",
 		Fields: map[string]string{"summary": "요약", "reproduction_steps": "절차", "acceptance": "기준", "verification": "검증"},
 	})
 	if result.OK || !slices.Equal(result.MissingRequiredFields, []string{"actual_behavior", "expected_behavior"}) {
@@ -113,13 +113,13 @@ func TestBugMissingExpectedActualNamesBothUnderlyingFields(t *testing.T) {
 
 func TestValidateAcceptsRequiredFieldSuppliedOnlyThroughBodySection(t *testing.T) {
 	body := "## 요약\n\n요약\n\n## 재현 절차\n\n절차\n\n## 기대 동작과 실제 동작\n\n기대는 A, 실제는 B\n\n## 완료 기준\n\n기준\n\n## 검증\n\n검증"
-	got := Validate(IssueOpsTemplateInput{Kind: IssueOpsArtifactIssue, Template: IssueOpsTemplateBug, Provider: "github", Title: "t", Body: body})
+	got := Validate(IssueOpsTemplateInput{Kind: IssueOpsArtifactIssue, Template: issueOpsTemplateBug, Provider: "github", Title: "t", Body: body})
 	if !got.OK || len(got.MissingRequiredFields) != 0 {
 		t.Fatalf("body-supplied sections must satisfy required fields: %+v", got)
 	}
 	// A body lacking one of those sections does not satisfy its field.
 	partial := strings.Replace(body, "## 검증\n\n검증", "", 1)
-	got = Validate(IssueOpsTemplateInput{Kind: IssueOpsArtifactIssue, Template: IssueOpsTemplateBug, Provider: "github", Title: "t", Body: partial})
+	got = Validate(IssueOpsTemplateInput{Kind: IssueOpsArtifactIssue, Template: issueOpsTemplateBug, Provider: "github", Title: "t", Body: partial})
 	if got.OK || !slices.Equal(got.MissingRequiredFields, []string{"verification"}) || !slices.Equal(got.MissingRequiredSections, []string{"검증"}) {
 		t.Fatalf("partial body = %+v", got)
 	}

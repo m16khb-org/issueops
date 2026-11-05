@@ -13,17 +13,17 @@ import (
 
 // PlanningRecorder keeps authority checks and planning mutations under one lock.
 type PlanningRecorder struct {
-	ActiveChildren         func(string, model.IssueOpsRecord) ([]string, error)
+	ActiveChildren         func(string, model.Record) ([]string, error)
 	Store                  port.ReviewMutationStore
-	PlanReadiness          func(model.IssueOpsRecord) model.IssueOpsReadiness
-	CompatibilityReadiness func(model.IssueOpsRecord) model.IssueOpsReadiness
-	PhaseRank              func(model.IssueOpsPhase) int
-	PlanDigest             func(string, model.IssueOpsRecord) (string, error)
-	ArchitectureDocument   func(string, model.IssueOpsRecord) (string, error)
+	PlanReadiness          func(model.Record) model.Readiness
+	CompatibilityReadiness func(model.Record) model.Readiness
+	PhaseRank              func(model.Phase) int
+	PlanDigest             func(string, model.Record) (string, error)
+	ArchitectureDocument   func(string, model.Record) (string, error)
 }
 
-func (s PlanningRecorder) record(root, id string, apply func() (model.IssueOpsRecord, error)) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+func (s PlanningRecorder) record(root, id string, apply func() (model.Record, error)) (model.Record, error) {
+	var result model.Record
 	err := s.Store.WithLock(root, id, func() error {
 		current, err := s.Store.Read(root, id)
 		if err != nil {
@@ -37,39 +37,54 @@ func (s PlanningRecorder) record(root, id string, apply func() (model.IssueOpsRe
 	})
 	return result, err
 }
-func (s PlanningRecorder) touchWrite(root string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s PlanningRecorder) touchWrite(root string, record model.Record) (model.Record, error) {
 	record.UpdatedAt = s.Store.Now()
 	return s.Store.Write(root, record)
 }
-func (s PlanningRecorder) Intent(root, id string, req model.IssueOpsIntentRecordRequest) (model.IssueOpsRecord, error) {
-	return s.record(root, id, func() (model.IssueOpsRecord, error) {
+
+// Intent records the intent contract on record id under the lifecycle lock.
+func (s PlanningRecorder) Intent(root, id string, req model.IntentRecordRequest) (model.Record, error) {
+	return s.record(root, id, func() (model.Record, error) {
 		return intentapp.RecordIntent(intentport.Store{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, req)
 	})
 }
-func (s PlanningRecorder) PlanPrep(root, id string, req model.IssueOpsPlanPrepRequest) (model.IssueOpsRecord, error) {
-	return s.record(root, id, func() (model.IssueOpsRecord, error) {
+
+// PlanPrep records the plan-preparation evidence on record id under the lifecycle lock.
+func (s PlanningRecorder) PlanPrep(root, id string, req model.PlanPrepRequest) (model.Record, error) {
+	return s.record(root, id, func() (model.Record, error) {
 		return intentapp.RecordPlanPrep(intentport.Store{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, req)
 	})
 }
-func (s PlanningRecorder) Architecture(root, id string, req reviewcontract.ArchitectureReviewRequest) (model.IssueOpsRecord, error) {
-	return s.record(root, id, func() (model.IssueOpsRecord, error) {
+
+// Architecture records the architecture review on record id under the lifecycle
+// lock. A missing-evidence failure is rewritten into an error that tells the
+// caller which verification flag to add.
+func (s PlanningRecorder) Architecture(root, id string, req reviewcontract.ArchitectureReviewRequest) (model.Record, error) {
+	return s.record(root, id, func() (model.Record, error) {
 		record, err := RecordArchitectureReview(port.ArchitectureReviewStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now, PlanReadiness: s.PlanReadiness, Document: s.ArchitectureDocument}, root, id, req)
 		if errors.Is(err, domain.ErrMissingArchitectureReviewEvidence) {
-			return model.IssueOpsRecord{OK: false}, errors.New(`approved architecture review requires architecture_review_evidence: this is not a separate flag or decision record; add --verification "architecture review checked alternatives and risks" or a Korean equivalent such as "아키텍처 검토 완료: 대안과 위험 확인"`)
+			return model.Record{OK: false}, errors.New(`approved architecture review requires architecture_review_evidence: this is not a separate flag or decision record; add --verification "architecture review checked alternatives and risks" or a Korean equivalent such as "아키텍처 검토 완료: 대안과 위험 확인"`)
 		}
 		return record, err
 	})
 }
-func (s PlanningRecorder) Compatibility(root, id string, req reviewcontract.CompatibilityReviewRequest) (model.IssueOpsRecord, error) {
-	return s.record(root, id, func() (model.IssueOpsRecord, error) {
+
+// Compatibility records the compatibility review on record id under the
+// lifecycle lock, advancing the phase to compatibility review when it is earlier.
+func (s PlanningRecorder) Compatibility(root, id string, req reviewcontract.CompatibilityReviewRequest) (model.Record, error) {
+	return s.record(root, id, func() (model.Record, error) {
 		return RecordCompatibilityReview(port.CompatibilityStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Ready: s.CompatibilityReadiness, PhaseRank: s.PhaseRank}, root, id, req, s.Store.Now())
 	})
 }
-func (s PlanningRecorder) DevilsAdvocate(root, id string, req reviewcontract.DevilsAdvocateReviewRequest) (model.IssueOpsRecord, error) {
-	return s.record(root, id, func() (model.IssueOpsRecord, error) {
+
+// DevilsAdvocate records a devil's advocate round on record id under the
+// lifecycle lock. When the revise round cap is reached the error explains how to
+// stop, reflect and regress, or to waive the round.
+func (s PlanningRecorder) DevilsAdvocate(root, id string, req reviewcontract.DevilsAdvocateReviewRequest) (model.Record, error) {
+	return s.record(root, id, func() (model.Record, error) {
 		record, err := RecordDevilsAdvocate(port.DevilsAdvocateStore{Read: s.Store.Read, TouchWrite: s.touchWrite, PlanDigest: s.PlanDigest}, root, id, req, s.Store.Now())
 		if capErr, ok := errors.AsType[*domain.ReviseRoundCapError](err); ok {
-			return model.IssueOpsRecord{OK: false}, fmt.Errorf("revise round cap reached: cycle %s already recorded %d unwaived revise verdicts on this plan phase, so the plan is not converging; "+
+			return model.Record{OK: false}, fmt.Errorf("revise round cap reached: cycle %s already recorded %d unwaived revise verdicts on this plan phase, so the plan is not converging; "+
 				"record a stop verdict, reflect it with issueops remote reflect-devils-advocate --id %s --confirm, then issueops regress --id %s --reason <TEXT>; "+
 				"or record this round with --waive --waiver-rationale <TEXT>", id, capErr.Count, id, id)
 		}
@@ -77,12 +92,15 @@ func (s PlanningRecorder) DevilsAdvocate(root, id string, req reviewcontract.Dev
 	})
 }
 
-func (s PlanningRecorder) Regress(root, id, reason string) (model.IssueOpsRecord, error) {
+// Regress moves record id back to an earlier planning phase for the given reason.
+// The reason is normalized before the lock is taken, and the regression runs
+// under the lifecycle lock.
+func (s PlanningRecorder) Regress(root, id, reason string) (model.Record, error) {
 	reason, err := domain.NormalizeRegressionReason(reason)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
-	return s.record(root, id, func() (model.IssueOpsRecord, error) {
-		return Regress(port.RegressStore{Read: s.Store.Read, ActiveChildren: s.ActiveChildren, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, reason)
+	return s.record(root, id, func() (model.Record, error) {
+		return regress(port.RegressStore{Read: s.Store.Read, ActiveChildren: s.ActiveChildren, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, reason)
 	})
 }

@@ -8,10 +8,10 @@ import (
 )
 
 func TestBranchEvidenceMissingPreservesOrderedGates(t *testing.T) {
-	if got := BranchEvidenceMissing(model.IssueOpsRecord{}); !reflect.DeepEqual(got, []string{"issue_url", "branch", "branch_prepare"}) {
+	if got := BranchEvidenceMissing(model.Record{}); !reflect.DeepEqual(got, []string{"issue_url", "branch", "branch_prepare"}) {
 		t.Fatalf("empty branch evidence=%v", got)
 	}
-	record := model.IssueOpsRecord{IssueURL: "issue", Branch: "feature", BranchPrepare: &model.IssueOpsBranchPrepare{}}
+	record := model.Record{IssueURL: "issue", Branch: "feature", BranchPrepare: &model.BranchPrepare{}}
 	if got := BranchEvidenceMissing(record); !reflect.DeepEqual(got, []string{"branch_link_verified"}) {
 		t.Fatalf("unverified link=%v", got)
 	}

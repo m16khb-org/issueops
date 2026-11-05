@@ -1,6 +1,9 @@
 // Package issueopsbasesync owns the pure base synchronization authority rules.
 package issueopsbasesync
 
+// AuthorityResolution is the recorded sync-base conflict resolution, when one
+// exists: the lease and completion generations it was sealed under and whether
+// the current actor is the one that started it.
 type AuthorityResolution struct {
 	Present              bool
 	LeaseGeneration      uint64
@@ -8,6 +11,9 @@ type AuthorityResolution struct {
 	ActorMatches         bool
 }
 
+// AuthorityFacts are the observed lease, completion, and resolution facts that
+// MissingAuthority judges for one sync-base Mode (preview, apply, finalize, or
+// abort); RequestedGeneration is the completion generation the caller supplied.
 type AuthorityFacts struct {
 	Mode                 string
 	LeaseStatus          string
@@ -19,6 +25,11 @@ type AuthorityFacts struct {
 	Resolution           AuthorityResolution
 }
 
+// MissingAuthority returns the names of the authority gates the caller fails
+// for the requested mode, or nil when it may proceed. An active lease needs a
+// matching holder (except in preview); a released lease needs a completion
+// whose generation equals the requested one and, for apply, finalize, and
+// abort, a resolution record consistent with the mode.
 func MissingAuthority(facts AuthorityFacts) []string {
 	if facts.LeaseStatus == "active" {
 		if facts.Mode != "preview" && !facts.HolderMatches {

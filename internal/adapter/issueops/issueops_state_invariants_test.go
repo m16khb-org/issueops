@@ -23,12 +23,12 @@ func TestReadIssueOpsAcceptsValidRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := issueops.IssueOpsRecord{
-		SchemaVersion: issueops.IssueOpsSchemaVersion,
+	want := issueops.Record{
+		SchemaVersion: issueops.SchemaVersion,
 		ID:            "io-valid",
 		Repo:          "/repo",
 		Branch:        "state-read",
-		Phase:         issueops.IssueOpsPhaseProblem,
+		Phase:         issueops.PhaseProblem,
 		CreatedAt:     "2026-10-01T00:00:00Z",
 		UpdatedAt:     "2026-10-01T01:00:00Z",
 	}
@@ -42,7 +42,7 @@ func TestReadIssueOpsAcceptsValidRecord(t *testing.T) {
 	want.OK = true
 	for _, reader := range []struct {
 		name string
-		read func(string, string) (issueops.IssueOpsRecord, error)
+		read func(string, string) (issueops.Record, error)
 	}{
 		{name: "read", read: ReadIssueOps},
 		{name: "existing", read: ReadIssueOpsExisting},
@@ -66,7 +66,7 @@ func TestReadIssueOpsMissingRecordPreservesErrorIdentity(t *testing.T) {
 	absentStore := filepath.Join(t.TempDir(), "never-created")
 	cases := []struct {
 		name string
-		read func(string, string) (issueops.IssueOpsRecord, error)
+		read func(string, string) (issueops.Record, error)
 		root string
 	}{
 		{"read, existing store", ReadIssueOps, stateRoot},
@@ -75,7 +75,7 @@ func TestReadIssueOpsMissingRecordPreservesErrorIdentity(t *testing.T) {
 	}
 	for _, tc := range cases {
 		got, err := tc.read(tc.root, "io-missing")
-		want := issueops.IssueOpsRecord{ID: "io-missing"}
+		want := issueops.Record{ID: "io-missing"}
 		// The answer names the cycle and how to list cycles, never the store path.
 		if !errors.Is(err, fs.ErrNotExist) || !strings.Contains(err.Error(), "issueops record io-missing not found") || strings.Contains(err.Error(), "sqlstore") ||
 			!reflect.DeepEqual(got, want) {
@@ -128,9 +128,9 @@ func TestReadIssueOpsRejectsRecordInvariantViolations(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			for _, read := range []func(string, string) (issueops.IssueOpsRecord, error){ReadIssueOps, ReadIssueOpsExisting} {
+			for _, read := range []func(string, string) (issueops.Record, error){ReadIssueOps, ReadIssueOpsExisting} {
 				got, err := read(stateRoot, id)
-				want := issueops.IssueOpsRecord{ID: id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
+				want := issueops.Record{ID: id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
 				if !errors.Is(err, statecontract.ErrInvalidState) ||
 					!reflect.DeepEqual(got, want) {
 					t.Fatalf("record = %+v, error = %v, want %+v and invalid state", got, err, want)
@@ -170,9 +170,9 @@ func TestReadIssueOpsRejectsInvalidStateMatrix(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			for _, read := range []func(string, string) (issueops.IssueOpsRecord, error){ReadIssueOps, ReadIssueOpsExisting} {
+			for _, read := range []func(string, string) (issueops.Record, error){ReadIssueOps, ReadIssueOpsExisting} {
 				got, err := read(stateRoot, test.id)
-				want := issueops.IssueOpsRecord{ID: test.id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
+				want := issueops.Record{ID: test.id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
 				if !errors.Is(err, statecontract.ErrInvalidState) ||
 					err.Error() != statecontract.ErrInvalidState.Error() || !reflect.DeepEqual(got, want) {
 					t.Fatalf("record = %+v, error = %v, want %+v and invalid state", got, err, want)

@@ -14,6 +14,8 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// CleanupLifetimeLock serializes cleanup commands per cycle ID with a process lease under
+// StateRoot.
 type CleanupLifetimeLock struct {
 	StateRoot string
 	// Wait bounds how long a busy lock is retried; zero means
@@ -21,6 +23,8 @@ type CleanupLifetimeLock struct {
 	Wait time.Duration
 }
 
+// Acquire takes the cleanup lifetime lease for id, retrying a busy lock until Wait
+// expires or ctx ends. A lock still held after that is refused with an explanatory error.
 func (s CleanupLifetimeLock) Acquire(ctx context.Context, id string) (cleanupapp.CleanupLifetime, error) {
 	normalized, err := normalizeIssueOpsID(id)
 	if err != nil {
@@ -72,10 +76,12 @@ func (l cleanupLifetime) Drain(ctx context.Context) (cleanupapp.CleanupLifetime,
 	return cleanupLifetime{next}, nil
 }
 
-func NewCleanupAttempt(operation model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
+// NewCleanupAttempt creates a cleanup attempt for operation with a random token and the
+// current UTC start time.
+func NewCleanupAttempt(operation model.CleanupOperation) (model.CleanupAttempt, error) {
 	token := make([]byte, 32)
 	if _, err := rand.Read(token); err != nil {
-		return model.IssueOpsCleanupAttempt{}, err
+		return model.CleanupAttempt{}, err
 	}
-	return model.IssueOpsCleanupAttempt{Operation: operation, Token: hex.EncodeToString(token), StartedAt: time.Now().UTC().Format(time.RFC3339Nano)}, nil
+	return model.CleanupAttempt{Operation: operation, Token: hex.EncodeToString(token), StartedAt: time.Now().UTC().Format(time.RFC3339Nano)}, nil
 }

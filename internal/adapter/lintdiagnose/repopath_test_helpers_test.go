@@ -6,6 +6,6 @@ import (
 	model "issueops/internal/contract/lintdiagnose"
 )
 
-func DiagnoseCommand(req model.LintDiagnoseRequest) (model.LintDiagnoseResult, error) {
+func DiagnoseCommand(req model.Request) (model.Result, error) {
 	return (app.Service{Effects: Effects{Normalize: repopath.NormalizeRoot}}).Diagnose(req)
 }

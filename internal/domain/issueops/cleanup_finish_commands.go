@@ -26,6 +26,10 @@ func CleanupFinishRemedyCommand(id string, missing []string) string {
 	}
 	return ""
 }
+
+// CleanupFinishApplyCommand returns the exact apply command for cleanup
+// finish of cycle id, bound to the preview fingerprint. It appends
+// --superseded-by (shell-quoted) and --keep-remote-branch when requested.
 func CleanupFinishApplyCommand(id, fingerprint, supersededBy string, keepRemote bool) string {
 	replacement := ""
 	if value := strings.TrimSpace(supersededBy); value != "" {
@@ -37,6 +41,10 @@ func CleanupFinishApplyCommand(id, fingerprint, supersededBy string, keepRemote 
 	}
 	return fmt.Sprintf("issueops cleanup finish --id %s --apply --confirm --fingerprint %s%s%s --json", id, fingerprint, replacement, keep)
 }
+
+// ValidateCleanupFinishApply requires --confirm and a request fingerprint
+// equal to the current preview fingerprint, so an apply cannot run on stale
+// preview data.
 func ValidateCleanupFinishApply(req model.CleanupFinishRequest, fingerprint string) error {
 	if !req.Confirm {
 		return fmt.Errorf("cleanup finish --apply requires --confirm")
@@ -46,6 +54,11 @@ func ValidateCleanupFinishApply(req model.CleanupFinishRequest, fingerprint stri
 	}
 	return nil
 }
+
+// CleanupFinishAudit renders the one-line audit record of a completed cleanup
+// finish: worktree, branch, branch OID, number of stopped processes, any kept
+// remote branch with its tip, and the completion time. Missing values print
+// as "(없음)".
 func CleanupFinishAudit(inventory model.CleanupFinishInventory, result model.CleanupFinishResult, now string) string {
 	kept := ""
 	if branch := result.KeptRemoteBranch; branch != nil {

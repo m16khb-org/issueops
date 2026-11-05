@@ -35,11 +35,11 @@ func (cli command) runIssueOpsPlanPrep(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsPlanPrepWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsPlanPrepRequest{
-		PriorDecisions: issueopscontract.IssueOpsPlanPrepItemRequest{Evidence: []string(decisionsEvidence), WaiveReason: *decisionsWaive},
-		RelatedIssues:  issueopscontract.IssueOpsPlanPrepItemRequest{Evidence: []string(relatedScore), WaiveReason: *relatedWaive},
-		WebResearch:    issueopscontract.IssueOpsPlanPrepItemRequest{Evidence: []string(webResearch), WaiveReason: *webWaive},
-		CodebaseSurvey: issueopscontract.IssueOpsPlanPrepItemRequest{Evidence: []string(codebaseSurvey), WaiveReason: *surveyWaive},
+	record, err := cli.Runtime.RecordIssueOpsPlanPrepWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.PlanPrepRequest{
+		PriorDecisions: issueopscontract.PlanPrepItemRequest{Evidence: []string(decisionsEvidence), WaiveReason: *decisionsWaive},
+		RelatedIssues:  issueopscontract.PlanPrepItemRequest{Evidence: []string(relatedScore), WaiveReason: *relatedWaive},
+		WebResearch:    issueopscontract.PlanPrepItemRequest{Evidence: []string(webResearch), WaiveReason: *webWaive},
+		CodebaseSurvey: issueopscontract.PlanPrepItemRequest{Evidence: []string(codebaseSurvey), WaiveReason: *surveyWaive},
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }

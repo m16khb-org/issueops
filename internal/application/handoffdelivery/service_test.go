@@ -14,11 +14,11 @@ type auditProbe struct {
 	err   error
 }
 
-func (p *auditProbe) Append(o model.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
+func (p *auditProbe) Append(o model.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	p.calls = append(p.calls, "append")
 	return auditcontract.HandoffDeliveryAuditRecord{Observation: o}, p.err
 }
-func (p *auditProbe) Read() ([]model.IssueOpsHandoffDeliveryObservation, error) {
+func (p *auditProbe) Read() ([]model.HandoffDeliveryObservation, error) {
 	p.calls = append(p.calls, "read")
 	return nil, p.err
 }
@@ -26,12 +26,12 @@ func (p *auditProbe) Read() ([]model.IssueOpsHandoffDeliveryObservation, error) 
 func TestManualObservationRefusalHasNoAppendAndPreservesReadError(t *testing.T) {
 	audit := &auditProbe{}
 	readErr := errors.New("record unavailable")
-	service := Service{Audit: audit, ReadRecord: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, readErr }}
-	if _, err := service.ObserveManual(model.IssueOpsHandoffDeliveryObservation{}); err != readErr {
+	service := Service{Audit: audit, ReadRecord: func(string) (model.Record, error) { return model.Record{}, readErr }}
+	if _, err := service.ObserveManual(model.HandoffDeliveryObservation{}); err != readErr {
 		t.Fatalf("read error replaced: %v", err)
 	}
-	service.ReadRecord = func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, nil }
-	if _, err := service.ObserveManual(model.IssueOpsHandoffDeliveryObservation{}); err == nil || err.Error() != "manual handoff delivery observation requires the exact released direct execution generation" {
+	service.ReadRecord = func(string) (model.Record, error) { return model.Record{}, nil }
+	if _, err := service.ObserveManual(model.HandoffDeliveryObservation{}); err == nil || err.Error() != "manual handoff delivery observation requires the exact released direct execution generation" {
 		t.Fatalf("authority error: %v", err)
 	}
 	if len(audit.calls) != 0 {

@@ -52,7 +52,7 @@ func TestPreflightUsesBoundedReadOnlyCmuxCommandsAndExactObservedIdentity(t *tes
 	observations := 0
 	client := Client{
 		Runner: runner,
-		ObserveEndpoint: func(path string, uid int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		ObserveEndpoint: func(path string, uid int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			observations++
 			if path != socketPath || uid != 501 {
 				t.Fatalf("endpoint observation path=%q uid=%d", path, uid)
@@ -67,7 +67,7 @@ func TestPreflightUsesBoundedReadOnlyCmuxCommandsAndExactObservedIdentity(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	if observations != 2 || result.Version != SupportedVersion || result.Build != SupportedBuildIdentity || result.WindowID != testWindow || !SameEndpoint(result.Endpoint, endpointFixture()) {
+	if observations != 2 || result.Version != SupportedVersion || result.Build != SupportedBuildIdentity || result.WindowID != testWindow || !sameEndpoint(result.Endpoint, endpointFixture()) {
 		t.Fatalf("preflight=%+v observations=%d", result, observations)
 	}
 	for _, request := range runner.seen {
@@ -215,7 +215,7 @@ func TestCreateWorkspaceResponseLossAndEndpointRestartNeverRetry(t *testing.T) {
 			{args: []string{"--id-format", "uuids", "identify", "--window", testWindow, "--workspace", testWorkspace, "--surface", testSurface}, stdout: identifyFixture(testWindow, testWorkspace, testSurface)},
 		}}
 		calls := 0
-		observer := func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+		observer := func(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			endpoint := endpointFixture()
 			if calls > 1 {
@@ -243,10 +243,10 @@ type runnerStep struct {
 type queueRunner struct {
 	t     *testing.T
 	steps []runnerStep
-	seen  []CommandRequest
+	seen  []commandRequest
 }
 
-func (runner *queueRunner) Run(_ context.Context, request CommandRequest) (CommandOutput, error) {
+func (runner *queueRunner) Run(_ context.Context, request commandRequest) (CommandOutput, error) {
 	runner.t.Helper()
 	runner.seen = append(runner.seen, request)
 	if len(runner.steps) == 0 {
@@ -261,7 +261,7 @@ func (runner *queueRunner) Run(_ context.Context, request CommandRequest) (Comma
 	return CommandOutput{Stdout: []byte(step.stdout), Stderr: []byte(step.stderr), Invoked: step.invoked || step.err == nil}, step.err
 }
 
-func stableEndpointObserver(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+func stableEndpointObserver(string, int) (issueops.HandoffDeliveryEndpointIncarnation, error) {
 	return endpointFixture(), nil
 }
 

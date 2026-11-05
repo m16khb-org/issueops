@@ -1,7 +1,9 @@
+// Package quality defines the result DTOs of the repository quality inspection: signals, findings, coverage, SNR and status constants.
 package quality
 
 import "issueops/internal/contract/qualitycatalog"
 
+// InspectResult is the full quality inspection report with collection, health and gate statuses, signals, findings and improvement candidates.
 type InspectResult struct {
 	OK               bool                       `json:"ok"`
 	CollectionStatus string                     `json:"collection_status"`
@@ -17,6 +19,7 @@ type InspectResult struct {
 	Warnings         []string                   `json:"warnings"`
 }
 
+// Summary holds the aggregate counts of open candidates, low-coverage packages, branch-heavy functions and audit items behind an InspectResult.
 type Summary struct {
 	SelfAugmentOpenCandidates int `json:"self_augment_open_candidates"`
 	SelfVerifyOpenCandidates  int `json:"self_verify_open_candidates"`
@@ -27,6 +30,7 @@ type Summary struct {
 	CandidateCount            int `json:"candidate_count"`
 }
 
+// Signal is one measured quality metric. Value is compared against Threshold (omitted when the signal has none) to derive Status, and Evidence lists the supporting items.
 type Signal struct {
 	ID        string   `json:"id"`
 	Category  string   `json:"category"`
@@ -36,11 +40,13 @@ type Signal struct {
 	Evidence  []string `json:"evidence"`
 }
 
+// CoveragePackage is the statement coverage of one Go package; Coverage is a percentage.
 type CoveragePackage struct {
 	Package  string  `json:"package"`
 	Coverage float64 `json:"coverage"`
 }
 
+// BranchFunction reports a function's location and its branch count, used to flag complexity candidates.
 type BranchFunction struct {
 	File     string `json:"file"`
 	Line     int    `json:"line"`
@@ -48,6 +54,7 @@ type BranchFunction struct {
 	Branches int    `json:"branches"`
 }
 
+// AuditItem is one entry of the project audit, with its area, priority and size.
 type AuditItem struct {
 	ID       string `json:"id"`
 	Area     string `json:"area"`
@@ -56,6 +63,7 @@ type AuditItem struct {
 	Size     string `json:"size"`
 }
 
+// Finding is a quality problem with its severity, whether it blocks the gate, supporting evidence, a remediation hint and the command that verifies the fix.
 type Finding struct {
 	ID            string   `json:"id"`
 	Severity      string   `json:"severity"`
@@ -66,6 +74,7 @@ type Finding struct {
 	VerifyCommand string   `json:"verify_command"`
 }
 
+// PioneerCoverage counts the benchmark, reproduction, isolated-evaluation and hidden-holdout results observed against the expected number of pioneer skills, and lists the missing or blocked ones.
 type PioneerCoverage struct {
 	Expected               int                  `json:"expected"`
 	BenchmarkObserved      int                  `json:"benchmark_observed"`
@@ -82,12 +91,14 @@ type PioneerCoverage struct {
 	HiddenHoldoutObserved  int                  `json:"hidden_holdout_observed"`
 }
 
+// PioneerBlockedCase names a skill and evaluation axis whose isolated evaluation was blocked, with the reason.
 type PioneerBlockedCase struct {
 	Skill  string `json:"skill"`
 	Axis   string `json:"axis"`
 	Reason string `json:"reason"`
 }
 
+// SNRResult is the code signal-to-noise measurement: signal lines (code), noise lines (blank, comment or structural-only), their total, and Ratio as signal over total.
 type SNRResult struct {
 	SignalLines int     `json:"signal_lines"`
 	NoiseLines  int     `json:"noise_lines"`
@@ -95,6 +106,7 @@ type SNRResult struct {
 	Ratio       float64 `json:"ratio"`
 }
 
+// CollectionStatusOK through GateStatusBlock are the string values of InspectResult's CollectionStatus, HealthStatus and GateStatus fields.
 const (
 	CollectionStatusOK    = "ok"
 	CollectionStatusError = "error"

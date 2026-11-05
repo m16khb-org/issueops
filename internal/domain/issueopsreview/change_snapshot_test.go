@@ -28,12 +28,12 @@ func TestChangeBasePriorityAndEvidencePolicy(t *testing.T) {
 		})
 	}
 	for _, value := range []string{strings.Repeat("0", 40), strings.Repeat("f", 64)} {
-		if !FullGitObjectID(value) {
+		if !fullGitObjectID(value) {
 			t.Fatalf("valid object rejected %s", value)
 		}
 	}
 	for _, value := range []string{"", strings.Repeat("A", 40), strings.Repeat("a", 39), strings.Repeat("g", 64)} {
-		if FullGitObjectID(value) {
+		if fullGitObjectID(value) {
 			t.Fatalf("invalid object accepted %s", value)
 		}
 	}

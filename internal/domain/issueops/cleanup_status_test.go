@@ -7,14 +7,14 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func cleanupStatusRecordForDomain() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "cycle", Phase: model.IssueOpsPhaseDone, Branch: "1-cleanup", WorktreePath: "/worktree", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1", Labels: []string{"ready"}, Assignees: []string{"owner"}}}
+func cleanupStatusRecordForDomain() model.Record {
+	return model.Record{ID: "cycle", Phase: model.PhaseDone, Branch: "1-cleanup", WorktreePath: "/worktree", RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1", Labels: []string{"ready"}, Assignees: []string{"owner"}}}
 }
 
 func TestCleanupStatusUsesObservedFactsAndStableRequirementPolarity(t *testing.T) {
 	record := cleanupStatusRecordForDomain()
 	facts := CleanupStatusObservation{WorktreeExists: true, Branch: "1-cleanup", Remote: "origin"}
-	ready := BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{Merged: true}, facts)
+	ready := BuildCleanupStatus(record, model.CleanupStatusRequest{Merged: true}, facts)
 	if !ready.Ready || len(ready.Missing) != 0 || len(ready.Choices) != 3 {
 		t.Fatalf("ready: %+v", ready)
 	}
@@ -37,7 +37,7 @@ func TestCleanupStatusUsesObservedFactsAndStableRequirementPolarity(t *testing.T
 		t.Run(tc.name, func(t *testing.T) {
 			observed := facts
 			tc.change(&observed)
-			got := BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{Merged: true}, observed)
+			got := BuildCleanupStatus(record, model.CleanupStatusRequest{Merged: true}, observed)
 			if got.Ready || !reflect.DeepEqual(got.Missing, []string{tc.missing}) {
 				t.Fatalf("status: %+v", got)
 			}
@@ -50,12 +50,12 @@ func TestCleanupStatusUsesObservedFactsAndStableRequirementPolarity(t *testing.T
 
 func TestCleanupStatusRequiresStructuralAndRemoteEvidence(t *testing.T) {
 	record := cleanupStatusRecordForDomain()
-	record.Phase = model.IssueOpsPhasePlan
+	record.Phase = model.PhasePlan
 	record.WorktreePath = ""
 	record.RemoteArtifact.Labels = []string{" ", "bad\x00label"}
 	record.RemoteArtifact.Assignees = []string{"\x00"}
-	record.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: "child"}}
-	got := BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{}, CleanupStatusObservation{})
+	record.IssueLinks = []model.IssueLink{{Type: "child", URL: "child"}}
+	got := BuildCleanupStatus(record, model.CleanupStatusRequest{}, CleanupStatusObservation{})
 	want := []string{"child_tasks_closed", "pr_phase", "remote_artifact_assignees", "remote_artifact_labels", "remote_artifact_merged", "worktree_path"}
 	if !reflect.DeepEqual(got.Missing, want) {
 		t.Fatalf("missing=%v", got.Missing)
@@ -71,7 +71,7 @@ func TestCleanupStatusRequiresStructuralAndRemoteEvidence(t *testing.T) {
 
 func TestFinalizeCleanupStatusDoesNotMutateInput(t *testing.T) {
 	values := []string{"b", "", "a", "b"}
-	got := FinalizeCleanupStatus(model.IssueOpsCleanupStatus{Missing: values, Warnings: values})
+	got := finalizeCleanupStatus(model.CleanupStatus{Missing: values, Warnings: values})
 	if !reflect.DeepEqual(got.Missing, []string{"a", "b"}) || !reflect.DeepEqual(got.Warnings, []string{"a", "b"}) {
 		t.Fatalf("finalize: %+v", got)
 	}

@@ -6,7 +6,7 @@
 실행해 봐야 원인을 안다.
 
 ## 제안 (이슈 작성자 메모)
-- 검증 결과 DTO(`IssueOpsRemoteArtifactVerification`)에 `failureReason` 필드를 추가해 실패 사유를 남긴다.
+- 검증 결과 DTO(`RemoteArtifactVerification`)에 `failureReason` 필드를 추가해 실패 사유를 남긴다.
 - 프론트엔드 대시보드가 camelCase를 쓰므로 기존 `verified_at`도 `verifiedAt`으로 이름을 바꿔 맞춘다.
 - 필드가 늘어나니 record의 `schema_version`을 2로 올린다.
 

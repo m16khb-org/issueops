@@ -79,7 +79,7 @@ func TestFinishAttemptCodecRejectsMalformedAuthority(t *testing.T) {
 		if _, err := DecodeLease("io-finish-codec", raw); !errors.Is(err, state.ErrInvalidState) {
 			t.Errorf("accepted malformed lease record %s: %v", attempt, err)
 		}
-		var record model.IssueOpsRecord
+		var record model.Record
 		if err := json.Unmarshal(raw, &record); err != nil {
 			t.Fatal(err)
 		}

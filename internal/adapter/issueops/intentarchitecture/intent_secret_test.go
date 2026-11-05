@@ -9,7 +9,7 @@ import (
 
 func TestRecordIntentRejectsColonFormSecretBeforeWriting(t *testing.T) {
 	store, rec := planPrepMemStore()
-	_, err := RecordIntent(store, "state", "io-1", model.IssueOpsIntentRecordRequest{
+	_, err := RecordIntent(store, "state", "io-1", model.IntentRecordRequest{
 		RawRequest:        "raw ask",
 		InterpretedIntent: "reframed agent interpretation differs",
 		SuccessCriteria:   []string{"works"},
@@ -25,7 +25,7 @@ func TestRecordIntentRejectsColonFormSecretBeforeWriting(t *testing.T) {
 
 func TestRecordIntentKeepsRedactingEqualsFormSecret(t *testing.T) {
 	store, _ := planPrepMemStore()
-	rec, err := RecordIntent(store, "state", "io-1", model.IssueOpsIntentRecordRequest{
+	rec, err := RecordIntent(store, "state", "io-1", model.IntentRecordRequest{
 		RawRequest:        "remove password=hunter2 from the logs",
 		InterpretedIntent: "reframed agent interpretation differs",
 		SuccessCriteria:   []string{"works"},

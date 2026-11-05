@@ -17,11 +17,11 @@ func newRemoteCompletionService(root string, resolve func(string) (port.IssuePro
 	return application.NewRemoteCompletionService(store, application.TrackedMaterials{Files: issueops.MaterialFiles{}}, application.NewCompletionReceipts(store, now), func(name string) (application.CompletionProvider, error) { return resolve(name) }, verify)
 }
 
-func reflectRemoteCompletion(ctx context.Context, root, id, providerOverride, resultBody string, confirm bool, verify application.MergeVerifier) (model.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
+func reflectRemoteCompletion(ctx context.Context, root, id, providerOverride, resultBody string, confirm bool, verify application.MergeVerifier) (model.Record, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
 	return newRemoteCompletionService(root, provider.Resolve, verify, time.Now).Reflect(ctx, id, providerOverride, resultBody, confirm)
 }
 
-func closeRemoteIssue(ctx context.Context, root, id, providerOverride string, confirm bool, verify application.MergeVerifier) (model.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
+func closeRemoteIssue(ctx context.Context, root, id, providerOverride string, confirm bool, verify application.MergeVerifier) (model.Record, port.IssueProviderCloseIssueResult, error) {
 	return newRemoteCompletionService(root, provider.Resolve, verify, time.Now).Close(ctx, id, providerOverride, confirm)
 }
 

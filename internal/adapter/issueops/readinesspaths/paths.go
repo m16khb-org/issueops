@@ -1,3 +1,7 @@
+// Package readinesspaths holds the filesystem checks behind IssueOps
+// readiness: where the git root and worktree of a cycle record live and whether
+// its plan file exists inside that worktree. It is an adapter-layer helper over
+// the os package.
 package readinesspaths
 
 import (
@@ -9,13 +13,17 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func StrictGitRoot(record model.IssueOpsRecord) string {
+// StrictGitRoot returns the directory readiness checks run git in: the
+// record's worktree path when set, otherwise its repo, trimmed of whitespace.
+func StrictGitRoot(record model.Record) string {
 	if path := strings.TrimSpace(record.WorktreePath); path != "" {
 		return path
 	}
 	return strings.TrimSpace(record.Repo)
 }
 
+// WorktreePathValid reports whether path names an existing directory. Empty
+// paths and paths containing a NUL byte are invalid.
 func WorktreePathValid(path string) bool {
 	path = strings.TrimSpace(path)
 	if path == "" || strings.Contains(path, "\x00") {
@@ -25,6 +33,8 @@ func WorktreePathValid(path string) bool {
 	return err == nil && info.IsDir()
 }
 
+// PlanPathExists reports whether path, resolved against repo when relative, is
+// an existing regular file (not a directory).
 func PlanPathExists(repo, path string) bool {
 	path = strings.TrimSpace(path)
 	if path == "" || strings.Contains(path, "\x00") {
@@ -37,7 +47,10 @@ func PlanPathExists(repo, path string) bool {
 	return err == nil && !info.IsDir()
 }
 
-func PlanInLinkedWorktree(record model.IssueOpsRecord) bool {
+// PlanInLinkedWorktree reports whether the record's plan path stays inside its
+// linked worktree. A record with no plan path or no worktree passes, since there
+// is nothing to compare.
+func PlanInLinkedWorktree(record model.Record) bool {
 	planPath := strings.TrimSpace(record.PlanPath)
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if planPath == "" || worktree == "" {
@@ -46,6 +59,10 @@ func PlanInLinkedWorktree(record model.IssueOpsRecord) bool {
 	return PlanPathInsideWorktree(worktree, planPath)
 }
 
+// PlanPathInsideWorktree reports whether planPath lies inside worktree. A
+// relative plan path always passes. An absolute one must sit under the worktree
+// as recorded or as symlink-resolved, and its own symlink-resolved target must
+// stay inside the resolved worktree.
 func PlanPathInsideWorktree(worktree, planPath string) bool {
 	planPath = strings.TrimSpace(planPath)
 	if planPath == "" || strings.Contains(planPath, "\x00") {

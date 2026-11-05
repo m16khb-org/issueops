@@ -5,34 +5,40 @@ import (
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 )
 
-type Code string
+type code string
 
+// Decision codes. The unexported codes are the preview and apply paths that
+// create a workspace; the exported ones are the outcomes callers must handle
+// when an execution already exists.
 const (
-	CodePreview          Code = "preview"
-	CodeApply            Code = "apply"
-	CodeExisting         Code = "existing"
-	CodePendingReconcile Code = "pending_reconcile"
-	CodeWriterless       Code = "writerless"
+	codePreview          code = "preview"
+	codeApply            code = "apply"
+	CodeExisting         code = "existing"
+	CodePendingReconcile code = "pending_reconcile"
+	CodeWriterless       code = "writerless"
 )
 
+// DecisionInput is what Decide reads: the prepare command and the current
+// record snapshot.
 type DecisionInput struct {
 	Command  preparationcontract.Command
 	Snapshot preparationcontract.Snapshot
 }
 
+// Decision is the outcome of Decide; Code selects the prepare path.
 type Decision struct {
-	Code Code
+	Code code
 }
 
-// Decide는 prepare 요청이 새 workspace를 만들지(preview/apply), 이미 준비된
+// Decide 함수는 prepare 요청이 새 workspace를 만들지(preview/apply), 이미 준비된
 // execution을 그대로 돌려줄지, 외부 intent나 writer 부재로 막을지 고른다.
 func Decide(input DecisionInput) Decision {
 	execution := input.Snapshot.Record.Execution
 	if execution == nil {
 		if input.Command.Confirm {
-			return Decision{Code: CodeApply}
+			return Decision{Code: codeApply}
 		}
-		return Decision{Code: CodePreview}
+		return Decision{Code: codePreview}
 	}
 	switch {
 	case execution.Pending != nil:

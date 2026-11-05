@@ -15,10 +15,10 @@ func testCommand() Command {
 }
 func Run(args []string) error            { return testCommand().Run(args) }
 func RunCheck(args []string) error       { return testCommand().Check(args) }
-func RunFakeRun(args []string) error     { return testCommand().FakeRun(args) }
-func RunReadOnly(args []string) error    { return testCommand().RunReadOnly(args) }
-func RunAudit(args []string) error       { return testCommand().AuditPolicy(args) }
-func runPolicyRun(args []string) error   { return testCommand().RunReadOnly(args) }
+func RunFakeRun(args []string) error     { return testCommand().fakeRun(args) }
+func RunReadOnly(args []string) error    { return testCommand().runReadOnly(args) }
+func RunAudit(args []string) error       { return testCommand().auditPolicy(args) }
+func runPolicyRun(args []string) error   { return testCommand().runReadOnly(args) }
 func runPolicyCheck(args []string) error { return testCommand().Check(args) }
 func parseCommandPolicyFlags(name string, args []string) (policy.CommandPolicyRequest, bool, error) {
 	return testCommand().ParseFlags(name, args)

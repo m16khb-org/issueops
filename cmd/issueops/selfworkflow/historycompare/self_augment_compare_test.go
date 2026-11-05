@@ -10,17 +10,17 @@ import (
 func TestCompareSelfAugmentSummaries(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	baseSummary := augmentcontract.SelfAugmentSummary{
+	baseSummary := augmentcontract.Summary{
 		TotalRuns:   10,
 		TotalSteps:  20,
 		PassedSteps: 20,
 		StepLabels:  []string{"go test", "MCP smoke"},
-		SlowestSteps: []augmentcontract.SelfAugmentSlowStep{
+		SlowestSteps: []augmentcontract.SlowStep{
 			{Iteration: 1, Seed: 400, Label: "go test", DurationMS: 1000},
 		},
 	}
 	candidateSummary := baseSummary
-	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -33,7 +33,7 @@ func TestCompareSelfAugmentSummaries(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write baseline: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -65,9 +65,9 @@ func TestCompareSelfAugmentSummaries(t *testing.T) {
 func TestCompareSelfAugmentSummariesDetectsFailedStepRegression(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	baseline := augmentcontract.SelfAugmentSummary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 20, StepLabels: []string{"go test", "MCP smoke"}}
-	candidate := augmentcontract.SelfAugmentSummary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 19, FailedSteps: 1, StepLabels: []string{"go test"}}
-	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.SelfAugmentStateSnapshot{
+	baseline := augmentcontract.Summary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 20, StepLabels: []string{"go test", "MCP smoke"}}
+	candidate := augmentcontract.Summary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 19, FailedSteps: 1, StepLabels: []string{"go test"}}
+	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -79,7 +79,7 @@ func TestCompareSelfAugmentSummariesDetectsFailedStepRegression(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write baseline: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            false,
@@ -103,22 +103,22 @@ func TestCompareSelfAugmentSummariesDetectsFailedStepRegression(t *testing.T) {
 func TestCompareSelfAugmentSummariesDetectsSlowStepRegression(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	baseline := augmentcontract.SelfAugmentSummary{
+	baseline := augmentcontract.Summary{
 		TotalRuns:   10,
 		TotalSteps:  20,
 		PassedSteps: 20,
 		StepLabels:  []string{"go test", "MCP smoke"},
-		SlowestSteps: []augmentcontract.SelfAugmentSlowStep{
+		SlowestSteps: []augmentcontract.SlowStep{
 			{Iteration: 1, Seed: 600, Label: "go test", DurationMS: 1000},
 			{Iteration: 1, Seed: 600, Label: "MCP smoke", DurationMS: 100},
 		},
 	}
 	candidate := baseline
-	candidate.SlowestSteps = []augmentcontract.SelfAugmentSlowStep{
+	candidate.SlowestSteps = []augmentcontract.SlowStep{
 		{Iteration: 1, Seed: 600, Label: "go test", DurationMS: 1400},
 		{Iteration: 1, Seed: 600, Label: "MCP smoke", DurationMS: 100},
 	}
-	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -130,7 +130,7 @@ func TestCompareSelfAugmentSummariesDetectsSlowStepRegression(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write baseline: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -161,28 +161,28 @@ func TestCompareSelfAugmentSummariesDetectsSlowStepRegression(t *testing.T) {
 func TestCompareSelfAugmentSummariesDetectsStepBudgetRegressionBeyondSlowestTopFive(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	baseline := augmentcontract.SelfAugmentSummary{
+	baseline := augmentcontract.Summary{
 		TotalRuns:   10,
 		TotalSteps:  60,
 		PassedSteps: 60,
 		StepLabels:  []string{"go test", "MCP smoke", "docs index smoke"},
-		SlowestSteps: []augmentcontract.SelfAugmentSlowStep{
+		SlowestSteps: []augmentcontract.SlowStep{
 			{Iteration: 1, Seed: 601, Label: "go test", DurationMS: 2000},
 			{Iteration: 1, Seed: 601, Label: "MCP smoke", DurationMS: 1500},
 		},
-		StepDurationStats: []augmentcontract.SelfAugmentStepDurationStat{
+		StepDurationStats: []augmentcontract.StepDurationStat{
 			{Label: "MCP smoke", Count: 10, MinDurationMS: 1200, MaxDurationMS: 1500, AverageDurationMS: 1400, P95DurationMS: 1500},
 			{Label: "docs index smoke", Count: 10, MinDurationMS: 90, MaxDurationMS: 100, AverageDurationMS: 95, P95DurationMS: 100},
 			{Label: "go test", Count: 10, MinDurationMS: 1800, MaxDurationMS: 2000, AverageDurationMS: 1900, P95DurationMS: 2000},
 		},
 	}
 	candidate := baseline
-	candidate.StepDurationStats = []augmentcontract.SelfAugmentStepDurationStat{
+	candidate.StepDurationStats = []augmentcontract.StepDurationStat{
 		{Label: "MCP smoke", Count: 10, MinDurationMS: 1200, MaxDurationMS: 1500, AverageDurationMS: 1400, P95DurationMS: 1500},
 		{Label: "docs index smoke", Count: 10, MinDurationMS: 90, MaxDurationMS: 130, AverageDurationMS: 105, P95DurationMS: 130},
 		{Label: "go test", Count: 10, MinDurationMS: 1800, MaxDurationMS: 2000, AverageDurationMS: 1900, P95DurationMS: 2000},
 	}
-	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "baseline", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -194,7 +194,7 @@ func TestCompareSelfAugmentSummariesDetectsStepBudgetRegressionBeyondSlowestTopF
 	}); err != nil {
 		t.Fatalf("write baseline: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "candidate", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -223,8 +223,8 @@ func TestCompareSelfAugmentSummariesDetectsStepBudgetRegressionBeyondSlowestTopF
 }
 
 func TestCompareStepBudgetRegressionsIgnoresTinyAbsoluteNoise(t *testing.T) {
-	baseline := []augmentcontract.SelfAugmentStepDurationStat{{Label: "state roundtrip", Count: 10, P95DurationMS: 76}}
-	candidate := []augmentcontract.SelfAugmentStepDurationStat{{Label: "state roundtrip", Count: 10, P95DurationMS: 83}}
+	baseline := []augmentcontract.StepDurationStat{{Label: "state roundtrip", Count: 10, P95DurationMS: 76}}
+	candidate := []augmentcontract.StepDurationStat{{Label: "state roundtrip", Count: 10, P95DurationMS: 83}}
 	regressions := domain.CompareStepBudgetRegressions(baseline, candidate, 5)
 	if len(regressions) != 0 {
 		t.Fatalf("expected tiny p95 delta to be ignored, got %+v", regressions)

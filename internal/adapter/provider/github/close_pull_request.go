@@ -10,7 +10,7 @@ import (
 	"issueops/internal/port"
 )
 
-// ClosePullRequest는 미머지 PR을 닫는다. 머지된 PR은 닫지 않고 사실만
+// ClosePullRequest 메서드는 미머지 PR을 닫는다. 머지된 PR은 닫지 않고 사실만
 // 돌려준다 — 머지 뒤의 정리는 cleanup finish가 소유한다.
 func (Provider) ClosePullRequest(ctx context.Context, req port.IssueProviderClosePullRequestRequest) (port.IssueProviderClosePullRequestResult, error) {
 	artifactURL := strings.TrimSpace(req.ArtifactURL)

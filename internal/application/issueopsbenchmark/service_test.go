@@ -16,17 +16,17 @@ import (
 
 type runFiles struct {
 	port.Files
-	fixture           contract.IssueOpsBenchmarkFixture
+	fixture           contract.Fixture
 	judge             contract.IssueOpsJudgeMap
 	loadErr, judgeErr error
 	trace             *[]string
 }
 
-func (f runFiles) LoadFixtures(string) ([]contract.IssueOpsBenchmarkFixture, error) {
+func (f runFiles) LoadFixtures(string) ([]contract.Fixture, error) {
 	*f.trace = append(*f.trace, "fixtures")
-	return []contract.IssueOpsBenchmarkFixture{f.fixture}, f.loadErr
+	return []contract.Fixture{f.fixture}, f.loadErr
 }
-func (f runFiles) ReadJudgeMap(string, []contract.IssueOpsBenchmarkFixture) (contract.IssueOpsJudgeMap, error) {
+func (f runFiles) ReadJudgeMap(string, []contract.Fixture) (contract.IssueOpsJudgeMap, error) {
 	*f.trace = append(*f.trace, "judge")
 	return f.judge, f.judgeErr
 }
@@ -34,14 +34,14 @@ func (f runFiles) ReadJudgeMap(string, []contract.IssueOpsBenchmarkFixture) (con
 type runStore struct {
 	trace            *[]string
 	readErr, saveErr error
-	saved            []contract.IssueOpsBenchmarkRunResult
+	saved            []contract.RunResult
 }
 
-func (s *runStore) Read(id string) (contract.IssueOpsBenchmarkRunResult, error) {
+func (s *runStore) Read(id string) (contract.RunResult, error) {
 	*s.trace = append(*s.trace, "read:"+id)
-	return contract.IssueOpsBenchmarkRunResult{ID: id}, s.readErr
+	return contract.RunResult{ID: id}, s.readErr
 }
-func (s *runStore) Save(result contract.IssueOpsBenchmarkRunResult) error {
+func (s *runStore) Save(result contract.RunResult) error {
 	*s.trace = append(*s.trace, "save")
 	if s.saveErr != nil {
 		return s.saveErr
@@ -68,9 +68,9 @@ func TestRunRejectsJudgeBeforeSave(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var trace []string
 			store := &runStore{trace: &trace, readErr: tc.readErr}
-			service := app.Service{Files: runFiles{fixture: contract.IssueOpsBenchmarkFixture{ID: "fixture"}, judge: tc.judge, loadErr: tc.loadErr, judgeErr: tc.judgeErr, trace: &trace}, Runs: store,
+			service := app.Service{Files: runFiles{fixture: contract.Fixture{ID: "fixture"}, judge: tc.judge, loadErr: tc.loadErr, judgeErr: tc.judgeErr, trace: &trace}, Runs: store,
 				Now: func() time.Time { trace = append(trace, "clock"); return time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC) },
-				Artifact: func(f contract.IssueOpsBenchmarkFixture) contract.IssueOpsBenchmarkArtifact {
+				Artifact: func(f contract.Fixture) contract.Artifact {
 					trace = append(trace, "artifact")
 					return benchmarkartifact.FromFixture(f)
 				}}
@@ -87,16 +87,16 @@ func TestRunRejectsJudgeBeforeSave(t *testing.T) {
 
 func TestRunFinalizesMergedScoresBeforePersisting(t *testing.T) {
 	var trace []string
-	fixture := contract.IssueOpsBenchmarkFixture{ID: "fixture", Title: "Fix workflow", UserPrompt: "Improve workflow", RepoContext: "Go", CriticalFailures: []string{"missing issue"}}
-	judge := contract.IssueOpsBenchmarkScore{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "intent_understanding", Score: 7, Evidence: "judge evidence"}}}
+	fixture := contract.Fixture{ID: "fixture", Title: "Fix workflow", UserPrompt: "Improve workflow", RepoContext: "Go", CriticalFailures: []string{"missing issue"}}
+	judge := contract.Score{DimensionScores: []contract.IssueOpsDimensionScore{{Dimension: "intent_understanding", Score: 7, Evidence: "judge evidence"}}}
 	store := &runStore{trace: &trace}
-	service := app.Service{Files: runFiles{fixture: fixture, judge: contract.IssueOpsJudgeMap{SourceRunID: "prior", Provenance: "recorded", Scores: map[string]contract.IssueOpsBenchmarkScore{"fixture": judge}}, trace: &trace}, Runs: store,
+	service := app.Service{Files: runFiles{fixture: fixture, judge: contract.IssueOpsJudgeMap{SourceRunID: "prior", Provenance: "recorded", Scores: map[string]contract.Score{"fixture": judge}}, trace: &trace}, Runs: store,
 		Now: func() time.Time { return time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC) }, Artifact: benchmarkartifact.FromFixture}
 	got, err := service.Run("fixtures", "file", "judge")
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := domain.FinalizeRun(contract.IssueOpsBenchmarkRunResult{ID: "issueops-benchmark-20260102T030405.000000000Z", Scores: []contract.IssueOpsBenchmarkScore{domain.MergeScoreWithJudge(domain.ScoreFixture(fixture, benchmarkartifact.FromFixture(fixture)), judge)}})
+	want := domain.FinalizeRun(contract.RunResult{ID: "issueops-benchmark-20260102T030405.000000000Z", Scores: []contract.Score{domain.MergeScoreWithJudge(domain.ScoreFixture(fixture, benchmarkartifact.FromFixture(fixture)), judge)}})
 	if !reflect.DeepEqual(got, want) || len(store.saved) != 1 || !reflect.DeepEqual(store.saved[0], want) {
 		t.Fatalf("result=%+v saved=%+v want=%+v", got, store.saved, want)
 	}

@@ -1,3 +1,5 @@
+// Package trace is the application service that analyzes agent execution
+// traces and reports findings with failure causes.
 package trace
 
 import (
@@ -10,20 +12,25 @@ import (
 	tracecontract "issueops/internal/contract/trace"
 )
 
-const AnalysisKind = "trace_analysis"
+const analysisKind = "trace_analysis"
 
-type Effects interface {
+type effects interface {
 	Load(input, format string) (source string, body []byte, truncated bool, err error)
 	Decode(body []byte, format string) tracedomain.Input
 }
 
-type Service struct{ Effects Effects }
+// Service analyzes agent execution traces. Effects supplies trace loading and decoding.
+type Service struct{ Effects effects }
 
-func (service Service) Analyze(req tracecontract.TraceAnalyzeRequest) (tracecontract.TraceAnalyzeResult, error) {
+// Analyze loads the trace named by req.Input, decodes it in req.InputFormat
+// (default issueops), and returns the classified findings. It returns an error
+// for empty input, an unsupported format, or an unreadable trace; the partial
+// result then carries warnings.
+func (service Service) Analyze(req tracecontract.AnalyzeRequest) (tracecontract.AnalyzeResult, error) {
 	input := strings.TrimSpace(req.Input)
-	result := tracecontract.TraceAnalyzeResult{
-		OK: false, Kind: AnalysisKind, Input: input,
-		TraceTypes: []string{}, Findings: []tracecontract.TraceAnalysisFinding{}, Warnings: []string{},
+	result := tracecontract.AnalyzeResult{
+		OK: false, Kind: analysisKind, Input: input,
+		TraceTypes: []string{}, Findings: []tracecontract.AnalysisFinding{}, Warnings: []string{},
 	}
 	if input == "" {
 		return result, fmt.Errorf("trace analyze input is required")
@@ -92,10 +99,10 @@ func classifyDocument(document *tracedomain.Document) {
 	}
 }
 
-func toContractFindings(findings []tracedomain.Finding) []tracecontract.TraceAnalysisFinding {
-	out := make([]tracecontract.TraceAnalysisFinding, 0, len(findings))
+func toContractFindings(findings []tracedomain.Finding) []tracecontract.AnalysisFinding {
+	out := make([]tracecontract.AnalysisFinding, 0, len(findings))
 	for _, f := range findings {
-		finding := tracecontract.TraceAnalysisFinding{FailureClass: f.FailureClass, FailureCause: failurecontract.Cause(f.FailureCause), FailureCauseEvidence: make([]failurecontract.Evidence, 0, len(f.FailureCauseEvidence)), RecurringPattern: f.RecurringPattern, ProposedKnob: f.ProposedKnob, OverfitRisk: f.OverfitRisk, VerificationCommand: f.VerificationCommand}
+		finding := tracecontract.AnalysisFinding{FailureClass: f.FailureClass, FailureCause: failurecontract.Cause(f.FailureCause), FailureCauseEvidence: make([]failurecontract.Evidence, 0, len(f.FailureCauseEvidence)), RecurringPattern: f.RecurringPattern, ProposedKnob: f.ProposedKnob, OverfitRisk: f.OverfitRisk, VerificationCommand: f.VerificationCommand}
 		for _, e := range f.FailureCauseEvidence {
 			finding.FailureCauseEvidence = append(finding.FailureCauseEvidence, failurecontract.Evidence{Cause: failurecontract.Cause(e.Cause), Code: e.Code, Source: e.Source})
 		}

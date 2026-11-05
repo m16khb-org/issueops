@@ -14,7 +14,7 @@ import (
 )
 
 func TestVerifyRemoteArtifactLiveRejectsUnsupportedCombination(t *testing.T) {
-	err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider: "other",
 		Kind:     "issue",
 		URL:      "https://example.com/acme/repo/issues/1",
@@ -33,7 +33,7 @@ func TestVerifyRemoteArtifactLiveContextHonorsCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := VerifyRemoteArtifactLiveContext(ctx, issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	err := VerifyRemoteArtifactLiveContext(ctx, issueopscontract.RemoteArtifactVerificationRequest{
 		Provider: "github",
 		Kind:     "issue",
 		URL:      "https://github.com/acme/repo/issues/1",
@@ -62,7 +62,7 @@ func TestCommandOutputErrorRedactsAndCapsProviderDiagnostics(t *testing.T) {
 
 func TestVerifyIssueOpsRemoteArtifactLiveRejectsMissingGitHubPR(t *testing.T) {
 	installFakeGHForRemoteArtifactTest(t)
-	err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/9999",
@@ -76,7 +76,7 @@ func TestVerifyIssueOpsRemoteArtifactLiveRejectsMissingGitHubPR(t *testing.T) {
 
 func TestVerifyIssueOpsRemoteArtifactLiveRequiresRemoteLabelsAndAssignees(t *testing.T) {
 	installFakeGHForRemoteArtifactTest(t)
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/1",
@@ -85,7 +85,7 @@ func TestVerifyIssueOpsRemoteArtifactLiveRequiresRemoteLabelsAndAssignees(t *tes
 	}); err != nil {
 		t.Fatalf("expected matching GitHub PR evidence to pass: %v", err)
 	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/1",
@@ -94,7 +94,7 @@ func TestVerifyIssueOpsRemoteArtifactLiveRequiresRemoteLabelsAndAssignees(t *tes
 	}); err == nil || !strings.Contains(err.Error(), "label") {
 		t.Fatalf("expected missing label to fail live verification, got %v", err)
 	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/1",
@@ -107,14 +107,14 @@ func TestVerifyIssueOpsRemoteArtifactLiveRequiresRemoteLabelsAndAssignees(t *tes
 
 func TestVerifyIssueOpsRemoteArtifactMergedLiveRequiresMergedGitHubPR(t *testing.T) {
 	installFakeGHForRemoteArtifactTest(t)
-	if err := VerifyRemoteArtifactMergedLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
+	if err := VerifyRemoteArtifactMergedLive(context.Background(), issueopscontract.RemoteArtifactVerification{
 		Provider: "github",
 		Kind:     "pr",
 		URL:      "https://github.com/example/repo/pull/2",
 	}); err == nil || !strings.Contains(err.Error(), "not verified merged") {
 		t.Fatalf("expected closed unmerged GitHub PR to fail cleanup merge verification, got %v", err)
 	}
-	if err := VerifyRemoteArtifactMergedLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
+	if err := VerifyRemoteArtifactMergedLive(context.Background(), issueopscontract.RemoteArtifactVerification{
 		Provider: "github",
 		Kind:     "pr",
 		URL:      "https://github.com/example/repo/pull/3",
@@ -174,7 +174,7 @@ printf '%s\n' '{"url":"https://github.com/example/repo/pull/3","state":"MERGED",
 	t.Setenv("ISSUEOPS_FAKE_GH_LOG", logPath)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	head, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
+	head, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/3",
 	})
 	if err != nil {
@@ -205,7 +205,7 @@ printf '%s\n' '{"web_url":"https://gitlab.example.com/group/project/-/merge_requ
 `)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	head, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
+	head, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.RemoteArtifactVerification{
 		Provider: "gitlab", Kind: "mr", URL: "https://gitlab.example.com/group/project/-/merge_requests/42",
 	})
 	if err != nil {
@@ -221,7 +221,7 @@ printf '%s\n' '{"web_url":"https://gitlab.example.com/group/project/-/merge_requ
 
 func TestVerifyRemoteArtifactMergedHeadLiveRejectsUnmerged(t *testing.T) {
 	installFakeGHForRemoteArtifactTest(t)
-	if _, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
+	if _, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/2",
 	}); err == nil || !strings.Contains(err.Error(), "not verified merged") {
 		t.Fatalf("unmerged PR must fail head verification: %v", err)
@@ -273,7 +273,7 @@ func TestVerifyRemoteArtifactMergedHonorsCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := VerifyRemoteArtifactMergedLive(ctx, issueopscontract.IssueOpsRemoteArtifactVerification{
+	err := VerifyRemoteArtifactMergedLive(ctx, issueopscontract.RemoteArtifactVerification{
 		Provider: "github",
 		Kind:     "pr",
 		URL:      "https://github.com/acme/repo/pull/1",

@@ -39,7 +39,7 @@ type semanticToolContent struct {
 }
 
 func observeHostStream(data []byte) (hostStreamObservation, error) {
-	if len(data) == 0 || len(data) > MaxOutputBytes {
+	if len(data) == 0 || len(data) > maxOutputBytes {
 		return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))

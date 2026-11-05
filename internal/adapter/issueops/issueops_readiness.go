@@ -5,6 +5,8 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
+// ReadinessPathObservations returns the filesystem- and git-backed observations that the
+// readiness evaluation uses for worktree path, plan file and sealed digest checks.
 func ReadinessPathObservations() cycleport.ReadinessObservations {
 	return cycleport.ReadinessObservations{
 		WorktreePathValid:        readinesspaths.WorktreePathValid,
@@ -12,6 +14,6 @@ func ReadinessPathObservations() cycleport.ReadinessObservations {
 		PlanInLinkedWorktree:     readinesspaths.PlanInLinkedWorktree,
 		WorkspaceMatches:         samePath,
 		LinkedPlanDigest:         ReviewPlanSource{}.LinkedDigest,
-		SealedArchitectureDigest: ReviewArchitectureSource{}.SealedDigest,
+		SealedArchitectureDigest: ReviewArchitectureSource{}.sealedDigest,
 	}
 }

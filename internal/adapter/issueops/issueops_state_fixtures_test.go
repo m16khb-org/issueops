@@ -35,7 +35,7 @@ func deleteIssueOps(ctx context.Context, stateRoot, id string) error {
 	})
 }
 
-func touchAndWriteIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+func touchAndWriteIssueOps(ctx context.Context, stateRoot string, record issueops.Record) (issueops.Record, error) {
 	record.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	return writeIssueOps(ctx, stateRoot, record)
 }

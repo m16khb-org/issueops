@@ -9,7 +9,12 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, request ClaimRepositoryRequest) (RepositoryResult, error) {
+// ClaimWithinTransaction applies a lease claim inside the repository's single
+// atomic span. It loads the record, treats an identical retry as success,
+// validates generation, actor, canonical cwd, and claim token, then persists
+// the claimed lease and removes the used token file. Any rejection returns an
+// error without persisting.
+func ClaimWithinTransaction(ctx context.Context, transaction claimTransaction, request ClaimRepositoryRequest) (RepositoryResult, error) {
 	before, err := transaction.Load(request.ID)
 	if err != nil {
 		return RepositoryResult{}, err
@@ -61,7 +66,7 @@ func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, r
 }
 
 // readClaimToken selects the claim token path from the request and reads it through the transaction.
-func readClaimToken(transaction ClaimTransaction, record leasecontract.Record, request ClaimRepositoryRequest) (string, string, error) {
+func readClaimToken(transaction claimTransaction, record leasecontract.Record, request ClaimRepositoryRequest) (string, string, error) {
 	if (request.TokenFile == "") == !request.ClaimCurrentToken {
 		return "", "", leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("exactly one claim token selector is required"))
 	}

@@ -25,7 +25,7 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 	tests := []struct {
 		name    string
 		prepare func(corehealth.Snapshot) corehealth.Snapshot
-		verify  func(model.IssueOpsRemoteArtifactVerification) error
+		verify  func(model.RemoteArtifactVerification) error
 		want    string
 	}{
 		{
@@ -117,7 +117,7 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 			prepare: func(snapshot corehealth.Snapshot) corehealth.Snapshot {
 				return snapshot
 			},
-			verify: func(model.IssueOpsRemoteArtifactVerification) error {
+			verify: func(model.RemoteArtifactVerification) error {
 				return errors.New("provider readback unavailable")
 			},
 			want: "remote_artifact_merged",
@@ -197,7 +197,7 @@ func TestPreviewAndApplyRemoveOnlyConfirmedRecordlessLocalArtifacts(t *testing.T
 		t.Fatal("remote branch was removed or unavailable; orphan cleanup must not delete it")
 	}
 	ids := []string{}
-	err = coreissueops.VisitIssueOpsExisting(issueOpsStateRootForTest(), func(id string, _ model.IssueOpsRecord, _ error) { ids = append(ids, id) })
+	err = coreissueops.VisitIssueOpsExisting(issueOpsStateRootForTest(), func(id string, _ model.Record, _ error) { ids = append(ids, id) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func (fixture orphanCleanupGitFixture) request() contract.Request {
 		RepoRoot:     fixture.repo,
 		WorktreePath: fixture.worktree,
 		Branch:       fixture.branch,
-		Artifact: model.IssueOpsRemoteArtifactVerification{
+		Artifact: model.RemoteArtifactVerification{
 			Provider: "github",
 			Kind:     "pr",
 			URL:      "https://github.com/example/repo/pull/42",
@@ -282,9 +282,9 @@ func (fixture orphanCleanupGitFixture) request() contract.Request {
 	}
 }
 
-func (fixture orphanCleanupGitFixture) deps(collect func(context.Context, string) (corehealth.Snapshot, error), verify func(model.IssueOpsRemoteArtifactVerification) error) Dependencies {
+func (fixture orphanCleanupGitFixture) deps(collect func(context.Context, string) (corehealth.Snapshot, error), verify func(model.RemoteArtifactVerification) error) Dependencies {
 	if verify == nil {
-		verify = func(model.IssueOpsRemoteArtifactVerification) error { return nil }
+		verify = func(model.RemoteArtifactVerification) error { return nil }
 	}
 	return Dependencies{Collect: collect, VerifyMerged: verify}
 }

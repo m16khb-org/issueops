@@ -1,8 +1,15 @@
+// Package selfaugment holds the pure domain rules of the self-augmentation and self-verification
+// loops: the candidate catalog and its scoring, goal and plan evaluation, lesson capture, summary
+// building, and history comparison and retention. It performs no I/O; application services supply
+// facts and persist the results.
 package selfaugment
 
 import contract "issueops/internal/contract/selfaugment"
 
-func MarkSatisfiedCandidate(candidate *contract.SelfAugmentCandidate, signals contract.SelfAugmentRepoSignals) {
+// MarkSatisfiedCandidate flips candidate to satisfied when signals prove the rule registered for
+// its ID holds. It records the evidence, zeroes the score so planners skip it, and appends a WhyNow
+// note; candidates without a matching rule or evidence are left untouched.
+func MarkSatisfiedCandidate(candidate *contract.Candidate, signals contract.RepoSignals) {
 	var evidence []string
 	for _, rule := range candidateSatisfactionRules() {
 		if rule.id == candidate.ID {
@@ -21,105 +28,105 @@ func MarkSatisfiedCandidate(candidate *contract.SelfAugmentCandidate, signals co
 
 type candidateSatisfactionRule struct {
 	id       string
-	evidence func(contract.SelfAugmentRepoSignals) []string
+	evidence func(contract.RepoSignals) []string
 }
 
 func candidateSatisfactionRules() []candidateSatisfactionRule {
 	return []candidateSatisfactionRule{
-		{"loop-taxonomy-score-gates", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"loop-taxonomy-score-gates", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasSelfVerifyCLI && signals.HasSelfAugmentPlanner && signals.HasSelfVerificationDocs && signals.HasGoalScoreSummary, "self-verify CLI exists", "self-augment planner exists", "loop docs distinguish both Korean names", "goal score summary is implemented")
 		}},
-		{"agent-skill-executor", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"agent-skill-executor", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasSelfAugmentSkill, "skills/self-augment exists in shared skill inventory")
 		}},
-		{"durable-augmentation-memory", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"durable-augmentation-memory", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasSelfAugmentStateCapture, "self-augment --save-state persists selected candidate curriculum to issueops state")
 		}},
-		{"reflexion-state-memory", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"reflexion-state-memory", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasSelfAugmentLessonCapture, "self-augment lesson stores Reflexion lessons in issueops state")
 		}},
-		{"qa-dashboard-summary", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"qa-dashboard-summary", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasGoalScoreSummary, "self-verify summary includes goal_scores and minimum_goal_score")
 		}},
-		{"qa-race-tier", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"qa-race-tier", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasRiskQATier, "self-verify includes a risk QA tier that conditionally runs go test -race and go vet for sensitive Go changes")
 		}},
-		{"adapter-contract-matrix", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"adapter-contract-matrix", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasAdapterContractMatrix, "internal/adapter install contract matrix locks Codex/Claude user-global and project-local installation behavior with a golden fixture")
 		}},
-		{"repo-local-augmentation-sandbox", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"repo-local-augmentation-sandbox", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasRepoLocalSandbox, "command policy rejects path-like argv outside workspace_root and self-verify command policy smoke covers the boundary")
 		}},
-		{"performance-baseline", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"performance-baseline", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasPerformanceBaseline, "self-verify compare promotes label-level slowest_steps deltas into slow_step regressions with unit coverage")
 		}},
-		{"self-augment-signal-table", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"self-augment-signal-table", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasSelfAugmentSignalTable, "self-augment repository signal collection is table-driven through repoSignalRules")
 		}},
-		{"quality-signal-harvester", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"quality-signal-harvester", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasQualityInspectCLI && signals.HasQualityInspectSignals, "quality inspect CLI exists", "quality inspect emits coverage, branch complexity, and audit risk signals")
 		}},
-		{"coverage-mcp-resources", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"coverage-mcp-resources", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasMCPResourceCoverage, "MCP resources cover stable descriptors, deterministic context, read errors, and catalog skill fallback")
 		}},
-		{"coverage-host-judgement", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"coverage-host-judgement", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasHostJudgementCoverage, "host-agent judgement decoder covers malformed structured output and bounded error output")
 		}},
-		{"coverage-issueops-linking", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"coverage-issueops-linking", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasIssueOpsLinkingBoundaryCoverage, "issueops linking covers invalid issue URLs, missing plan files, and plan/worktree boundary violations")
 		}},
-		{"coverage-issueops-inbound-adapters", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"coverage-issueops-inbound-adapters", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasIssueOpsInboundAdapterCoverage,
 				"inbound decision/inventory/retention/routing/status handlers cover delegation, validation failure, and error propagation",
 				"inbound lease handlers cover nil-service fail-closed paths and public denial/failure error mapping",
 			)
 		}},
-		{"coverage-issueops-transport-boundaries", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"coverage-issueops-transport-boundaries", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasToolConformanceTransportCoverage,
 				"tool conformance enums round-trip through typed JSON unmarshalling",
 				"issueops execution write-lease status matrix and sync-base resolution/event validation are pinned",
 			)
 		}},
-		{"state-write-locking", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"state-write-locking", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasStateWriteLocking, "StateWrite delegates to the application service, which serializes writes through the store span with regression coverage")
 		}},
-		{"worker-stuck-running-detection", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"worker-stuck-running-detection", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasWorkerStuckRunningDetection, "worker cleanup-stuck detects running jobs with dead PIDs and marks them failed through CLI/core coverage")
 		}},
-		{"genius-mermaid-lint", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"genius-mermaid-lint", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasGeniusMermaidLint, "QA gate lints Mermaid fences using GENIUS_THINK quote/<br/> rules and repo diagrams were normalized")
 		}},
-		{"install-dry-run-mode", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"install-dry-run-mode", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasInstallDryRunMode, "install supports --dry-run planning with no filesystem writes and adapter-level coverage")
 		}},
-		{"cli-mcp-adapter-split", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"cli-mcp-adapter-split", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasCLIAdapterSplit && signals.HasMCPAdapterCatalog, "CLI usage lives in internal/adapter/inbound/catalog/cli", "MCP static tool descriptors live in internal/contract/mcp")
 		}},
-		{"dto-compatibility-contract", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"dto-compatibility-contract", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasCompatibilityContract, "issueops contract schema/check exposes CLI/MCP compatibility contract")
 		}},
-		{"candidate-refill-curriculum", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"candidate-refill-curriculum", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasCandidateRefill, "self-augment catalog includes second-wave candidates and release-repro-pack open follow-up")
 		}},
-		{"policy-audit-redaction", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"policy-audit-redaction", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasCommandAuditLog, "policy audit writes append-only redacted JSONL records without executing commands")
 		}},
-		{"worker-mvp-no-shell", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"worker-mvp-no-shell", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasWorkerMVP, "worker MVP persists queued/cancelled job lifecycle records and never executes shell commands")
 		}},
-		{"release-repro-pack", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"release-repro-pack", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasReleaseReproPack, "release reproducibility checklist exists", "scripts/release-repro-smoke.sh verifies temp HOME/CODEX_HOME/ISSUEOPS_ROOT install dry-run", "testing docs list the release install reproducibility smoke")
 		}},
-		{"release-user-readme", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"release-user-readme", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasReleaseUserReadme, "README contains install and update commands", "README links canonical release reproducibility and rollback criteria", "README omits copyable destructive rollback commands")
 		}},
-		{"cross-platform-build-matrix", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"cross-platform-build-matrix", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasCrossPlatformBuildMatrix, "scripts/release-build-matrix.sh builds the supported darwin/linux amd64/arm64 and windows/amd64 matrix", "release reproducibility docs record the cross-platform matrix", "testing docs list the release build matrix smoke")
 		}},
-		{"distribution-decision-record", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"distribution-decision-record", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasDistributionDecision, "ADR records the tarball/manual archive versus Homebrew decision gate", "release reproducibility docs define rollback criteria", "README exposes the current distribution decision")
 		}},
-		{"release-dogfood-notes", func(signals contract.SelfAugmentRepoSignals) []string {
+		{"release-dogfood-notes", func(signals contract.RepoSignals) []string {
 			return evidenceWhen(signals.HasReleaseDogfoodNotes, "release dogfood notes capture Codex MCP registration", "release dogfood notes capture Claude MCP registration", "shared inspect/docs/state workflow is recorded")
 		}},
 	}
@@ -132,7 +139,9 @@ func evidenceWhen(ok bool, evidence ...string) []string {
 	return evidence
 }
 
-func CandidateScore(c contract.SelfAugmentCandidate) float64 {
+// CandidateScore returns the weighted priority of c on a 0-100 scale: impact 38%, feasibility 30%,
+// novelty 20% and inverse risk 12%, clamped to that range.
+func CandidateScore(c contract.Candidate) float64 {
 	score := c.Impact*0.38 + c.Feasibility*0.30 + c.Novelty*0.20 + (100-c.Risk)*0.12
 	if score > 100 {
 		return 100

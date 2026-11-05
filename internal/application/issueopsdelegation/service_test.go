@@ -16,7 +16,7 @@ import (
 )
 
 type delegationStore struct {
-	records  map[string]model.IssueOpsRecord
+	records  map[string]model.Record
 	locked   bool
 	saves    int
 	scanErr  error
@@ -24,8 +24,8 @@ type delegationStore struct {
 	loadErrs map[string]error
 }
 
-func newDelegationStore(records ...model.IssueOpsRecord) *delegationStore {
-	s := &delegationStore{records: map[string]model.IssueOpsRecord{}}
+func newDelegationStore(records ...model.Record) *delegationStore {
+	s := &delegationStore{records: map[string]model.Record{}}
 	for _, r := range records {
 		s.records[r.ID] = r
 	}
@@ -37,12 +37,12 @@ func (s *delegationStore) WithinLock(ctx context.Context, _ string, fn func(cont
 	defer func() { s.locked = false }()
 	return fn(ctx)
 }
-func (s *delegationStore) Load(id string) (model.IssueOpsRecord, error) {
+func (s *delegationStore) Load(id string) (model.Record, error) {
 	if !s.locked {
 		panic("load outside lock")
 	}
 	if err := s.loadErrs[id]; err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	r, ok := s.records[id]
 	if !ok {
@@ -50,7 +50,7 @@ func (s *delegationStore) Load(id string) (model.IssueOpsRecord, error) {
 	}
 	return r, nil
 }
-func (s *delegationStore) Save(_ context.Context, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *delegationStore) Save(_ context.Context, r model.Record) (model.Record, error) {
 	if s.saveErr != nil {
 		return r, s.saveErr
 	}
@@ -58,7 +58,7 @@ func (s *delegationStore) Save(_ context.Context, r model.IssueOpsRecord) (model
 	s.saves++
 	return r, nil
 }
-func (s *delegationStore) SavePair(_ context.Context, a, b model.IssueOpsRecord) (model.IssueOpsRecord, model.IssueOpsRecord, error) {
+func (s *delegationStore) SavePair(_ context.Context, a, b model.Record) (model.Record, model.Record, error) {
 	if s.saveErr != nil {
 		return a, b, s.saveErr
 	}
@@ -66,11 +66,11 @@ func (s *delegationStore) SavePair(_ context.Context, a, b model.IssueOpsRecord)
 	s.saves++
 	return a, b, nil
 }
-func (s *delegationStore) Scan() ([]model.IssueOpsRecord, error) {
+func (s *delegationStore) Scan() ([]model.Record, error) {
 	if s.scanErr != nil {
 		return nil, s.scanErr
 	}
-	var out []model.IssueOpsRecord
+	var out []model.Record
 	for _, r := range s.records {
 		out = append(out, r)
 	}
@@ -90,17 +90,17 @@ const fixedStamp = "2026-09-28T01:02:03Z"
 
 func authority() cycleapp.MutationAuthority { return cycleapp.NewMutationAuthority(nil, nil) }
 
-func readyParent() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		ID: "parent", Repo: "/repo", Branch: "1-parent", Phase: model.IssueOpsPhaseImplement,
+func readyParent() model.Record {
+	return model.Record{
+		ID: "parent", Repo: "/repo", Branch: "1-parent", Phase: model.PhaseImplement,
 		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true},
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{Approved: true},
-		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "proceed", RecordedAt: "2026-09-27T00:00:00Z"},
+		DevilsAdvocateReview: &model.DevilsAdvocateReview{Verdict: "proceed", RecordedAt: "2026-09-27T00:00:00Z"},
 	}
 }
 
-func startRequest() model.IssueOpsChildStartRequest {
-	return model.IssueOpsChildStartRequest{
+func startRequest() model.ChildStartRequest {
+	return model.ChildStartRequest{
 		ParentID: " parent ", Branch: " 2-child ", Title: "child", TaskScope: " do it ",
 		AcceptanceCriteria: []string{" works ", " "},
 	}
@@ -156,24 +156,24 @@ func TestChildStartIsIdempotentForExistingChild(t *testing.T) {
 
 func TestChildStartRejectionsLeaveStoreUntouched(t *testing.T) {
 	notReady := readyParent()
-	notReady.Phase = model.IssueOpsPhasePlan
+	notReady.Phase = model.PhasePlan
 	notReady.ArchitectureReview = nil
 	badRepo := readyParent()
 	badRepo.Repo = "  "
 	cases := []struct {
 		name   string
-		parent model.IssueOpsRecord
-		mutate func(*model.IssueOpsChildStartRequest)
+		parent model.Record
+		mutate func(*model.ChildStartRequest)
 		want   string
 	}{
-		{"missing parent id", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.ParentID = " " }, "parent_id is required"},
-		{"missing branch", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.Branch = "" }, "branch is required"},
-		{"missing scope", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.TaskScope = "" }, "task_scope is required"},
-		{"missing acceptance", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.AcceptanceCriteria = []string{" "} }, "acceptance_criteria"},
+		{"missing parent id", readyParent(), func(r *model.ChildStartRequest) { r.ParentID = " " }, "parent_id is required"},
+		{"missing branch", readyParent(), func(r *model.ChildStartRequest) { r.Branch = "" }, "branch is required"},
+		{"missing scope", readyParent(), func(r *model.ChildStartRequest) { r.TaskScope = "" }, "task_scope is required"},
+		{"missing acceptance", readyParent(), func(r *model.ChildStartRequest) { r.AcceptanceCriteria = []string{" "} }, "acceptance_criteria"},
 		{"unready parent", notReady, nil, "parent_phase_not_implement, parent_architecture_review_unapproved"},
-		{"same branch", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.Branch = "1-parent" }, "child_branch_equals_parent"},
+		{"same branch", readyParent(), func(r *model.ChildStartRequest) { r.Branch = "1-parent" }, "child_branch_equals_parent"},
 		{"empty repo", badRepo, nil, "repo is required"},
-		{"invalid branch", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.Branch = "no-number" }, "issue number"},
+		{"invalid branch", readyParent(), func(r *model.ChildStartRequest) { r.Branch = "no-number" }, "issue number"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -209,9 +209,9 @@ func TestChildStartPropagatesStoreErrors(t *testing.T) {
 }
 
 func TestChildStartRejectsChildWithCleanupInProgress(t *testing.T) {
-	store := newDelegationStore(readyParent(), model.IssueOpsRecord{
+	store := newDelegationStore(readyParent(), model.Record{
 		ID: "io-2-child", Repo: "/repo", Branch: "2-child",
-		CleanupAbandonFailure: &model.IssueOpsCleanupAbandonFailure{Step: "applying"},
+		CleanupAbandonFailure: &model.CleanupAbandonFailure{Step: "applying"},
 	})
 	if _, err := newStarter(store).Start(context.Background(), startRequest(), nil); err == nil || !strings.Contains(err.Error(), "cleanup abandon apply is in progress") {
 		t.Fatalf("err=%v", err)
@@ -228,14 +228,14 @@ func TestChildStartLinkFailureBecomesWarning(t *testing.T) {
 	}
 }
 
-func doneChild(id, parent string) model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: id, Repo: "/repo", Branch: id, Phase: model.IssueOpsPhaseDone, Delegation: &model.IssueOpsDelegationContract{ParentCycleID: parent}}
+func doneChild(id, parent string) model.Record {
+	return model.Record{ID: id, Repo: "/repo", Branch: id, Phase: model.PhaseDone, Delegation: &model.DelegationContract{ParentCycleID: parent}}
 }
 
-func indexedParent(ids ...string) model.IssueOpsRecord {
+func indexedParent(ids ...string) model.Record {
 	p := readyParent()
 	for _, id := range ids {
-		p.ChildCycles = append(p.ChildCycles, model.IssueOpsChildCycleRef{CycleID: id, Branch: id})
+		p.ChildCycles = append(p.ChildCycles, model.ChildCycleRef{CycleID: id, Branch: id})
 	}
 	return p
 }
@@ -258,7 +258,7 @@ func TestValidatorAcceptRecordsVerdictOnParentIndex(t *testing.T) {
 
 func TestValidatorRejectAndDropRequireReasonAndOnlyRejectKeepsEvidence(t *testing.T) {
 	child := doneChild("c1", "parent")
-	child.Phase = model.IssueOpsPhaseImplement
+	child.Phase = model.PhaseImplement
 	store := newDelegationStore(indexedParent("c1"), child)
 	v := Validator{Records: store, Authority: authority(), Now: fixedNow}
 	if _, err := v.Reject(context.Background(), "parent", "c1", "short", nil, nil); err == nil || !strings.Contains(err.Error(), "at least 10") {
@@ -276,7 +276,7 @@ func TestValidatorRejectAndDropRequireReasonAndOnlyRejectKeepsEvidence(t *testin
 
 func TestValidatorRefusesInvalidInputsAndMismatches(t *testing.T) {
 	notDone := doneChild("c2", "parent")
-	notDone.Phase = model.IssueOpsPhaseImplement
+	notDone.Phase = model.PhaseImplement
 	store := newDelegationStore(indexedParent("c1", "c2"), doneChild("c1", "other"), notDone)
 	v := Validator{Records: store, Authority: authority(), Now: fixedNow}
 	cases := []struct {
@@ -331,17 +331,17 @@ func TestValidatorDetectsChildReappearingDuringArchivedVerdict(t *testing.T) {
 // reappearingStore hides the child on its first load and exposes it afterwards.
 type reappearingStore struct {
 	*delegationStore
-	child model.IssueOpsRecord
+	child model.Record
 	loads int
 }
 
-func (s *reappearingStore) Load(id string) (model.IssueOpsRecord, error) {
+func (s *reappearingStore) Load(id string) (model.Record, error) {
 	if id != s.child.ID {
 		return s.delegationStore.Load(id)
 	}
 	s.loads++
 	if s.loads == 1 {
-		return model.IssueOpsRecord{}, fs.ErrNotExist
+		return model.Record{}, fs.ErrNotExist
 	}
 	return s.child, nil
 }
@@ -404,7 +404,7 @@ func TestStatusErrors(t *testing.T) {
 func TestChildStartAlreadyLinkedChildIsNotAWarning(t *testing.T) {
 	parent := readyParent()
 	parent.IssueURL = "https://github.com/o/r/issues/1"
-	parent.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: "https://github.com/o/r/issues/2"}}
+	parent.IssueLinks = []model.IssueLink{{Type: "child", URL: "https://github.com/o/r/issues/2"}}
 	req := startRequest()
 	req.ChildIssueURL = "https://github.com/o/r/issues/2"
 	got, err := newStarter(newDelegationStore(parent)).Start(context.Background(), req, nil)

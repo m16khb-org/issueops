@@ -5,9 +5,9 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
-func DedupeFindings(findings []guardcontract.GuardFinding) []guardcontract.GuardFinding {
+func dedupeFindings(findings []guardcontract.Finding) []guardcontract.Finding {
 	seen := map[string]bool{}
-	out := []guardcontract.GuardFinding{}
+	out := []guardcontract.Finding{}
 	for _, finding := range findings {
 		key := finding.Severity + "\x00" + finding.Rule + "\x00" + finding.File + "\x00" + fmt.Sprint(finding.Line) + "\x00" + finding.Evidence
 		if seen[key] {
@@ -19,7 +19,7 @@ func DedupeFindings(findings []guardcontract.GuardFinding) []guardcontract.Guard
 	return out
 }
 
-func SeverityRank(severity string) int {
+func severityRank(severity string) int {
 	switch severity {
 	case "block":
 		return 0

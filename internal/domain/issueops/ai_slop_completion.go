@@ -6,7 +6,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func AISlopCleanCompletionMissing(record model.IssueOpsRecord) []string {
+// AISlopCleanCompletionMissing lists the AI-slop-clean completion fields
+// still absent from record: timestamp, head, fingerprint, cleanup evidence,
+// and verification evidence. An empty result means the stage can complete.
+func AISlopCleanCompletionMissing(record model.Record) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.AISlopCleanAt) == "" {
 		missing = append(missing, "ai_slop_clean_at")

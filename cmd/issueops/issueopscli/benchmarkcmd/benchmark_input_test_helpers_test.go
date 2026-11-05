@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func readIssueOpsJudgeMap(path string, fixtures []contract.IssueOpsBenchmarkFixture) (contract.IssueOpsJudgeMap, map[string]contract.IssueOpsBenchmarkScore, error) {
+func readIssueOpsJudgeMap(path string, fixtures []contract.Fixture) (contract.IssueOpsJudgeMap, map[string]contract.Score, error) {
 	m, err := (adapter.Files{Stdin: os.Stdin}).ReadJudgeMap(path, fixtures)
 	return m, m.Scores, err
 }

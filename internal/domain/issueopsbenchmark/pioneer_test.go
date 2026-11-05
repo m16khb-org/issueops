@@ -36,8 +36,8 @@ func TestPioneerSkillEvidenceComplete(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			got := PioneerSkillEvidenceComplete(
-				contract.IssueOpsBenchmarkFixture{PioneerSkillTarget: c.target},
-				contract.IssueOpsBenchmarkArtifact{PioneerSkillEvidence: c.evidence})
+				contract.Fixture{PioneerSkillTarget: c.target},
+				contract.Artifact{PioneerSkillEvidence: c.evidence})
 			if got != c.want {
 				t.Fatalf("got %v want %v", got, c.want)
 			}

@@ -2,6 +2,8 @@ package selfverify
 
 import contract "issueops/internal/contract/selfverify"
 
+// CandidateIDsByStatus returns the IDs of candidates whose Status equals status, in input order.
+// The result is never nil.
 func CandidateIDsByStatus(candidates []contract.SelfVerificationCandidate, status string) []string {
 	ids := []string{}
 	for _, candidate := range candidates {
@@ -12,6 +14,8 @@ func CandidateIDsByStatus(candidates []contract.SelfVerificationCandidate, statu
 	return ids
 }
 
+// SelectedCandidate returns a copy of the open candidate with the highest Score, breaking ties by the
+// lowest Priority value. It returns nil when no candidate is open.
 func SelectedCandidate(candidates []contract.SelfVerificationCandidate) *contract.SelfVerificationCandidate {
 	var selected *contract.SelfVerificationCandidate
 	for _, candidate := range candidates {
@@ -26,6 +30,7 @@ func SelectedCandidate(candidates []contract.SelfVerificationCandidate) *contrac
 	return selected
 }
 
+// SelectedCandidateID returns the ID of candidate, or "none" when candidate is nil.
 func SelectedCandidateID(candidate *contract.SelfVerificationCandidate) string {
 	if candidate == nil {
 		return "none"

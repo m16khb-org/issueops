@@ -1,3 +1,5 @@
+// Package status is the application service that assembles the harness status
+// report from inspect, doctor, state, worker and self-verify observations.
 package status
 
 import (
@@ -14,19 +16,25 @@ import (
 	"strings"
 )
 
+// Service builds the harness status report by combining inspect, doctor, state
+// and worker observations with the latest self-verify record. Every function
+// field is required.
 type Service struct {
 	Home, IssueOpsRoot, Version string
-	Inspect                     func(string) inspectcontract.InspectInfo
-	Doctor                      func(doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error)
-	State                       func() (statecontract.StateListResult, error)
-	StateRead                   func(string) (statecontract.StateResult, error)
-	Workers                     func() (workercontract.WorkerListResult, error)
+	Inspect                     func(string) inspectcontract.Info
+	Doctor                      func(context.Context, doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error)
+	State                       func() (statecontract.ListResult, error)
+	StateRead                   func(string) (statecontract.Result, error)
+	Workers                     func() (workercontract.ListResult, error)
 	ResolveTarget               func(string) string
 }
 
-func (service Service) Run(repo string) statuscontract.Result {
+// Run observes the harness for repo and returns the status result. Failures of
+// the individual observations are folded into the result's warnings and OK
+// flag by the status domain rather than returned as errors.
+func (service Service) Run(ctx context.Context, repo string) statuscontract.Result {
 	inspect := service.Inspect(repo)
-	doctor, doctorErr := service.Doctor(doctorcontract.HarnessDoctorRequest{
+	doctor, doctorErr := service.Doctor(ctx, doctorcontract.HarnessDoctorRequest{
 		RepoRoot: repo, IssueOpsRoot: service.IssueOpsRoot, Home: service.Home, Version: service.Version,
 	})
 	state, stateErr := service.State()
@@ -37,9 +45,9 @@ func (service Service) Run(repo string) statuscontract.Result {
 	if stateErr == nil && state.OK {
 		history, err := (selfaugmentapp.HistoryService{
 			StateDir: func() string { return state.StateDir },
-			List:     func() (statecontract.StateListResult, error) { return state, nil },
+			List:     func() (statecontract.ListResult, error) { return state, nil },
 			Read:     service.StateRead,
-		}).History(context.Background(), "", 1, selfaugmentcontract.SelfAugmentHistoryRetentionOptions{})
+		}).History(ctx, "", 1, selfaugmentcontract.HistoryRetentionOptions{})
 		if err != nil {
 			facts.SelfVerifyReadFailed = true
 			facts.SelfVerifyWarnings = append(facts.SelfVerifyWarnings, err.Error())

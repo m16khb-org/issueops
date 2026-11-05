@@ -80,7 +80,7 @@ func decodeProgressEventsForLoopTest(t *testing.T, out string) []selfverify.Prog
 	return events
 }
 
-func fakeVerifyLoopStepDeps(failLabel, failError string) verifyapp.SelfVerifyStepDeps {
+func fakeVerifyLoopStepDeps(failLabel, failError string) verifyapp.StepDeps {
 	return fakeVerifyLoopStepDepsOK(func(label string) selfverify.StepResult {
 		if label == failLabel {
 			return selfverify.StepResult{Label: label, OK: false, Error: failError}
@@ -91,7 +91,7 @@ func fakeVerifyLoopStepDeps(failLabel, failError string) verifyapp.SelfVerifySte
 
 // fakeVerifyLoopStepDepsFailing fails every label in failLabels (the rest pass),
 // for exercising collect-all-steps across multiple gates in one iteration.
-func fakeVerifyLoopStepDepsFailing(failLabels ...string) verifyapp.SelfVerifyStepDeps {
+func fakeVerifyLoopStepDepsFailing(failLabels ...string) verifyapp.StepDeps {
 	fail := map[string]bool{}
 	for _, label := range failLabels {
 		fail[label] = true
@@ -104,8 +104,8 @@ func fakeVerifyLoopStepDepsFailing(failLabels ...string) verifyapp.SelfVerifySte
 	})
 }
 
-func fakeVerifyLoopStepDepsOK(ok func(string) selfverify.StepResult) verifyapp.SelfVerifyStepDeps {
-	return verifyapp.SelfVerifyStepDeps{
+func fakeVerifyLoopStepDepsOK(ok func(string) selfverify.StepResult) verifyapp.StepDeps {
+	return verifyapp.StepDeps{
 		IssueOpsRoot: func() string { return "." },
 		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) selfverify.StepResult {
 			step := ok(label)

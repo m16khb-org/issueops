@@ -1,3 +1,6 @@
+// Package hookcli implements the host lifecycle hook subcommands of the issueops
+// CLI (SessionStart, SubagentStart, PostCompact). It reads the static project-doc
+// catalog and prints host-compatible context payloads without touching durable state.
 package hookcli
 
 import (

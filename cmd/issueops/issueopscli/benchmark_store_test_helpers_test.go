@@ -5,6 +5,6 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
-func saveBenchmarkRunForTest(root string, run contract.IssueOpsBenchmarkRunResult) error {
+func saveBenchmarkRunForTest(root string, run contract.RunResult) error {
 	return (adapter.Store{Directory: root}).Save(run)
 }

@@ -43,7 +43,7 @@ func TestMCPHTTPCapabilityReachesClaimAndReseedDomainDecisions(t *testing.T) {
 	}
 
 	url, _ := startProductionHTTPServer(t, issueOpsMCPHTTPDependencies())
-	bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+	bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// ParseTime parses a stored state timestamp in RFC 3339 form, with or without fractional seconds. It returns an error for an empty or malformed value.
 func ParseTime(value string) (time.Time, error) {
 	if value == "" {
 		return time.Time{}, fmt.Errorf("empty state timestamp")

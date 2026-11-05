@@ -6,6 +6,6 @@ import (
 	model "issueops/internal/contract/commitsuggest"
 )
 
-func SuggestCommit(req model.CommitSuggestRequest) (model.CommitSuggestResult, error) {
+func SuggestCommit(req model.Request) (model.Result, error) {
 	return (app.Service{Effects: Effects{Normalize: repopath.NormalizeRoot}}).Suggest(req)
 }

@@ -24,12 +24,12 @@ import (
 func TestPolicyPullRequestTargetLookupIsWired(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := makeGitRepoForContract(t)
-	record, err := startIssueOpsFixture(issueOpsStateRoot(), model.IssueOpsStartRequest{Repo: root, Branch: "79-child"})
+	record, err := startIssueOpsFixture(issueOpsStateRoot(), model.StartRequest{Repo: root, Branch: "79-child"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/79"
-	record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "parent/umbrella-work", LinkVerified: true, CreatedAt: record.CreatedAt}
+	record.BranchPrepare = &model.BranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "parent/umbrella-work", LinkVerified: true, CreatedAt: record.CreatedAt}
 	if _, err = (core.CycleRecordStore{StateRoot: issueOpsStateRoot()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
@@ -51,12 +51,12 @@ func TestPolicyLookupReadsCurrentStateRootOnEachEvaluation(t *testing.T) {
 	for _, base := range []string{"78-first-parent", "80-second-parent"} {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		root := issueOpsStateRoot()
-		record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
+		record, err := startIssueOpsFixture(root, model.StartRequest{Repo: repo, Branch: "79-child"})
 		if err != nil {
 			t.Fatal(err)
 		}
 		record.IssueURL = "https://github.com/acme/repo/issues/79"
-		record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: base, LinkVerified: true, CreatedAt: record.CreatedAt}
+		record.BranchPrepare = &model.BranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: base, LinkVerified: true, CreatedAt: record.CreatedAt}
 		if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 			t.Fatal(err)
 		}

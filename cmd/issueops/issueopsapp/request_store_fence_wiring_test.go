@@ -20,7 +20,7 @@ import (
 
 func boundLoopRequest(t *testing.T, repo, grant, tool string) context.Context {
 	t.Helper()
-	key, token, err := (authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()}).Read(t.Context(), grant)
+	key, token, err := (authorityoutbound.CredentialFiles{StateDir: statestore.Dir()}).Read(t.Context(), grant)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestScopedLoopWriteRechecksGrantUnderLockAfterRotation(t *testing.T) {
 func TestScopedWorkerRunLosesGrantRevokedWhileFenceIsHeld(t *testing.T) {
 	repo, grant, _, _ := loopFenceFixture(t)
 	bound := boundLoopRequest(t, repo, grant, "worker_run_read_only")
-	key, _, err := (authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()}).Read(t.Context(), grant)
+	key, _, err := (authorityoutbound.CredentialFiles{StateDir: statestore.Dir()}).Read(t.Context(), grant)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestBoundGrantRootWriteRechecksGrantAfterRotation(t *testing.T) {
 func TestScopedLoopWriteLosesGrantRevokedWhileFenceIsHeld(t *testing.T) {
 	repo, grant, _, started := loopFenceFixture(t)
 	bound := boundLoopRequest(t, repo, grant, "loop_record_attempt")
-	key, _, err := (authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()}).Read(t.Context(), grant)
+	key, _, err := (authorityoutbound.CredentialFiles{StateDir: statestore.Dir()}).Read(t.Context(), grant)
 	if err != nil {
 		t.Fatal(err)
 	}

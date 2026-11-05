@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"reflect"
@@ -64,7 +64,7 @@ func TestIssueOpsRemoteLabelEvidenceCountsEachTokenOncePerRule(t *testing.T) {
 }
 
 func TestIssueOpsRemoteLabelEvidenceScoreAbstainsBelowMinimumEvidence(t *testing.T) {
-	bug := IssueOpsRemoteLabelCandidate{Name: " BUG "}
+	bug := LabelCandidate{Name: " BUG "}
 	one := issueOpsRemoteLabelEvidence(issueOpsRemoteTokens("회귀"))
 	score, matched, ok := issueOpsRemoteLabelEvidenceScore(one, bug)
 	if !ok || score != 0 || !reflect.DeepEqual(matched, []string{"회귀"}) {
@@ -76,7 +76,7 @@ func TestIssueOpsRemoteLabelEvidenceScoreAbstainsBelowMinimumEvidence(t *testing
 		t.Fatalf("two evidence: score=%v, want 1", score)
 	}
 
-	if _, _, ok := issueOpsRemoteLabelEvidenceScore(two, IssueOpsRemoteLabelCandidate{Name: "question"}); ok {
+	if _, _, ok := issueOpsRemoteLabelEvidenceScore(two, LabelCandidate{Name: "question"}); ok {
 		t.Fatal("label without a keyword rule must not use the evidence score")
 	}
 }

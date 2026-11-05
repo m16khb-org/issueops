@@ -7,12 +7,12 @@ import (
 )
 
 func (s *stateRoundtripSelfVerifySession) writeCompareSnapshots(input validateStateRoundtripSelfVerifyInput, baselineCompareKey, candidateCompareKey string) selfverify.StepResult {
-	compareSummary := selfaugment.SelfAugmentSummary{
+	compareSummary := selfaugment.Summary{
 		TotalRuns:    10,
 		TotalSteps:   20,
 		PassedSteps:  20,
 		StepLabels:   []string{"go test", "MCP smoke"},
-		SlowestSteps: []selfaugment.SelfAugmentSlowStep{{Iteration: 1, Seed: input.seed, Label: "go test", DurationMS: 1000}},
+		SlowestSteps: []selfaugment.SlowStep{{Iteration: 1, Seed: input.seed, Label: "go test", DurationMS: 1000}},
 	}
 	for _, snapshot := range []struct {
 		key       string
@@ -22,7 +22,7 @@ func (s *stateRoundtripSelfVerifySession) writeCompareSnapshots(input validateSt
 		{baselineCompareKey, 1000, "2000-01-01T00:00:00Z"},
 		{candidateCompareKey, 1100, "2000-01-01T00:01:00Z"},
 	} {
-		if err := input.deps.writeSnapshot(input.tempState, snapshot.key, selfaugment.SelfAugmentStateSnapshot{
+		if err := input.deps.writeSnapshot(input.tempState, snapshot.key, selfaugment.StateSnapshot{
 			SchemaVersion: 1,
 			Kind:          selfaugmentx.SelfVerificationSummaryKind,
 			OK:            true,

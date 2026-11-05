@@ -11,6 +11,8 @@ import (
 
 const host = "opencode"
 
+// Installer installs the opencode host integration: user skills, the issueops
+// MCP entry, and the lifecycle plugin.
 type Installer struct {
 	deps       Dependencies
 	lifecycle  func(binPath string) string
@@ -23,8 +25,14 @@ func NewInstaller(deps Dependencies, lifecycle func(string) string, configRoot f
 	return Installer{deps: deps, lifecycle: lifecycle, configRoot: configRoot}
 }
 
+var _ port.HostInstaller = Installer{}
+
+// Name returns the host name "opencode".
 func (Installer) Name() string { return host }
 
+// Install plans or, unless req.DryRun, writes the opencode skill links, user
+// and project MCP configs, and lifecycle plugin files, and returns the plan
+// result. Problems are collected in the plan rather than aborting the run.
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	plan := installer.deps.NewInstallPlan(host, req.DryRun)
 	configRoot := installer.configRoot(req.Home)

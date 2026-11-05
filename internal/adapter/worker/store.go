@@ -19,43 +19,43 @@ func (store Store) open() (StateDatabase, error) {
 	return store.OpenDatabase(store.FilesystemDirectory)
 }
 
-// jobNotFound names the missing job and where ids come from; it still
+// jobNotFoundError names the missing job and where ids come from; it still
 // matches fs.ErrNotExist for callers that branch on absence.
-type jobNotFound struct{ id string }
+type jobNotFoundError struct{ id string }
 
-func (e jobNotFound) Error() string {
+func (e jobNotFoundError) Error() string {
 	return fmt.Sprintf("worker job %q not found; run `issueops worker list --json` for job ids", e.id)
 }
-func (jobNotFound) Unwrap() error { return fs.ErrNotExist }
+func (jobNotFoundError) Unwrap() error { return fs.ErrNotExist }
 
-func (store Store) Read(id string) (workercontract.WorkerJob, error) {
+func (store Store) Read(id string) (workercontract.Job, error) {
 	if !workerdomain.ValidID(id) {
-		return workercontract.WorkerJob{OK: false, ID: id}, fmt.Errorf("invalid worker job id %q; run `issueops worker list --json` for job ids", id)
+		return workercontract.Job{OK: false, ID: id}, fmt.Errorf("invalid worker job id %q; run `issueops worker list --json` for job ids", id)
 	}
 	dir, err := store.Dir()
 	if err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id}, err
+		return workercontract.Job{OK: false, ID: id}, err
 	}
 	db, err := store.open()
 	if err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, err
 	}
 	b, ok, err := db.Get(workerBucket, id)
 	if err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, err
 	}
 	if !ok {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, jobNotFound{id: id}
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, jobNotFoundError{id: id}
 	}
-	var job workercontract.WorkerJob
+	var job workercontract.Job
 	if err := json.Unmarshal(b, &job); err != nil {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
+		return workercontract.Job{OK: false, ID: id, WorkerDir: dir}, err
 	}
 	job.WorkerDir = dir
 	return job, nil
 }
 
-func (store Store) Write(ctx context.Context, job workercontract.WorkerJob) error {
+func (store Store) Write(ctx context.Context, job workercontract.Job) error {
 	if !workerdomain.ValidID(job.ID) {
 		return fmt.Errorf("invalid worker job id")
 	}
@@ -78,6 +78,9 @@ func (store Store) Write(ctx context.Context, job workercontract.WorkerJob) erro
 	return db.Apply(ctx, []port.RecordMutation{{Bucket: workerBucket, ID: job.ID, Data: append(b, '\n')}})
 }
 
+// ResolveDirectory returns the worker store directory: ISSUEOPS_WORKER_DIR made
+// absolute when set, otherwise the "worker" subdirectory of ISSUEOPS_STATE_DIR or
+// the default per-user state directory.
 func ResolveDirectory() (string, error) {
 	if dir := os.Getenv("ISSUEOPS_WORKER_DIR"); dir != "" {
 		return filepath.Abs(dir)

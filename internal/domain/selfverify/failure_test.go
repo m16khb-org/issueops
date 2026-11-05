@@ -43,14 +43,14 @@ func TestClassifyFailureDistinguishesPatterns(t *testing.T) {
 }
 
 func TestFailureClustersSortStepsAndSeeds(t *testing.T) {
-	clusters := FailureClusters([]Run{failing(9, "gofmt", "go test"), failing(3, "gofmt")})
+	clusters := failureClusters([]Run{failing(9, "gofmt", "go test"), failing(3, "gofmt")})
 	if len(clusters) != 2 || clusters[0].Step != "go test" || clusters[1].Step != "gofmt" {
 		t.Fatalf("clusters=%+v", clusters)
 	}
 	if !reflect.DeepEqual(clusters[1].Seeds, []int64{3, 9}) || clusters[1].Count != 2 {
 		t.Fatalf("gofmt cluster=%+v", clusters[1])
 	}
-	if got := FailureClusters(nil); got == nil || len(got) != 0 {
+	if got := failureClusters(nil); got == nil || len(got) != 0 {
 		t.Fatalf("empty result must be non-nil empty, got %#v", got)
 	}
 }

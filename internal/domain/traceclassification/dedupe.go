@@ -1,7 +1,10 @@
-package classification
+package traceclassification
 
 import "sort"
 
+// FindingKey is the comparable projection of one trace finding used for
+// deduplication and ordering. Index points back at the finding's position in the
+// caller's slice.
 type FindingKey struct {
 	Index               int
 	FailureClass        string
@@ -12,6 +15,10 @@ type FindingKey struct {
 	VerificationCommand string
 }
 
+// DeduplicateFindings drops findings that repeat the same failure class, cause,
+// recurring pattern, and proposed knob, keeping the first occurrence. It returns
+// the surviving Index values ordered by class, cause, pattern, knob, overfit risk,
+// then verification command.
 func DeduplicateFindings(findings []FindingKey) []int {
 	seen := map[string]bool{}
 	selected := []FindingKey{}

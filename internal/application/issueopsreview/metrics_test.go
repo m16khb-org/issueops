@@ -20,12 +20,12 @@ func TestMetricsReaderKeepsUnreadablePopulationAndReadOrder(t *testing.T) {
 			events = append(events, "list:"+root+":"+repo)
 			return []string{"ok", "corrupt", "ok"}, []string{"unlisted"}, nil
 		},
-		ReadRecord: func(root, id string) (contract.IssueOpsRecord, error) {
+		ReadRecord: func(root, id string) (contract.Record, error) {
 			events = append(events, "read:"+root+":"+id)
 			if id == "corrupt" {
-				return contract.IssueOpsRecord{}, errors.New("invalid state")
+				return contract.Record{}, errors.New("invalid state")
 			}
-			return contract.IssueOpsRecord{ID: id}, nil
+			return contract.Record{ID: id}, nil
 		},
 	}
 	got, err := service.Read("state", "", " /repo ")
@@ -53,12 +53,12 @@ func TestMetricsReaderKeepsUnreadablePopulationAndReadOrder(t *testing.T) {
 func TestMetricsReaderFailsSingleLookupAndDoesNotObserveInvalidScope(t *testing.T) {
 	failure := errors.New("read failed")
 	calls := 0
-	service := MetricsReader{Now: func() time.Time { calls++; return time.Time{} }, ReadRecord: func(root, id string) (contract.IssueOpsRecord, error) {
+	service := MetricsReader{Now: func() time.Time { calls++; return time.Time{} }, ReadRecord: func(root, id string) (contract.Record, error) {
 		calls++
 		if root != "state" || id != "one" {
 			t.Fatalf("lookup root=%s id=%s", root, id)
 		}
-		return contract.IssueOpsRecord{}, failure
+		return contract.Record{}, failure
 	}}
 	for _, scope := range [][2]string{{"", ""}, {" id ", " /repo "}} {
 		got, err := service.Read("state", scope[0], scope[1])
@@ -82,26 +82,26 @@ func TestMetricsReaderFailsSingleLookupAndDoesNotObserveInvalidScope(t *testing.
 }
 
 func TestMetricsReaderAddsRetainedOutcomesWithoutDoubleCountingLiveRecords(t *testing.T) {
-	retained := func(id, outcome string, verdicts ...string) contract.IssueOpsCycleOutcome {
-		return contract.IssueOpsCycleOutcome{ID: id, Outcome: outcome, Metrics: contract.IssueOpsReviewMetricsCycle{
+	retained := func(id, outcome string, verdicts ...string) contract.CycleOutcome {
+		return contract.CycleOutcome{ID: id, Outcome: outcome, Metrics: contract.ReviewMetricsCycle{
 			ID: id, Outcome: outcome, DevilsAdvocateRounds: len(verdicts), DevilsAdvocateVerdicts: verdicts,
 		}}
 	}
 	service := MetricsReader{
 		Now:          time.Now,
 		ListCycleIDs: func(string, string) ([]string, []string, error) { return []string{"live"}, nil, nil },
-		ReadRecord: func(_, id string) (contract.IssueOpsRecord, error) {
+		ReadRecord: func(_, id string) (contract.Record, error) {
 			if id != "live" {
-				return contract.IssueOpsRecord{}, errors.New("issueops record not found")
+				return contract.Record{}, errors.New("issueops record not found")
 			}
-			return contract.IssueOpsRecord{ID: id}, nil
+			return contract.Record{ID: id}, nil
 		},
-		ListOutcomes: func(_, repo string) ([]contract.IssueOpsCycleOutcome, []string, error) {
+		ListOutcomes: func(_, repo string) ([]contract.CycleOutcome, []string, error) {
 			// "live" also has a stale retained row; the live record must win.
-			return []contract.IssueOpsCycleOutcome{
-				retained("live", contract.IssueOpsCycleOutcomeFinished, "pass"),
-				retained("gone", contract.IssueOpsCycleOutcomeFinished, "revise", "pass"),
-				retained("dropped", contract.IssueOpsCycleOutcomeAbandoned, "stop"),
+			return []contract.CycleOutcome{
+				retained("live", contract.CycleOutcomeFinished, "pass"),
+				retained("gone", contract.CycleOutcomeFinished, "revise", "pass"),
+				retained("dropped", contract.CycleOutcomeAbandoned, "stop"),
 			}, []string{"garbled"}, nil
 		},
 	}
@@ -123,7 +123,7 @@ func TestMetricsReaderAddsRetainedOutcomesWithoutDoubleCountingLiveRecords(t *te
 	}
 
 	single, err := service.Read("state", "gone", "")
-	if err != nil || len(single.Cycles) != 1 || single.Cycles[0].Outcome != contract.IssueOpsCycleOutcomeFinished {
+	if err != nil || len(single.Cycles) != 1 || single.Cycles[0].Outcome != contract.CycleOutcomeFinished {
 		t.Fatalf("retained single lookup=%+v err=%v", single, err)
 	}
 	if _, err := service.Read("state", "never", ""); err == nil || err.Error() != "issueops record not found" {
@@ -136,11 +136,11 @@ func TestMetricsReaderFailsRepoQueryWhenRetainedOutcomesCannotBeListed(t *testin
 	service := MetricsReader{
 		Now:          time.Now,
 		ListCycleIDs: func(string, string) ([]string, []string, error) { return nil, nil, nil },
-		ReadRecord: func(string, string) (contract.IssueOpsRecord, error) {
+		ReadRecord: func(string, string) (contract.Record, error) {
 			t.Fatal("no cycle to read")
-			return contract.IssueOpsRecord{}, nil
+			return contract.Record{}, nil
 		},
-		ListOutcomes: func(string, string) ([]contract.IssueOpsCycleOutcome, []string, error) { return nil, nil, listErr },
+		ListOutcomes: func(string, string) ([]contract.CycleOutcome, []string, error) { return nil, nil, listErr },
 	}
 	got, err := service.Read("state", "", "/repo")
 	if !errors.Is(err, listErr) || got.OK {

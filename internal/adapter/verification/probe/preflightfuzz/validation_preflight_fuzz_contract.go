@@ -2,7 +2,7 @@ package preflightfuzz
 
 import preflightcontract "issueops/internal/contract/preflight"
 
-func preflightFuzzValidationErrors(preflight preflightcontract.PreflightResult) []string {
+func preflightFuzzValidationErrors(preflight preflightcontract.Result) []string {
 	errs := []string{}
 	if !preflight.OK {
 		errs = append(errs, "preflight ok=false")

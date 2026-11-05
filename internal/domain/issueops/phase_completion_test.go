@@ -8,9 +8,9 @@ import (
 )
 
 func TestPRCompletionMissingAddsRemoteArtifactAndTargetBranch(t *testing.T) {
-	record := model.IssueOpsRecord{
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: "main"},
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://example.test/pr/1", TargetBranch: "other"},
+	record := model.Record{
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: "main"},
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://example.test/pr/1", TargetBranch: "other"},
 	}
 	if got := PRCompletionMissing(record, []string{"review"}); !reflect.DeepEqual(got, []string{"review", "target_branch_match"}) {
 		t.Fatalf("missing=%v", got)
@@ -22,11 +22,11 @@ func TestPRCompletionMissingAddsRemoteArtifactAndTargetBranch(t *testing.T) {
 }
 
 func TestDoneCompletionMissingRequiresPriorPRAndRemoteProof(t *testing.T) {
-	record := model.IssueOpsRecord{Phase: model.IssueOpsPhaseFeedback}
+	record := model.Record{Phase: model.PhaseFeedback}
 	if got := DoneCompletionMissing(record, []string{"remote_artifact"}); !reflect.DeepEqual(got, []string{"prior_phase_pr", "remote_artifact"}) {
 		t.Fatalf("missing=%v", got)
 	}
-	record.Phase = model.IssueOpsPhasePR
+	record.Phase = model.PhasePR
 	if got := DoneCompletionMissing(record, nil); len(got) != 0 {
 		t.Fatalf("ready done missing=%v", got)
 	}

@@ -27,6 +27,9 @@ var gitLabBlockingMergeStatus = map[string]bool{
 	"status_checks_must_pass": true, "title_regex": true,
 }
 
+// ReadPullRequestMergeState reads the merge request through the REST API and
+// maps it to a RemotePullRequestMergeState: open/merged/closed state, head
+// SHA, draft, conflict, blocking merge status and head pipeline checks.
 func (Provider) ReadPullRequestMergeState(ctx context.Context, repo, artifactURL string) (model.RemotePullRequestMergeState, error) {
 	hostname, endpoint, err := gitLabMergeRequestEndpoint(artifactURL)
 	if err != nil {

@@ -15,18 +15,18 @@ func readinessServiceForTest() cycleapp.GateService {
 	policy := policyapp.Service{Observer: policyadapter.CommandObserver{}, Overrides: policyadapter.OverrideLoader{}, Executor: policyadapter.CommandExecutor{}, Clock: policyadapter.Clock{}}
 	gates := app.Service{Store: adapter.FileStore{}, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policy.Evaluate, Execute: policy.Run}}
 	return cycleapp.GateService{BaseReadiness: strictLoopReadinessForTest,
-		LoopReadiness: func(repo string) model.IssueOpsReadiness {
-			return withLoopGateForTest(model.IssueOpsReadiness{Ready: true}, repo)
+		LoopReadiness: func(repo string) model.Readiness {
+			return withLoopGateForTest(model.Readiness{Ready: true}, repo)
 		},
-		ReadRecord: issueops.ReadIssueOps, AdvanceRecord: func(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error) {
+		ReadRecord: issueops.ReadIssueOps, AdvanceRecord: func(root, id, to string, actor model.Actor) (model.Record, model.TrackedMaterials, error) {
 			return testCyclePhaseService(&actor).AdvanceReport(root, id, to)
 		},
 		Ledger: cycleport.GateLedgerReadiness{Discover: adapter.DiscoverGateFiles, Check: gates.Check}}
 }
-func StrictPRReadinessWithState(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
+func StrictPRReadinessWithState(root string, record model.Record) model.Readiness {
 	return readinessServiceForTest().StrictPRReadinessWithState(root, record)
 }
-func AdvancePhaseWithActor(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func AdvancePhaseWithActor(root, id, to string, actor model.Actor) (model.Record, error) {
 	record, _, err := readinessServiceForTest().AdvancePhaseReport(root, id, to, actor)
 	return record, err
 }

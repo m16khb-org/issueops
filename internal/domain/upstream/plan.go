@@ -14,9 +14,9 @@ import (
 
 // Reasons a declared entry is skipped rather than installed.
 const (
-	ReasonPluginAlreadyInstalled = "already installed on the host"
-	ReasonSkillAlreadyInstalled  = "already present in the host skill directory"
-	ReasonPluginHostUnavailable  = "host plugin CLI is unavailable"
+	reasonPluginAlreadyInstalled = "already installed on the host"
+	reasonSkillAlreadyInstalled  = "already present in the host skill directory"
+	reasonPluginHostUnavailable  = "host plugin CLI is unavailable"
 )
 
 var skillNamePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`) })
@@ -24,7 +24,7 @@ var skillNamePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.Must
 // Plan decides what one sync pass should do, given the declaration and what the
 // host already has. Plugins come first, then skills; both keep declaration order.
 func Plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed) []upstreamcontract.PlanItem {
-	return plan(cfg, observed, true)
+	return buildPlan(cfg, observed, true)
 }
 
 // PlanWithoutPluginHost is Plan for a host whose plugin CLI is missing: plugin
@@ -32,10 +32,10 @@ func Plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed) []ups
 // that cannot run. Skills are unaffected because they are provisioned by the
 // harness itself.
 func PlanWithoutPluginHost(cfg upstreamcontract.Config, observed upstreamcontract.Observed) []upstreamcontract.PlanItem {
-	return plan(cfg, observed, false)
+	return buildPlan(cfg, observed, false)
 }
 
-func plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, pluginHostAvailable bool) []upstreamcontract.PlanItem {
+func buildPlan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, pluginHostAvailable bool) []upstreamcontract.PlanItem {
 	installedPlugins := indexOf(observed.Plugins)
 	marketplaces := indexOf(observed.Marketplaces)
 	installedSkills := indexOf(observed.Skills)
@@ -52,10 +52,10 @@ func plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, plugi
 		switch {
 		case installedPlugins[entry.ID()]:
 			item.Action = upstreamcontract.ActionSkip
-			item.Reason = ReasonPluginAlreadyInstalled
+			item.Reason = reasonPluginAlreadyInstalled
 		case !pluginHostAvailable:
 			item.Action = upstreamcontract.ActionSkip
-			item.Reason = ReasonPluginHostUnavailable
+			item.Reason = reasonPluginHostUnavailable
 		default:
 			item.AddMarketplace = !marketplaces[entry.Marketplace]
 		}
@@ -70,7 +70,7 @@ func plan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, plugi
 		item := upstreamcontract.PlanItem{Kind: upstreamcontract.KindSkill, Name: entry.Name, Action: upstreamcontract.ActionInstall, Skill: &entry}
 		if installedSkills[entry.Name] {
 			item.Action = upstreamcontract.ActionSkip
-			item.Reason = ReasonSkillAlreadyInstalled
+			item.Reason = reasonSkillAlreadyInstalled
 		}
 		items = append(items, item)
 	}

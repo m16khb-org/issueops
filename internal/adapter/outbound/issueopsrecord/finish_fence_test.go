@@ -17,7 +17,7 @@ func TestArmedFinishRefusesOrdinaryRecordMutations(t *testing.T) {
 			for _, operation := range []string{"update", "related update", "delete", "unchanged delete"} {
 				t.Run(operation, func(t *testing.T) {
 					root := filepath.Join(t.TempDir(), "state")
-					record := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-fence", Phase: model.IssueOpsPhaseDone, CleanupAttempt: &model.IssueOpsCleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}}
+					record := model.Record{SchemaVersion: 1, ID: "io-finish-fence", Phase: model.PhaseDone, CleanupAttempt: &model.CleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}}
 					raw, err := Encode(record)
 					if err != nil {
 						t.Fatal(err)
@@ -38,13 +38,13 @@ func TestArmedFinishRefusesOrdinaryRecordMutations(t *testing.T) {
 					called := false
 					switch operation {
 					case "update":
-						_, err = store.Update(ctx, root, record.ID, func(r model.IssueOpsRecord) (model.IssueOpsRecord, bool, error) {
+						_, err = store.Update(ctx, root, record.ID, func(r model.Record) (model.Record, bool, error) {
 							called = true
 							r.Branch = "replacement"
 							return r, true, nil
 						})
 					case "related update":
-						_, err = store.UpdateRelated(ctx, root, record.ID, "artifact_stage_v1", func(r model.IssueOpsRecord, b []byte, exists bool) ([]byte, bool, error) {
+						_, err = store.UpdateRelated(ctx, root, record.ID, "artifact_stage_v1", func(r model.Record, b []byte, exists bool) ([]byte, bool, error) {
 							called = true
 							return []byte(`{"evidence":"replaced"}`), false, nil
 						})
@@ -75,7 +75,7 @@ func TestUpdateCannotRestoreDrainedFinishAttempt(t *testing.T) {
 	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
 			root := filepath.Join(t.TempDir(), "state")
-			record := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-drained", Phase: model.IssueOpsPhaseDone}
+			record := model.Record{SchemaVersion: 1, ID: "io-drained", Phase: model.PhaseDone}
 			raw, err := Encode(record)
 			if err != nil {
 				t.Fatal(err)
@@ -87,8 +87,8 @@ func TestUpdateCannotRestoreDrainedFinishAttempt(t *testing.T) {
 			if err := db.Put(bucket, record.ID, raw); err != nil {
 				t.Fatal(err)
 			}
-			_, err = (Store{}).Update(context.Background(), root, record.ID, func(r model.IssueOpsRecord) (model.IssueOpsRecord, bool, error) {
-				r.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+			_, err = (Store{}).Update(context.Background(), root, record.ID, func(r model.Record) (model.Record, bool, error) {
+				r.CleanupAttempt = &model.CleanupAttempt{Operation: cleanupOperation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 				return r, true, nil
 			})
 			if err == nil || !strings.Contains(err.Error(), "cleanup "+string(cleanupOperation)) {

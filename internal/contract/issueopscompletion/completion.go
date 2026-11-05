@@ -4,18 +4,23 @@ package issueopscompletion
 
 import leasecontract "issueops/internal/contract/issueopslease"
 
+// Execution aliases the lease contract's execution state under this package's name.
 // application/issueopscompletion은 completion domain·contract만 import할 수 있어서
 // lease 계약의 Execution과 ErrExecutionNotPrepared를 여기서 이 이름으로 둔다.
 type Execution = leasecontract.Execution
 
+// ErrExecutionNotPrepared is returned when completion targets a cycle whose execution was never prepared.
 var ErrExecutionNotPrepared = leasecontract.ErrExecutionNotPrepared
 
+// ProcessReceipt identifies one OS process by PID, start time, and executable so a later check can tell
+// it apart from a reused PID.
 type ProcessReceipt struct {
 	PID        int
 	StartedAt  string
 	Executable string
 }
 
+// Actor identifies who acts on a cycle: the host, session, and agent IDs plus the verified process.
 type Actor struct {
 	Host      string
 	SessionID string
@@ -23,6 +28,8 @@ type Actor struct {
 	Process   *ProcessReceipt
 }
 
+// Lease is the execution lease as completion sees it: its generation, status, holder, claim token digest,
+// and the timestamps and reason recorded when it was claimed, released, or replaced.
 type Lease struct {
 	Generation        uint64
 	Status            string
@@ -34,6 +41,8 @@ type Lease struct {
 	ReplacementReason string
 }
 
+// Completion is the evidence recorded when a cycle completes: lease generation, final head, verification
+// report path and notes, remote artifact URL, and the completion time.
 type Completion struct {
 	Generation             uint64
 	FinalHead              string
@@ -43,6 +52,8 @@ type Completion struct {
 	CompletedAt            string
 }
 
+// LedgerEntry is the phase ledger record for one phase: when it started and finished, and its artifacts,
+// missing items, and notes.
 type LedgerEntry struct {
 	Phase       string
 	EnteredAt   string
@@ -52,6 +63,8 @@ type LedgerEntry struct {
 	Notes       []string
 }
 
+// Command is the validated request to complete a cycle: the lease generation, the verified actor,
+// and the final head, verification evidence, and remote artifact URL to record.
 type Command struct {
 	Generation             uint64
 	Actor                  Actor
@@ -61,6 +74,8 @@ type Command struct {
 	RemoteArtifactURL      string
 }
 
+// RemoteArtifact describes the remote issue or pull request linked to a cycle: provider, kind, URL, labels,
+// assignees, when it was last verified, and its target branch.
 type RemoteArtifact struct {
 	Provider     string
 	Kind         string
@@ -93,6 +108,7 @@ type RecordSnapshot struct {
 	PRHead string
 }
 
+// Clone returns a deep copy of the snapshot, so a transition can edit the result without changing the original.
 func (r RecordSnapshot) Clone() RecordSnapshot {
 	result := r
 	if r.Lease.Holder != nil {

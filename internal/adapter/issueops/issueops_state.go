@@ -1,3 +1,6 @@
+// Package issueops is the outbound adapter of the IssueOps cycle: it stores cycle records
+// and execution leases in the SQLite state, and implements the git, process, provider-CLI and
+// filesystem observations that the application layer consumes through the ports.
 package issueops
 
 import (
@@ -22,23 +25,23 @@ import (
 
 // 레코드는 schema 버전별 물리 namespace에만 읽고 쓴다.
 // namespace 이름은 issueops.IssueOpsSchemaVersion에서 파생된다.
-var issueOpsBucket = fmt.Sprintf("issueops_v%d", issueops.IssueOpsSchemaVersion)
+var issueOpsBucket = fmt.Sprintf("issueops_v%d", issueops.SchemaVersion)
 
 // ReadIssueOpsExisting reads exactly one existing record without creating,
 // repairing, migrating, or changing permissions on the state store.
-func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error) {
+func ReadIssueOpsExisting(stateRoot, id string) (issueops.Record, error) {
 	id, err := normalizeIssueOpsID(id)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
+		return issueops.Record{OK: false}, err
 	}
 	b, ok, err := sqlstore.GetExisting(stateRoot, issueOpsBucket, id)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, err
+		return issueops.Record{OK: false, ID: id}, err
 	}
 	// A missing store answers like a missing record: the caller asked for a
 	// cycle, and the store path is an implementation detail.
 	if err != nil || !ok {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(stateRoot, id)
+		return issueops.Record{OK: false, ID: id}, recordNotFound(stateRoot, id)
 	}
 	return decodeIssueOpsRecord(id, b)
 }
@@ -48,7 +51,7 @@ func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error)
 // the bare "not found" did not say which state was read.
 func recordNotFound(stateRoot, id string) error {
 	if data, ok, err := sqlstore.GetExisting(stateRoot, cycleOutcomeBucket, id); err == nil && ok {
-		var outcome issueops.IssueOpsCycleOutcome
+		var outcome issueops.CycleOutcome
 		if json.Unmarshal(data, &outcome) == nil {
 			if note := issueopsdomain.RetiredCycleNote(outcome); note != "" {
 				return fmt.Errorf("issueops record %s: %s: %w", id, note, fs.ErrNotExist)
@@ -58,28 +61,31 @@ func recordNotFound(stateRoot, id string) error {
 	return fmt.Errorf("issueops record %s not found in state %s (ISSUEOPS_STATE_DIR selects the state); list cycles with `issueops list --json`: %w", id, stateRoot, fs.ErrNotExist)
 }
 
-func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
+// ReadIssueOps loads and validates the cycle record for id. A missing record wraps
+// fs.ErrNotExist; a row that fails to decode or validate returns an Invalid record with
+// the invalid-state error.
+func ReadIssueOps(stateRoot, id string) (issueops.Record, error) {
 	id, err := normalizeIssueOpsID(id)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
+		return issueops.Record{OK: false}, err
 	}
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, err
+		return issueops.Record{OK: false, ID: id}, err
 	}
 	b, ok, err := db.Get(issueOpsBucket, id)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, err
+		return issueops.Record{OK: false, ID: id}, err
 	}
 	if !ok {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(stateRoot, id)
+		return issueops.Record{OK: false, ID: id}, recordNotFound(stateRoot, id)
 	}
 	return decodeIssueOpsRecord(id, b)
 }
 
-func decodeIssueOpsRecord(id string, b []byte) (issueops.IssueOpsRecord, error) {
-	invalid := issueops.IssueOpsRecord{OK: false, ID: id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
-	var record issueops.IssueOpsRecord
+func decodeIssueOpsRecord(id string, b []byte) (issueops.Record, error) {
+	invalid := issueops.Record{OK: false, ID: id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
+	var record issueops.Record
 	decoder := json.NewDecoder(bytes.NewReader(b))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&record); err != nil {
@@ -88,7 +94,7 @@ func decodeIssueOpsRecord(id string, b []byte) (issueops.IssueOpsRecord, error) 
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return invalid, statecontract.ErrInvalidState
 	}
-	if record.SchemaVersion != issueops.IssueOpsSchemaVersion || record.ID != id {
+	if record.SchemaVersion != issueops.SchemaVersion || record.ID != id {
 		return invalid, statecontract.ErrInvalidState
 	}
 	if err := validateIssueOpsRecord(record); err != nil {
@@ -101,7 +107,7 @@ func decodeIssueOpsRecord(id string, b []byte) (issueops.IssueOpsRecord, error) 
 // VisitIssueOpsExisting visits every stored cycle in id order from one
 // read-only scan without creating or repairing state. A row whose id or record
 // is invalid reaches visit with its error. A missing store has no rows.
-func VisitIssueOpsExisting(stateRoot string, visit func(id string, record issueops.IssueOpsRecord, err error)) error {
+func VisitIssueOpsExisting(stateRoot string, visit func(id string, record issueops.Record, err error)) error {
 	rows, err := sqlstore.GetAllExisting(stateRoot, issueOpsBucket)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -112,7 +118,7 @@ func VisitIssueOpsExisting(stateRoot string, visit func(id string, record issueo
 	for _, row := range rows {
 		id, err := normalizeIssueOpsID(row.ID)
 		if err != nil {
-			visit(row.ID, issueops.IssueOpsRecord{OK: false}, err)
+			visit(row.ID, issueops.Record{OK: false}, err)
 			continue
 		}
 		record, err := decodeIssueOpsRecord(id, row.Data)
@@ -121,20 +127,22 @@ func VisitIssueOpsExisting(stateRoot string, visit func(id string, record issueo
 	return nil
 }
 
-func ScanReadableIssueOps(stateRoot string) ([]issueops.IssueOpsRecord, error) {
+// ScanReadableIssueOps returns every cycle record under stateRoot that decodes and validates.
+// Unreadable rows are skipped, and a missing state yields an empty list.
+func ScanReadableIssueOps(stateRoot string) ([]issueops.Record, error) {
 	records, _, err := scanIssueOpsRows(stateRoot)
 	return records, err
 }
 
-func scanIssueOpsRows(stateRoot string) ([]issueops.IssueOpsRecord, bool, error) {
+func scanIssueOpsRows(stateRoot string) ([]issueops.Record, bool, error) {
 	rows, err := sqlstore.GetAllExisting(stateRoot, issueOpsBucket)
 	if errors.Is(err, fs.ErrNotExist) {
-		return []issueops.IssueOpsRecord{}, false, nil
+		return []issueops.Record{}, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
-	records := make([]issueops.IssueOpsRecord, 0, len(rows))
+	records := make([]issueops.Record, 0, len(rows))
 	invalid := false
 	for _, row := range rows {
 		record, decodeErr := decodeIssueOpsRecord(row.ID, row.Data)
@@ -162,7 +170,7 @@ func newIndependentIssueOpsID(repo string) (string, error) {
 	return "io-" + hex.EncodeToString(sum[:])[:12], nil
 }
 
-func writeIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+func writeIssueOps(ctx context.Context, stateRoot string, record issueops.Record) (issueops.Record, error) {
 	record, b, err := encodeIssueOpsRecord(record)
 	if err != nil {
 		return record, err
@@ -195,12 +203,12 @@ func writeIssueOps(ctx context.Context, stateRoot string, record issueops.IssueO
 	return record, nil
 }
 
-func encodeIssueOpsRecord(record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, []byte, error) {
+func encodeIssueOpsRecord(record issueops.Record) (issueops.Record, []byte, error) {
 	if _, err := normalizeIssueOpsID(record.ID); err != nil {
 		record.OK = false
 		return record, nil, err
 	}
-	if record.SchemaVersion != issueops.IssueOpsSchemaVersion {
+	if record.SchemaVersion != issueops.SchemaVersion {
 		record.OK = false
 		return record, nil, statecontract.ErrInvalidState
 	}
@@ -232,7 +240,7 @@ func normalizeIssueOpsID(id string) (string, error) {
 	return id, nil
 }
 
-func validateIssueOpsRecord(record issueops.IssueOpsRecord) error {
+func validateIssueOpsRecord(record issueops.Record) error {
 	if err := issueops.ValidateRecord(record); err != nil {
 		return statecontract.ErrInvalidState
 	}

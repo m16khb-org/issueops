@@ -12,6 +12,9 @@ import (
 	domain "issueops/internal/domain/issueopsorphancleanup"
 )
 
+// OrphanEnvironment is the local environment OrphanCleaner uses to
+// canonicalize paths, check cleanliness, read local authority, exclude record
+// writers, and remove the worktree and branch.
 type OrphanEnvironment interface {
 	CanonicalPath(string) (string, error)
 	StateOutsideTarget(string) (bool, error)
@@ -22,10 +25,12 @@ type OrphanEnvironment interface {
 	DeleteBranch(context.Context, string, string, string) error
 }
 
+// OrphanCleaner previews and applies removal of an orphaned local worktree and
+// branch, gated on operational inventory and optional remote merge evidence.
 type OrphanCleaner struct {
 	Environment  OrphanEnvironment
 	Collect      func(context.Context, string) (health.Snapshot, error)
-	VerifyMerged func(context.Context, model.IssueOpsRemoteArtifactVerification) error
+	VerifyMerged func(context.Context, model.RemoteArtifactVerification) error
 }
 
 func (s OrphanCleaner) normalize(request contract.Request) (contract.Request, error) {
@@ -41,6 +46,9 @@ func (s OrphanCleaner) normalize(request contract.Request) (contract.Request, er
 	return domain.NormalizeRequest(request)
 }
 
+// Preview inspects the orphan target against a fresh inventory and merge
+// evidence and returns the result with a fingerprint when it is ready. It never
+// mutates; unavailable inventory is reported as a missing gate.
 func (s OrphanCleaner) Preview(ctx context.Context, request contract.Request) (contract.Result, error) {
 	request, err := s.normalize(request)
 	if err != nil {
@@ -110,6 +118,9 @@ func finishOrphan(result contract.Result) contract.Result {
 	return result
 }
 
+// Apply removes the orphan worktree and branch after confirm and a matching
+// preview fingerprint. It re-reads local authority while record writers are
+// excluded and fails if the fingerprint changed.
 func (s OrphanCleaner) Apply(ctx context.Context, request contract.Request, apply contract.ApplyRequest) (contract.Result, error) {
 	preview, err := s.previewForApply(ctx, request, apply)
 	if err != nil {

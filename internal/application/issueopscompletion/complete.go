@@ -1,3 +1,6 @@
+// Package issueopscompletion is the application layer for the issueops execution completion use case: it validates the
+// caller's authority and the final-head and verification evidence, then asks a repository to move the
+// cycle into the completed state. Persistence and git/filesystem checks sit behind its ports.
 package issueopscompletion
 
 import (
@@ -8,6 +11,10 @@ import (
 	completiondomain "issueops/internal/domain/issueopscompletion"
 )
 
+// Request carries one completion attempt: the target cycle ID, the lease generation the caller believes it holds,
+// the caller identity with its process ancestry, and the evidence to record (final head,
+// verification report path and notes, optional remote artifact URL). Confirm must be true
+// for the completion to be accepted.
 type Request struct {
 	ID                     string
 	Generation             uint64
@@ -21,23 +28,31 @@ type Request struct {
 	Confirm                bool
 }
 
+// Result reports a completed Complete call: the cycle ID and the persisted execution state.
 type Result struct {
 	OK        bool
 	ID        string
 	Execution completioncontract.Execution
 }
 
+// Service completes a prepared cycle: it verifies the caller, validates the completion evidence against the
+// recorded cycle state, and persists the transition through Repository.
 type Service struct {
 	repository  Repository
 	environment Environment
-	clock       Clock
-	verify      ActorVerifier
+	clock       clock
+	verify      actorVerifier
 }
 
-func NewService(repository Repository, environment Environment, clock Clock, verify ActorVerifier) *Service {
+// NewService builds a Service from its repository, environment, clock, and actor verifier.
+// All four are required; Complete fails when any is nil.
+func NewService(repository Repository, environment Environment, clock clock, verify actorVerifier) *Service {
 	return &Service{repository: repository, environment: environment, clock: clock, verify: verify}
 }
 
+// Complete verifies the caller and the evidence, then atomically records the completion of request.ID.
+// Retrying with identical evidence is idempotent; different evidence for an already completed
+// execution is an error. The first failing validation is returned unchanged.
 func (s *Service) Complete(ctx context.Context, request Request) (Result, error) {
 	if !s.ready() {
 		return Result{ID: request.ID}, fmt.Errorf("completion dependencies are required")

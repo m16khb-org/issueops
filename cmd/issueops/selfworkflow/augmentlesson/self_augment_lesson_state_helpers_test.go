@@ -11,14 +11,14 @@ import (
 type lessonTestDeps struct {
 	IssueOpsRoot    func() string
 	PrintJSON       func(any) error
-	SelectCandidate func() *augmentcontract.SelfAugmentCandidate
+	SelectCandidate func() *augmentcontract.Candidate
 }
 
-func SaveSelfAugmentLesson(req augmentcontract.SelfAugmentLessonRequest, deps lessonTestDeps) (augmentcontract.SelfAugmentLessonResult, error) {
+func SaveSelfAugmentLesson(req augmentcontract.LessonRequest, deps lessonTestDeps) (augmentcontract.LessonResult, error) {
 	return application.SaveLesson(req, application.SaveLessonDeps{
 		IssueOpsRoot: deps.IssueOpsRoot, SelectCandidate: deps.SelectCandidate,
 		Now: time.Now,
-		Encode: func(snapshot augmentcontract.SelfAugmentLessonStateSnapshot) ([]byte, error) {
+		Encode: func(snapshot augmentcontract.LessonStateSnapshot) ([]byte, error) {
 			return json.MarshalIndent(snapshot, "", "  ")
 		},
 		Write: StateWrite, StateDir: StateDir, Prune: StatePrunePrefix,

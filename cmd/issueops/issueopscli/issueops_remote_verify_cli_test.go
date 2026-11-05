@@ -16,7 +16,7 @@ import (
 func TestRunIssueOpsRemoteVerifyArtifactValidationErrors(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIGitRepoForRemoteVerifyTest(t)
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{
 		Repo:   repo,
 		Branch: "75-remote-verify-cli",
 	})
@@ -61,13 +61,13 @@ func TestRunIssueOpsRemoteVerifyArtifactValidationErrors(t *testing.T) {
 	}
 }
 
-func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
+func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueopscontract.Record, issueopscontract.Actor) {
 	t.Helper()
 	recordIssueOpsCoreIntentForCLITest(t, id)
 	if _, err := LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), id, "https://github.com/example/repo/issues/75"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsBranchPrepareRequest{
+	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/example/repo/issues/75",
 		Branch:       "75-remote-verify-cli",
@@ -119,7 +119,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 		t.Fatal(err)
 	}
 	_, actor := seedIssueOpsCLIExecution(t, record)
-	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.PhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	// The transition wrote tracked material copies; they ship in the same commit.
@@ -134,7 +134,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, id)
 	recordIssueOpsCoreImplementationReviewForCLITest(t, id)
-	record, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhasePR), actor)
+	record, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.PhasePR), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := recordProjectDocsReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	if _, err := recordProjectDocsReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.ProjectDocsReviewRequest{
 		Verdict:      "no-change",
 		ReviewedDocs: []string{".issueops/CAUTIONS.md"},
 		Evidence:     []string{"이 변경은 운영 문서에 남길 결정을 만들지 않는다"},
@@ -231,7 +231,7 @@ func recordIssueOpsCoreImplementationReviewForCLITest(t *testing.T, id string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := recordImplementationReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsImplementationReviewRequest{
+	if _, err := recordImplementationReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.ImplementationReviewRequest{
 		Verdict:      "pass",
 		Findings:     []string{"변경 범위가 이슈 계약을 넘지 않는다"},
 		Evidence:     []string{"go test ./cmd/issueops/issueopscli -count=1"},
@@ -243,12 +243,12 @@ func recordIssueOpsCoreImplementationReviewForCLITest(t *testing.T, id string) {
 
 // evidenceRecorderActorForCLITest는 레코드의 활성 lease holder로 인정되는 actor다.
 // evidence 기록은 owner mutation이라 lease가 있으면 holder만 쓸 수 있다.
-func evidenceRecorderActorForCLITest(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsActor {
+func evidenceRecorderActorForCLITest(record issueopscontract.Record) issueopscontract.Actor {
 	if record.Execution == nil || record.Execution.Lease.Holder == nil {
-		return issueopscontract.IssueOpsActor{}
+		return issueopscontract.Actor{}
 	}
 	holder := record.Execution.Lease.Holder
-	actor := issueopscontract.IssueOpsActor{Host: holder.Host, SessionID: holder.SessionID, AgentID: holder.AgentID, CWD: record.Execution.Workspace.Root}
+	actor := issueopscontract.Actor{Host: holder.Host, SessionID: holder.SessionID, AgentID: holder.AgentID, CWD: record.Execution.Workspace.Root}
 	if holder.SessionProcess != nil {
 		actor.NativeProcessAncestry = []issueopscontract.NativeProcessReceipt{*holder.SessionProcess}
 	}

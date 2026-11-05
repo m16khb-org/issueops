@@ -24,8 +24,8 @@ import (
 	"issueops/internal/adapter/outbound/osfile"
 )
 
-// GitRaw runs git in dir and returns its exit code with untrimmed stdout and stderr.
-type GitRaw func(dir string, args ...string) (code int, stdout, stderr string)
+// gitRaw runs git in dir and returns its exit code with untrimmed stdout and stderr.
+type gitRaw func(dir string, args ...string) (code int, stdout, stderr string)
 
 // Inputs is everything one fingerprint covers. Untracked is the sorted list of
 // slash-separated paths relative to Root, as ReadDiffs returns it.
@@ -88,7 +88,7 @@ func ReadIndex(root, gitPath string) ([]byte, error) {
 // ReadDiffs reads the tracked and staged binary diffs and the sorted untracked
 // path list. A command that exits zero is accepted even when it wrote warnings
 // to stderr.
-func ReadDiffs(git GitRaw, root string) (tracked, staged string, untracked []string, err error) {
+func ReadDiffs(git gitRaw, root string) (tracked, staged string, untracked []string, err error) {
 	code, tracked, stderr := git(root, "diff", "--binary", "--no-ext-diff", "--")
 	if code != 0 {
 		return "", "", nil, fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))

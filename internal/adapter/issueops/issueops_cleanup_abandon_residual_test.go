@@ -139,17 +139,17 @@ func TestCleanupAbandonBranchFailurePreservesRetryInventory(t *testing.T) {
 	if code, _, _ := preflight.GitCmd(fixture.record.Repo, "show-ref", "--verify", "--quiet", "refs/heads/293-cleanup-partial"); code != 0 {
 		t.Fatal("failed branch deletion must leave the local branch present")
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.Record) {
 		record.CleanupAbandonFailure.Fingerprint = strings.Repeat("b", 64)
 	})
 	forged, forgedErr := CleanupAbandon(context.Background(), stateRoot, abandonRequest(fixture.record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses()})
 	if forgedErr == nil || !containsString(forged.Missing, "cleanup_failure_inventory") {
 		t.Fatalf("a substituted receipt fingerprint must fail closed: err=%v result=%+v", forgedErr, forged)
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.Record) {
 		record.CleanupAbandonFailure.Fingerprint = preview.Fingerprint
 	})
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.Record) {
 		record.CleanupAbandonFailure.BranchOID = "different-oid"
 	})
 	// receipt의 OID가 관측과 어긋나면 계속 막는다. 예전에는 이것이
@@ -160,7 +160,7 @@ func TestCleanupAbandonBranchFailurePreservesRetryInventory(t *testing.T) {
 	if mismatchErr == nil || !containsString(mismatch.Missing, "cleanup_failure_inventory") {
 		t.Fatalf("branch-only retry must match the sealed OID: err=%v result=%+v", mismatchErr, mismatch)
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.Record) {
 		record.CleanupAbandonFailure.BranchOID = head
 	})
 
@@ -195,8 +195,8 @@ func TestCleanupAbandonApplyingReceiptForOriginallyAbsentExecutionIsRetryable(t 
 	if code, _, stderr := preflight.GitCmd(fixture.record.Repo, "update-ref", "-d", "refs/heads/293-cleanup-originally-absent", head); code != 0 {
 		t.Fatalf("remove absent fixture branch: %s", stderr)
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(current *issueops.IssueOpsRecord) {
-		current.CleanupAbandonFailure = &issueops.IssueOpsCleanupAbandonFailure{
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(current *issueops.Record) {
+		current.CleanupAbandonFailure = &issueops.CleanupAbandonFailure{
 			Step: "applying", Fingerprint: strings.Repeat("a", 64),
 			RecordSHA:    originalRecordSHA,
 			WorktreePath: fixture.worktree, Branch: current.Branch,
@@ -228,8 +228,8 @@ func TestCleanupAbandonRecordDeletePartialStateIsRetryable(t *testing.T) {
 	if code, _, stderr := preflight.GitCmd(fixture.record.Repo, "update-ref", "-d", "refs/heads/293-cleanup-record-partial", head); code != 0 {
 		t.Fatalf("remove partial branch: %s", stderr)
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(current *issueops.IssueOpsRecord) {
-		current.CleanupAbandonFailure = &issueops.IssueOpsCleanupAbandonFailure{
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(current *issueops.Record) {
+		current.CleanupAbandonFailure = &issueops.CleanupAbandonFailure{
 			Step: "record_delete", Message: "injected record delete failure",
 			Fingerprint: strings.Repeat("a", 64), Branch: current.Branch,
 			At: "2026-08-04T00:00:00Z",
@@ -240,7 +240,7 @@ func TestCleanupAbandonRecordDeletePartialStateIsRetryable(t *testing.T) {
 	if invalidErr == nil || !containsString(invalid.Missing, "cleanup_failure_inventory") {
 		t.Fatalf("incomplete record-delete inventory must fail closed: err=%v result=%+v", invalidErr, invalid)
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(current *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(current *issueops.Record) {
 		current.CleanupAbandonFailure.WorktreePath = fixture.worktree
 		current.CleanupAbandonFailure.Branch = "293-cleanup-record-partial"
 		current.CleanupAbandonFailure.WorktreeHead = head
@@ -323,8 +323,8 @@ func TestCleanupAbandonAuthorityCASRunsBeforeGitMutation(t *testing.T) {
 		}
 		if armed && !mutated && len(args) > 1 && args[0] == "rev-parse" && args[1] == "--verify" {
 			mutated = true
-			mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.IssueOpsRecord) {
-				record.Phase = issueops.IssueOpsPhasePlan
+			mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.Record) {
+				record.Phase = issueops.PhasePlan
 			})
 		}
 		code, stdout, stderr := preflight.GitCmd(dir, args...)
@@ -438,7 +438,7 @@ func TestCleanupAbandonAcceptsRecordLinkedResidueWithoutExecution(t *testing.T) 
 	if err := os.Remove(fixture.tokenPath); err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(rec *issueops.IssueOpsRecord) {
+	mutateFinishRecord(t, stateRoot, fixture.record.ID, func(rec *issueops.Record) {
 		rec.Execution = nil
 		rec.WorktreePath = fixture.worktree
 	})

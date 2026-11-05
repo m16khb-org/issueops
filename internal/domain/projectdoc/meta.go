@@ -32,7 +32,7 @@ func DocMetaDescription(name string) (string, bool) {
 	return desc, ok
 }
 
-// parseDocFrontmatter extracts a leading SKILL.md-style frontmatter block
+// ParseFrontmatter extracts a leading SKILL.md-style frontmatter block
 // (--- ... ---) from the very top of content. It returns the name and
 // description fields, the body after the block, and whether a block was present.
 func ParseFrontmatter(content string) (name, description, body string, ok bool) {
@@ -72,7 +72,7 @@ func renderDocMetaFrontmatter(name, description string) string {
 	return "---\nname: " + name + "\ndescription: " + description + "\n---\n"
 }
 
-// ensureDocMetaFrontmatter guarantees content begins with the canonical meta
+// EnsureMetaFrontmatter guarantees content begins with the canonical meta
 // frontmatter for the given doc name while preserving the existing body. An
 // existing frontmatter block is replaced; otherwise one is prepended. Content is
 // returned unchanged when the doc has no canonical metadata. The operation is

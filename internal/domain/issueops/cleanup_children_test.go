@@ -8,30 +8,30 @@ import (
 )
 
 func TestChildCleanupRequiresRequestedEvidenceAndLinkedParent(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "parent"}
-	result, err := PrepareChildCleanup(record, model.IssueOpsCloseChildrenRequest{})
+	record := model.Record{ID: "parent"}
+	result, err := PrepareChildCleanup(record, model.CloseChildrenRequest{})
 	if err == nil || !reflect.DeepEqual(result.Missing, []string{"merge_evidence"}) {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	result, err = PrepareChildCleanup(record, model.IssueOpsCloseChildrenRequest{MergeEvidenceRequested: true})
+	result, err = PrepareChildCleanup(record, model.CloseChildrenRequest{MergeEvidenceRequested: true})
 	if err == nil || !reflect.DeepEqual(result.Missing, []string{"parent_issue"}) {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/1"
-	result, err = PrepareChildCleanup(record, model.IssueOpsCloseChildrenRequest{Merged: true, Confirm: true})
+	result, err = PrepareChildCleanup(record, model.CloseChildrenRequest{Merged: true, Confirm: true})
 	if err != nil || !result.OK || !result.Merged || !result.Confirmed || result.DryRun {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 }
 
 func TestChildCleanupEvidenceNeverBypassesUnmergedArtifact(t *testing.T) {
-	record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{}}
+	record := model.Record{RemoteArtifact: &model.RemoteArtifactVerification{}}
 	basis, err := ChildCleanupEvidenceBasis(record, false)
 	if err == nil || basis != "" {
 		t.Fatalf("unmerged parent accepted: %s %v", basis, err)
 	}
 	basis, err = ChildCleanupEvidenceBasis(record, true)
-	if err != nil || basis != ChildCleanupParentMergeVerified {
+	if err != nil || basis != childCleanupParentMergeVerified {
 		t.Fatalf("merged parent rejected: %s %v", basis, err)
 	}
 	record.RemoteArtifact = nil
@@ -50,8 +50,8 @@ func TestChildCleanupEvidenceNeverBypassesUnmergedArtifact(t *testing.T) {
 }
 
 func TestChildCleanupReceiptIsImmutableAndPreservesFirstClose(t *testing.T) {
-	record := model.IssueOpsRecord{IssueLinks: []model.IssueOpsIssueLink{{Type: "related", URL: "related"}, {Type: "child", URL: "one", ClosedAt: "first"}, {Type: "child", URL: "two"}}}
-	before := append([]model.IssueOpsIssueLink(nil), record.IssueLinks...)
+	record := model.Record{IssueLinks: []model.IssueLink{{Type: "related", URL: "related"}, {Type: "child", URL: "one", ClosedAt: "first"}, {Type: "child", URL: "two"}}}
+	before := append([]model.IssueLink(nil), record.IssueLinks...)
 	got := ApplyChildCleanupReceipts(record, []int{1, 2}, "now")
 	if !reflect.DeepEqual(record.IssueLinks, before) {
 		t.Fatal("input receipt mutated")
@@ -64,7 +64,7 @@ func TestChildCleanupReceiptIsImmutableAndPreservesFirstClose(t *testing.T) {
 			t.Fatalf("receipt=%+v", got)
 		}
 	}
-	for _, child := range []model.IssueOpsCloseChildResult{{URL: "one", Closed: true}, {URL: "one", HierarchyVerified: true}} {
+	for _, child := range []model.CloseChildResult{{URL: "one", Closed: true}, {URL: "one", HierarchyVerified: true}} {
 		if err := ValidateChildCloseConfirmation(child, true); err == nil {
 			t.Fatal("unverified close accepted")
 		}
@@ -72,7 +72,7 @@ func TestChildCleanupReceiptIsImmutableAndPreservesFirstClose(t *testing.T) {
 			t.Fatal("preview should not require close")
 		}
 	}
-	if err := ValidateChildCloseConfirmation(model.IssueOpsCloseChildResult{Closed: true, HierarchyVerified: true}, true); err != nil {
+	if err := ValidateChildCloseConfirmation(model.CloseChildResult{Closed: true, HierarchyVerified: true}, true); err != nil {
 		t.Fatal(err)
 	}
 }

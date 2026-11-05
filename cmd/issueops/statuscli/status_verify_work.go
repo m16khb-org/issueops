@@ -9,6 +9,10 @@ import (
 	verifyworkapp "issueops/internal/application/verifywork"
 )
 
+// RunVerifyWork runs `verify-work`: it collects git, preflight, and guard
+// evidence through service and prints text or JSON. Incomplete evidence returns
+// an error; with --json the printed matrix is the verdict and the error is
+// marked as already reported.
 func RunVerifyWork(service verifyworkapp.Service, args []string) error {
 	fs := flag.NewFlagSet("verify-work", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")

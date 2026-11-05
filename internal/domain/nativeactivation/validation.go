@@ -11,6 +11,7 @@ import (
 	activationcontract "issueops/internal/contract/nativeactivation"
 )
 
+// ValidateRequest rejects a request whose state root, harness root or target binary is empty or has surrounding whitespace, or whose non-empty transition ID is malformed.
 func ValidateRequest(request activationcontract.Request) error {
 	if strings.TrimSpace(request.StateRoot) == "" || strings.TrimSpace(request.IssueOpsRoot) == "" || strings.TrimSpace(request.TargetBinary) == "" ||
 		request.StateRoot != strings.TrimSpace(request.StateRoot) || request.IssueOpsRoot != strings.TrimSpace(request.IssueOpsRoot) || request.TargetBinary != strings.TrimSpace(request.TargetBinary) {
@@ -22,21 +23,25 @@ func ValidateRequest(request activationcontract.Request) error {
 	return nil
 }
 
+// ValidTransitionID reports whether value is a lowercase hex encoding of 16 bytes.
 func ValidTransitionID(value string) bool {
 	decoded, err := hex.DecodeString(value)
 	return err == nil && len(decoded) == 16 && value == strings.ToLower(value)
 }
 
+// ValidSHA256 reports whether value is a lowercase hex SHA-256 digest with no surrounding whitespace.
 func ValidSHA256(value string) bool {
 	decoded, err := hex.DecodeString(value)
 	return err == nil && len(decoded) == sha256.Size && value == strings.TrimSpace(value) && value == strings.ToLower(value)
 }
 
+// ValidTimestamp reports whether value is an RFC 3339 timestamp with nanoseconds in its canonical UTC form.
 func ValidTimestamp(value string) bool {
 	parsed, err := time.Parse(time.RFC3339Nano, value)
 	return err == nil && parsed.UTC().Format(time.RFC3339Nano) == value
 }
 
+// ReadbackOrder validates the readback evidence and returns the indices that sort it by host and surface. The catalog digest must be valid and evidence must hold exactly one valid readback, with distinct paths, for each of the eleven first-party MCP and hook surfaces.
 func ReadbackOrder(catalogSHA256 string, evidence []activationcontract.Evidence) ([]int, error) {
 	if !ValidSHA256(catalogSHA256) {
 		return nil, fmt.Errorf("native activation readback digest is invalid")

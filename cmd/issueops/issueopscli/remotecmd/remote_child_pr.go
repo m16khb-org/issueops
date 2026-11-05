@@ -37,7 +37,7 @@ func (command Command) runRemoteCreateChild(args []string, deps Deps) error {
 	}
 	result, err := command.Operations.CreateChild(context.Background(), command.Operations.IssueOpsStateRoot(), remoteapp.ChildCreateCommand{
 		ID: *id, OperationID: *operationID, Provider: *providerOverride, Title: *title, Body: *body, BodyFile: *bodyFile, Template: *template, ScoreFile: *scoreFile, Fields: fields, Labels: labels, Assignees: assignees, Confirm: *confirm,
-		Actor: issueopscontract.IssueOpsActor{Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd},
+		Actor: issueopscontract.Actor{Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd},
 	}, deps.observeNativeProcessAncestry)
 	if err != nil {
 		return deps.printChildErrorResult(*jsonOut, result, err)

@@ -21,7 +21,7 @@ func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest
 
 	command.Operations = wired
 	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
-		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+		service.Read = func(id string) (issueopscontract.Record, error) {
 			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 		}
 		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
@@ -96,16 +96,16 @@ func TestRunCleanupAbandonWithoutFlagsNeedsNoProvider(t *testing.T) {
 type fakeCleanupAbandonProvider struct{}
 
 func (fakeCleanupAbandonProvider) Name() string { return "github" }
-func (fakeCleanupAbandonProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (fakeCleanupAbandonProvider) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (fakeCleanupAbandonProvider) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (fakeCleanupAbandonProvider) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (fakeCleanupAbandonProvider) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
 func (fakeCleanupAbandonProvider) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {

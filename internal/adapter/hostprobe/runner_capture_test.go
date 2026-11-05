@@ -65,7 +65,7 @@ func TestDecodeEpisodeCaptureRejectionsMapToNormalizedFailures(t *testing.T) {
 		{"unknown classification", captureJSON(t, request, func(m map[string]any) { m["classification"] = "looks_fine" }), "probe_result_invalid", "transport", "probe_result_invalid"},
 		{"unknown field", captureJSON(t, request, func(m map[string]any) { m["extra"] = 1 }), "probe_result_invalid", "transport", "probe_result_invalid"},
 		{"trailing json", append(captureJSON(t, request, nil), []byte(` {}`)...), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"oversize", []byte(strings.Repeat(" ", MaxOutputBytes+1)), "probe_result_too_large", "transport", "probe_result_too_large"},
+		{"oversize", []byte(strings.Repeat(" ", maxOutputBytes+1)), "probe_result_too_large", "transport", "probe_result_too_large"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -165,7 +165,7 @@ func TestMultipleCallMarkerOverridesCaptureOutcome(t *testing.T) {
 		})
 	}
 	t.Run("oversize marker", func(t *testing.T) {
-		_, err := decodeEpisodeCapture(write(t, strings.Repeat(" ", MaxOutputBytes+1)), request)
+		_, err := decodeEpisodeCapture(write(t, strings.Repeat(" ", maxOutputBytes+1)), request)
 		if err == nil || err.Error() != "multiple_call_marker_too_large" {
 			t.Fatalf("err = %v", err)
 		}
@@ -230,21 +230,21 @@ func TestCommandOutcomeErrorPrecedence(t *testing.T) {
 
 func TestExecRunnerReportsStartExitAndCancellationFailures(t *testing.T) {
 	ctx := t.Context()
-	if _, err := (ExecRunner{}).Run(ctx, CommandRequest{}); err == nil || err.Error() != "empty_argv" {
+	if _, err := (execRunner{}).Run(ctx, commandRequest{}); err == nil || err.Error() != "empty_argv" {
 		t.Fatalf("empty argv err = %v", err)
 	}
-	if _, err := (ExecRunner{}).Run(ctx, CommandRequest{Argv: []string{filepath.Join(t.TempDir(), "nope")}}); err == nil || err.Error() != "command_failed" {
+	if _, err := (execRunner{}).Run(ctx, commandRequest{Argv: []string{filepath.Join(t.TempDir(), "nope")}}); err == nil || err.Error() != "command_failed" {
 		t.Fatalf("start failure err = %v", err)
 	}
 	exitThree := testsupport.WriteFakeCommand(t, t.TempDir(), "exit-three", "#!/bin/sh\necho hi\nexit 3\n")
-	out, err := (ExecRunner{}).Run(ctx, CommandRequest{Argv: []string{exitThree}, Env: []string{}})
+	out, err := (execRunner{}).Run(ctx, commandRequest{Argv: []string{exitThree}, Env: []string{}})
 	if err == nil || err.Error() != "command_failed" || out.ExitCode != 3 || strings.TrimSpace(string(out.Stdout)) != "hi" {
 		t.Fatalf("exit failure: out=%+v err=%v", out, err)
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
 	sleeper := testsupport.WriteFakeCommand(t, t.TempDir(), "sleeper", "#!/bin/sh\nsleep 30\n")
-	if _, err := (ExecRunner{}).Run(cancelled, CommandRequest{Argv: []string{sleeper}}); err == nil || err.Error() != "command_cancelled" {
+	if _, err := (execRunner{}).Run(cancelled, commandRequest{Argv: []string{sleeper}}); err == nil || err.Error() != "command_cancelled" {
 		t.Fatalf("cancel err = %v", err)
 	}
 }
@@ -381,7 +381,7 @@ type fakeRunner struct {
 	err error
 }
 
-func (f fakeRunner) Run(context.Context, CommandRequest) (CommandOutput, error) { return f.out, f.err }
+func (f fakeRunner) Run(context.Context, commandRequest) (CommandOutput, error) { return f.out, f.err }
 
 func TestIsolatedHostEnvKeepsOnlyAmbientAndAllowedSorted(t *testing.T) {
 	deps := Dependencies{Environ: func() []string {

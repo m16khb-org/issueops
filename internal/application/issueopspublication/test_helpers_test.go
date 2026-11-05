@@ -124,7 +124,7 @@ func (f *fakeVerifier) VerifyLive(ctx context.Context, intent contract.Intent, u
 
 var _ Repository = (*fakeRepository)(nil)
 var _ Provider = (*fakeProvider)(nil)
-var _ Verifier = (*fakeVerifier)(nil)
+var _ verifier = (*fakeVerifier)(nil)
 
 func newFakeRepository(t *testing.T) *fakeRepository {
 	t.Helper()

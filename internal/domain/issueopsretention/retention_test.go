@@ -9,10 +9,10 @@ import (
 
 func TestIsPrunableRequiresResolvedIssueCreateIntent(t *testing.T) {
 	cutoff := time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)
-	record := issueopscontract.IssueOpsRecord{
-		Phase:     issueopscontract.IssueOpsPhaseDone,
+	record := issueopscontract.Record{
+		Phase:     issueopscontract.PhaseDone,
 		UpdatedAt: cutoff.Add(-time.Hour).Format(time.RFC3339Nano),
-		IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{
+		IssueCreateIntent: &issueopscontract.IssueCreateIntent{
 			Status: issueopscontract.IssueCreateIntentInvokedUnknown,
 		},
 	}
@@ -27,7 +27,7 @@ func TestIsPrunableRequiresResolvedIssueCreateIntent(t *testing.T) {
 
 func TestPruneRetainsFinishAttemptRegardlessOfAge(t *testing.T) {
 	cutoff := time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)
-	record := issueopscontract.IssueOpsRecord{Phase: issueopscontract.IssueOpsPhaseDone, UpdatedAt: "2000-01-01T00:00:00Z", CleanupAttempt: &issueopscontract.IssueOpsCleanupAttempt{Operation: "finish", Token: "pending", StartedAt: "2000-01-01T00:00:00Z"}}
+	record := issueopscontract.Record{Phase: issueopscontract.PhaseDone, UpdatedAt: "2000-01-01T00:00:00Z", CleanupAttempt: &issueopscontract.CleanupAttempt{Operation: "finish", Token: "pending", StartedAt: "2000-01-01T00:00:00Z"}}
 	if IsPrunable(record, cutoff) {
 		t.Fatal("retention discarded finish recovery authority")
 	}

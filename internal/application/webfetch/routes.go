@@ -9,7 +9,7 @@ import (
 
 var scheduledRoutes = [...]string{"direct_http", "jina_reader", "mobile_variant", "feed_variant"}
 
-func SkippedRoutes(reason string) []webfetchcontract.RouteRecord {
+func skippedRoutes(reason string) []webfetchcontract.RouteRecord {
 	routes := make([]webfetchcontract.RouteRecord, 0, len(scheduledRoutes)-1)
 	for _, id := range scheduledRoutes[1:] {
 		routes = append(routes, webfetchcontract.RouteRecord{ID: id, Status: "skipped", Reason: reason})
@@ -17,7 +17,7 @@ func SkippedRoutes(reason string) []webfetchcontract.RouteRecord {
 	return routes
 }
 
-func FinalizeResult(result webfetchcontract.Result, maxChars int, started time.Time) webfetchcontract.Result {
+func finalizeResult(result webfetchcontract.Result, maxChars int, started time.Time) webfetchcontract.Result {
 	result.DurationMS = time.Since(started).Milliseconds()
 	result.Content = webfetchdomain.TruncateContent(result.Content, maxChars)
 	if result.Metadata == nil {

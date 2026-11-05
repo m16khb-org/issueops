@@ -11,16 +11,16 @@ import (
 	webfetchcontract "issueops/internal/contract/webfetch"
 )
 
-func handleAssistantWorkerMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleAssistantWorkerMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	switch call.Name {
 	case "commit_suggest":
-		result, err := deps.Commit.Suggest(commitsuggestcontract.CommitSuggestRequest{
+		result, err := deps.Commit.Suggest(commitsuggestcontract.Request{
 			RepoRoot: deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			Staged:   argmap.Bool(call.Arguments, "staged"),
 		})
 		return mcpPayloadOrFailure(result, err, -32000, "commit_suggest failed")
 	case "lint_diagnose":
-		result, err := deps.Lint.Diagnose(lintdiagnosecontract.LintDiagnoseRequest{
+		result, err := deps.Lint.Diagnose(lintdiagnosecontract.Request{
 			RepoRoot:    deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			CommandArgv: argmap.StringSlice(call.Arguments, "command_argv"),
 		})
@@ -44,11 +44,11 @@ func handleAssistantWorkerMCPToolCall(ctx context.Context, call MCPToolCall, dep
 		result, err := deps.Worker.Cancel(ctx, argmap.String(call.Arguments, "id"))
 		return mcpPayloadOrFailure(result, err, -32000, "worker_cancel failed")
 	default:
-		return MCPToolOutcome{}
+		return mcpToolOutcome{}
 	}
 }
 
-func handleWebFetchTool(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleWebFetchTool(ctx context.Context, call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	timeout, err := time.ParseDuration(argmap.StringDefault(call.Arguments, "timeout", "30s"))
 	if err != nil {
 		return mcpToolFailure(newProtocolError(-32602, "invalid timeout", err.Error()))
@@ -61,7 +61,7 @@ func handleWebFetchTool(ctx context.Context, call MCPToolCall, deps MCPDependenc
 	return mcpPayloadOrFailure(result, err, -32000, "web_fetch_resilient failed")
 }
 
-func handleWorkerRunReadOnlyTool(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleWorkerRunReadOnlyTool(ctx context.Context, call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	result, err := deps.Worker.RunReadOnly(
 		ctx,
 		argmap.String(call.Arguments, "kind"),

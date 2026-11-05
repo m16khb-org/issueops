@@ -1,3 +1,8 @@
+// Package projectdoc holds the pure domain rules for the .issueops project
+// documents: the required and optional document names, folder-first document
+// families, canonical frontmatter metadata, bootstrap write decisions,
+// revision and append planning, task routing, and record matching. It does no
+// I/O; application services read and write files and call into it.
 package projectdoc
 
 import (

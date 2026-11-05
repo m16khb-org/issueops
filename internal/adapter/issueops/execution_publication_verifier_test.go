@@ -16,11 +16,11 @@ func TestPublicationVerifierUsesLatestProjectAndPhaseBeforeLiveReadback(t *testi
 	t.Parallel()
 
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "66-verification"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: t.TempDir(), Branch: "66-verification"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = model.IssueOpsPhasePR
+	record.Phase = model.PhasePR
 	record.IssueURL = "https://github.com/stale/repo/issues/1"
 	rawRecord, _ := json.Marshal(record)
 	record.IssueURL = "https://github.com/acme/repo/issues/1"
@@ -32,7 +32,7 @@ func TestPublicationVerifierUsesLatestProjectAndPhaseBeforeLiveReadback(t *testi
 	intent := contract.Intent{OperationID: "operation", Record: contract.RecordSnapshot{ID: record.ID, Raw: rawRecord}, Raw: rawPayload}
 	candidate := contract.Candidate{URL: "https://github.com/acme/repo/pull/1", ProjectKey: "acme/repo", SourceProjectKey: "acme/repo", HeadBranch: "work", BaseBranch: "main", HeadSHA: strings.Repeat("a", 40), Title: "Draft: Fix", BodySHA256: publicationdomain.BodySHA256("body"), Labels: []string{"backend"}, Assignees: []string{"owner"}, Draft: true, State: "opened"}
 	calls := 0
-	verifier := remoteapp.NewPublicationVerifier(RemotePublicationStore{StateRoot: root}, func(req model.IssueOpsRemoteArtifactVerificationRequest) error {
+	verifier := remoteapp.NewPublicationVerifier(RemotePublicationStore{StateRoot: root}, func(req model.RemoteArtifactVerificationRequest) error {
 		calls++
 		if req.URL != candidate.URL || req.TargetBranch != "main" {
 			t.Fatalf("readback=%+v", req)
@@ -62,14 +62,14 @@ func TestPublicationVerifierUsesLatestProjectAndPhaseBeforeLiveReadback(t *testi
 	if err := verifier.VerifyCandidate(context.Background(), intent, candidate); err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = model.IssueOpsPhasePlan
+	record.Phase = model.PhasePlan
 	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifier.VerifyLive(context.Background(), intent, candidate.URL); err == nil || calls != 0 {
 		t.Fatalf("premature readback calls=%d err=%v", calls, err)
 	}
-	record.Phase = model.IssueOpsPhasePR
+	record.Phase = model.PhasePR
 	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}

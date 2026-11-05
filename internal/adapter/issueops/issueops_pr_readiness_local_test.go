@@ -16,9 +16,9 @@ func TestIssueOpsLocalPRReadinessNeverFetches(t *testing.T) {
 	restore := stubIssueOpsGit(t, &commands)
 	defer restore()
 
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID: "io-local", Repo: t.TempDir(), Branch: "12-local",
-		Phase: issueops.IssueOpsPhaseAISlopClean,
+		Phase: issueops.PhaseAISlopClean,
 	}
 	ready := IssueOpsLocalPRReadiness(record)
 
@@ -43,9 +43,9 @@ func TestIssueOpsStrictPRReadinessStillFetches(t *testing.T) {
 	restore := stubIssueOpsGit(t, &commands)
 	defer restore()
 
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID: "io-strict", Repo: t.TempDir(), Branch: "12-strict",
-		Phase: issueops.IssueOpsPhaseAISlopClean,
+		Phase: issueops.PhaseAISlopClean,
 	}
 	ready := IssueOpsStrictPRReadiness(record)
 	if !ready.Strict {
@@ -139,10 +139,10 @@ func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGat
 	writeRepoFileForTest(t, repo, "db/migrations/001_add_index.sql", "CREATE INDEX idx_x ON x(id);\n")
 	baseSHA := strings.TrimSpace(preflightadapter.GitOut(repo, "rev-parse", "HEAD"))
 	branch := strings.TrimSpace(preflightadapter.GitOut(repo, "branch", "--show-current"))
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID: "io-local-observation", Repo: repo, WorktreePath: repo, Branch: branch,
-		Phase: issueops.IssueOpsPhaseAISlopClean, PlanPath: filepath.Join(repo, ".issueops", "ADR.md"),
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{BaseBranch: branch, BaseSHA: baseSHA, LinkVerified: true},
+		Phase: issueops.PhaseAISlopClean, PlanPath: filepath.Join(repo, ".issueops", "ADR.md"),
+		BranchPrepare: &issueops.BranchPrepare{BaseBranch: branch, BaseSHA: baseSHA, LinkVerified: true},
 		Execution:     &issueops.Execution{},
 		AISlopCleanAt: "2026-01-01T00:00:00Z",
 	}
@@ -183,9 +183,9 @@ func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGat
 func TestObserveIssueOpsLocalPRReadinessReturnsTheReadinessChangeSet(t *testing.T) {
 	repo := gitRepoWithProjectDocsForTest(t)
 	writeRepoFileForTest(t, repo, "db/migrations/001_add_index.sql", "CREATE INDEX idx_x ON x(id);\n")
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		ID: "io-local-result", Repo: repo, WorktreePath: repo,
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{
+		BranchPrepare: &issueops.BranchPrepare{
 			BaseBranch: strings.TrimSpace(preflightadapter.GitOut(repo, "branch", "--show-current")),
 			BaseSHA:    strings.TrimSpace(preflightadapter.GitOut(repo, "rev-parse", "HEAD")),
 		},

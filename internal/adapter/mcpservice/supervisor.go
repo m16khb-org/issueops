@@ -13,8 +13,8 @@ import (
 	"issueops/internal/domain/policy"
 )
 
-// Runner executes one supervisor CLI command and returns its combined output.
-type Runner func(ctx context.Context, name string, args ...string) ([]byte, error)
+// runner executes one supervisor CLI command and returns its combined output.
+type runner func(ctx context.Context, name string, args ...string) ([]byte, error)
 
 const loadOutputLimit = 2048
 
@@ -25,7 +25,7 @@ var errUnitPathNotSearched = errors.New("is not searched by the running systemd 
 // runLoadStep runs one load command and, on failure, names the command and
 // keeps the tail of its output: the exit status alone does not say why the
 // supervisor refused the job.
-func runLoadStep(ctx context.Context, run Runner, name string, args ...string) error {
+func runLoadStep(ctx context.Context, run runner, name string, args ...string) error {
 	out, err := run(ctx, name, args...)
 	if err == nil {
 		return nil
@@ -60,7 +60,7 @@ func (spec unitSpec) environment() [][2]string {
 }
 
 type launchd struct {
-	run   Runner
+	run   runner
 	label string
 	uid   int
 	home  string
@@ -143,7 +143,7 @@ func (l launchd) supervised(ctx context.Context) (bool, int, error) {
 }
 
 type systemd struct {
-	run  Runner
+	run  runner
 	unit string
 	home string
 }

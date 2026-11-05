@@ -10,7 +10,7 @@ import (
 
 func TestServiceRecordsNormalizedDecision(t *testing.T) {
 	repository := &fakeRepository{
-		record: issueopscontract.IssueOpsRecord{OK: true, ID: "io-decision01"},
+		record: issueopscontract.Record{OK: true, ID: "io-decision01"},
 	}
 	service := NewService(
 		repository,
@@ -23,7 +23,7 @@ func TestServiceRecordsNormalizedDecision(t *testing.T) {
 		context.Background(),
 		"/state",
 		"io-decision01",
-		issueopscontract.IssueOpsDecisionRecordRequest{
+		issueopscontract.DecisionRecordRequest{
 			Kind:  "architecture",
 			Title: " Hexagonal boundary ",
 			Body:  " Move decision recording into its own vertical. ",
@@ -50,15 +50,15 @@ func TestServiceRecordsNormalizedDecision(t *testing.T) {
 }
 
 type fakeRepository struct {
-	record issueopscontract.IssueOpsRecord
+	record issueopscontract.Record
 }
 
 func (repository *fakeRepository) Update(
 	_ context.Context,
 	_ string,
 	_ string,
-	mutate func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error),
-) (issueopscontract.IssueOpsRecord, error) {
+	mutate func(issueopscontract.Record) (issueopscontract.Record, error),
+) (issueopscontract.Record, error) {
 	record, err := mutate(repository.record)
 	if err != nil {
 		return record, err

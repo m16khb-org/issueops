@@ -20,7 +20,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 
 // validateHistoryListing은 history가 저장된 기준선/후보/승격 요약을 모두 나열하는지 검증한다.
 func (s *stateRoundtripSelfVerifySession) validateHistoryListing(baselineCompareKey, candidateCompareKey, promotedBaselineKey string) selfverify.StepResult {
-	historyResult, failed := runSelfVerifyJSON[selfaugment.SelfAugmentHistoryResult](s, "self verify history", "self-verify", "history", "--prefix", s.input.key+"-", "--json")
+	historyResult, failed := runSelfVerifyJSON[selfaugment.HistoryResult](s, "self verify history", "self-verify", "history", "--prefix", s.input.key+"-", "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -37,7 +37,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryListing(baselineCompare
 // validateRetentionPrune은 retention dry-run, confirm 삭제, 삭제 후 잔여 개수를 순서대로 검증한다.
 func (s *stateRoundtripSelfVerifySession) validateRetentionPrune() selfverify.StepResult {
 	prefix := s.input.key + "-"
-	retentionDry, failed := runSelfVerifyJSON[selfaugment.SelfAugmentHistoryResult](s, "self verify history retention dry-run", "self-verify", "history", "--prefix", prefix, "--retention-limit", "1", "--prune-retention", "--json")
+	retentionDry, failed := runSelfVerifyJSON[selfaugment.HistoryResult](s, "self verify history retention dry-run", "self-verify", "history", "--prefix", prefix, "--retention-limit", "1", "--prune-retention", "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -45,7 +45,7 @@ func (s *stateRoundtripSelfVerifySession) validateRetentionPrune() selfverify.St
 		return s.fail("self-verify history retention dry-run did not classify prune candidates safely")
 	}
 
-	retentionConfirm, failed := runSelfVerifyJSON[selfaugment.SelfAugmentHistoryResult](s, "self verify history retention confirm", "self-verify", "history", "--prefix", prefix, "--retention-limit", "1", "--prune-retention", "--confirm", "--json")
+	retentionConfirm, failed := runSelfVerifyJSON[selfaugment.HistoryResult](s, "self verify history retention confirm", "self-verify", "history", "--prefix", prefix, "--retention-limit", "1", "--prune-retention", "--confirm", "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -53,7 +53,7 @@ func (s *stateRoundtripSelfVerifySession) validateRetentionPrune() selfverify.St
 		return s.fail("self-verify history retention confirm did not delete prune candidates")
 	}
 
-	historyAfterRetention, failed := runSelfVerifyJSON[selfaugment.SelfAugmentHistoryResult](s, "self verify history after retention", "self-verify", "history", "--prefix", prefix, "--json")
+	historyAfterRetention, failed := runSelfVerifyJSON[selfaugment.HistoryResult](s, "self verify history after retention", "self-verify", "history", "--prefix", prefix, "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -74,7 +74,7 @@ func (s *stateRoundtripSelfVerifySession) validateStateDoctorCorruption() selfve
 	if err := db.Put("state", key+"-corrupt", []byte("{not json\n")); err != nil {
 		return s.fail(err.Error())
 	}
-	doctorResult, failed := runSelfVerifyJSON[statecontract.StateDoctorResult](s, "state doctor", "state", "doctor", "--json")
+	doctorResult, failed := runSelfVerifyJSON[statecontract.DoctorResult](s, "state doctor", "state", "doctor", "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -93,17 +93,17 @@ func historyListsAll(historyKeys []string, wantKeys ...string) bool {
 	return true
 }
 
-func retentionDryRunIsSafe(result selfaugment.SelfAugmentHistoryResult) bool {
+func retentionDryRunIsSafe(result selfaugment.HistoryResult) bool {
 	retention := result.Retention
 	return retention != nil && retention.DryRun && !retention.Confirm && retention.Limit == 1 && len(retention.CandidateKeys) != 0 && len(retention.DeletedKeys) == 0
 }
 
-func retentionConfirmDeleted(result selfaugment.SelfAugmentHistoryResult) bool {
+func retentionConfirmDeleted(result selfaugment.HistoryResult) bool {
 	retention := result.Retention
 	return retention != nil && !retention.DryRun && retention.Confirm && len(retention.DeletedKeys) != 0
 }
 
-func stateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want string) bool {
+func stateDoctorHasIssueCode(issues []statecontract.DoctorIssue, want string) bool {
 	for _, issue := range issues {
 		if issue.Code == want {
 			return true

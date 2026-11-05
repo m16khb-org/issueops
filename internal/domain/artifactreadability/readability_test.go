@@ -21,7 +21,7 @@ func validPRBody() string {
 }
 
 func TestCheckPassesCleanPRBody(t *testing.T) {
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody()})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody()})
 	if !report.OK {
 		t.Fatalf("clean PR body should pass: %+v", report)
 	}
@@ -29,7 +29,7 @@ func TestCheckPassesCleanPRBody(t *testing.T) {
 
 func TestCheckSHA256HexIsCriticalWithLine(t *testing.T) {
 	body := validPRBody() + "\n\n## 남은 일\n\n다음 커밋 해시로 확인합니다 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	if report.OK {
 		t.Fatalf("body with a bare SHA-256 must fail: %+v", report)
 	}
@@ -49,7 +49,7 @@ func TestCheckSHA256HexIsCriticalWithLine(t *testing.T) {
 
 func TestCheckAllowsHashInsideCodeFence(t *testing.T) {
 	body := validPRBody() + "\n\n## 남은 일\n\n```\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n```"
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	for _, c := range report.Critical {
 		if c.Code == "sha256_hex" {
 			t.Fatalf("hash inside a code fence must not trigger sha256_hex: %+v", report.Critical)
@@ -64,7 +64,7 @@ func TestCheckKoreanRatioCritical(t *testing.T) {
 		"## Verified\n\nRan go test locally and confirmed every rule fixture passes as expected in English.",
 		"## Review Points\n\nPlease check whether the English ratio threshold is calibrated correctly for reviewers.",
 	}, "\n\n")
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "readability check", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "readability check", Body: body})
 	if report.OK {
 		t.Fatalf("english-only body must fail korean_ratio: %+v", report)
 	}
@@ -80,7 +80,7 @@ func TestCheckKoreanRatioCritical(t *testing.T) {
 }
 
 func TestCheckDelegatesStructuralFindingsToArtifactTemplate(t *testing.T) {
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "PR", Body: "## 변경 내용\n\n요약이 없는 본문입니다.\n\n## 확인한 것\n\n확인했습니다.\n\n## 리뷰 포인트\n\n봐 주세요."})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "PR", Body: "## 변경 내용\n\n요약이 없는 본문입니다.\n\n## 확인한 것\n\n확인했습니다.\n\n## 리뷰 포인트\n\n봐 주세요."})
 	if report.OK {
 		t.Fatalf("body missing summary-first must fail: %+v", report)
 	}
@@ -97,7 +97,7 @@ func TestCheckDelegatesStructuralFindingsToArtifactTemplate(t *testing.T) {
 
 func TestCheckLocalPathAndCommitSHAAreCriticalOnlyForCompletion(t *testing.T) {
 	prBody := validPRBody() + "\n\n## 남은 일\n\n로그는 /Users/dev/workspace/issueops 아래 있고 커밋 abcd1234abcd1234abcd1234abcd1234abcd1234로 확인했습니다."
-	prReport := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: prBody})
+	prReport := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: prBody})
 	if !prReport.OK {
 		t.Fatalf("local path / commit sha are warnings for PR bodies, not critical: %+v", prReport)
 	}
@@ -150,7 +150,7 @@ func TestCheckResultTooLongOnlyAppliesToCompletion(t *testing.T) {
 
 func TestCheckUnrenderedFieldWarning(t *testing.T) {
 	report := Check(Input{
-		Kind:     KindPR,
+		Kind:     kindPR,
 		Template: artifacttemplate.IssueOpsTemplatePullRequest,
 		Title:    "가독성 검사 추가",
 		Body:     validPRBody(),
@@ -172,7 +172,7 @@ func TestCheckUnrenderedFieldWarning(t *testing.T) {
 
 func TestCheckHarnessTermIsWarningOnly(t *testing.T) {
 	body := validPRBody() + "\n\n## 남은 일\n\ngeneration과 lease는 그대로 유지합니다."
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	if !report.OK {
 		t.Fatalf("harness terms must warn, not fail: %+v", report)
 	}
@@ -189,7 +189,7 @@ func TestCheckHarnessTermIsWarningOnly(t *testing.T) {
 
 func TestCheckManagedRegionsAreExcludedFromChecks(t *testing.T) {
 	body := validPRBody() + "\n\n<!-- issueops:completion:start -->\n## 진행 결과\n\n커밋 abcd1234abcd1234abcd1234abcd1234abcd1234로 확인했습니다.\n<!-- issueops:completion:end -->"
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	if !report.OK {
 		t.Fatalf("managed completion region must not be checked against author rules: %+v", report)
 	}
@@ -204,7 +204,7 @@ func TestCheckWarnsOnSummaryTooLongEmptyOptionalSectionAndResultOnlyPass(t *test
 		"## 리뷰 포인트\n\n봐 주세요.",
 		"## 대안과 선택 이유\n\n",
 	}, "\n\n")
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	if !report.OK {
 		t.Fatalf("these are warnings, not criticals: %+v", report)
 	}
@@ -229,7 +229,7 @@ func TestCheckWarnsOnSlopPatternAndDuplicateSentence(t *testing.T) {
 		"## 확인한 것\n\ngo test로 확인했습니다.",
 		"## 리뷰 포인트\n\n봐 주세요.",
 	}, "\n\n")
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	if !report.OK {
 		t.Fatalf("slop pattern and duplicate sentence are warnings, not criticals: %+v", report)
 	}
@@ -247,7 +247,7 @@ func TestCheckWarnsOnSlopPatternAndDuplicateSentence(t *testing.T) {
 }
 
 func TestCheckRejectsRequiredSectionMissingAndPlaceholderSection(t *testing.T) {
-	missing := Check(Input{Kind: KindChild, Template: artifacttemplate.IssueOpsTemplateChildTask, Title: "하위 작업", Body: "## 요약\n\n부모 이슈의 템플릿 렌더러 구현을 맡습니다."})
+	missing := Check(Input{Kind: kindChild, Template: artifacttemplate.IssueOpsTemplateChildTask, Title: "하위 작업", Body: "## 요약\n\n부모 이슈의 템플릿 렌더러 구현을 맡습니다."})
 	if missing.OK {
 		t.Fatalf("child body missing required sections must fail: %+v", missing)
 	}
@@ -261,7 +261,7 @@ func TestCheckRejectsRequiredSectionMissingAndPlaceholderSection(t *testing.T) {
 		t.Fatalf("criticals missing required_section_missing: %+v", missing.Critical)
 	}
 
-	placeholder := Check(Input{Kind: KindChild, Template: artifacttemplate.IssueOpsTemplateChildTask, Title: "하위 작업", Body: strings.Join([]string{
+	placeholder := Check(Input{Kind: kindChild, Template: artifacttemplate.IssueOpsTemplateChildTask, Title: "하위 작업", Body: strings.Join([]string{
 		"## 요약\n\n부모 이슈의 템플릿 렌더러 구현을 맡습니다.",
 		"## 완료 기준\n\n없음",
 		"## 범위\n\n렌더러 패키지만 바꿉니다.",
@@ -291,7 +291,7 @@ func TestCheckLargeBodyScalesLinearly(t *testing.T) {
 	if len(small) < 50*1024 {
 		t.Fatalf("fixture body should be around 50KB, got %d bytes", len(small))
 	}
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "성능 측정", Body: small})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "성능 측정", Body: small})
 	if !report.OK {
 		t.Fatalf("large repetitive body should still pass readability: %+v", report)
 	}
@@ -312,7 +312,7 @@ func largeReadabilityBody(repeat int) string {
 
 func allocatedBytesPerCheck(body string) uint64 {
 	const runs = 3
-	input := Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "성능 측정", Body: body}
+	input := Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "성능 측정", Body: body}
 	Check(input)
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
@@ -337,7 +337,7 @@ func TestCheckLineNumbersSurviveCodeFencesAndManagedRegions(t *testing.T) {
 		"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 	}, "\n")
 	wantLine := len(strings.Split(body, "\n"))
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	for _, c := range report.Critical {
 		if c.Code == "sha256_hex" {
 			if c.Line != wantLine {
@@ -351,7 +351,7 @@ func TestCheckLineNumbersSurviveCodeFencesAndManagedRegions(t *testing.T) {
 
 func TestCheckHarnessTermMatchesWholeWordsOnly(t *testing.T) {
 	body := validPRBody() + "\n\n## 남은 일\n\n다음 release 노트에 정리합니다. please 같은 단어도 그대로 둡니다."
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	for _, w := range report.Warnings {
 		if w.Code == "harness_term" {
 			t.Fatalf("release/please must not match the harness term lease: %+v", w)
@@ -392,7 +392,7 @@ func TestCompletionDraftRefusesHarnessValuesInsideCode(t *testing.T) {
 			t.Fatalf("a completion draft must refuse %s even inside code: %+v", code, report.Critical)
 		}
 	}
-	pr := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody() + "\n\n## 남은 일\n\n```\n" + sha + "\n```"})
+	pr := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody() + "\n\n## 남은 일\n\n```\n" + sha + "\n```"})
 	if !pr.OK {
 		t.Fatalf("issue and PR bodies keep the code exception: %+v", pr)
 	}
@@ -417,11 +417,11 @@ func hasWarningCode(report reportcontract.Report, code string) bool {
 }
 
 func checkRemainder(section string) reportcontract.Report {
-	return Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody() + "\n\n## 남은 일\n\n" + section})
+	return Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody() + "\n\n## 남은 일\n\n" + section})
 }
 
 func TestCheckCleanBodyHasNoSlopOrDuplicateWarnings(t *testing.T) {
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody()})
+	report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody()})
 	for _, code := range []string{"slop_pattern", "duplicate_sentence"} {
 		if hasWarningCode(report, code) {
 			t.Fatalf("clean body must not warn %s: %+v", code, report.Warnings)
@@ -493,7 +493,7 @@ func TestCheckKoreanRatioThresholds(t *testing.T) {
 func TestCheckSummaryLengthBoundary(t *testing.T) {
 	check := func(summaryRunes int) reportcontract.Report {
 		body := strings.Replace(validPRBody(), "이슈와 PR 본문을 사람이 읽는 문서로 바꾸는 가독성 검사를 추가합니다. 게시 명령 안에서 항상 실행됩니다.", strings.Repeat("가", summaryRunes), 1)
-		return Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+		return Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 	}
 	if hasWarningCode(check(summaryMaxRunes), "summary_too_long") {
 		t.Fatalf("a %d-rune summary must not warn", summaryMaxRunes)
@@ -518,7 +518,7 @@ func TestCheckDuplicateSentenceDetection(t *testing.T) {
 	}
 	for _, tc := range cases {
 		body := "## 요약\n" + tc.first + "\n\n## 변경 내용\n" + tc.second + "\n\n## 확인한 것\n\ngo test로 확인했습니다.\n\n## 리뷰 포인트\n\n봐 주세요."
-		report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+		report := Check(Input{Kind: kindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
 		if got := hasWarningCode(report, "duplicate_sentence"); got != tc.want {
 			t.Fatalf("%s: duplicate_sentence = %v, want %v", tc.name, got, tc.want)
 		}

@@ -34,7 +34,7 @@ esac
 
 func TestVerifyIssueOpsRemoteArtifactLiveRejectsMissingGitHubIssue(t *testing.T) {
 	installFakeGHIssueForRemoteArtifactTest(t)
-	err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "issue",
 		URL:       "https://github.com/example/repo/issues/9999",
@@ -48,7 +48,7 @@ func TestVerifyIssueOpsRemoteArtifactLiveRejectsMissingGitHubIssue(t *testing.T)
 
 func TestVerifyIssueOpsRemoteArtifactLiveRequiresGitHubIssueLabelsAndAssignees(t *testing.T) {
 	installFakeGHIssueForRemoteArtifactTest(t)
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "issue",
 		URL:       "https://github.com/example/repo/issues/1",
@@ -57,7 +57,7 @@ func TestVerifyIssueOpsRemoteArtifactLiveRequiresGitHubIssueLabelsAndAssignees(t
 	}); err != nil {
 		t.Fatalf("expected matching GitHub issue evidence to pass: %v", err)
 	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "issue",
 		URL:       "https://github.com/example/repo/issues/1",
@@ -66,7 +66,7 @@ func TestVerifyIssueOpsRemoteArtifactLiveRequiresGitHubIssueLabelsAndAssignees(t
 	}); err == nil || !strings.Contains(err.Error(), "label") {
 		t.Fatalf("expected missing label to fail live verification, got %v", err)
 	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "issue",
 		URL:       "https://github.com/example/repo/issues/1",
@@ -122,7 +122,7 @@ printf '%s\n' '{"web_url":"https://gitlab.example.com/group/project/-/issues/42"
 `)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "issue",
 		URL:       "https://gitlab.example.com/group/project/-/issues/42",
@@ -131,7 +131,7 @@ printf '%s\n' '{"web_url":"https://gitlab.example.com/group/project/-/issues/42"
 	}); err != nil {
 		t.Fatalf("expected matching GitLab issue evidence to pass: %v", err)
 	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "issue",
 		URL:       "https://gitlab.example.com/group/project/-/issues/42",
@@ -188,7 +188,7 @@ esac
 	if got := strings.TrimSpace(string(log)); got != wantArgs {
 		t.Fatalf("glab args = %q, want %q", got, wantArgs)
 	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+	if err := VerifyRemoteArtifactLive(issueopscontract.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "issue",
 		URL:       issueURL,

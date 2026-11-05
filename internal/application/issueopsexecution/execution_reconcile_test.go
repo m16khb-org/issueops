@@ -21,8 +21,8 @@ func (v stubVerifier) Verify(context.Context, model.NativeActor) (model.Verified
 
 func reconcileService(exec *model.Execution, readErr error, verr error) Service {
 	return Service{
-		ReadRecord: func(string, string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{ID: "cycle", Execution: exec}, readErr
+		ReadRecord: func(string, string) (model.Record, error) {
+			return model.Record{ID: "cycle", Execution: exec}, readErr
 		},
 		SamePath: func(a, b string) bool { return a == b },
 		Verifier: stubVerifier{identity: model.NativeActor{Host: "h"}, err: verr},

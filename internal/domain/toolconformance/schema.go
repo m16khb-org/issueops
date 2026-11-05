@@ -1,3 +1,6 @@
+// Package toolconformance is the domain logic for tool-argument conformance: it validates call arguments against a tool's JSON schema,
+// classifies how a model's call drifts from it, and decides benchmark gate outcomes, resume validity, and regression-fixture checks.
+// It is pure computation over contract types and performs no I/O.
 package toolconformance
 
 import (
@@ -12,6 +15,9 @@ import (
 	"unicode/utf8"
 )
 
+// Classify validates a model's recorded tool call against the advertised schema and its closed projection and classifies the result.
+// Unparseable arguments classify as invalid JSON and zero or several calls as such; a non-nil error means the schema uses unsupported keywords.
+// Arguments that pass the closed schema are exact when equal to expected and semantically different otherwise.
 func Classify(observation toolconformancecontract.CallObservation, schema map[string]any, expected any) (toolconformancecontract.CaseResult, error) {
 	var arguments any
 	if err := json.Unmarshal(observation.RawArguments, &arguments); err != nil {
@@ -146,6 +152,7 @@ func splitCSV(text string) []string {
 	return out
 }
 
+// ClosedProjection returns a deep copy of schema in which every object type without an additionalProperties entry rejects extra properties.
 func ClosedProjection(in map[string]any) map[string]any { return project(in).(map[string]any) }
 func project(v any) any {
 	switch x := v.(type) {
@@ -170,15 +177,20 @@ func project(v any) any {
 		return v
 	}
 }
+
+// Validate checks value against schema and returns its diagnostics sorted by SortDiagnostics.
+// It returns an error, not diagnostics, when the schema itself uses an unsupported keyword.
 func Validate(schema map[string]any, value any) ([]toolconformancecontract.Diagnostic, error) {
 	if err := supported(schema); err != nil {
 		return nil, err
 	}
 	out := []toolconformancecontract.Diagnostic{}
-	validate(schema, value, "", &out)
+	validateSchema(schema, value, "", &out)
 	SortDiagnostics(out)
 	return out, nil
 }
+
+// SortDiagnostics sorts diagnostics in place by path, code, expected, then actual.
 func SortDiagnostics(out []toolconformancecontract.Diagnostic) {
 	sort.Slice(out, func(i, j int) bool {
 		a, b := out[i], out[j]
@@ -291,7 +303,7 @@ func supportedPattern(value any) error {
 	}
 	return nil
 }
-func validate(s map[string]any, v any, p string, out *[]toolconformancecontract.Diagnostic) {
+func validateSchema(s map[string]any, v any, p string, out *[]toolconformancecontract.Diagnostic) {
 	typ, _ := s["type"].(string)
 	if typ == "object" {
 		validateObject(s, v, p, out)
@@ -341,7 +353,7 @@ func validateObject(s map[string]any, v any, p string, out *[]toolconformancecon
 			}
 			continue
 		}
-		validate(child.(map[string]any), item, pointer(p, key), out)
+		validateSchema(child.(map[string]any), item, pointer(p, key), out)
 	}
 }
 
@@ -353,7 +365,7 @@ func validateArray(s map[string]any, v any, p string, out *[]toolconformancecont
 	}
 	child, _ := s["items"].(map[string]any)
 	for i, item := range arr {
-		validate(child, item, pointer(p, strconv.Itoa(i)), out)
+		validateSchema(child, item, pointer(p, strconv.Itoa(i)), out)
 	}
 }
 

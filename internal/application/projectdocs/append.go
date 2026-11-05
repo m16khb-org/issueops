@@ -1,3 +1,6 @@
+// Package projectdocs is the application layer for .issueops project documents: reading a document with its hash,
+// revising it under a hash check, routing a task to the documents it should read, and appending dated
+// records. File and clock access is injected through the effects interfaces.
 package projectdocs
 
 import (
@@ -10,6 +13,8 @@ import (
 	projectdocdomain "issueops/internal/domain/projectdoc"
 )
 
+// AppendEffects is the file system and clock access Append needs: path joining, existence checks, directory
+// creation, writes, adding a line to an overview file, and rendering the record body.
 type AppendEffects interface {
 	Path(root, rel string) string
 	Exists(path string) bool
@@ -17,24 +22,27 @@ type AppendEffects interface {
 	Write(path, content string) error
 	// AppendLine adds line as the last line of an existing file.
 	AppendLine(path, line string) error
-	Render(kind, name, description string, request projectdocscontract.ProjectDocsAppendRequest, now time.Time) string
+	Render(kind, name, description string, request projectdocscontract.AppendRequest, now time.Time) string
 	Now() time.Time
 }
 
-func Append(root string, request projectdocscontract.ProjectDocsAppendRequest, effects AppendEffects) (projectdocscontract.ProjectDocsAppendResult, error) {
+// Append writes one dated caution or ADR record under the family's module directory and links it from the
+// family overview. A numeric suffix keeps the file name unique when the same slug already exists that day.
+// Linking is best effort: a failure becomes a warning because the record is already written.
+func Append(root string, request projectdocscontract.AppendRequest, effects AppendEffects) (projectdocscontract.AppendResult, error) {
 	plan, err := projectdocdomain.PlanAppend(projectdocdomain.AppendInput{Kind: request.Kind, Title: request.Title, Summary: request.Summary})
 	if err != nil {
-		return projectdocscontract.ProjectDocsAppendResult{}, err
+		return projectdocscontract.AppendResult{}, err
 	}
 	family, ok := projectdocdomain.FamilyByModuleDir(plan.ModuleDir)
 	if !ok {
-		return projectdocscontract.ProjectDocsAppendResult{}, fmt.Errorf("no family owns module dir %q", plan.ModuleDir)
+		return projectdocscontract.AppendResult{}, fmt.Errorf("no family owns module dir %q", plan.ModuleDir)
 	}
 	now := effects.Now()
 	date := now.Format("2006-01-02")
 	dirRel := path.Join(projectdocdomain.ProjectDocsDir, family.ModuleDir)
 	if err := effects.EnsureDir(effects.Path(root, dirRel)); err != nil {
-		return projectdocscontract.ProjectDocsAppendResult{}, err
+		return projectdocscontract.AppendResult{}, err
 	}
 	base := date + "-" + plan.Slug + ".md"
 	rel := path.Join(dirRel, base)
@@ -45,9 +53,9 @@ func Append(root string, request projectdocscontract.ProjectDocsAppendRequest, e
 	description, _ := projectdocdomain.RecordMetaDescription(family.ModuleDir)
 	content := effects.Render(plan.Kind, strings.TrimSuffix(path.Base(rel), ".md"), description, request, now)
 	if err := effects.Write(filePath, content); err != nil {
-		return projectdocscontract.ProjectDocsAppendResult{}, err
+		return projectdocscontract.AppendResult{}, err
 	}
-	return projectdocscontract.ProjectDocsAppendResult{
+	return projectdocscontract.AppendResult{
 		OK: true, Kind: "project_docs_append", RecordKind: plan.Kind, RepoRoot: root,
 		RelPath: rel, Path: filePath, GeneratedAt: effects.Now().UTC().Format(time.RFC3339),
 		BytesAppended: len([]byte(content)), SHA256: projectdocdomain.SHA256Hex(content),

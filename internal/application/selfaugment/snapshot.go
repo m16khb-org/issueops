@@ -12,27 +12,29 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
+// SnapshotStore reads and writes self-verification summary snapshots through
+// injected state accessors.
 type SnapshotStore struct {
-	ReadState    func(string) (statecontract.StateResult, error)
+	ReadState    func(string) (statecontract.Result, error)
 	NormalizeKey func(string) (string, error)
 	WriteRecord  func(string, string, statecontract.RecordEnvelope) (string, error)
 	Now          func() time.Time
 }
 
-func (store SnapshotStore) Read(key string) (contract.SelfAugmentStateSnapshot, error) {
+func (store SnapshotStore) Read(key string) (contract.StateSnapshot, error) {
 	state, err := store.ReadState(key)
 	if err != nil {
-		return contract.SelfAugmentStateSnapshot{}, err
+		return contract.StateSnapshot{}, err
 	}
-	var snapshot contract.SelfAugmentStateSnapshot
+	var snapshot contract.StateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
-		return contract.SelfAugmentStateSnapshot{}, err
+		return contract.StateSnapshot{}, err
 	}
 	if err := domain.ValidateSummarySnapshot(key, snapshot); err != nil {
-		return contract.SelfAugmentStateSnapshot{}, err
+		return contract.StateSnapshot{}, err
 	}
 	if err := validateSnapshotFailureCause(key, snapshot); err != nil {
-		return contract.SelfAugmentStateSnapshot{}, err
+		return contract.StateSnapshot{}, err
 	}
 	return snapshot, nil
 }
@@ -40,7 +42,7 @@ func (store SnapshotStore) Read(key string) (contract.SelfAugmentStateSnapshot, 
 // validateSnapshotFailureCause는 저장된 failure cause가 Write가 기록하는
 // 분류 결과와 정확히 같은지 확인한다. 읽기 경로는 값을 다시 계산해 덮어쓰지
 // 않으므로, 분류 필드가 없거나 어긋난 레코드는 거부된다.
-func validateSnapshotFailureCause(key string, snapshot contract.SelfAugmentStateSnapshot) error {
+func validateSnapshotFailureCause(key string, snapshot contract.StateSnapshot) error {
 	want := failurecause.Classify(snapshot.Summary.FailedSteps > 0, snapshot.Summary.FailureCauseEvidence)
 	if snapshot.Summary.FailureCause != want.Cause || snapshot.Summary.FailureCauseReason != want.Reason ||
 		snapshot.Summary.FailureCauseEvidence == nil || !reflect.DeepEqual(snapshot.Summary.FailureCauseEvidence, want.Evidence) {
@@ -50,14 +52,16 @@ func validateSnapshotFailureCause(key string, snapshot contract.SelfAugmentState
 	return nil
 }
 
-func NormalizeSnapshotFailureCause(snapshot *contract.SelfAugmentStateSnapshot) {
+// NormalizeSnapshotFailureCause recomputes the failure cause, reason and evidence
+// in snapshot's summary from its failed-step count and evidence, in place.
+func NormalizeSnapshotFailureCause(snapshot *contract.StateSnapshot) {
 	classified := failurecause.Classify(snapshot.Summary.FailedSteps > 0, snapshot.Summary.FailureCauseEvidence)
 	snapshot.Summary.FailureCause = classified.Cause
 	snapshot.Summary.FailureCauseReason = classified.Reason
 	snapshot.Summary.FailureCauseEvidence = classified.Evidence
 }
 
-func (store SnapshotStore) Write(dir, key string, snapshot contract.SelfAugmentStateSnapshot) error {
+func (store SnapshotStore) Write(dir, key string, snapshot contract.StateSnapshot) error {
 	NormalizeSnapshotFailureCause(&snapshot)
 	key, err := store.NormalizeKey(key)
 	if err != nil {

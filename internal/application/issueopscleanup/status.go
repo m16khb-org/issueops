@@ -10,15 +10,20 @@ import (
 	"issueops/internal/port"
 )
 
-type StatusEnvironment interface {
+type statusEnvironment interface {
 	DirectoryExists(string) bool
 	Git(string, ...string) (int, string, string)
 	GitOutput(string, ...string) string
 }
 
-type StructuralStatus struct{ Environment StatusEnvironment }
+// StructuralStatus derives cleanup status from git facts observed in the
+// record's worktree.
+type StructuralStatus struct{ Environment statusEnvironment }
 
-func (s StructuralStatus) ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusRequest) model.IssueOpsCleanupStatus {
+// ForRecord observes the record's worktree, current branch and first remote
+// and returns the domain-built cleanup status. A missing worktree yields a
+// status without git facts.
+func (s StructuralStatus) ForRecord(record model.Record, req model.CleanupStatusRequest) model.CleanupStatus {
 	var facts domain.CleanupStatusObservation
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if worktree == "" {
@@ -40,31 +45,36 @@ func (s StructuralStatus) ForRecord(record model.IssueOpsRecord, req model.Issue
 	return domain.BuildCleanupStatus(record, req, facts)
 }
 
-type StatusRecords interface {
-	Load(string) (model.IssueOpsRecord, error)
+type statusRecords interface {
+	Load(string) (model.Record, error)
 }
 
+// StatusService answers `cleanup status`, using the structural status unless
+// merge readback is needed, in which case it reuses the finish preview.
 type StatusService struct {
-	Records          StatusRecords
+	Records          statusRecords
 	Structural       StructuralStatus
 	Provider         func(string) (port.IssueProvider, error)
 	CurrentDirectory func() (string, error)
 	PreviewFinish    func(context.Context, model.CleanupFinishRequest, port.IssueProvider) (model.CleanupFinishResult, error)
 }
 
-func (s StatusService) Status(ctx context.Context, id string, mergedRequested bool) (model.IssueOpsCleanupStatus, error) {
+// Status returns the cleanup status for id. When merge readback is needed it
+// resolves the provider and current directory and merges in the finish preview
+// result; errors are returned only when the preview gave no usable gates.
+func (s StatusService) Status(ctx context.Context, id string, mergedRequested bool) (model.CleanupStatus, error) {
 	record, err := s.Records.Load(id)
-	failed := model.IssueOpsCleanupStatus{OK: false, ID: id}
+	failed := model.CleanupStatus{OK: false, ID: id}
 	if err != nil {
 		return failed, err
 	}
 	if !domain.CleanupStatusNeedsMergeReadback(record, mergedRequested) {
-		return s.Structural.ForRecord(record, model.IssueOpsCleanupStatusRequest{}), nil
+		return s.Structural.ForRecord(record, model.CleanupStatusRequest{}), nil
 	}
 	// The finish preview observes the worktree and remote refs itself and its
 	// result replaces the structural status, which then contributes only the
 	// record's artifact URL: skip the git and network ls-remote observation.
-	structural := domain.BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{}, domain.CleanupStatusObservation{})
+	structural := domain.BuildCleanupStatus(record, model.CleanupStatusRequest{}, domain.CleanupStatusObservation{})
 	providerName := domain.ResolveRecordProvider(record)
 	if providerName == "" {
 		return failed, fmt.Errorf("cannot determine provider from IssueOps record")

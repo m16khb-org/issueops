@@ -6,23 +6,28 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-// CleanupOwnershipRecords requires an exclusive lifetime lease at the caller.
+// cleanupOwnershipRecords requires an exclusive lifetime lease at the caller.
 // Arm may recover only a crashed attempt of the same operation.
-type CleanupOwnershipRecords interface {
+type cleanupOwnershipRecords interface {
 	Load(context.Context, string) (model.CleanupSnapshot, error)
-	Arm(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error)
+	Arm(context.Context, model.CleanupSnapshot, model.CleanupAttempt) (model.CleanupSnapshot, error)
 	Check(context.Context, model.CleanupSnapshot) error
 }
 
+// CleanupFinishRecords is the record surface cleanup finish uses once ownership is armed. Fail
+// records a finish failure on the snapshot, with the bool telling whether workspace processes were
+// already drained, and Delete removes the record and stores the outcome in one transaction.
 type CleanupFinishRecords interface {
-	CleanupOwnershipRecords
-	Fail(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupFinishFailure, bool) (model.CleanupSnapshot, error)
+	cleanupOwnershipRecords
+	Fail(context.Context, model.CleanupSnapshot, model.CleanupFinishFailure, bool) (model.CleanupSnapshot, error)
 	// Delete removes the record and stores outcome in the same transaction.
-	Delete(context.Context, model.CleanupSnapshot, model.IssueOpsCycleOutcome) error
+	Delete(context.Context, model.CleanupSnapshot, model.CycleOutcome) error
 }
 
+// CleanupRemoteBranchRecords is the record surface remote-branch cleanup uses once ownership is
+// armed, adding Release to hand the record back after the inherited processes drained.
 type CleanupRemoteBranchRecords interface {
-	CleanupOwnershipRecords
+	cleanupOwnershipRecords
 	// Release is allowed only after successful inherited-process drainage.
 	Release(context.Context, model.CleanupSnapshot, string) (model.CleanupSnapshot, error)
 }

@@ -38,11 +38,11 @@ func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
 		return nil
 	}
 	deps.Provider = func(string) (port.IssueProvider, error) {
-		return &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
+		return &cleanupStatusProvider{snapshot: executionissue.Snapshot{
 			URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 		}}, nil
 	}
-	deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+	deps.VerifyMergedHead = func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: "abc123", BaseRefName: "main"}, nil
 	}
 	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
@@ -117,7 +117,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	observer := cleanupProvenanceObserverStub{evidence: provenanceport.Receipt{
 		ExecutablePath: binary, ExecutableSHA256: hex.EncodeToString(binaryHash[:]),
 	}}
-	provider := &liveCleanupProvider{cleanupStatusProvider: cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
+	provider := &liveCleanupProvider{cleanupStatusProvider: cleanupStatusProvider{snapshot: executionissue.Snapshot{
 		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}}
 	var printed any
@@ -135,7 +135,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		}
 	}
 	deps.Provider = func(string) (port.IssueProvider, error) { return provider, nil }
-	deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+	deps.VerifyMergedHead = func(issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: "abc123", BaseRefName: "main"}, nil
 	}
 	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {

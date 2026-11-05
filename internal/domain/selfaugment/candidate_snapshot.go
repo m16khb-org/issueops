@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// NewCandidateExportSnapshot converts result into its schema-version-1 state snapshot and stamps
+// generatedAt in RFC 3339 form.
 func NewCandidateExportSnapshot(result contract.SelfVerificationCandidateExportResult, generatedAt time.Time) contract.SelfVerificationCandidateExportStateSnapshot {
 	return contract.SelfVerificationCandidateExportStateSnapshot{
 		SchemaVersion:         1,

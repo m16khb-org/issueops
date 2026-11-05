@@ -9,7 +9,7 @@ import (
 
 func newActiveCycleReader(root string) branchapp.ActiveCycleReader {
 	return branchapp.ActiveCycleReader{
-		Scan:      func() ([]model.IssueOpsRecord, error) { return core.ScanReadableIssueOps(root) },
+		Scan:      func() ([]model.Record, error) { return core.ScanReadableIssueOps(root) },
 		CleanPath: pathutil.CleanAbsPath,
 	}
 }

@@ -6,11 +6,13 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
-func MapGoalScores(result augment.SelfAugmentResult, targetScore float64) []verify.SelfVerificationGoalScore {
+// MapGoalScores scores the self-verification goals against the steps that ran in result and
+// targetScore.
+func MapGoalScores(result augment.Result, targetScore float64) []verify.SelfVerificationGoalScore {
 	return domain.ScoreGoals(domain.GoalDefinitions(), projectRuns(result), result.Iterations, targetScore)
 }
 
-func projectRuns(result augment.SelfAugmentResult) []domain.Run {
+func projectRuns(result augment.Result) []domain.Run {
 	runs := make([]domain.Run, 0, len(result.Runs))
 	for _, run := range result.Runs {
 		checks := make([]domain.Check, 0, len(run.Steps))

@@ -9,23 +9,30 @@ package issueopsnext
 
 import issueopscontract "issueops/internal/contract/issueops"
 
-// domain/issueopsnext은 이 contract 패키지만 import할 수 있어서(domain은 같은
-// capability 계약만 import) 그 domain이 읽는 공용 IssueOps 어휘를 여기서 이 이름으로 둔다.
-type Record = issueopscontract.IssueOpsRecord
-type Phase = issueopscontract.IssueOpsPhase
+// Record 타입은 issueops contract의 Record 별칭이다. domain/issueopsnext은 이
+// contract 패키지만 import할 수 있어서(domain은 같은 capability 계약만
+// import) 그 domain이 읽는 공용 IssueOps 어휘를 여기서 이 이름으로 둔다.
+type Record = issueopscontract.Record
 
+// Phase 타입은 issueops contract의 사이클 phase 별칭이다.
+type Phase = issueopscontract.Phase
+
+// Phase 상수는 사이클 record가 가질 수 있는 phase 값을 issueops contract에서
+// 그대로 다시 내보낸다.
 const (
-	PhaseProblem             = issueopscontract.IssueOpsPhaseProblem
-	PhaseGrill               = issueopscontract.IssueOpsPhaseGrill
-	PhasePlan                = issueopscontract.IssueOpsPhasePlan
-	PhaseCompatibilityReview = issueopscontract.IssueOpsPhaseCompatibilityReview
-	PhaseImplement           = issueopscontract.IssueOpsPhaseImplement
-	PhaseAISlopClean         = issueopscontract.IssueOpsPhaseAISlopClean
-	PhaseFeedback            = issueopscontract.IssueOpsPhaseFeedback
-	PhasePR                  = issueopscontract.IssueOpsPhasePR
-	PhaseDone                = issueopscontract.IssueOpsPhaseDone
+	PhaseProblem             = issueopscontract.PhaseProblem
+	PhaseGrill               = issueopscontract.PhaseGrill
+	PhasePlan                = issueopscontract.PhasePlan
+	PhaseCompatibilityReview = issueopscontract.PhaseCompatibilityReview
+	PhaseImplement           = issueopscontract.PhaseImplement
+	PhaseAISlopClean         = issueopscontract.PhaseAISlopClean
+	PhaseFeedback            = issueopscontract.PhaseFeedback
+	PhasePR                  = issueopscontract.PhasePR
+	PhaseDone                = issueopscontract.PhaseDone
 )
 
+// LeaseStatus 상수는 실행 lease의 상태 값을 issueops contract에서 그대로 다시
+// 내보낸다.
 const (
 	LeaseStatusClaimable = issueopscontract.LeaseStatusClaimable
 	LeaseStatusActive    = issueopscontract.LeaseStatusActive
@@ -33,7 +40,9 @@ const (
 	LeaseStatusReleased  = issueopscontract.LeaseStatusReleased
 )
 
-type IssueCreateIntent = issueopscontract.IssueOpsIssueCreateIntent
+// IssueCreateIntent 타입은 이슈 생성 시도의 진행 상태를 나타내는 issueops
+// contract 별칭이다.
+type IssueCreateIntent = issueopscontract.IssueCreateIntent
 
 // Cleanup operations a record.cleanup_attempt names.
 const (
@@ -42,6 +51,8 @@ const (
 	CleanupOperationRemoteBranch = issueopscontract.CleanupOperationRemoteBranch
 )
 
+// IssueCreateIntent 상수는 이슈 생성 시도 기록이 가질 수 있는 상태 값을
+// issueops contract에서 그대로 다시 내보낸다.
 const (
 	IssueCreateIntentPending            = issueopscontract.IssueCreateIntentPending
 	IssueCreateIntentInvokedUnknown     = issueopscontract.IssueCreateIntentInvokedUnknown
@@ -64,6 +75,9 @@ const (
 	CWDRoleOther    = "other"
 )
 
+// Result 타입은 `issueops next`가 돌려주는 읽기 전용 투영이다. 호출 위치,
+// 선택된 사이클과 후보, 현재 stage, lease 상태, 부족한 항목, 다음 명령,
+// 빠져나가는 경로, 리뷰어 기본값을 담는다.
 type Result struct {
 	OK              bool     `json:"ok"`
 	GeneratedAt     string   `json:"generated_at"`
@@ -82,7 +96,7 @@ type Result struct {
 	Warnings        []string `json:"warnings,omitempty"`
 }
 
-// Review는 코드가 소유하는 host별 리뷰어 기본값이다.
+// Review 타입은 코드가 소유하는 host별 리뷰어 기본값이다.
 // 스킬이 모델 이름을 적어 두면 그 값이 곧 낡으므로 CLI가 돌려준다.
 type Review struct {
 	Model  string `json:"model,omitempty"`
@@ -99,6 +113,8 @@ type Review struct {
 	Frontend bool `json:"frontend,omitempty"`
 }
 
+// Entry 타입은 `issueops next`가 선택하거나 후보로 보여 주는 사이클 하나의
+// 요약이다.
 type Entry struct {
 	ID                string `json:"id"`
 	Phase             string `json:"phase"`
@@ -108,11 +124,15 @@ type Entry struct {
 	RemoteArtifactURL string `json:"remote_artifact_url,omitempty"`
 }
 
+// Stage 타입은 사이클이 있는 단계의 stage key와 그 순번이다.
 type Stage struct {
 	Key   string `json:"key"`
 	Index int    `json:"index"`
 }
 
+// Lease 타입은 선택된 사이클의 실행 lease 상태와 세대, 호출자가 holder인지,
+// holder 프로세스가 살아 있는지를 담는다. holder_live는 holder가 없거나
+// 관측하지 못했으면 비어 있다.
 type Lease struct {
 	Status       string `json:"status,omitempty"`
 	Generation   uint64 `json:"generation,omitempty"`
@@ -120,7 +140,7 @@ type Lease struct {
 	HolderLive   *bool  `json:"holder_live,omitempty"`
 }
 
-// Exits는 어느 단계에서든 빠져나가는 세 경로다. 사이클이 없으면 전부 빈 값이다.
+// Exits 타입은 어느 단계에서든 빠져나가는 세 경로다. 사이클이 없으면 전부 빈 값이다.
 type Exits struct {
 	PauseCommand    string `json:"pause_command,omitempty"`
 	AbandonCommand  string `json:"abandon_command"`

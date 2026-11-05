@@ -7,23 +7,28 @@ import (
 	commitsuggestcontract "issueops/internal/contract/commitsuggest"
 )
 
-type Effects interface {
+type effects interface {
 	NormalizeRoot(string) (string, error)
 	Diff(root string, staged bool) (string, error)
 }
 
-type Service struct{ Effects Effects }
+// Service builds a commit message suggestion from the repository diff read
+// through Effects.
+type Service struct{ Effects effects }
 
-func (service Service) Suggest(req commitsuggestcontract.CommitSuggestRequest) (commitsuggestcontract.CommitSuggestResult, error) {
+// Suggest reads the staged or unstaged diff of req.RepoRoot and returns a
+// result carrying the prompt for the host agent. When the diff needs no
+// suggestion the result is OK with Executed false and no prompt.
+func (service Service) Suggest(req commitsuggestcontract.Request) (commitsuggestcontract.Result, error) {
 	root, err := service.Effects.NormalizeRoot(req.RepoRoot)
 	if err != nil {
-		return commitsuggestcontract.CommitSuggestResult{}, err
+		return commitsuggestcontract.Result{}, err
 	}
 	diff, err := service.Effects.Diff(root, req.Staged)
 	if err != nil {
-		return commitsuggestcontract.CommitSuggestResult{}, fmt.Errorf("git diff failed: %w", err)
+		return commitsuggestcontract.Result{}, fmt.Errorf("git diff failed: %w", err)
 	}
-	result := commitsuggestcontract.CommitSuggestResult{OK: true, RepoRoot: root, Staged: req.Staged}
+	result := commitsuggestcontract.Result{OK: true, RepoRoot: root, Staged: req.Staged}
 	if !domain.NeedsSuggestion(diff) {
 		return result, nil
 	}

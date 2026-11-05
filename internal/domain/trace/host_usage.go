@@ -10,6 +10,9 @@ import (
 	"issueops/internal/domain/policy"
 )
 
+// UsageObservation 타입은 호스트가 보고한 토큰·비용 사용량 관측 하나다. Temporality가
+// cumulative이면 세션 누적값이고 아니면 turn/message 단위 증분값이다. 포인터 필드가
+// nil이면 호스트가 그 값을 보고하지 않았다는 뜻이다.
 type UsageObservation struct {
 	Host, Version, Provider, Model string
 	SessionID, TurnID, MessageID   string
@@ -30,7 +33,7 @@ type cumulativeKey struct{ host, session, provider, model string }
 
 type deltaKey struct{ host, session, turn, message string }
 
-func UsageDigest(kind, id string) string {
+func usageDigest(kind, id string) string {
 	if id == "" {
 		return ""
 	}
@@ -38,6 +41,11 @@ func UsageDigest(kind, id string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// ReduceUsage 함수는 관측들을 UsageReport로 합친다. 누적값은 세션별로 최신 값만
+// 남기고(값이 줄면 reset으로 보고 새 구간을 시작), turn/message가 같은 증분 중복은
+// 하나만 남기며, 식별자가 없는 관측은 그대로 둔다. 경고 코드는 정렬해 담는다.
+// 커버리지는 관측이 없거나 식별되지 않은 표본이 있으면 unknown, 최종값이 아니거나
+// 중복 외의 경고가 있으면 partial, 그 밖에는 complete다.
 func ReduceUsage(observations []UsageObservation, warnings []string) *tracecontract.UsageReport {
 	entries := []usageEntry{}
 	current := map[cumulativeKey]int{}
@@ -95,6 +103,8 @@ func ReduceUsage(observations []UsageObservation, warnings []string) *tracecontr
 	return report
 }
 
+// NoteUsageLoss 함수는 report에 손실 경고 code를 추가하고(기존 경고는 유지, 정렬)
+// 커버리지가 complete이면 partial로 낮춘다. report를 제자리에서 바꾼다.
 func NoteUsageLoss(report *tracecontract.UsageReport, code string) {
 	codes := map[string]bool{code: true}
 	for _, existing := range report.Warnings {
@@ -131,11 +141,11 @@ func usageSample(entry usageEntry) tracecontract.UsageSample {
 	o := entry.observation
 	scope := ""
 	if o.SessionID != "" {
-		scope = UsageDigest("scope", o.Host+"\x00"+o.SessionID)
+		scope = usageDigest("scope", o.Host+"\x00"+o.SessionID)
 	}
 	return tracecontract.UsageSample{
 		Host: o.Host, Version: policy.RedactDiagnostic(o.Version), ScopeID: scope,
-		SessionID: UsageDigest("session", o.SessionID), TurnID: UsageDigest("turn", o.TurnID), MessageID: UsageDigest("message", o.MessageID),
+		SessionID: usageDigest("session", o.SessionID), TurnID: usageDigest("turn", o.TurnID), MessageID: usageDigest("message", o.MessageID),
 		Provider: policy.RedactDiagnostic(o.Provider), Model: policy.RedactDiagnostic(o.Model),
 		Finality:    valueOrUnknown(o.Finality),
 		Temporality: o.Temporality,

@@ -51,7 +51,7 @@ func TestInputAndFullContentUseDiffFileOrSafeFullContent(t *testing.T) {
 	if !strings.Contains(got, "--- FILE: api.ts ---") || !strings.Contains(got, "export {}") {
 		t.Fatalf("unexpected full content: %q", got)
 	}
-	if _, err := FullContent(repo, []string{"../outside.ts"}); err == nil {
+	if _, err := fullContent(repo, []string{"../outside.ts"}); err == nil {
 		t.Fatal("expected unsafe path error")
 	}
 }

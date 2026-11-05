@@ -140,7 +140,7 @@ func TestChildHostSmokeModePersistsOnlyBoundedCodexObservation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	process := &codexFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
+	process := &codexFakeProcess{run: func(_ context.Context, request commandRequest) (CommandOutput, error) {
 		bypassHookTrust := false
 		for _, arg := range request.Argv {
 			if arg == "--ignore-user-config" {
@@ -298,7 +298,7 @@ func TestChildHostSmokeModePersistsOnlyBoundedClaudeObservation(t *testing.T) {
 		"ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE": observationPath,
 	}
 	runner := NewClaudeRunner("issueops", Dependencies{
-		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		Process: claudeCommandRunner{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 			if got := argumentValue(t, command.Argv, "--setting-sources"); got != "user" {
 				t.Fatalf("setting sources=%q want user", got)
 			}

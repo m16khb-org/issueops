@@ -19,10 +19,10 @@ import (
 )
 
 type claudeCommandRunner struct {
-	run func(context.Context, CommandRequest) (CommandOutput, error)
+	run func(context.Context, commandRequest) (CommandOutput, error)
 }
 
-func (r claudeCommandRunner) Run(ctx context.Context, request CommandRequest) (CommandOutput, error) {
+func (r claudeCommandRunner) Run(ctx context.Context, request commandRequest) (CommandOutput, error) {
 	return r.run(ctx, request)
 }
 
@@ -87,7 +87,7 @@ func TestClaudeRunnerRunUsesOnePrivateProbeConfig(t *testing.T) {
 	}
 	request := claudeProbeRequest()
 	inherited := []string{"PATH=/test/bin", "HOME=/private/home", "USER=tester", "TEST_CREDENTIAL=credential-value"}
-	var received CommandRequest
+	var received commandRequest
 	runner := NewClaudeRunner("./bin/issueops", Dependencies{
 		TempDir: func(_, _ string) (string, error) {
 			if err := os.Mkdir(episodeRoot, 0o755); err != nil {
@@ -97,13 +97,13 @@ func TestClaudeRunnerRunUsesOnePrivateProbeConfig(t *testing.T) {
 		},
 		Environ:  func() []string { return inherited },
 		LookPath: func(string) (string, error) { return "/test/bin/claude", nil },
-		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		Process: claudeCommandRunner{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 			received = command
 			if command.Cwd != episodeRoot {
 				t.Fatalf("cwd=%q want %q", command.Cwd, episodeRoot)
 			}
-			if command.Timeout != EpisodeTimeout {
-				t.Fatalf("timeout=%s want %s", command.Timeout, EpisodeTimeout)
+			if command.Timeout != episodeTimeout {
+				t.Fatalf("timeout=%s want %s", command.Timeout, episodeTimeout)
 			}
 			observationPath := environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
 			if !reflect.DeepEqual(command.Env, []string{"HOME=/private/home", "ISSUEOPS_CHILD_SMOKE_HOOKS=1", "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE=" + observationPath, "PATH=/test/bin", "USER=tester"}) {
@@ -208,7 +208,7 @@ func TestClaudeRunnerNormalLiveCollectsCanonicalRuntimeEvidenceWithoutActivatedH
 			now = now.Add(25 * time.Millisecond)
 			return now
 		},
-		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		Process: claudeCommandRunner{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 			if got := argumentValue(t, command.Argv, "--setting-sources"); got != "" {
 				t.Fatalf("setting sources = %q", got)
 			}
@@ -261,7 +261,7 @@ func TestClaudeRunnerCleanupFailureSuppressesSuccessfulEpisode(t *testing.T) {
 			}
 			return errors.New("sensitive cleanup detail")
 		},
-		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		Process: claudeCommandRunner{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 			writeClaudeCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
 			writeChildSmokeHookMarkers(t, environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"), request.Model)
 			return CommandOutput{Stdout: claudeSuccessfulStream(request.Model, request.ProbeTool)}, nil
@@ -294,7 +294,7 @@ func TestClaudeRunnerRunDefaultModelOmitsModelFlag(t *testing.T) {
 			return episodeRoot, nil
 		},
 		LookPath: func(string) (string, error) { return "/test/bin/claude", nil },
-		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		Process: claudeCommandRunner{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 			for _, arg := range command.Argv {
 				if arg == "--model" {
 					t.Fatalf("default model must not add --model: %q", command.Argv)
@@ -323,7 +323,7 @@ func TestClaudeRunnerRunMissingCaptureIsTransportFailure(t *testing.T) {
 			return episodeRoot, nil
 		},
 		LookPath: func(string) (string, error) { return "/test/bin/claude", nil },
-		Process: claudeCommandRunner{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+		Process: claudeCommandRunner{run: func(context.Context, commandRequest) (CommandOutput, error) {
 			return CommandOutput{}, nil
 		}},
 	})
@@ -347,14 +347,14 @@ func TestClaudeRunnerPreflightUsesClaudeExecutable(t *testing.T) {
 			return "/test/bin/claude", nil
 		},
 		Environ: func() []string { return []string{"PATH=/test/bin"} },
-		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		Process: claudeCommandRunner{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 			if !reflect.DeepEqual(command.Argv, []string{"/test/bin/claude", "--version"}) {
 				t.Fatalf("argv=%q", command.Argv)
 			}
 			if !reflect.DeepEqual(command.Env, []string{"PATH=/test/bin"}) {
 				t.Fatalf("env=%q", command.Env)
 			}
-			if command.Timeout != VersionTimeout {
+			if command.Timeout != versionTimeout {
 				t.Fatalf("timeout=%s", command.Timeout)
 			}
 			return CommandOutput{Stdout: []byte("claude 2.1.209\n")}, nil
@@ -376,8 +376,6 @@ func TestNewClaudeRunnerNormalizesDependencies(t *testing.T) {
 		t.Fatalf("harness binary=%q", runner.harnessBinary)
 	}
 }
-
-var _ port.HostProbeRunner = ClaudeRunner{}
 
 func claudeSuccessfulStream(model, probeTool string) []byte {
 	return []byte(strings.Join([]string{

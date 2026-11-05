@@ -15,6 +15,7 @@ import (
 	policydomain "issueops/internal/domain/policy"
 )
 
+// RunReadOnly evaluates request against the policy and, when it is allowed, runs the command and returns its captured result.
 func (e Evaluator) RunReadOnly(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
 	return e.service().RunReadOnly(request)
 }
@@ -23,12 +24,16 @@ func (e Evaluator) service() policyapp.Service {
 	return policyapp.Service{Observer: CommandObserver{}, PreparedBaseBranch: e.lookup, Overrides: OverrideLoader{}, Executor: CommandExecutor{}, Clock: Clock{}}
 }
 
+// Clock reads the system time for the policy service.
 type Clock struct{}
 
+// Now returns the current system time.
 func (Clock) Now() time.Time { return time.Now() }
 
+// CommandExecutor runs a command as a child process for the policy service.
 type CommandExecutor struct{}
 
+// Execute runs request.Argv in request.CWD with only the allowlisted environment, bounded output, and the given timeout. On timeout it terminates the process group and reports TimedOut. A command that fails to start returns exit code 127 when it is not found and 1 otherwise.
 func (CommandExecutor) Execute(request policycontract.CommandPolicyRequest, timeout time.Duration) policyapp.Execution {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

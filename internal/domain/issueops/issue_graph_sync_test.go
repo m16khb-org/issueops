@@ -19,12 +19,12 @@ func TestIssueGraphSyncEligibilityBeforePublication(t *testing.T) {
 		{name: "unsupported provider", url: "https://example.test/issue/1", provider: "other", confirm: true, links: true, want: "not supported"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{IssueURL: tc.url}
+			record := model.Record{IssueURL: tc.url}
 			if tc.provider != "" {
-				record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: tc.provider}
+				record.BranchPrepare = &model.BranchPrepare{Provider: tc.provider}
 			}
 			if tc.links {
-				record.IssueLinks = []model.IssueOpsIssueLink{{Type: "blocks", URL: "https://example.test/issue/2"}}
+				record.IssueLinks = []model.IssueLink{{Type: "blocks", URL: "https://example.test/issue/2"}}
 			}
 			plan, err := PlanIssueGraphSync(record, tc.confirm)
 			if tc.want != "" {
@@ -41,9 +41,9 @@ func TestIssueGraphSyncEligibilityBeforePublication(t *testing.T) {
 }
 
 func TestIssueGraphSyncRendersRelationships(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-graph", IssueURL: " https://github.com/acme/repo/issues/1 "}
+	record := model.Record{ID: "io-graph", IssueURL: " https://github.com/acme/repo/issues/1 "}
 	for _, kind := range []string{"depends-on", "blocks", "supersedes", "follows-up", "duplicates", "splits-from", "implements", "custom"} {
-		record.IssueLinks = append(record.IssueLinks, model.IssueOpsIssueLink{Type: kind, URL: "https://example.test/2"})
+		record.IssueLinks = append(record.IssueLinks, model.IssueLink{Type: kind, URL: "https://example.test/2"})
 	}
 	plan, err := PlanIssueGraphSync(record, true)
 	want := "## 관련 이슈\n\n- **선행 이슈**: https://example.test/2\n- **이 이슈가 막는 이슈**: https://example.test/2\n- **대체하는 이슈**: https://example.test/2\n- **후속 이슈**: https://example.test/2\n- **중복 이슈**: https://example.test/2\n- **나뉘어 나온 원래 이슈**: https://example.test/2\n- **구현하는 이슈**: https://example.test/2\n- **custom**: https://example.test/2\n"

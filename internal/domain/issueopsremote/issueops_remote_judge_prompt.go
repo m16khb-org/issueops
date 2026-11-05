@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"issueops/internal/domain/prompt"
 )
 
-func buildIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteScoringRequest) (string, error) {
+func buildIssueOpsRemoteLLMJudgePrompt(req ScoringRequest) (string, error) {
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return "", err
@@ -40,7 +40,7 @@ func buildIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteScoringRequest) (string
 		},
 		OutputContract: []string{
 			"Return JSON only. Do not include prose before or after the JSON object or fenced json block.",
-			"Return one JSON object matching IssueOpsRemoteScoringResult: ok, provider, threshold, execution_class, read_only, join_before, selected_related_issues, rejected_related_issues, selected_labels, rejected_labels, apply_instructions, warnings.",
+			"Return one JSON object matching ScoringResult: ok, provider, threshold, execution_class, read_only, join_before, selected_related_issues, rejected_related_issues, selected_labels, rejected_labels, apply_instructions, warnings.",
 			"Set execution_class to background_join, read_only to true, and join_before to remote_artifact_write.",
 			"Every scored item must include score, threshold, selected, and evidence.",
 			"Selected related issues must include id or url when available. Selected labels must include name.",
@@ -52,7 +52,7 @@ func buildIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteScoringRequest) (string
 			"Provider-specific apply_instructions are present when there are selected issues or labels.",
 			"Output is raw JSON or one fenced json block, with no prose.",
 		},
-		Data: []prompt.PromptDataSection{
+		Data: []prompt.DataSection{
 			judgement.BuildJSONSchemaSection(issueOpsRemoteScoringResponseSchemaExample(), issueOpsRemoteScoringFieldTypes()),
 			{Title: "Request JSON", Content: string(payload)},
 		},
@@ -60,14 +60,14 @@ func buildIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteScoringRequest) (string
 }
 
 func issueOpsRemoteScoringResponseSchemaExample() string {
-	example := IssueOpsRemoteScoringResult{
+	example := ScoringResult{
 		OK:             true,
 		Provider:       "github",
 		Threshold:      0.70,
 		ExecutionClass: "background_join",
 		ReadOnly:       true,
 		JoinBefore:     "remote_artifact_write",
-		SelectedRelatedIssues: []IssueOpsRemoteScoredItem{{
+		SelectedRelatedIssues: []ScoredItem{{
 			ID:        "#123",
 			Title:     "Related IssueOps workflow issue",
 			URL:       "https://github.com/example/repo/issues/123",
@@ -77,8 +77,8 @@ func issueOpsRemoteScoringResponseSchemaExample() string {
 			Evidence:  []string{"shared workflow and component"},
 			ApplyHint: "link in issue body: #123",
 		}},
-		RejectedRelatedIssues: []IssueOpsRemoteScoredItem{},
-		SelectedLabels: []IssueOpsRemoteScoredItem{{
+		RejectedRelatedIssues: []ScoredItem{},
+		SelectedLabels: []ScoredItem{{
 			Name:      "enhancement",
 			Score:     0.88,
 			Threshold: 0.70,
@@ -86,7 +86,7 @@ func issueOpsRemoteScoringResponseSchemaExample() string {
 			Evidence:  []string{"feature request label matches requested work"},
 			ApplyHint: "apply GitHub label: enhancement",
 		}},
-		RejectedLabels:    []IssueOpsRemoteScoredItem{},
+		RejectedLabels:    []ScoredItem{},
 		ApplyInstructions: []string{"include selected related issues in the issue body", "apply selected labels with gh issue create --label enhancement"},
 		Warnings:          []string{},
 	}

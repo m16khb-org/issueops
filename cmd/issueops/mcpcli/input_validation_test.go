@@ -40,9 +40,9 @@ func TestSDKInputSchemaErrorsPrecedeEffects(t *testing.T) {
 		{"unsupported-schema", mcpcontract.Catalog{Tools: []map[string]any{{"name": "probe", "inputSchema": map[string]any{"$ref": "#/missing"}}}}, -32603},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			handler := sdkToolHandlerWithContext(test.catalog, func(context.Context, MCPToolCall) MCPToolOutcome {
+			handler := sdkToolHandlerWithContext(test.catalog, func(context.Context, MCPToolCall) mcpToolOutcome {
 				t.Fatal("invalid schema reached effect")
-				return MCPToolOutcome{}
+				return mcpToolOutcome{}
 			}, "probe")
 			_, err := handler(t.Context(), &mcp.CallToolRequest{Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)}})
 			var protocol *jsonrpc.Error
@@ -54,7 +54,7 @@ func TestSDKInputSchemaErrorsPrecedeEffects(t *testing.T) {
 }
 
 func BenchmarkSDKToolHandler(b *testing.B) {
-	handler := sdkToolHandlerWithContext(inputValidationCatalog(), func(context.Context, MCPToolCall) MCPToolOutcome {
+	handler := sdkToolHandlerWithContext(inputValidationCatalog(), func(context.Context, MCPToolCall) mcpToolOutcome {
 		return mcpToolPayload(map[string]any{"ok": true})
 	}, "probe")
 	req := &mcp.CallToolRequest{Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"nested":{"value":1}}`)}}
@@ -68,7 +68,7 @@ func BenchmarkSDKToolHandler(b *testing.B) {
 
 func TestSDKInputValidationParallelNestedProperties(t *testing.T) {
 	var calls atomic.Int32
-	handler := sdkToolHandlerWithContext(inputValidationCatalog(), func(context.Context, MCPToolCall) MCPToolOutcome {
+	handler := sdkToolHandlerWithContext(inputValidationCatalog(), func(context.Context, MCPToolCall) mcpToolOutcome {
 		calls.Add(1)
 		return mcpToolPayload(map[string]any{"ok": true})
 	}, "probe")

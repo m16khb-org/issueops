@@ -33,7 +33,7 @@ func ContainsString(items []string, want string) bool {
 	return slices.Contains(items, want)
 }
 
-func StateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want string) bool {
+func StateDoctorHasIssueCode(issues []statecontract.DoctorIssue, want string) bool {
 	for _, issue := range issues {
 		if issue.Code == want {
 			return true

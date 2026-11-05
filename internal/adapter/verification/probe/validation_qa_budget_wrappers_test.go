@@ -64,15 +64,15 @@ esac
 	return testsupport.WriteFakeCommand(t, dir, "fake-issueops", body)
 }
 
-func validStepBudgetWrapperCompareResult() selfaugment.SelfAugmentCompareResult {
-	return selfaugment.SelfAugmentCompareResult{
+func validStepBudgetWrapperCompareResult() selfaugment.CompareResult {
+	return selfaugment.CompareResult{
 		OK:        true,
 		Regressed: true,
 		Regressions: []string{
 			"step_budget:docs index smoke_p95_increased_by_30.00_pct",
 		},
-		SlowStepRegressions: []selfaugment.SelfAugmentSlowStepRegression{},
-		StepBudgetRegressions: []selfaugment.SelfAugmentStepBudgetRegression{
+		SlowStepRegressions: []selfaugment.SlowStepRegression{},
+		StepBudgetRegressions: []selfaugment.StepBudgetRegression{
 			{Label: "docs index smoke", Metric: "p95_duration_ms", DeltaMS: 30, DeltaPct: 30},
 		},
 	}

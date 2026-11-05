@@ -6,7 +6,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func IntentMissing(record model.IssueOpsRecord) []string {
+// IntentMissing lists the intent contract fields still absent from record:
+// the contract itself, the raw request, the interpreted intent, and usable
+// success criteria.
+func IntentMissing(record model.Record) []string {
 	if record.Intent == nil {
 		return []string{"intent_contract"}
 	}

@@ -6,11 +6,14 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
-func Candidates(signals contract.SelfAugmentRepoSignals) []contract.SelfAugmentCandidate {
+// Candidates returns the improvement candidates for signals: the quality
+// catalog's candidate specs combined by the selfaugment domain. Slices in the
+// result are copies, so callers may modify them.
+func Candidates(signals contract.RepoSignals) []contract.Candidate {
 	specs := qualitycatalog.CandidateSpecs()
-	qualityCandidates := make([]contract.SelfAugmentCandidate, 0, len(specs))
+	qualityCandidates := make([]contract.Candidate, 0, len(specs))
 	for _, spec := range specs {
-		qualityCandidates = append(qualityCandidates, contract.SelfAugmentCandidate{
+		qualityCandidates = append(qualityCandidates, contract.Candidate{
 			ID: spec.ID, Title: spec.Title, Category: spec.Category,
 			VerificationKind: spec.VerificationKind,
 			Impact:           spec.Impact, Feasibility: spec.Feasibility, Novelty: spec.Novelty, Risk: spec.Risk,

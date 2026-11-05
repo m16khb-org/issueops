@@ -17,9 +17,9 @@ func TestFinishInvocationPreservesObservationOrderAndStopsBeforeEffects(t *testi
 	denied := errors.New("cwd unavailable")
 	var events []string
 	service := Invocation{
-		Read: func(string) (model.IssueOpsRecord, error) {
+		Read: func(string) (model.Record, error) {
 			events = append(events, "read")
-			return model.IssueOpsRecord{ID: "cycle", IssueURL: "https://github.com/example/repo/issues/1"}, nil
+			return model.Record{ID: "cycle", IssueURL: "https://github.com/example/repo/issues/1"}, nil
 		},
 		Provider:         func(string) (port.IssueProvider, error) { events = append(events, "provider"); return nil, nil },
 		CurrentDirectory: func() (string, error) { events = append(events, "cwd"); return "", denied },
@@ -39,9 +39,9 @@ func TestAbandonInvocationOnlyReadsWhenCommandNeedsBinding(t *testing.T) {
 	for _, command := range []string{"", "issueops cleanup abandon --id cycle --preview"} {
 		t.Run(command, func(t *testing.T) {
 			var events []string
-			service := Invocation{Read: func(string) (model.IssueOpsRecord, error) {
+			service := Invocation{Read: func(string) (model.Record, error) {
 				events = append(events, "read")
-				return model.IssueOpsRecord{}, nil
+				return model.Record{}, nil
 			}, RunAbandon: func(context.Context, model.CleanupAbandonRequest) (model.CleanupAbandonResult, error) {
 				events = append(events, "execute")
 				return model.CleanupAbandonResult{NextCommand: command}, failed
@@ -83,9 +83,9 @@ func TestFinishInvocationKeepsInitialGenerationAndErrorPrecedence(t *testing.T) 
 			generation := uint64(3)
 			observed := 0
 			reads := 0
-			service := Invocation{Read: func(string) (model.IssueOpsRecord, error) {
+			service := Invocation{Read: func(string) (model.Record, error) {
 				reads++
-				return model.IssueOpsRecord{ID: "cycle", IssueURL: "https://github.com/example/repo/issues/1", Execution: &model.Execution{Lease: model.WriteLease{Generation: generation}}}, nil
+				return model.Record{ID: "cycle", IssueURL: "https://github.com/example/repo/issues/1", Execution: &model.Execution{Lease: model.WriteLease{Generation: generation}}}, nil
 			}, Provider: func(string) (port.IssueProvider, error) { return nil, nil }, CurrentDirectory: func() (string, error) { return "/cwd", nil }, Provenance: invocationObserver{&observed, tc.observeErr},
 				RunFinish: func(_ context.Context, r model.CleanupFinishRequest, _ port.IssueProvider) (model.CleanupFinishResult, error) {
 					if r.ID != "cycle" || r.CWD != "/cwd" {

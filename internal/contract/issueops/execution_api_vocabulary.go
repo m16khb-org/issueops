@@ -13,6 +13,9 @@ var (
 	ErrRemotePullRequestReconcileHandlerUnavailable = errors.New("remote reconcile provider is unavailable")
 )
 
+// The ExecutionAction* values name the execution actions, the ExecutionReplace*
+// values name the steps of a lease replacement, and the ExecutionSyncBase*
+// values name the modes of a base sync.
 const (
 	ExecutionActionPrepare          = "prepare"
 	ExecutionActionStatus           = "status"

@@ -29,10 +29,10 @@ func (f verifierFunc) Verify(ctx context.Context, actor model.NativeActor) (mode
 func TestMutationAuthorityValidatesExecutionBeforePathObservation(t *testing.T) {
 	calls := 0
 	authority := NewMutationAuthority(func(string, string) bool { calls++; return true }, liveVerifier())
-	if err := authority.Validate(context.Background(), model.IssueOpsRecord{}, nil); err != nil || calls != 0 {
+	if err := authority.Validate(context.Background(), model.Record{}, nil); err != nil || calls != 0 {
 		t.Fatalf("planning err=%v paths=%d", err, calls)
 	}
-	record := model.IssueOpsRecord{Execution: &model.Execution{}}
+	record := model.Record{Execution: &model.Execution{}}
 	if err := authority.Validate(context.Background(), record, nil); err == nil || !strings.Contains(err.Error(), "invalid IssueOps execution v1 record") || calls != 0 {
 		t.Fatalf("invalid execution err=%v paths=%d", err, calls)
 	}
@@ -40,8 +40,8 @@ func TestMutationAuthorityValidatesExecutionBeforePathObservation(t *testing.T) 
 
 func TestAuthorizeHolderObservesPathsOnlyAfterIdentityMatches(t *testing.T) {
 	process := model.NativeProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/host"}
-	record := model.IssueOpsRecord{Execution: &model.Execution{Workspace: model.Workspace{Root: "/canonical"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}}}}
-	actor := model.IssueOpsActor{Host: "codex", SessionID: "holder", CWD: "/request", NativeProcessAncestry: []model.NativeProcessReceipt{process}}
+	record := model.Record{Execution: &model.Execution{Workspace: model.Workspace{Root: "/canonical"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}}}}
+	actor := model.Actor{Host: "codex", SessionID: "holder", CWD: "/request", NativeProcessAncestry: []model.NativeProcessReceipt{process}}
 	calls := 0
 	paths := func(left, right string) bool {
 		calls++
@@ -74,8 +74,8 @@ func TestAuthorizeHolderObservesPathsOnlyAfterIdentityMatches(t *testing.T) {
 func TestAuthorizeHolderUsesCapabilityIdentityWithoutAncestry(t *testing.T) {
 	process := model.NativeProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/host"}
 	holder := model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}
-	record := model.IssueOpsRecord{Execution: &model.Execution{Workspace: model.Workspace{Root: "/canonical"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder}}}
-	actor := model.IssueOpsActor{Host: "codex", SessionID: "holder", CWD: "/canonical"}
+	record := model.Record{Execution: &model.Execution{Workspace: model.Workspace{Root: "/canonical"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder}}}
+	actor := model.Actor{Host: "codex", SessionID: "holder", CWD: "/canonical"}
 	same := func(a, b string) bool { return a == b }
 	var seen model.NativeActor
 	granted := verifierFunc(func(_ context.Context, input model.NativeActor) (model.VerifiedActor, error) {

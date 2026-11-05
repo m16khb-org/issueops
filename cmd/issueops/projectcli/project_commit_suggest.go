@@ -20,7 +20,7 @@ func runProjectCommitSuggest(service app.Service, args []string) error {
 		return err
 	}
 
-	result, err := service.Suggest(commitsuggestcontract.CommitSuggestRequest{
+	result, err := service.Suggest(commitsuggestcontract.Request{
 		RepoRoot: *repo,
 		Staged:   *staged,
 	})

@@ -28,7 +28,7 @@ func TestIssueOpsAISlopCleanRejectsUntrackedPlanWithoutImplementation(t *testing
 	if code, _, stderr := preflight.GitCmd(repo, "worktree", "add", "-q", worktree, branch); code != 0 {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestIssueOpsAISlopCleanRejectsUntrackedPlanWithoutImplementation(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	record, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     record.IssueURL,
 		Branch:       branch,
@@ -56,7 +56,7 @@ func TestIssueOpsAISlopCleanRejectsUntrackedPlanWithoutImplementation(t *testing
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans", "new-demo.md")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean)); err == nil || !strings.Contains(err.Error(), "implementation_changes") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.PhaseAISlopClean)); err == nil || !strings.Contains(err.Error(), "implementation_changes") {
 		t.Fatalf("ai-slop-clean should reject plan-only untracked directories, got %v", err)
 	}
 }

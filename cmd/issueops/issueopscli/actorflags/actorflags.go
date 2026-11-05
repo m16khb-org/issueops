@@ -16,6 +16,8 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
+// Flags holds the pointers to the actor flag values registered by Add. Read
+// them only after the FlagSet has parsed its arguments.
 type Flags struct {
 	host       *string
 	sessionID  *string
@@ -41,21 +43,21 @@ func Add(fs *flag.FlagSet) Flags {
 
 // Actor returns the declared actor without process ancestry; pair it with
 // Observer when the core observes ancestry itself.
-func (f Flags) Actor() issueopscontract.IssueOpsActor {
-	return issueopscontract.IssueOpsActor{Host: *f.host, SessionID: *f.sessionID, AgentID: *f.agentID, CWD: *f.cwd}
+func (f Flags) Actor() issueopscontract.Actor {
+	return issueopscontract.Actor{Host: *f.host, SessionID: *f.sessionID, AgentID: *f.agentID, CWD: *f.cwd}
 }
 
 // ActorWithAncestry returns the declared actor carrying the observed ancestry
-// after Filter. An observation error leaves the ancestry empty (fail closed).
-func (f Flags) ActorWithAncestry(ancestry []issueopscontract.NativeProcessReceipt) issueopscontract.IssueOpsActor {
+// after filter. An observation error leaves the ancestry empty (fail closed).
+func (f Flags) ActorWithAncestry(ancestry []issueopscontract.NativeProcessReceipt) issueopscontract.Actor {
 	actor := f.Actor()
-	actor.NativeProcessAncestry = f.Filter(ancestry)
+	actor.NativeProcessAncestry = f.filter(ancestry)
 	return actor
 }
 
-// Filter returns ancestry when no receipt was supplied or the supplied receipt
+// filter returns ancestry when no receipt was supplied or the supplied receipt
 // is one of its entries, and nil otherwise.
-func (f Flags) Filter(ancestry []issueopscontract.NativeProcessReceipt) []issueopscontract.NativeProcessReceipt {
+func (f Flags) filter(ancestry []issueopscontract.NativeProcessReceipt) []issueopscontract.NativeProcessReceipt {
 	pid, startedAt, executable := *f.pid, strings.TrimSpace(*f.startedAt), strings.TrimSpace(*f.executable)
 	if pid == 0 && startedAt == "" && executable == "" {
 		return ancestry
@@ -71,13 +73,13 @@ func (f Flags) Filter(ancestry []issueopscontract.NativeProcessReceipt) []issueo
 	return nil
 }
 
-// Observer wraps an ancestry observer with Filter.
+// Observer wraps an ancestry observer with filter.
 func (f Flags) Observer(observe func() ([]issueopscontract.NativeProcessReceipt, error)) func() ([]issueopscontract.NativeProcessReceipt, error) {
 	return func() ([]issueopscontract.NativeProcessReceipt, error) {
 		ancestry, err := observe()
 		if err != nil {
 			return nil, err
 		}
-		return f.Filter(ancestry), nil
+		return f.filter(ancestry), nil
 	}
 }

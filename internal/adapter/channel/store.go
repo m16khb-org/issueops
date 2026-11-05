@@ -17,11 +17,16 @@ import (
 
 const channelBucket = "channel_v1"
 
+// StateDatabase is the slice of the state database the channel store writes:
+// storing a message and pruning messages older than an ID.
 type StateDatabase interface {
 	Put(bucket, id string, data []byte) error
 	DeleteBefore(ctx context.Context, bucket, beforeID string) error
 }
 
+// Store adapts the channel state database, message IDs, and clock to the channel
+// use case. Root is the state root; the function fields are injected so tests
+// can replace the database, clock, and sleep.
 type Store struct {
 	Root              string
 	OpenDatabase      func(string) (StateDatabase, error)
@@ -30,6 +35,8 @@ type Store struct {
 	Sleep             func(context.Context, time.Duration) error
 }
 
+// Open opens the state database under store.Root and returns a writer that
+// stores messages in it.
 func (store Store) Open() (channelapp.Writer, error) {
 	db, err := store.OpenDatabase(store.Root)
 	if err != nil {
@@ -54,8 +61,14 @@ func (writer messageWriter) PruneBefore(cutoff time.Time) error {
 	return writer.db.DeleteBefore(context.Background(), channelBucket, messageIDPrefix(cutoff))
 }
 
-func (store Store) NewID() string  { return newMessageID(store.Clock()) }
+// NewID returns a message ID derived from the store clock.
+func (store Store) NewID() string { return newMessageID(store.Clock()) }
+
+// Now returns the current time from the store clock.
 func (store Store) Now() time.Time { return store.Clock() }
+
+// Wait blocks for duration using the store's sleep function, returning early with
+// an error when ctx ends.
 func (store Store) Wait(ctx context.Context, duration time.Duration) error {
 	return store.Sleep(ctx, duration)
 }

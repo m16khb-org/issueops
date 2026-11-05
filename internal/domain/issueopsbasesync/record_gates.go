@@ -1,5 +1,8 @@
 package issueopsbasesync
 
+// RecordGateFacts are the lifecycle record facts that gate a sync-base run:
+// execution and completion presence, lease state, remote artifact, pending
+// intent, and base branch.
 type RecordGateFacts struct {
 	ExecutionPresent      bool
 	LeaseActive           bool
@@ -10,6 +13,9 @@ type RecordGateFacts struct {
 	BaseBranchPresent     bool
 }
 
+// MissingRecordGates returns the names of the record gates facts fails. A
+// missing execution short-circuits to execution_prepared; a lease that is not
+// active additionally needs a current completion and a remote artifact.
 func MissingRecordGates(facts RecordGateFacts) []string {
 	if !facts.ExecutionPresent {
 		return []string{"execution_prepared"}
@@ -34,12 +40,17 @@ func MissingRecordGates(facts RecordGateFacts) []string {
 	return missing
 }
 
+// MergeStateFacts are the worktree facts of a sync-base run: its Mode, whether
+// a merge is in progress, and whether tracked files are dirty.
 type MergeStateFacts struct {
 	Mode            string
 	MergeInProgress bool
 	TrackedDirty    bool
 }
 
+// MissingMergeStateGates returns the merge-state gates facts fails: apply needs
+// a clean worktree with no merge in progress; finalize and abort need a merge
+// in progress.
 func MissingMergeStateGates(facts MergeStateFacts) []string {
 	missing := []string{}
 	switch facts.Mode {

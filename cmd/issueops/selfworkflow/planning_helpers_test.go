@@ -16,18 +16,18 @@ import (
 	"time"
 )
 
-func planSelfAugmentation(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
+func planSelfAugmentation(req contract.PlanRequest) contract.PlanResult {
 	return (app.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: state.NewService().List, StateRead: state.NewService().Read, Now: time.Now}).Plan(req, IssueOpsRoot(), Version)
 }
 
-func SaveSelfAugmentLesson(req contract.SelfAugmentLessonRequest) (contract.SelfAugmentLessonResult, error) {
-	return app.SaveLesson(req, app.SaveLessonDeps{IssueOpsRoot: IssueOpsRoot, SelectCandidate: func() *contract.SelfAugmentCandidate {
-		return planSelfAugmentation(contract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}).SelectedCandidate
-	}, Now: time.Now, Encode: func(snapshot contract.SelfAugmentLessonStateSnapshot) ([]byte, error) {
+func SaveSelfAugmentLesson(req contract.LessonRequest) (contract.LessonResult, error) {
+	return app.SaveLesson(req, app.SaveLessonDeps{IssueOpsRoot: IssueOpsRoot, SelectCandidate: func() *contract.Candidate {
+		return planSelfAugmentation(contract.PlanRequest{Cycles: 1, TargetScore: 95}).SelectedCandidate
+	}, Now: time.Now, Encode: func(snapshot contract.LessonStateSnapshot) ([]byte, error) {
 		return json.MarshalIndent(snapshot, "", "  ")
-	}, Write: func(key, content string) (statecontract.StateResult, error) {
+	}, Write: func(key, content string) (statecontract.Result, error) {
 		return state.NewService().Write(context.Background(), key, content)
-	}, StateDir: state.StateDir, Prune: func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
+	}, StateDir: state.Dir, Prune: func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
 		return state.NewService().PrunePrefix(context.Background(), prefix, maxAge, maxRecords, confirm)
 	}})
 }
@@ -38,7 +38,7 @@ func ExportSelfVerificationCandidates() contract.SelfVerificationCandidateExport
 func SaveSelfVerificationCandidateExport(result *contract.SelfVerificationCandidateExportResult, key string) error {
 	return verifyapp.SaveCandidateExport(result, key, verifyapp.SaveCandidateExportDeps{Now: time.Now, Encode: func(snapshot contract.SelfVerificationCandidateExportStateSnapshot) ([]byte, error) {
 		return json.MarshalIndent(snapshot, "", "  ")
-	}, Write: func(key, content string) (statecontract.StateResult, error) {
+	}, Write: func(key, content string) (statecontract.Result, error) {
 		return state.NewService().Write(context.Background(), key, content)
-	}, StateDir: state.StateDir})
+	}, StateDir: state.Dir})
 }

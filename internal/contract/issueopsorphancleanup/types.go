@@ -1,5 +1,5 @@
-// 고아 워크트리 정리의 요청·결과 DTO다. 정리를 수행하는 쪽은 I/O를 하지만
-// 요청을 만들고 결과를 읽는 쪽은 그 구현을 알 필요가 없다.
+// Package issueopsorphancleanup 패키지는 고아 워크트리 정리의 요청·결과 DTO를 소유한다.
+// 정리를 수행하는 쪽은 I/O를 하지만 요청을 만들고 결과를 읽는 쪽은 그 구현을 알 필요가 없다.
 package issueopsorphancleanup
 
 import issueopscontract "issueops/internal/contract/issueops"
@@ -12,12 +12,18 @@ type Request struct {
 	RepoRoot     string
 	WorktreePath string
 	Branch       string
-	Artifact     issueopscontract.IssueOpsRemoteArtifactVerification
+	Artifact     issueopscontract.RemoteArtifactVerification
 }
+
+// ApplyRequest 타입은 미리보기에서 받은 정리 계획을 적용하는 요청이다.
+// Confirm이 true이고 Fingerprint가 미리보기 결과와 일치할 때만 적용한다.
 type ApplyRequest struct {
 	Confirm     bool
 	Fingerprint string
 }
+
+// Result 타입은 고아 워크트리 정리의 미리보기·적용 결과다. 워크트리와 원격 산출물의
+// 검증 사실, 로컬 정리 수행 여부, 복구 경로, 적용 시 확인할 Fingerprint를 담는다.
 type Result struct {
 	OK                   bool     `json:"ok"`
 	Preview              bool     `json:"preview"`

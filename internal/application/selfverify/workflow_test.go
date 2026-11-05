@@ -29,7 +29,7 @@ func TestExportAndSaveCandidates(t *testing.T) {
 					if reads != 1 || result.KoreanName != "fixture" || key != "custom-key" {
 						t.Fatalf("incorrect save input: reads=%d result=%+v key=%q", reads, result, key)
 					}
-					result.StateCheckpoint = &contract.SelfAugmentStateCheckpoint{OK: !tc.fail, Key: key}
+					result.StateCheckpoint = &contract.StateCheckpoint{OK: !tc.fail, Key: key}
 					if tc.fail {
 						result.StateCheckpoint.Error = failure.Error()
 						return failure

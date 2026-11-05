@@ -109,7 +109,7 @@ func (Provider) ReplaceArtifactBody(ctx context.Context, req port.IssueProviderR
 
 // VerifyChildHierarchy asks GitLab whether the child work item hangs off the
 // parent issue, reusing the observation CreateChild verifies against.
-func (Provider) VerifyChildHierarchy(_ context.Context, req port.IssueProviderChildHierarchyRequest) (port.IssueProviderChildHierarchyResult, error) {
+func (Provider) VerifyChildHierarchy(ctx context.Context, req port.IssueProviderChildHierarchyRequest) (port.IssueProviderChildHierarchyResult, error) {
 	hostname, projectPath, parentIID, err := parseGitLabIssueURL(req.ParentIssueURL)
 	if err != nil {
 		return port.IssueProviderChildHierarchyResult{Provider: "gitlab"}, err
@@ -118,7 +118,7 @@ func (Provider) VerifyChildHierarchy(_ context.Context, req port.IssueProviderCh
 	if err != nil {
 		return port.IssueProviderChildHierarchyResult{Provider: "gitlab"}, fmt.Errorf("child_url must be a GitLab issue or work item URL")
 	}
-	_, ok := observeGitLabChild(req.Repo, hostname, projectPath, parentIID, childIID)
+	_, ok := observeGitLabChild(ctx, req.Repo, hostname, projectPath, parentIID, childIID)
 	return port.IssueProviderChildHierarchyResult{Provider: "gitlab", OK: true, Verified: ok}, nil
 }
 

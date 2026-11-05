@@ -12,8 +12,8 @@ import (
 
 // Keep the original provider scenarios on the new application use case.
 type Store struct {
-	Read       func(string, string) (model.IssueOpsRecord, error)
-	TouchWrite func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Read       func(string, string) (model.Record, error)
+	TouchWrite func(string, model.Record) (model.Record, error)
 	Provider   func(string) (port.IssueProvider, error)
 }
 
@@ -25,14 +25,14 @@ type childCleanupFixtureRecords struct {
 func (r childCleanupFixtureRecords) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
 	return fn(ctx)
 }
-func (r childCleanupFixtureRecords) Load(id string) (model.IssueOpsRecord, error) {
+func (r childCleanupFixtureRecords) Load(id string) (model.Record, error) {
 	return r.store.Read(r.root, id)
 }
-func (r childCleanupFixtureRecords) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (r childCleanupFixtureRecords) Save(_ context.Context, record model.Record) (model.Record, error) {
 	return r.store.TouchWrite(r.root, record)
 }
-func ByID(store Store, root, id string, req model.IssueOpsCloseChildrenRequest) (model.IssueOpsCloseChildrenResult, error) {
-	return (app.ChildrenCloser{Records: childCleanupFixtureRecords{store, root}, Provider: store.Provider, VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error {
+func ByID(store Store, root, id string, req model.CloseChildrenRequest) (model.CloseChildrenResult, error) {
+	return (app.ChildrenCloser{Records: childCleanupFixtureRecords{store, root}, Provider: store.Provider, VerifyMerged: func(model.RemoteArtifactVerification) error {
 		if req.Merged {
 			return nil
 		}

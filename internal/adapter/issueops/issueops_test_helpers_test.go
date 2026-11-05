@@ -14,7 +14,7 @@ import (
 )
 
 type claimableExecutionFixture struct {
-	record    issueops.IssueOpsRecord
+	record    issueops.Record
 	worktree  string
 	tokenPath string
 }
@@ -38,12 +38,12 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 		t.Fatalf("git worktree add: %s", stderr)
 	}
 	baseHead := strings.TrimSpace(preflight.GitOut(worktree, "rev-parse", "HEAD"))
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.WorktreePath = worktree
-	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueops.BranchPrepare{
 		Provider: "github", IssueURL: "https://github.com/example/issueops/issues/69",
 		Branch: branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
@@ -67,9 +67,9 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 
 func prepareExecutionCompletionFixture(t *testing.T, stateRoot string, fixture *claimableExecutionFixture) {
 	t.Helper()
-	fixture.record.Phase = issueops.IssueOpsPhasePR
+	fixture.record.Phase = issueops.PhasePR
 	fixture.record.IssueURL = "https://github.com/example/issueops/issues/69"
-	fixture.record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	fixture.record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/issueops/pull/69",
 		Labels: []string{"enhancement"}, Assignees: []string{"maintainer"},
 		VerifiedAt: "2026-07-22T00:00:00Z", TargetBranch: "main",
@@ -147,7 +147,7 @@ func writeIssueOpsFile(t *testing.T, repo, rel, content string) {
 
 func recordIssueOpsIntentForTest(t *testing.T, stateRoot, id string) {
 	t.Helper()
-	if _, err := RecordIssueOpsIntent(stateRoot, id, issueops.IssueOpsIntentRecordRequest{
+	if _, err := RecordIssueOpsIntent(stateRoot, id, issueops.IntentRecordRequest{
 		RawRequest:        "refactor issueops flow",
 		InterpretedIntent: "keep intent and design evidence before implementation",
 		SuccessCriteria:   []string{"intent is recorded", "design is reviewed"},
@@ -162,8 +162,8 @@ func setIssueOpsPlanPrepForTest(t *testing.T, stateRoot, id string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	waived := issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "lifecycle fixture"}
-	rec.PlanPrep = &issueops.IssueOpsPlanPrep{
+	waived := issueops.PlanPrepItem{Status: "waived", WaiveReason: "lifecycle fixture"}
+	rec.PlanPrep = &issueops.PlanPrep{
 		PriorDecisions: waived,
 		RelatedIssues:  waived,
 		WebResearch:    waived,
@@ -179,14 +179,14 @@ func setIssueOpsPlanPrepForTest(t *testing.T, stateRoot, id string) {
 // grill->plan boundary. split_decision is recorded as a no-split scope decision.
 func recordIssueOpsGrillArtifactsForTest(t *testing.T, stateRoot, id string) {
 	t.Helper()
-	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.IssueOpsDecisionRecordRequest{
+	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.DecisionRecordRequest{
 		Title: "no split",
 		Body:  "single focused work item; no provider-native child tasks needed",
 		Kind:  "scope",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{
+	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.DomainReviewRequest{
 		ModelFit:          "change fits the existing IssueOps phase model",
 		Terminology:       []string{"phase ledger", "completion gate"},
 		OpenUncertainties: []string{"none blocking"},
@@ -212,7 +212,7 @@ func recordIssueOpsApprovedArchitectureForTest(t *testing.T, stateRoot, id strin
 	}
 }
 
-func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktree string) issueops.IssueOpsRecord {
+func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktree string) issueops.Record {
 	t.Helper()
 	recordIssueOpsCompatibilityReviewForTest(t, stateRoot, id)
 	record, err := ReadIssueOps(stateRoot, id)
@@ -224,7 +224,7 @@ func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktre
 	if _, err = writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, id, string(issueops.IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, id, string(issueops.PhaseImplement), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,8 +249,8 @@ func recordIssueOpsCompatibilityReviewForTest(t *testing.T, stateRoot, id string
 	}
 }
 
-func issueOpsIntentContractForTest() *issueops.IssueOpsIntentContract {
-	return &issueops.IssueOpsIntentContract{
+func issueOpsIntentContractForTest() *issueops.IntentContract {
+	return &issueops.IntentContract{
 		RawRequest:        "refactor issueops flow",
 		InterpretedIntent: "keep intent and design evidence before implementation",
 		SuccessCriteria:   []string{"intent is recorded", "design is reviewed"},
@@ -269,8 +269,8 @@ func issueOpsCompatibilityReviewForTest() *reviewcontract.CompatibilityReview {
 	}
 }
 
-func issueOpsDevilsAdvocateReviewForTest() *issueops.IssueOpsDevilsAdvocateReview {
-	return &issueops.IssueOpsDevilsAdvocateReview{
+func issueOpsDevilsAdvocateReviewForTest() *issueops.DevilsAdvocateReview {
+	return &issueops.DevilsAdvocateReview{
 		Verdict:         "pass",
 		Findings:        []string{"attacked gate 3: no second caller exists"},
 		ReviewerPattern: "devils-advocate-review",
@@ -302,30 +302,30 @@ func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution
 	}
 }
 
-func issueOpsActorForTest(worktree string) issueops.IssueOpsActor {
-	return issueops.IssueOpsActor{
+func issueOpsActorForTest(worktree string) issueops.Actor {
+	return issueops.Actor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: worktree,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{liveFixtureReceipt()},
 	}
 }
 
-func startIssueOpsChildForTest(stateRoot string, parent issueops.IssueOpsRecord, req issueops.IssueOpsChildStartRequest) (issueops.IssueOpsChildStartResult, error) {
+func startIssueOpsChildForTest(stateRoot string, parent issueops.Record, req issueops.ChildStartRequest) (issueops.ChildStartResult, error) {
 	return StartIssueOpsChildWithActor(stateRoot, req, issueOpsActorForTest(parent.WorktreePath))
 }
 
-func acceptIssueOpsChildForTest(stateRoot string, parent issueops.IssueOpsRecord, childID string, evidence []string) (issueops.IssueOpsChildValidationResult, error) {
+func acceptIssueOpsChildForTest(stateRoot string, parent issueops.Record, childID string, evidence []string) (issueops.ChildValidationResult, error) {
 	return AcceptIssueOpsChildWithActor(stateRoot, parent.ID, childID, evidence, issueOpsActorForTest(parent.WorktreePath))
 }
 
-func rejectIssueOpsChildForTest(stateRoot string, parent issueops.IssueOpsRecord, childID, reason string, evidence []string) (issueops.IssueOpsChildValidationResult, error) {
+func rejectIssueOpsChildForTest(stateRoot string, parent issueops.Record, childID, reason string, evidence []string) (issueops.ChildValidationResult, error) {
 	return RejectIssueOpsChildWithActor(stateRoot, parent.ID, childID, reason, evidence, issueOpsActorForTest(parent.WorktreePath))
 }
 
-func dropIssueOpsChildForTest(stateRoot string, parent issueops.IssueOpsRecord, childID, reason string) (issueops.IssueOpsChildValidationResult, error) {
+func dropIssueOpsChildForTest(stateRoot string, parent issueops.Record, childID, reason string) (issueops.ChildValidationResult, error) {
 	return DropIssueOpsChildWithActor(stateRoot, parent.ID, childID, reason, issueOpsActorForTest(parent.WorktreePath))
 }
 
-func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func executionPrepareRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
@@ -334,12 +334,12 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	if code, _, stderr := preflight.GitCmd(repo, "update-ref", "refs/remotes/origin/"+branch, baseHead); code != 0 {
 		t.Fatalf("create remote branch fixture: %s", stderr)
 	}
-	record := issueops.IssueOpsRecord{
-		OK: true, SchemaVersion: issueops.IssueOpsSchemaVersion,
-		ID: newIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
+	record := issueops.Record{
+		OK: true, SchemaVersion: issueops.SchemaVersion,
+		ID: newIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.PhasePlan,
 		IssueURL:           "https://github.com/acme/repo/issues/16",
 		ArchitectureReview: &reviewcontract.ArchitectureReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{
+		BranchPrepare: &issueops.BranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/16", Branch: branch,
 			BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true, CreatedAt: "2026-07-11T00:00:00Z",
 		},
@@ -389,7 +389,7 @@ func quiescentWorkspaceInspector() executionWorkspaceProcessInspector {
 
 // sealStagedArchitectureForTest는 execution prepare가 하는 봉인을 fixture에서 흉내 낸다.
 // 스테이징된 architecture가 있을 때만 봉인 디렉터리를 정하고 파일을 쓴다.
-func sealStagedArchitectureForTest(t *testing.T, stateRoot string, record issueops.IssueOpsRecord) {
+func sealStagedArchitectureForTest(t *testing.T, stateRoot string, record issueops.Record) {
 	t.Helper()
 	staged, err := readStagedArtifacts(stateRoot, record.ID)
 	if err != nil || staged["architecture"] == "" {

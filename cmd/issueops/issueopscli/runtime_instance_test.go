@@ -13,7 +13,7 @@ import (
 func TestLifecycleCommandsKeepRuntimeAndActorOwnership(t *testing.T) {
 	var events []string
 	build := func(owner string) func([]string) error {
-		runtime := IssueOpsCLIDeps{
+		runtime := Deps{
 			IssueOpsStateRoot: func() string { return owner },
 			ObserveNativeProcessAncestry: func(pid int) ([]model.NativeProcessReceipt, error) {
 				if pid != os.Getpid() {
@@ -22,26 +22,26 @@ func TestLifecycleCommandsKeepRuntimeAndActorOwnership(t *testing.T) {
 				events = append(events, owner+":actor")
 				return []model.NativeProcessReceipt{{PID: pid, Executable: owner}}, nil
 			},
-			ReadIssueOps: func(root, id string) (model.IssueOpsRecord, error) {
+			ReadIssueOps: func(root, id string) (model.Record, error) {
 				events = append(events, owner+":read:"+root+":"+id)
-				return model.IssueOpsRecord{ID: id}, nil
+				return model.Record{ID: id}, nil
 			},
-			IssueOpsPRReadiness: func(record model.IssueOpsRecord) model.IssueOpsReadiness {
+			IssueOpsPRReadiness: func(record model.Record) model.Readiness {
 				events = append(events, owner+":base:"+record.ID)
-				return model.IssueOpsReadiness{Ready: true}
+				return model.Readiness{Ready: true}
 			},
 		}
 		gates := LoopGateDeps{
-			AdvancePhaseReport: func(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error) {
+			AdvancePhaseReport: func(root, id, to string, actor model.Actor) (model.Record, model.TrackedMaterials, error) {
 				if actor.Host != "codex" || actor.SessionID != "session" || actor.CWD != "/workspace" || len(actor.NativeProcessAncestry) != 1 || actor.NativeProcessAncestry[0].Executable != owner {
 					t.Fatalf("actor lost ownership: %+v", actor)
 				}
 				events = append(events, owner+":advance:"+root+":"+id+":"+to)
-				return model.IssueOpsRecord{ID: id}, model.IssueOpsTrackedMaterials{}, nil
+				return model.Record{ID: id}, model.TrackedMaterials{}, nil
 			},
-			StrictPRReadinessWithState: func(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
+			StrictPRReadinessWithState: func(root string, record model.Record) model.Readiness {
 				events = append(events, owner+":strict:"+root+":"+record.ID)
-				return model.IssueOpsReadiness{Ready: true}
+				return model.Readiness{Ready: true}
 			},
 		}
 		return runtimeRunnerForIsolation(runtime, gates)
@@ -59,7 +59,7 @@ func TestLifecycleCommandsKeepRuntimeAndActorOwnership(t *testing.T) {
 	}
 }
 
-func runtimeRunnerForIsolation(runtime IssueOpsCLIDeps, gates LoopGateDeps) func([]string) error {
+func runtimeRunnerForIsolation(runtime Deps, gates LoopGateDeps) func([]string) error {
 	return func(args []string) error {
 		return RunIssueOpsWithDependencies(args, Dependencies{Runtime: runtime, Gates: gates})
 	}

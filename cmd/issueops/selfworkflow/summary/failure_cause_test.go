@@ -11,11 +11,11 @@ import (
 )
 
 func TestSummarizeSelfVerificationAddsOrthogonalFailureCause(t *testing.T) {
-	ok := app.SummarizeSelfVerification(augmentcontract.SelfAugmentResult{OK: true}, 95)
+	ok := app.SummarizeSelfVerification(augmentcontract.Result{OK: true}, 95)
 	if ok.FailureCause != failurecause.None || ok.FailureCauseEvidence == nil {
 		t.Fatalf("success cause = %#v", ok)
 	}
-	failed := app.SummarizeSelfVerification(augmentcontract.SelfAugmentResult{Runs: []augmentcontract.SelfAugmentIteration{{Steps: []selfverify.StepResult{{Label: "probe", FailureEvidence: []failurecause.Evidence{{Cause: failurecause.Transport, Code: "framing", Source: "mcp"}}}}}}}, 95)
+	failed := app.SummarizeSelfVerification(augmentcontract.Result{Runs: []augmentcontract.Iteration{{Steps: []selfverify.StepResult{{Label: "probe", FailureEvidence: []failurecause.Evidence{{Cause: failurecause.Transport, Code: "framing", Source: "mcp"}}}}}}}, 95)
 	if failed.FailureCause != failurecause.Transport {
 		t.Fatalf("cause = %s", failed.FailureCause)
 	}

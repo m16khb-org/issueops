@@ -102,7 +102,7 @@ func TestCmuxHandoffStagesBeforeCreateAndEnrichesOneNonAuthoritativeLineage(t *t
 	if staged.LineageID != enriched.LineageID || staged.LineageID != accepted.LineageID || staged.LineageID != correlated.LineageID || enriched.Target.WorkspaceID != testWorkspace || enriched.Target.SurfaceID != testSurface {
 		t.Fatalf("lineage enrichment diverged: %+v %+v %+v", staged, enriched, accepted)
 	}
-	if accepted.InputAccepted.Evidence != issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput || accepted.NativeTurnObserved.Status != "not_observed" || accepted.OwnerClaimed.Status != "not_observed" {
+	if accepted.InputAccepted.Evidence != issueopscontract.HandoffDeliveryEvidenceRawInput || accepted.NativeTurnObserved.Status != "not_observed" || accepted.OwnerClaimed.Status != "not_observed" {
 		t.Fatalf("raw input promoted authority: %+v", accepted)
 	}
 	if correlated.Target.Process == nil || correlated.Target.Process.PID != process.PID || correlated.NativeTurnObserved.Status != "not_observed" || correlated.OwnerClaimed.Status != "not_observed" {
@@ -452,7 +452,7 @@ func TestCmuxHandoffCreateAndSendAmbiguityNeverRetries(t *testing.T) {
 				t.Fatal(readErr)
 			}
 			last := observations[len(observations)-1]
-			if last.Ambiguous.Status != "observed" || last.Ambiguous.Evidence != issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost {
+			if last.Ambiguous.Status != "observed" || last.Ambiguous.Evidence != issueopscontract.HandoffDeliveryEvidenceAcceptedResponseLost {
 				t.Fatalf("ambiguous observation=%+v", last)
 			}
 			if phase == "input_send" {
@@ -485,7 +485,7 @@ func TestCmuxHandoffNonAmbiguousMutationFailureIsNotAcceptedResponseLost(t *test
 		t.Fatal(readErr)
 	}
 	last := observations[len(observations)-1]
-	if last.Ambiguous.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved {
+	if last.Ambiguous.Status != issueopscontract.HandoffDeliveryStateNotObserved {
 		t.Fatalf("non-ambiguous failure classified as response loss: %+v", last)
 	}
 }
@@ -562,7 +562,7 @@ func TestCmuxHandoffPostCreateFailuresStayInLineageAndPreserveRecovery(t *testin
 				t.Fatal(readErr)
 			}
 			last := observations[len(observations)-1]
-			if last.Ambiguous.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved || last.Target.WorkspaceID != testWorkspace {
+			if last.Ambiguous.Status != issueopscontract.HandoffDeliveryStateNotObserved || last.Target.WorkspaceID != testWorkspace {
 				t.Fatalf("terminal observation=%+v", last)
 			}
 			for _, observation := range observations {
@@ -675,8 +675,8 @@ func cmuxCreatedFixture() cmuxcontract.CreatedWorkspace {
 	return cmuxcontract.CreatedWorkspace{Preflight: cmuxPreflightFixture(), WindowID: testWindow, WorkspaceID: testWorkspace, PaneID: testPane, SurfaceID: testSurface, CWD: "/placeholder", CreateMS: 31, ResolveMS: 8}
 }
 
-func cmuxEndpointFixture() *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation {
-	return &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
+func cmuxEndpointFixture() *issueopscontract.HandoffDeliveryEndpointIncarnation {
+	return &issueopscontract.HandoffDeliveryEndpointIncarnation{
 		Path: socketPath, Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
 		OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: filepath.Dir(socketPath), ParentDevice: 1,
 		ParentInode: 4, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,

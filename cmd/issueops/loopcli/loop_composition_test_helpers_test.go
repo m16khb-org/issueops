@@ -11,7 +11,7 @@ import (
 	loopapp "issueops/internal/application/looprun"
 )
 
-func testLoopStateRoot() string { return filepath.Join(statestore.StateDir(), "loop") }
+func testLoopStateRoot() string { return filepath.Join(statestore.Dir(), "loop") }
 func testLoopStore() loopadapter.Store {
 	return loopadapter.Store{Directory: testLoopStateRoot(), OpenDatabase: func(dir string) (loopadapter.StateDatabase, error) { return sqlstore.Open(dir) }, GetExisting: sqlstore.GetExisting, GetAllExisting: sqlstore.GetAllExisting}
 }
@@ -20,5 +20,5 @@ func testLoopIdentity() loopadapter.Identity {
 	return loopadapter.Identity{BaseDir: cwd, BaseError: err}
 }
 func testLoopService() loopapp.Service {
-	return loopapp.Service{Store: testLoopStore(), Identity: testLoopIdentity(), Clock: loopadapter.Clock{Time: time.Now}, SchemaVersion: loopadapter.LoopRunCurrentSchemaVersion}
+	return loopapp.Service{Store: testLoopStore(), Identity: testLoopIdentity(), Clock: loopadapter.Clock{Time: time.Now}, SchemaVersion: loopadapter.CurrentSchemaVersion}
 }

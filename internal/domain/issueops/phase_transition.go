@@ -6,24 +6,28 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ApplyPhaseTransition(record model.IssueOpsRecord, phase model.IssueOpsPhase, now, head, fingerprint string, completedArtifacts []string) model.IssueOpsRecord {
+// ApplyPhaseTransition moves record to phase and stamps the evidence that
+// phase needs: the ai-slop-clean time, head, and fingerprint, or the pr head.
+// It also seeds the problem entry of the phase ledger from the creation time
+// and stamps the forward transition with the completed artifacts.
+func ApplyPhaseTransition(record model.Record, phase model.Phase, now, head, fingerprint string, completedArtifacts []string) model.Record {
 	previous := record.Phase
 	record.Phase = phase
-	if phase == model.IssueOpsPhaseAISlopClean {
+	if phase == model.PhaseAISlopClean {
 		if strings.TrimSpace(record.AISlopCleanAt) == "" {
 			record.AISlopCleanAt = now
 		}
 		record.AISlopCleanHead = head
 		record.AISlopCleanFingerprint = fingerprint
 	}
-	if phase == model.IssueOpsPhasePR {
+	if phase == model.PhasePR {
 		record.PRHead = head
 	}
 	// A cycle starts in problem without a ledger entry; it was entered when the
 	// record was created, not when it is left.
-	if previous == model.IssueOpsPhaseProblem && record.PhaseLedger[previous].EnteredAt == "" && record.CreatedAt != "" {
+	if previous == model.PhaseProblem && record.PhaseLedger[previous].EnteredAt == "" && record.CreatedAt != "" {
 		if record.PhaseLedger == nil {
-			record.PhaseLedger = model.IssueOpsPhaseLedger{}
+			record.PhaseLedger = model.PhaseLedger{}
 		}
 		entry := record.PhaseLedger[previous]
 		entry.EnteredAt = record.CreatedAt

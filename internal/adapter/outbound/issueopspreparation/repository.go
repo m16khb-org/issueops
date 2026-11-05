@@ -1,3 +1,7 @@
+// Package issueopspreparation is the outbound adapter for cycle preparation:
+// it loads and commits lease records in the SQLite record store, enforces
+// canonical worktree and lease-holder exclusivity, and provisions the direct
+// Git worktree for the preparation use case.
 package issueopspreparation
 
 import (
@@ -15,7 +19,7 @@ import (
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	issueopsdomain "issueops/internal/domain/issueops"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
@@ -24,14 +28,21 @@ const (
 	holderBucket = port.LeaseHolderBucket
 )
 
+// SQLiteRepository implements the preparation repository over the shared
+// issueops record store and its lease-holder index.
 type SQLiteRepository struct {
 	store port.RecordInventoryStore
 }
 
+// NewSQLiteRepository returns a SQLiteRepository reading and writing store.
+// A nil store makes every operation fail with an "unavailable" error.
 func NewSQLiteRepository(store port.RecordInventoryStore) *SQLiteRepository {
 	return &SQLiteRepository{store: store}
 }
 
+// Load reads and decodes the lease record id into a Snapshot that keeps the
+// raw bytes for later drift checks. It fails when the record is missing or a
+// cleanup attempt is in progress.
 func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparationcontract.Snapshot, error) {
 	if repository.store == nil {
 		return preparationcontract.Snapshot{}, fmt.Errorf("preparation record store is unavailable")
@@ -52,10 +63,12 @@ func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparat
 	}
 	return preparationcontract.Snapshot{
 		Record: record, RecordRaw: append([]byte(nil), data...), ClaimTokenPath: currentClaimTokenPath(record),
-		ArtifactDir: remote.IssueArtifactDir(record.IssueURL),
+		ArtifactDir: issueopsremote.IssueArtifactDir(record.IssueURL),
 	}, nil
 }
 
+// EnsureRootUnclaimed fails when another lifecycle's record (other than
+// selfID) already claims root as its worktree or execution workspace root.
 func (repository *SQLiteRepository) EnsureRootUnclaimed(_ context.Context, selfID, root string) error {
 	if repository.store == nil {
 		return fmt.Errorf("preparation record store is unavailable")
@@ -83,6 +96,10 @@ func (repository *SQLiteRepository) EnsureActorHoldsNoLease(_ context.Context, a
 		index.LifecycleID, index.Generation, index.LifecycleID, index.Generation, index.LifecycleID)
 }
 
+// CommitDirect re-loads the record inside a store span, applies the direct
+// preparation commit, re-checks root and lease-holder exclusivity, and writes
+// the lease record and holder index atomically. The holder index row is
+// inserted with RequireAbsent, so a concurrent claim makes the commit fail.
 func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit preparationapp.DirectCommit) (preparationcontract.Result, error) {
 	if repository.store == nil {
 		return preparationcontract.Result{ID: commit.Command.ID}, fmt.Errorf("preparation record store is unavailable")
@@ -93,7 +110,7 @@ func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit pre
 		if err != nil {
 			return err
 		}
-		commit.ArtifactDir = remote.IssueArtifactDir(current.Record.IssueURL)
+		commit.ArtifactDir = issueopsremote.IssueArtifactDir(current.Record.IssueURL)
 		record, projected, err := preparationapp.ApplyDirectCommit(current.Record, commit)
 		if err != nil {
 			return err

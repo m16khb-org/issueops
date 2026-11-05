@@ -9,6 +9,9 @@ import (
 	"slices"
 )
 
+// ValidateRegressionFixture checks that a regression fixture is complete, uses valid digests, and expects a schema-drift classification
+// with canonically ordered diagnostics whose signature matches. It also requires at least two distinct confirming evidence IDs,
+// zero handler calls with unchanged state, and a final result equal to InvalidToolArgumentsResult.
 func ValidateRegressionFixture(fixture contract.RegressionFixture) error {
 	if fixture.SchemaVersion != 1 {
 		return fmt.Errorf("unsupported_regression_schema_version:%d", fixture.SchemaVersion)
@@ -63,6 +66,7 @@ func validateConfirmedEvidence(ids []string) error {
 	return nil
 }
 
+// RegressionDescriptor returns the tool descriptor named by the fixture's SourceTool, or an error when none matches.
 func RegressionDescriptor(fixture contract.RegressionFixture, descriptors []contract.ToolDescriptor) (contract.ToolDescriptor, error) {
 	for _, descriptor := range descriptors {
 		if descriptor.Name == fixture.SourceTool {
@@ -72,6 +76,8 @@ func RegressionDescriptor(fixture contract.RegressionFixture, descriptors []cont
 	return contract.ToolDescriptor{}, fmt.Errorf("source_tool_not_found:%s", fixture.SourceTool)
 }
 
+// RegressionSource finds the manifest fixture a regression fixture was captured from and returns it.
+// It fails when the identity (ID, source tool, probe tool) differs or when the descriptor's current schema hash no longer matches the recorded one.
 func RegressionSource(fixture contract.RegressionFixture, descriptor contract.ToolDescriptor, fixtures []contract.Fixture) (contract.Fixture, error) {
 	var sourceFixture *contract.Fixture
 	for index := range fixtures {
@@ -93,6 +99,8 @@ func RegressionSource(fixture contract.RegressionFixture, descriptor contract.To
 	return *sourceFixture, nil
 }
 
+// ReplayMatches reports whether a replay reproduced the fixture's expected classification, diagnostic signature,
+// handler call count, state invariance, and final result.
 func ReplayMatches(fixture contract.RegressionFixture, replay contract.ReplayResult) bool {
 	return replay.Classification == fixture.ExpectedClassification &&
 		replay.DiagnosticSignature == fixture.ExpectedDiagnosticSignature &&

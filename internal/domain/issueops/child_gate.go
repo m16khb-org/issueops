@@ -7,20 +7,25 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ChildPRGateMissing(children []model.IssueOpsChildStatusEntry) []string {
+// ChildPRGateMissing lists the children that block the parent PR gate as
+// "<reason>:<cycle id>" entries: children not done, not validated, or
+// rejected without resolution. Dropped children are ignored.
+func ChildPRGateMissing(children []model.ChildStatusEntry) []string {
 	missing := []string{}
 	for _, child := range children {
-		if key := ChildPRGateKey(child); key != "" {
+		if key := childPRGateKey(child); key != "" {
 			missing = append(missing, key+":"+child.CycleID)
 		}
 	}
 	return missing
 }
 
-func ActiveChildIDs(children []model.IssueOpsChildStatusEntry) []string {
+// ActiveChildIDs returns the sorted cycle IDs of children that are neither
+// dropped nor terminal.
+func ActiveChildIDs(children []model.ChildStatusEntry) []string {
 	ids := []string{}
 	for _, child := range children {
-		if !ChildDropped(child) && !ChildTerminal(child) {
+		if !childDropped(child) && !childTerminal(child) {
 			ids = append(ids, child.CycleID)
 		}
 	}
@@ -28,11 +33,11 @@ func ActiveChildIDs(children []model.IssueOpsChildStatusEntry) []string {
 	return ids
 }
 
-func ChildPRGateKey(entry model.IssueOpsChildStatusEntry) string {
-	if ChildDropped(entry) {
+func childPRGateKey(entry model.ChildStatusEntry) string {
+	if childDropped(entry) {
 		return ""
 	}
-	if !ChildTerminal(entry) {
+	if !childTerminal(entry) {
 		return "child_incomplete"
 	}
 	switch strings.TrimSpace(entry.ValidationVerdict) {
@@ -45,11 +50,11 @@ func ChildPRGateKey(entry model.IssueOpsChildStatusEntry) string {
 	}
 }
 
-func ChildTerminal(entry model.IssueOpsChildStatusEntry) bool {
-	return !entry.Orphaned && entry.Phase == model.IssueOpsPhaseDone
+func childTerminal(entry model.ChildStatusEntry) bool {
+	return !entry.Orphaned && entry.Phase == model.PhaseDone
 }
 
-func ChildDropped(entry model.IssueOpsChildStatusEntry) bool {
+func childDropped(entry model.ChildStatusEntry) bool {
 	return strings.TrimSpace(entry.ValidationVerdict) == "dropped" &&
 		len(strings.TrimSpace(entry.ValidationReason)) >= 10 &&
 		strings.TrimSpace(entry.ValidatedAt) != ""

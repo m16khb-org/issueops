@@ -12,21 +12,21 @@ func TestApplyPhaseTransitionObservesCleanupOnlyWhenNeeded(t *testing.T) {
 	var calls []string
 	store := cycleport.PhaseTransitionObservations{
 		Now:         func() string { calls = append(calls, "clock"); return "now" },
-		Head:        func(model.IssueOpsRecord) string { calls = append(calls, "head"); return "head" },
-		Fingerprint: func(model.IssueOpsRecord) string { calls = append(calls, "fingerprint"); return "fingerprint" },
+		Head:        func(model.Record) string { calls = append(calls, "head"); return "head" },
+		Fingerprint: func(model.Record) string { calls = append(calls, "fingerprint"); return "fingerprint" },
 	}
-	record := model.IssueOpsRecord{Phase: model.IssueOpsPhaseImplement}
-	result := ApplyPhaseTransition(store, record, model.IssueOpsPhaseAISlopClean)
+	record := model.Record{Phase: model.PhaseImplement}
+	result := applyPhaseTransition(store, record, model.PhaseAISlopClean)
 	if !reflect.DeepEqual(calls, []string{"clock", "head", "fingerprint"}) || result.AISlopCleanHead != "head" {
 		t.Fatalf("result=%+v calls=%v", result, calls)
 	}
 	calls = nil
-	result = ApplyPhaseTransition(store, record, model.IssueOpsPhaseFeedback)
+	result = applyPhaseTransition(store, record, model.PhaseFeedback)
 	if !reflect.DeepEqual(calls, []string{"clock"}) || result.AISlopCleanHead != "" || result.PRHead != "" {
 		t.Fatalf("result=%+v calls=%v", result, calls)
 	}
 	calls = nil
-	result = ApplyPhaseTransition(store, model.IssueOpsRecord{Phase: model.IssueOpsPhaseFeedback}, model.IssueOpsPhasePR)
+	result = applyPhaseTransition(store, model.Record{Phase: model.PhaseFeedback}, model.PhasePR)
 	if !reflect.DeepEqual(calls, []string{"clock", "head"}) || result.PRHead != "head" || result.AISlopCleanHead != "" {
 		t.Fatalf("pr entry must record the verified head completion checks against: result=%+v calls=%v", result, calls)
 	}

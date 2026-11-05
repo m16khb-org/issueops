@@ -19,19 +19,19 @@ func TestChildVerdictRefusesInvalidEvidenceAndNonTerminalAcceptance(t *testing.T
 	if err != nil || reason != "missing tests" || !reflect.DeepEqual(evidence, []string{"proof"}) {
 		t.Fatalf("normalization: %q %v %v", reason, evidence, err)
 	}
-	child := model.IssueOpsRecord{ID: "child", Phase: model.IssueOpsPhaseProblem, Delegation: &model.IssueOpsDelegationContract{ParentCycleID: "parent"}}
+	child := model.Record{ID: "child", Phase: model.PhaseProblem, Delegation: &model.DelegationContract{ParentCycleID: "parent"}}
 	if err := ValidateChildForVerdict(child, "parent", "accepted"); err == nil || !strings.Contains(err.Error(), "child_not_done") {
 		t.Fatalf("nonterminal: %v", err)
 	}
-	child.Phase = model.IssueOpsPhaseDone
+	child.Phase = model.PhaseDone
 	if err := ValidateChildForVerdict(child, "other", "accepted"); err == nil || !strings.Contains(err.Error(), "child_parent_mismatch") {
 		t.Fatalf("wrong parent: %v", err)
 	}
 }
 
 func TestChildVerdictPreservesParentInputAndArchivedIndexRequirement(t *testing.T) {
-	parent := model.IssueOpsRecord{ID: "parent", Repo: "repo", ChildCycles: []model.IssueOpsChildCycleRef{{CycleID: "child", Title: "original", ValidationVerdict: "rejected"}}}
-	child := model.IssueOpsRecord{ID: "child", Repo: "repo", Branch: "child-branch"}
+	parent := model.Record{ID: "parent", Repo: "repo", ChildCycles: []model.ChildCycleRef{{CycleID: "child", Title: "original", ValidationVerdict: "rejected"}}}
+	child := model.Record{ID: "child", Repo: "repo", Branch: "child-branch"}
 	updated, ref, err := ApplyChildVerdict(parent, child, "accepted", "", []string{"checked"}, "now")
 	if err != nil || ref.Title != "original" || ref.ValidationVerdict != "accepted" || ref.ValidatedAt != "now" {
 		t.Fatalf("receipt: %+v %v", ref, err)

@@ -4,6 +4,9 @@ import (
 	contract "issueops/internal/contract/qualitycatalog"
 )
 
+// ApplyPlanStatus returns a copy of catalog in which each candidate present in
+// plan takes that candidate's Status and Score. Candidates absent from plan are
+// unchanged.
 func ApplyPlanStatus(catalog []contract.Candidate, plan []contract.Candidate) []contract.Candidate {
 	candidates := append([]contract.Candidate{}, catalog...)
 	byID := make(map[string]contract.Candidate, len(plan))

@@ -10,6 +10,8 @@ import (
 // ProcessInspectorFunc adapts a function to authority.ProcessInspector.
 type ProcessInspectorFunc func(context.Context, model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error)
 
+// Inspect implements authority.ProcessInspector by delegating to f and
+// returning its result unchanged.
 func (f ProcessInspectorFunc) Inspect(ctx context.Context, receipt model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) {
 	return f(ctx, receipt)
 }

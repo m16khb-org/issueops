@@ -11,6 +11,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// ForbiddenNameHits scans the text files under root for retired project names
+// and returns at most 20 "<relative path> contains <name>" hits in sorted order.
+// Binary files, files over 2 MiB, and cache/tool directories are skipped, and
+// occurrences that are part of the current owner handle do not count.
 func ForbiddenNameHits(root string) []string {
 	var hits []string
 	var hitsMu sync.Mutex

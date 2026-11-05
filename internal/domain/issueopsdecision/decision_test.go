@@ -10,7 +10,7 @@ import (
 
 func TestBuildRejectsSecretAndOversizedFields(t *testing.T) {
 	now := time.Date(2026, 8, 11, 6, 0, 0, 0, time.UTC)
-	base := issueopscontract.IssueOpsDecisionRecordRequest{
+	base := issueopscontract.DecisionRecordRequest{
 		Kind:  "architecture",
 		Title: "Boundary",
 		Body:  "Move the decision capability.",
@@ -29,7 +29,7 @@ func TestBuildRejectsSecretAndOversizedFields(t *testing.T) {
 
 func TestBuildValidatesAndProjectsAllFields(t *testing.T) {
 	now := time.Date(2026, 8, 21, 9, 0, 0, 0, time.UTC)
-	req := issueopscontract.IssueOpsDecisionRecordRequest{
+	req := issueopscontract.DecisionRecordRequest{
 		Kind:               " implementation ",
 		Title:              "  Use sqlc  ",
 		Body:               "Generate typed queries.",
@@ -50,7 +50,7 @@ func TestBuildValidatesAndProjectsAllFields(t *testing.T) {
 		t.Fatalf("stable slices wrong: %#v", decision)
 	}
 	// nil 슬라이스는 빈 슬라이스로 정규화된다(JSON에서 null 방지).
-	minimal, err := Build(issueopscontract.IssueOpsDecisionRecordRequest{Kind: "scope", Title: "t", Body: "b"}, now)
+	minimal, err := Build(issueopscontract.DecisionRecordRequest{Kind: "scope", Title: "t", Body: "b"}, now)
 	if err != nil || minimal.Alternatives == nil || minimal.AffectedArtifacts == nil || minimal.AffectedIssueLinks == nil {
 		t.Fatalf("nil slices must normalize to empty: %#v err=%v", minimal, err)
 	}
@@ -58,16 +58,16 @@ func TestBuildValidatesAndProjectsAllFields(t *testing.T) {
 
 func TestBuildRejectsInvalidKindsArtifactsAndBodies(t *testing.T) {
 	now := time.Now()
-	base := issueopscontract.IssueOpsDecisionRecordRequest{Kind: "product", Title: "t", Body: "b"}
+	base := issueopscontract.DecisionRecordRequest{Kind: "product", Title: "t", Body: "b"}
 	cases := []struct {
 		name string
-		mut  func(*issueopscontract.IssueOpsDecisionRecordRequest)
+		mut  func(*issueopscontract.DecisionRecordRequest)
 		want string
 	}{
-		{"unknown kind", func(r *issueopscontract.IssueOpsDecisionRecordRequest) { r.Kind = "urgent" }, "invalid decision kind"},
-		{"empty title", func(r *issueopscontract.IssueOpsDecisionRecordRequest) { r.Title = "  " }, "title is required"},
-		{"oversized body", func(r *issueopscontract.IssueOpsDecisionRecordRequest) { r.Body = strings.Repeat("x", 65537) }, "64 KiB"},
-		{"invalid artifact", func(r *issueopscontract.IssueOpsDecisionRecordRequest) { r.AffectedArtifacts = []string{"diagram"} }, "invalid affected artifact"},
+		{"unknown kind", func(r *issueopscontract.DecisionRecordRequest) { r.Kind = "urgent" }, "invalid decision kind"},
+		{"empty title", func(r *issueopscontract.DecisionRecordRequest) { r.Title = "  " }, "title is required"},
+		{"oversized body", func(r *issueopscontract.DecisionRecordRequest) { r.Body = strings.Repeat("x", 65537) }, "64 KiB"},
+		{"invalid artifact", func(r *issueopscontract.DecisionRecordRequest) { r.AffectedArtifacts = []string{"diagram"} }, "invalid affected artifact"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

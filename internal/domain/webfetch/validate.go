@@ -1,3 +1,7 @@
+// Package webfetch holds the domain rules of the resilient web fetcher: URL
+// parsing and SSRF safety checks, redirect handling, response classification
+// (challenge, login wall, paywall, feed, JSON, thin content) and the offline
+// and live benchmark scoring. It performs no network or file I/O.
 package webfetch
 
 import (
@@ -15,6 +19,10 @@ import (
 
 var tagRE = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?s)<[^>]+>`) })
 
+// ValidateResponse classifies a fetched response into a category and stop
+// reason. It decodes the body, then checks the status, bot challenges, login
+// walls, paywalls, JSON, feed and HTML content in order, and returns the
+// metadata extracted along the way.
 func ValidateResponse(input webfetchcontract.ResponseValidationInput) webfetchcontract.ResponseValidation {
 	body := decodeBody(input.Header, input.Body)
 	text := strings.TrimSpace(string(body))
@@ -200,6 +208,8 @@ func TruncateContent(content string, maxChars int) string {
 	return policy.TruncateRunes(content, maxChars)
 }
 
+// HeaderValue returns the first value of the header named key, matching the
+// name case-insensitively, or "" when absent.
 func HeaderValue(header map[string][]string, key string) string {
 	for name, values := range header {
 		if strings.EqualFold(name, key) && len(values) != 0 {

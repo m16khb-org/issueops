@@ -5,6 +5,6 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
-func GuardCheck(req guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult {
+func GuardCheck(req guardcontract.CheckRequest) guardcontract.CheckResult {
 	return (guardapp.Service{Source: Source{}}).Check(req)
 }

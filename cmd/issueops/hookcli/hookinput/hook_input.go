@@ -12,10 +12,15 @@ import (
 
 var repoKeys = []string{"repo", "cwd", "workspace", "workspace_root", "project_dir"}
 
+// RepoFromHookInput returns the repository path named by the hook stdin JSON
+// (repo, cwd, workspace, workspace_root or project_dir, in that order, also
+// inside a nested hook_input), or "" when input is blank, not JSON, or names none.
 func RepoFromHookInput(input []byte) string {
 	return firstValue(input, repoKeys)
 }
 
+// AgentTypeFromHookInput returns the agent_type field of the hook stdin JSON
+// (also inside a nested hook_input), or "" when it is absent or input is not JSON.
 func AgentTypeFromHookInput(input []byte) string {
 	return firstValue(input, []string{"agent_type"})
 }

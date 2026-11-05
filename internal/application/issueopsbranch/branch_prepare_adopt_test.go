@@ -20,14 +20,14 @@ import (
 // 없다. 따라서 create-issue 쪽을 막으면 그 명령 자체가 무용해진다. 브랜치를
 // 채택할 수 있게 하는 것이 설계와 맞는 방향이다.
 func TestPrepareAdoptsBranchOntoBranchlessRecord(t *testing.T) {
-	store := newBranchPrepareTestStore(model.IssueOpsRecord{
+	store := newBranchPrepareTestStore(model.Record{
 		ID:       "io-adopt",
 		OK:       true,
 		Repo:     "/repo/example",
 		IssueURL: "https://github.com/example/repo/issues/77",
 	})
 
-	record, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt", model.IssueOpsBranchPrepareRequest{
+	record, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt", model.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/77",
 		Branch:     "77-adopt-branch",
@@ -48,13 +48,13 @@ func TestPrepareAdoptsBranchOntoBranchlessRecord(t *testing.T) {
 // 한 번 정해진 브랜치는 그 사이클의 정체성이므로 이후 다른 이름으로 바꿔
 // 쓸 수 없어야 한다.
 func TestPrepareRejectsBranchMismatchOnAdoptedRecord(t *testing.T) {
-	store := newBranchPrepareTestStore(model.IssueOpsRecord{
+	store := newBranchPrepareTestStore(model.Record{
 		ID:       "io-adopt-twice",
 		OK:       true,
 		Repo:     "/repo/example",
 		IssueURL: "https://github.com/example/repo/issues/77",
 	})
-	base := model.IssueOpsBranchPrepareRequest{
+	base := model.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/77",
 		Branch:     "77-adopt-branch",
@@ -74,12 +74,12 @@ func TestPrepareRejectsBranchMismatchOnAdoptedRecord(t *testing.T) {
 // TestPrepareRejectsAdoptionWithoutLinkedIssue는 채택이 무근거로 일어나지
 // 않는지 본다. 이슈가 없으면 브랜치 번호를 검증할 근거도 없다.
 func TestPrepareRejectsAdoptionWithoutLinkedIssue(t *testing.T) {
-	store := newBranchPrepareTestStore(model.IssueOpsRecord{
+	store := newBranchPrepareTestStore(model.Record{
 		ID:   "io-adopt-noissue",
 		OK:   true,
 		Repo: "/repo/example",
 	})
-	_, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt-noissue", model.IssueOpsBranchPrepareRequest{
+	_, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt-noissue", model.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/77",
 		Branch:     "77-adopt-branch",

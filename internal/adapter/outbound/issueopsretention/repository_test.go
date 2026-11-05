@@ -16,11 +16,11 @@ import (
 func TestRepositoryReadsListsAndDeletesRecordWithStagedArtifact(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-retention01"
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhaseDone,
+		Phase:         issueopscontract.PhaseDone,
 		UpdatedAt:     "2026-06-01T00:00:00Z",
 	}
 	data, err := issueopsrecord.Encode(record)

@@ -11,7 +11,7 @@ import (
 
 func TestServiceStagesListsAndUnstagesArtifacts(t *testing.T) {
 	repository := &fakeRepository{
-		record: issueopscontract.IssueOpsRecord{OK: true, ID: "io-artifact01"},
+		record: issueopscontract.Record{OK: true, ID: "io-artifact01"},
 		staged: map[string]string{},
 	}
 	service := NewService(repository)
@@ -56,7 +56,7 @@ func TestServiceStagesListsAndUnstagesArtifacts(t *testing.T) {
 }
 
 type fakeRepository struct {
-	record issueopscontract.IssueOpsRecord
+	record issueopscontract.Record
 	staged map[string]string
 }
 
@@ -65,13 +65,13 @@ func (repository *fakeRepository) Update(
 	_ string,
 	_ string,
 	mutate func(
-		issueopscontract.IssueOpsRecord,
+		issueopscontract.Record,
 		map[string]string,
 	) (map[string]string, error),
-) (issueopscontract.IssueOpsRecord, error) {
+) (issueopscontract.Record, error) {
 	staged, err := mutate(repository.record, cloneMap(repository.staged))
 	if err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false}, err
+		return issueopscontract.Record{OK: false}, err
 	}
 	repository.staged = staged
 	return repository.record, nil

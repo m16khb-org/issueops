@@ -38,7 +38,7 @@ func TestInspectInventoryClassifiesCycleRecordsOwningTheTarget(t *testing.T) {
 			request, snapshot := orphanRequest(), orphanSnapshot()
 			snapshot.Cycles = []operationalhealthcontract.Cycle{test.cycle}
 			result := ResultForRequest(request)
-			InspectInventory(&result, request, snapshot)
+			inspectInventory(&result, request, snapshot)
 			Finish(&result)
 			for _, code := range test.want {
 				if !slices.Contains(result.Missing, code) {
@@ -65,7 +65,7 @@ func TestInspectInventoryRejectsCanonicalTargetAndIncompleteInventory(t *testing
 	request.WorktreePath = "/repo"
 	snapshot.InventoryProblems = []operationalhealthcontract.InventoryProblem{{Source: "git", Code: "unreadable"}}
 	result := ResultForRequest(request)
-	InspectInventory(&result, request, snapshot)
+	inspectInventory(&result, request, snapshot)
 	Finish(&result)
 	for _, code := range []string{"canonical_worktree", "inventory_complete"} {
 		if !slices.Contains(result.Missing, code) {
@@ -82,7 +82,7 @@ func TestInspectInventoryRequiresExactlyOneLocalBranchRef(t *testing.T) {
 	snapshot.LocalRefs = append(snapshot.LocalRefs,
 		operationalhealthcontract.GitRef{Branch: "12-orphan", OID: orphanHead, Location: "local"})
 	result := ResultForRequest(request)
-	InspectInventory(&result, request, snapshot)
+	inspectInventory(&result, request, snapshot)
 	Finish(&result)
 	if !slices.Contains(result.Missing, "local_branch_head") {
 		t.Fatalf("duplicate local refs must be reported, missing=%v", result.Missing)
@@ -144,7 +144,7 @@ func TestInspectInventoryIgnoresRemoteRefsOfTheTargetBranch(t *testing.T) {
 	snapshot.RemoteRefs = []operationalhealthcontract.GitRef{{Branch: "12-orphan", OID: strings.Repeat("f", 40), Location: "remote"}}
 	snapshot.LocalRefs = append(snapshot.LocalRefs, operationalhealthcontract.GitRef{Branch: "12-orphan", OID: strings.Repeat("e", 40), Location: "remote"})
 	result := ResultForRequest(request)
-	InspectInventory(&result, request, snapshot)
+	inspectInventory(&result, request, snapshot)
 	Finish(&result)
 	if slices.Contains(result.Missing, "local_branch_head") {
 		t.Fatalf("remote-located refs must not count as local branch refs: %v", result.Missing)

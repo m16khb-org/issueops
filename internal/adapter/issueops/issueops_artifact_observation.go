@@ -1,41 +1,42 @@
 package issueops
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
 
 	issueopsdomain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
-// ObserveRemoteArtifact는 원격 artifact의 현재 상태를 provider CLI로 읽는다.
+// ObserveRemoteArtifact 함수는 원격 artifact의 현재 상태를 provider CLI로 읽는다.
 // replacement 증거 검증의 유일한 관측 경로다(#283).
 //
 // 읽기 전용이며 mutation 인자를 쓰지 않는다. 관측에 실패하면 오류를 돌려주고,
 // 호출부는 그것을 통과 근거로 삼지 않는다.
-func ObserveRemoteArtifact(url string) (issueopsdomain.ArtifactObservation, error) {
+func ObserveRemoteArtifact(ctx context.Context, url string) (issueopsdomain.ArtifactObservation, error) {
 	url = strings.TrimSpace(url)
 	if url == "" {
 		return issueopsdomain.ArtifactObservation{}, fmt.Errorf("artifact URL is required")
 	}
-	provider, err := remote.ProviderFromRemoteURLs([]string{url})
+	provider, err := issueopsremote.ProviderFromRemoteURLs([]string{url})
 	if err != nil {
 		return issueopsdomain.ArtifactObservation{}, fmt.Errorf("artifact URL %q has no recognizable provider host", url)
 	}
 	switch provider {
 	case "github":
-		return observeGitHubArtifact(url)
+		return observeGitHubArtifact(ctx, url)
 	case "gitlab":
-		return observeGitLabArtifact(url)
+		return observeGitLabArtifact(ctx, url)
 	default:
 		return issueopsdomain.ArtifactObservation{}, fmt.Errorf("unsupported provider %q for artifact observation", provider)
 	}
 }
 
-func observeGitHubArtifact(url string) (issueopsdomain.ArtifactObservation, error) {
-	out, err := exec.Command("gh", "pr", "view", url, "--json", "state,mergedAt,body,url").Output()
+func observeGitHubArtifact(ctx context.Context, url string) (issueopsdomain.ArtifactObservation, error) {
+	out, err := exec.CommandContext(ctx, "gh", "pr", "view", url, "--json", "state,mergedAt,body,url").Output()
 	if err != nil {
 		return issueopsdomain.ArtifactObservation{}, fmt.Errorf("gh pr view failed for %s", url)
 	}
@@ -58,8 +59,8 @@ func observeGitHubArtifact(url string) (issueopsdomain.ArtifactObservation, erro
 	}, nil
 }
 
-func observeGitLabArtifact(url string) (issueopsdomain.ArtifactObservation, error) {
-	out, err := exec.Command("glab", "mr", "view", url, "--output", "json").Output()
+func observeGitLabArtifact(ctx context.Context, url string) (issueopsdomain.ArtifactObservation, error) {
+	out, err := exec.CommandContext(ctx, "glab", "mr", "view", url, "--output", "json").Output()
 	if err != nil {
 		return issueopsdomain.ArtifactObservation{}, fmt.Errorf("glab mr view failed for %s", url)
 	}

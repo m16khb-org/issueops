@@ -25,7 +25,7 @@ const artifactStageBucket = port.ArtifactStageBucket
 // sealedArtifactDir은 레코드가 봉인 아티팩트를 두는 워크트리 상대 디렉터리다.
 // 레코드 필드만 본다 — 파일시스템 상태나 PlanPath 파싱으로 추론하지 않는다.
 // 값이 없는 레코드는 진입점에서 RequireSealedArtifactDir로 거부한다.
-func sealedArtifactDir(record issueops.IssueOpsRecord) string {
+func sealedArtifactDir(record issueops.Record) string {
 	if record.Execution == nil {
 		return ""
 	}
@@ -33,7 +33,7 @@ func sealedArtifactDir(record issueops.IssueOpsRecord) string {
 }
 
 // sealedArtifactPath는 워크트리 root 아래 봉인 아티팩트 name.md의 절대 경로다.
-func sealedArtifactPath(record issueops.IssueOpsRecord, root, name string) string {
+func sealedArtifactPath(record issueops.Record, root, name string) string {
 	return filepath.Join(root, filepath.FromSlash(sealedArtifactDir(record)), name+".md")
 }
 
@@ -43,7 +43,7 @@ type linkedPlanIdentity struct {
 	Digest string
 }
 
-func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (linkedPlanIdentity, error) {
+func readLinkedPlanIdentity(record issueops.Record) (linkedPlanIdentity, error) {
 	planPath, err := resolveLinkedPlanPath(record)
 	if err != nil {
 		return linkedPlanIdentity{}, err
@@ -60,7 +60,7 @@ func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (linkedPlanIdentity,
 }
 
 // resolveLinkedPlanPath는 기록된 plan 경로를 절대·정규화하고 캐노니컬 워크트리 안에 있는지 확인한다.
-func resolveLinkedPlanPath(record issueops.IssueOpsRecord) (string, error) {
+func resolveLinkedPlanPath(record issueops.Record) (string, error) {
 	worktree := strings.TrimSpace(record.WorktreePath)
 	planPath := strings.TrimSpace(record.PlanPath)
 	if worktree == "" || planPath == "" || strings.Contains(worktree, "\x00") || strings.Contains(planPath, "\x00") {
@@ -110,7 +110,7 @@ func readStagedArtifacts(stateRoot, id string) (map[string]string, error) {
 // 동일 내용일 때만 통과한다. generic helper는 스테이징이 없으면 빈 manifest를
 // 반환한다.
 // 기존 파일을 바꾸는 재-materialize는 immutable writer가 거부한다.
-func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord) (map[string]string, error) {
+func materializeStagedArtifacts(stateRoot string, record issueops.Record) (map[string]string, error) {
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.Root) == "" {
 		return nil, fmt.Errorf("cannot materialize artifacts without a canonical worktree")
 	}

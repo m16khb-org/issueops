@@ -48,7 +48,7 @@ func TestStructuralStatusObservesOnlyAvailableWorktreeAndRemote(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			env := &statusEnvironment{exists: tc.exists, branch: tc.branch, remotes: tc.remotes}
-			(app.StructuralStatus{Environment: env}).ForRecord(model.IssueOpsRecord{WorktreePath: tc.path}, model.IssueOpsCleanupStatusRequest{})
+			(app.StructuralStatus{Environment: env}).ForRecord(model.Record{WorktreePath: tc.path}, model.CleanupStatusRequest{})
 			if !reflect.DeepEqual(env.calls, tc.calls) {
 				t.Fatalf("observations=%v want=%v", env.calls, tc.calls)
 			}
@@ -68,7 +68,7 @@ func TestStatusServiceOnlyNormalizesSameCycleReadinessErrors(t *testing.T) {
 		{"unclassified failure", "cycle", nil, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", WorktreePath: "/repo.worktrees/cycle", Branch: "cycle", Phase: model.IssueOpsPhaseDone, IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/2", Labels: []string{"ready"}, Assignees: []string{"owner"}}}
+			record := model.Record{ID: "cycle", Repo: "/repo", WorktreePath: "/repo.worktrees/cycle", Branch: "cycle", Phase: model.PhaseDone, IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/2", Labels: []string{"ready"}, Assignees: []string{"owner"}}}
 			env := &statusEnvironment{exists: true, branch: "cycle", remotes: "origin"}
 			var calls []string
 			type requestContextKey struct{}

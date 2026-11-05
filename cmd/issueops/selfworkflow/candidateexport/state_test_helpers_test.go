@@ -11,8 +11,8 @@ import (
 // 수집하지 않으므로 여기서는 concrete를 써도 된다.
 func init() {
 	ObserveSource = verification.CandidateSource
-	StateDir = statestore.StateDir
-	StateWrite = func(key, content string) (statecontract.StateResult, error) {
+	StateDir = statestore.Dir
+	StateWrite = func(key, content string) (statecontract.Result, error) {
 		return statestore.NewService().Write(context.Background(), key, content)
 	}
 }

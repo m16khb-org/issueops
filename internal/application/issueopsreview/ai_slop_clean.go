@@ -10,8 +10,12 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func RecordAISlopCleanEvidence(store reviewport.AISlopCleanStore, stateRoot, id string, categories, verification []string) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+// RecordAISlopCleanEvidence stores the cleaned categories and verification
+// commands of the ai-slop-clean stage on record id under the record lock. The
+// write refreshes the record without a phase change when the stage was already
+// recorded and the phase is at or past ai-slop-clean; otherwise it stamps UpdatedAt.
+func RecordAISlopCleanEvidence(store reviewport.AISlopCleanStore, stateRoot, id string, categories, verification []string) (model.Record, error) {
+	var result model.Record
 	err := store.WithLock(stateRoot, id, func() error {
 		current, err := store.Read(stateRoot, id)
 		if err != nil {
@@ -32,7 +36,7 @@ func RecordAISlopCleanEvidence(store reviewport.AISlopCleanStore, stateRoot, id 
 		}
 		current.AISlopCleanCategories = cleanCategories
 		current.AISlopCleanVerification = cleanVerification
-		if strings.TrimSpace(current.AISlopCleanAt) != "" && issueopsdomain.IssueOpsPhaseRank(current.Phase) >= issueopsdomain.IssueOpsPhaseRank(model.IssueOpsPhaseAISlopClean) {
+		if strings.TrimSpace(current.AISlopCleanAt) != "" && issueopsdomain.PhaseRank(current.Phase) >= issueopsdomain.PhaseRank(model.PhaseAISlopClean) {
 			result, err = store.Refresh(stateRoot, current)
 			return err
 		}

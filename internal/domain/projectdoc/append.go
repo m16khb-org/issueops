@@ -5,9 +5,16 @@ import (
 	"strings"
 )
 
+// AppendInput is the request to append a dated record: Kind selects the record family (caution or adr, with aliases), Title and Summary describe it.
 type AppendInput struct{ Kind, Title, Summary string }
+
+// AppendPlan is the validated placement of a new record: the canonical Kind ("caution" or "adr"), the module directory under the project docs directory, and the file-name Slug derived from the title.
 type AppendPlan struct{ Kind, ModuleDir, Slug string }
 
+// PlanAppend validates input and decides where the new record belongs. It
+// folds Kind aliases ("failure", "decision", ...) to "caution" or "adr", and
+// returns an error for an unsupported kind or an empty title or summary. It
+// does no I/O; the caller writes the file.
 func PlanAppend(input AppendInput) (AppendPlan, error) {
 	kind := strings.ToLower(strings.TrimSpace(input.Kind))
 	kind = strings.ReplaceAll(kind, "_", "-")
@@ -30,10 +37,10 @@ func PlanAppend(input AppendInput) (AppendPlan, error) {
 	if kind == "adr" {
 		moduleDir = "adr"
 	}
-	return AppendPlan{Kind: kind, ModuleDir: moduleDir, Slug: RecordSlug(input.Title)}, nil
+	return AppendPlan{Kind: kind, ModuleDir: moduleDir, Slug: recordSlug(input.Title)}, nil
 }
 
-func RecordSlug(title string) string {
+func recordSlug(title string) string {
 	var builder strings.Builder
 	lastHyphen := false
 	for _, char := range strings.ToLower(strings.TrimSpace(title)) {

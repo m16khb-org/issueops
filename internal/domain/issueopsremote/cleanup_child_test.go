@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import "testing"
 

@@ -7,23 +7,32 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
+// ActiveCycleReader finds the live cycle that owns a repository or worktree
+// path. Scan lists every cycle record and CleanPath canonicalizes a path for
+// comparison; a scan failure or an empty path yields no match.
 type ActiveCycleReader struct {
-	Scan      func() ([]model.IssueOpsRecord, error)
+	Scan      func() ([]model.Record, error)
 	CleanPath func(string) string
 }
 
-func (r ActiveCycleReader) UmbrellaForChildIssue(repo, issueURL string) (model.IssueOpsRecord, bool) {
+// UmbrellaForChildIssue returns the umbrella cycle of repo that tracks
+// issueURL as a child issue, and false when issueURL is blank or none matches.
+func (r ActiveCycleReader) UmbrellaForChildIssue(repo, issueURL string) (model.Record, bool) {
 	issueURL = strings.TrimSpace(issueURL)
 	if issueURL == "" {
-		return model.IssueOpsRecord{}, false
+		return model.Record{}, false
 	}
 	return domain.SelectUmbrellaCycle(r.observe(repo, false), issueURL)
 }
 
-func (r ActiveCycleReader) ForWorkspace(workspace string) (model.IssueOpsRecord, bool) {
+// ForWorkspace returns the active cycle whose worktree is workspace.
+func (r ActiveCycleReader) ForWorkspace(workspace string) (model.Record, bool) {
 	return domain.SelectWorkspaceCycle(r.observe(workspace, true))
 }
 
+// PreparedBaseBranchForWorkspace returns the base branch sealed by branch
+// preparation for the cycle owning workspace, and false when there is no such
+// cycle or it has not been prepared.
 func (r ActiveCycleReader) PreparedBaseBranchForWorkspace(workspace string) (string, bool) {
 	record, ok := r.ForWorkspace(workspace)
 	if !ok {

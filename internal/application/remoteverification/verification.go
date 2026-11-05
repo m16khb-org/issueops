@@ -1,3 +1,6 @@
+// Package remoteverification is the application layer that verifies remote issue, pull
+// request, merge request, and child-task artifacts through a provider reader. Matching
+// rules live in the domain; provider access comes in through the Reader port.
 package remoteverification
 
 import (
@@ -13,10 +16,15 @@ import (
 // Service binds each caller to its provider reader; no process-global callbacks.
 type Service struct{ Reader verificationport.Reader }
 
-func (s Service) Verify(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+// Verify checks the remote artifact in req with a background context. See VerifyContext.
+func (s Service) Verify(req issueopscontract.RemoteArtifactVerificationRequest) error {
 	return s.VerifyContext(context.Background(), req)
 }
-func (s Service) VerifyContext(ctx context.Context, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+
+// VerifyContext reads the artifact named by req from its provider within a 30 second
+// timeout and validates its URL, labels, and assignees. A nil ctx is treated as
+// context.Background.
+func (s Service) VerifyContext(ctx context.Context, req issueopscontract.RemoteArtifactVerificationRequest) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -35,18 +43,23 @@ func (s Service) VerifyContext(ctx context.Context, req issueopscontract.IssueOp
 	}
 	return rules.ValidateArtifact(req.URL, req.Labels, req.Assignees, artifact)
 }
-func (s Service) mergedArtifact(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) (model.Artifact, error) {
+func (s Service) mergedArtifact(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) (model.Artifact, error) {
 	target, err := rules.ArtifactTarget(artifact.Provider, artifact.Kind, artifact.URL, true)
 	if err != nil {
 		return model.Artifact{}, err
 	}
 	return s.Reader.Artifact(ctx, target)
 }
-func (s Service) Merged(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) error {
+
+// Merged returns nil only when the live remote artifact is confirmed merged.
+func (s Service) Merged(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) error {
 	_, err := s.MergedHead(ctx, artifact)
 	return err
 }
-func (s Service) MergedHead(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
+
+// MergedHead returns the live head and base refs of the remote artifact, trimmed of
+// whitespace, and fails unless the artifact is confirmed merged.
+func (s Service) MergedHead(ctx context.Context, artifact issueopscontract.RemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 	live, err := s.mergedArtifact(ctx, artifact)
 	if err != nil {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{}, err
@@ -57,21 +70,28 @@ func (s Service) MergedHead(ctx context.Context, artifact issueopscontract.Issue
 	return issueopscontract.CleanupRemoteBranchArtifactHead{HeadRefName: strings.TrimSpace(live.HeadRefName), HeadRefOID: strings.TrimSpace(live.HeadRefOID), BaseRefName: strings.TrimSpace(live.BaseRefName)}, nil
 }
 
-// A failed observation must not be interpreted as an unmerged artifact.
-func (s Service) ObserveMerged(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error) {
+// ObserveMerged reports whether the live remote artifact is merged. A failed observation
+// returns an error and must not be interpreted as an unmerged artifact.
+func (s Service) ObserveMerged(artifact issueopscontract.RemoteArtifactVerification) (bool, error) {
 	live, err := s.mergedArtifact(context.Background(), artifact)
 	if err != nil {
 		return false, err
 	}
 	return live.Merged, nil
 }
-func (s Service) ObserveTarget(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (string, error) {
+
+// ObserveTarget returns the trimmed base ref name of the live remote artifact.
+func (s Service) ObserveTarget(artifact issueopscontract.RemoteArtifactVerification) (string, error) {
 	live, err := s.mergedArtifact(context.Background(), artifact)
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(live.BaseRefName), nil
 }
+
+// Child verifies that the child task at childURL exists on its provider. GitLab work
+// items fall back to the issue API and are additionally validated as tasks; unknown
+// providers are accepted without a remote call.
 func (s Service) Child(childURL string) error {
 	target, err := rules.ChildTarget(childURL)
 	if err != nil {

@@ -1,3 +1,7 @@
+// Package webfetch is the web fetch use case: it fetches a public URL through a
+// validated redirect chain, classifies the response, and runs the offline and
+// live benchmarks over that fetch. It is an application-layer package that
+// reaches the network through ports.
 package webfetch
 
 import (
@@ -14,6 +18,9 @@ import (
 
 const maxRedirects = 8
 
+// Dependencies are the collaborators Fetch needs. HTTPClient and URLPolicy are
+// required; Now, RetryAfter, and Sleep are optional overrides for time and
+// rate-limit handling.
 type Dependencies struct {
 	HTTPClient webfetchport.HTTPClient
 	URLPolicy  webfetchport.URLPolicy
@@ -22,6 +29,11 @@ type Dependencies struct {
 	Sleep      func(context.Context, time.Duration)
 }
 
+// Fetch retrieves request.URL over direct HTTP. Every hop is checked by the URL
+// policy, at most 8 redirects are followed, and one Retry-After retry is allowed.
+// Policy rejections, redirect loops, and request failures come back as a
+// classified Result, not an error; the error is returned only when the required
+// dependencies are missing.
 func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies Dependencies) (webfetchcontract.Result, error) {
 	started := time.Now()
 	now := fetchNow(started, dependencies)
@@ -39,8 +51,8 @@ func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies D
 		result.StopReason = webfetchcontract.StopReasonSafetyRejected
 		result.GridExhausted = true
 		result.Warnings = append(result.Warnings, err.Error())
-		result.UntriedRoutes = SkippedRoutes("safety_rejected")
-		return FinalizeResult(result, request.MaxChars, started), nil
+		result.UntriedRoutes = skippedRoutes("safety_rejected")
+		return finalizeResult(result, request.MaxChars, started), nil
 	}
 	result.FinalURL = webfetchdomain.SanitizeURL(current)
 	result.AttemptedRoutes = append(result.AttemptedRoutes, webfetchcontract.RouteRecord{ID: "direct_http", Status: "attempted"})
@@ -92,7 +104,7 @@ func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies D
 			continue
 		}
 		result = applyValidation(result, validation, retriedAfter)
-		return FinalizeResult(result, request.MaxChars, started), nil
+		return finalizeResult(result, request.MaxChars, started), nil
 	}
 	return stopped(result, request.MaxChars, started, webfetchcontract.CategoryUnknown, webfetchcontract.StopReasonRedirectLoop, "redirect_loop"), nil
 }
@@ -172,10 +184,10 @@ func applyValidation(result webfetchcontract.Result, validation webfetchcontract
 	result.OK = validation.Category == webfetchcontract.CategoryStrongOK || validation.Category == webfetchcontract.CategoryWeakOK || validation.Category == webfetchcontract.CategoryPaywalled
 	if validation.StopReason == webfetchcontract.StopReasonAccepted {
 		result.GridExhausted = false
-		result.UntriedRoutes = SkippedRoutes("not_needed_after_success")
+		result.UntriedRoutes = skippedRoutes("not_needed_after_success")
 	} else {
 		result.GridExhausted = true
-		result.UntriedRoutes = SkippedRoutes(validation.Category)
+		result.UntriedRoutes = skippedRoutes(validation.Category)
 	}
 	return result
 }
@@ -184,8 +196,8 @@ func stopped(result webfetchcontract.Result, maxChars int, started time.Time, ca
 	result.Category = category
 	result.StopReason = reason
 	result.GridExhausted = true
-	result.UntriedRoutes = SkippedRoutes(skippedReason)
-	return FinalizeResult(result, maxChars, started)
+	result.UntriedRoutes = skippedRoutes(skippedReason)
+	return finalizeResult(result, maxChars, started)
 }
 
 func serviceRetryDelay(ctx context.Context, dependencies Dependencies, value string) {

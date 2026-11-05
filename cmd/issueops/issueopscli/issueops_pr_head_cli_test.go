@@ -14,7 +14,7 @@ import (
 func TestCLIIssueOpsPRReentryResealsPRHeadOnlyAfterTheStrictGate(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIGitRepoForRemoteVerifyTest(t)
-	started, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "75-remote-verify-cli"})
+	started, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: repo, Branch: "75-remote-verify-cli"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestCLIIssueOpsPRReentryResealsPRHeadOnlyAfterTheStrictGate(t *testing.T) {
 			t.Fatalf("git %v failed: %s", args, stderr)
 		}
 	}
-	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), started.ID, string(issueopscontract.IssueOpsPhasePR), actor); err == nil || !strings.Contains(err.Error(), "cannot enter pr phase") {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), started.ID, string(issueopscontract.PhasePR), actor); err == nil || !strings.Contains(err.Error(), "cannot enter pr phase") {
 		t.Fatalf("reseal with stale seals must be refused, err=%v", err)
 	}
 	stored, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), started.ID)
@@ -43,16 +43,16 @@ func TestCLIIssueOpsPRReentryResealsPRHeadOnlyAfterTheStrictGate(t *testing.T) {
 		t.Fatalf("refused reseal moved pr_head to %q (err=%v), want %q", stored.PRHead, err, sealed)
 	}
 
-	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), started.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), started.ID, string(issueopscontract.PhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, started.ID)
 	recordIssueOpsCoreImplementationReviewForCLITest(t, started.ID)
-	resealed, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), started.ID, string(issueopscontract.IssueOpsPhasePR), actor)
+	resealed, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), started.ID, string(issueopscontract.PhasePR), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resealed.Phase != issueopscontract.IssueOpsPhasePR || resealed.PRHead != head() || resealed.PRHead == sealed {
+	if resealed.Phase != issueopscontract.PhasePR || resealed.PRHead != head() || resealed.PRHead == sealed {
 		t.Fatalf("reseal pr_head = %q phase=%s, want new HEAD %q", resealed.PRHead, resealed.Phase, head())
 	}
 }

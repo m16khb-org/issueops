@@ -232,7 +232,7 @@ func TestPlanHostSkillLinksPrunesOnlyStaleHarnessOwnedLinks(t *testing.T) {
 }
 
 func TestPruneStaleSkillLinksToleratesMissingDestRoot(t *testing.T) {
-	links, errs := PruneStaleSkillLinks(t.TempDir(), filepath.Join(t.TempDir(), "absent"), false)
+	links, errs := pruneStaleSkillLinks(t.TempDir(), filepath.Join(t.TempDir(), "absent"), false)
 	if len(links) != 0 || len(errs) != 0 {
 		t.Fatalf("missing dest root must be a no-op, got links=%+v errs=%v", links, errs)
 	}

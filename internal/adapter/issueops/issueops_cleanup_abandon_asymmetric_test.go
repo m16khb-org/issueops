@@ -26,7 +26,7 @@ func TestCleanupAbandonClearsAsymmetricResidue(t *testing.T) {
 	t.Run("branch only", func(t *testing.T) {
 		stateRoot, record := abandonTestRecord(t)
 		absent := filepath.Join(t.TempDir(), "reclaimed-worktree")
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 			rec.Execution = abandonExecution(rec.Repo, absent, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 			rec.WorktreePath = absent
 		})
@@ -50,7 +50,7 @@ func TestCleanupAbandonClearsAsymmetricResidue(t *testing.T) {
 		if err := os.MkdirAll(root, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 			rec.WorktreePath = root
 		})
@@ -77,7 +77,7 @@ func TestCleanupAbandonStillGatesEachAxisOnItsOwnEvidence(t *testing.T) {
 		if err := os.MkdirAll(root, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 		})
 		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""),
@@ -93,7 +93,7 @@ func TestCleanupAbandonStillGatesEachAxisOnItsOwnEvidence(t *testing.T) {
 		if err := os.MkdirAll(root, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
+		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 			rec.WorktreePath = root
 		})

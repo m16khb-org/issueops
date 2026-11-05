@@ -9,6 +9,8 @@ import (
 	domain "issueops/internal/domain/webfetch"
 )
 
+// Benchmark runs the web fetch benchmark. Its function fields supply the fetcher,
+// fixtures, fixture runner, and comparator so the use case stays free of I/O.
 type Benchmark struct {
 	Fetch           func(context.Context, webfetchcontract.Request) (webfetchcontract.Result, error)
 	Fixtures        func() []webfetchcontract.BenchmarkFixture
@@ -18,6 +20,10 @@ type Benchmark struct {
 	Now             func() time.Time
 }
 
+// Run executes the benchmark and returns its scored result. Live requests are
+// compared against the live comparator; otherwise each fixture (req.Fixtures, or
+// the built-in set when empty) runs offline. Per-fixture failures are recorded as
+// hard failures in the result rather than returned as errors.
 func (service Benchmark) Run(ctx context.Context, req webfetchcontract.BenchmarkRequest) (webfetchcontract.BenchmarkResult, error) {
 	if req.Live {
 		return service.runLiveBenchmark(ctx, req)

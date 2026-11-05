@@ -61,7 +61,7 @@ func TestRunPublicationReconcilePreservesCLITextProjection(t *testing.T) {
 	}
 }
 
-func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.IssueOpsRecord, issueopscontract.NativeProcessReceipt) {
+func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.Record, issueopscontract.NativeProcessReceipt) {
 	t.Helper()
 	ancestry, err := issueops.ObserveNativeProcessAncestry(os.Getpid())
 	if err != nil {
@@ -79,10 +79,10 @@ func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.Issue
 	}
 	stateRoot, repo, worktree := t.TempDir(), t.TempDir(), t.TempDir()
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "publication-cli-session", SessionProcess: &receipt}
-	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	record := issueopscontract.Record{
+		OK: true, SchemaVersion: issueopscontract.SchemaVersion,
 		ID: (issueops.CycleStartIdentity{}).StableID(repo, "195-publication-cli"), Repo: repo, Branch: "195-publication-cli",
-		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
+		Phase: issueopscontract.PhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{
 			Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: "195-publication-cli", BaseHead: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", LinkedAt: "2026-08-01T00:00:00Z"},
 			Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: "2026-08-01T00:00:00Z"},

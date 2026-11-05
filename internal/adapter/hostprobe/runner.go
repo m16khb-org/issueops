@@ -1,3 +1,6 @@
+// Package hostprobe runs capture-only MCP probe episodes against installed agent hosts (claude, codex, omo, omp, opencode).
+// Each runner isolates the host in a private root, launches it with a stdio MCP server, and turns the observed tool call
+// into a port.HostProbeResult. It is an outbound adapter for port.HostProbeRunner.
 package hostprobe
 
 import (
@@ -25,16 +28,19 @@ import (
 )
 
 const (
-	MaxOutputBytes              = 64 << 10
-	EpisodeTimeout              = 5 * time.Minute
-	VersionTimeout              = 10 * time.Second
+	maxOutputBytes              = 64 << 10
+	episodeTimeout              = 5 * time.Minute
+	versionTimeout              = 10 * time.Second
 	processTerminationGrace     = 250 * time.Millisecond
 	processTerminationHardLimit = 2 * time.Second
 )
 
 var errPrivateRootCleanup = errors.New("private_root_cleanup_failed")
 
-type CommandRequest struct {
+// errEvidenceFileTooLarge reports an evidence file above maxOutputBytes.
+var errEvidenceFileTooLarge = errors.New("evidence_file_too_large")
+
+type commandRequest struct {
 	Cwd      string
 	Argv     []string
 	Env      []string
@@ -44,6 +50,8 @@ type CommandRequest struct {
 	Stdin string
 }
 
+// CommandOutput is the captured result of a host command: stdout and stderr limited to a fixed byte cap, the exit code,
+// and flags saying whether either stream was truncated.
 type CommandOutput struct {
 	Stdout          []byte
 	Stderr          []byte
@@ -52,12 +60,14 @@ type CommandOutput struct {
 	StderrTruncated bool
 }
 
-type CommandRunner interface {
-	Run(context.Context, CommandRequest) (CommandOutput, error)
+type commandRunner interface {
+	Run(context.Context, commandRequest) (CommandOutput, error)
 }
 
+// Dependencies are the process, clock, filesystem, environment, and server seams a runner uses.
+// Tests inject fakes; nil members default to the real implementations.
 type Dependencies struct {
-	Process   CommandRunner
+	Process   commandRunner
 	LookPath  func(string) (string, error)
 	Now       func() time.Time
 	TempDir   func(string, string) (string, error)
@@ -65,11 +75,11 @@ type Dependencies struct {
 	Getenv    func(string) string
 	Environ   func() []string
 	// StartServer and HTTPGet drive a host's private background server.
-	StartServer func(context.Context, ServerRequest) (ServerProcess, error)
+	StartServer func(context.Context, serverRequest) (serverProcess, error)
 	HTTPGet     func(ctx context.Context, url, user, password string) (int, []byte, error)
 }
 
-type ExecRunner struct{}
+type execRunner struct{}
 
 type boundedBuffer struct {
 	bytes.Buffer
@@ -92,13 +102,13 @@ func (b *boundedBuffer) Write(value []byte) (int, error) {
 	return written, err
 }
 
-func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutput, error) {
+func (execRunner) Run(ctx context.Context, request commandRequest) (CommandOutput, error) {
 	if len(request.Argv) == 0 {
 		return CommandOutput{}, fmt.Errorf("empty_argv")
 	}
 	timeout := request.Timeout
 	if timeout <= 0 {
-		timeout = EpisodeTimeout
+		timeout = episodeTimeout
 	}
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -111,8 +121,8 @@ func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutpu
 	if request.Stdin != "" {
 		cmd.Stdin = strings.NewReader(request.Stdin)
 	}
-	stdout := &boundedBuffer{limit: MaxOutputBytes}
-	stderr := &boundedBuffer{limit: MaxOutputBytes}
+	stdout := &boundedBuffer{limit: maxOutputBytes}
+	stderr := &boundedBuffer{limit: maxOutputBytes}
 	// Hide bytes.Buffer.ReadFrom: io.Copy must use the bounded Write method.
 	cmd.Stdout = struct{ io.Writer }{stdout}
 	cmd.Stderr = struct{ io.Writer }{stderr}
@@ -188,7 +198,7 @@ func commandOutcomeError(runCtx context.Context, out CommandOutput, waitErr erro
 
 func normalizeDependencies(deps Dependencies) Dependencies {
 	if deps.Process == nil {
-		deps.Process = ExecRunner{}
+		deps.Process = execRunner{}
 	}
 	if deps.LookPath == nil {
 		deps.LookPath = exec.LookPath
@@ -227,7 +237,7 @@ func preflight(ctx context.Context, deps Dependencies, host, executable string, 
 		return result
 	}
 	result.Installed = true
-	output, err := deps.Process.Run(ctx, CommandRequest{Argv: []string{path, "--version"}, Env: env, Timeout: VersionTimeout})
+	output, err := deps.Process.Run(ctx, commandRequest{Argv: []string{path, "--version"}, Env: env, Timeout: versionTimeout})
 	if err != nil {
 		result.Cause = "harness_environment"
 		result.Code = "version_probe_failed"
@@ -315,7 +325,7 @@ func readEpisodeCapture(resultPath string) (episodeCapture, error) {
 		if errors.Is(err, fs.ErrNotExist) {
 			return episodeCapture{}, fmt.Errorf("probe_result_missing")
 		}
-		if err.Error() == "evidence_file_too_large" {
+		if errors.Is(err, errEvidenceFileTooLarge) {
 			return episodeCapture{}, fmt.Errorf("probe_result_too_large")
 		}
 		return episodeCapture{}, fmt.Errorf("probe_result_read_failed")
@@ -362,7 +372,7 @@ func applyMultipleCallMarker(resultPath string, capture *episodeCapture) error {
 		capture.CanonicalValid = false
 		capture.Diagnostics = []toolconformancecontract.Diagnostic{}
 	} else if !errors.Is(markerErr, fs.ErrNotExist) {
-		if markerErr.Error() == "evidence_file_too_large" {
+		if errors.Is(markerErr, errEvidenceFileTooLarge) {
 			return fmt.Errorf("multiple_call_marker_too_large")
 		}
 		return fmt.Errorf("multiple_call_marker_read_failed")
@@ -376,12 +386,12 @@ func readBoundedEvidenceFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, MaxOutputBytes+1))
+	data, err := io.ReadAll(io.LimitReader(file, maxOutputBytes+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(data) > MaxOutputBytes {
-		return nil, fmt.Errorf("evidence_file_too_large")
+	if len(data) > maxOutputBytes {
+		return nil, errEvidenceFileTooLarge
 	}
 	return data, nil
 }

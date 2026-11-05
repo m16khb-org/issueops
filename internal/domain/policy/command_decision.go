@@ -27,12 +27,17 @@ type CommandFacts struct {
 	Warnings         []string
 }
 
+// CommandDecision is the outcome of EvaluateCommandDecision: whether the command
+// is allowed, plus the sorted, de-duplicated deny reasons and warnings.
 type CommandDecision struct {
 	Allowed     bool
 	DenyReasons []string
 	Warnings    []string
 }
 
+// EvaluateCommandDecision applies the command policy to req using the observed
+// facts. Allowed is true only when no deny reason remains; DenyReasons and
+// Warnings are sorted and de-duplicated. It performs no I/O.
 func EvaluateCommandDecision(req policycontract.CommandPolicyRequest, facts CommandFacts) CommandDecision {
 	denies := []string{}
 	warnings := append([]string{}, facts.Warnings...)
@@ -84,7 +89,7 @@ func timeoutDenies(facts CommandFacts) []string {
 func argumentDenies(req policycontract.CommandPolicyRequest) []string {
 	var denies []string
 	for _, envName := range req.EnvAllowlist {
-		if !ValidEnvName(envName) {
+		if !validEnvName(envName) {
 			denies = append(denies, "invalid_env_allowlist_name")
 			break
 		}

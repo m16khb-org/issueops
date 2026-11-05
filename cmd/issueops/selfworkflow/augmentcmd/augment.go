@@ -1,3 +1,6 @@
+// Package augmentcmd implements the `issueops self-augment` command: it plans
+// improvement cycles, optionally saves the plan, and routes the lesson, verify,
+// history, compare, and promote subcommands to their runners.
 package augmentcmd
 
 import (
@@ -12,17 +15,23 @@ import (
 	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
+// Deps injects the planning, persistence, and output behavior of Run. Nil
+// fields fall back to defaults that either write to stdout or fail with a
+// "dependency is required" error.
 type Deps struct {
 	Output              io.Writer
 	RunLesson           func([]string) error
 	RunVerify           func([]string) error
-	Plan                func(augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult
-	SavePlan            func(*augmentcontract.SelfAugmentPlanResult, string) error
+	Plan                func(augmentcontract.PlanRequest) augmentcontract.PlanResult
+	SavePlan            func(*augmentcontract.PlanResult, string) error
 	PrintJSON           func(any) error
-	SelectedCandidateID func(*augmentcontract.SelfAugmentCandidate) string
+	SelectedCandidateID func(*augmentcontract.Candidate) string
 	DefaultTargetScore  float64
 }
 
+// Run executes `issueops self-augment`. The lesson, verify, history, compare,
+// and promote subcommands are forwarded to their runners; otherwise it plans
+// --cycles cycles against --target-score, optionally saving with --save-state.
 func Run(args []string, deps Deps) error {
 	deps = deps.withDefaults()
 	if len(args) > 0 {
@@ -50,7 +59,7 @@ func Run(args []string, deps Deps) error {
 	if *targetScore < 0 || *targetScore >= 100 {
 		return fmt.Errorf("target-score must be >= 0 and < 100")
 	}
-	result, err := app.PlanAndSave(augmentcontract.SelfAugmentPlanRequest{Cycles: *cycles, TargetScore: *targetScore}, *saveState, *stateKey, app.PlanAndSaveDeps{Plan: deps.Plan, Save: deps.SavePlan})
+	result, err := app.PlanAndSave(augmentcontract.PlanRequest{Cycles: *cycles, TargetScore: *targetScore}, *saveState, *stateKey, app.PlanAndSaveDeps{Plan: deps.Plan, Save: deps.SavePlan})
 	if err != nil {
 		return err
 	}
@@ -61,7 +70,7 @@ func Run(args []string, deps Deps) error {
 	return nil
 }
 
-func printPlanText(deps Deps, result augmentcontract.SelfAugmentPlanResult) {
+func printPlanText(deps Deps, result augmentcontract.PlanResult) {
 	_, _ = fmt.Fprintf(deps.Output, "%s plan: %d candidate(s), selected=%s, termination_eligible=%v\n", result.KoreanName, len(result.Candidates), deps.SelectedCandidateID(result.SelectedCandidate), result.TerminationEligible)
 	for _, goal := range result.Goals {
 		_, _ = fmt.Fprintf(deps.Output, "- %s score=%.1f target>%.1f passed=%v\n", goal.KoreanName, goal.Score, goal.TargetScore, goal.Passed)
@@ -86,12 +95,12 @@ func (deps Deps) withDefaults() Deps {
 		}
 	}
 	if deps.Plan == nil {
-		deps.Plan = func(augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult {
-			return augmentcontract.SelfAugmentPlanResult{OK: false}
+		deps.Plan = func(augmentcontract.PlanRequest) augmentcontract.PlanResult {
+			return augmentcontract.PlanResult{OK: false}
 		}
 	}
 	if deps.SavePlan == nil {
-		deps.SavePlan = func(*augmentcontract.SelfAugmentPlanResult, string) error {
+		deps.SavePlan = func(*augmentcontract.PlanResult, string) error {
 			return fmt.Errorf("self-augment state dependency is required")
 		}
 	}

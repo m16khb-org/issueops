@@ -14,25 +14,25 @@ func TestAdvanceStampsPhaseLedgerOnTransition(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-stamp"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "1-stamp"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
 	id := rec.ID
 	recordIssueOpsIntentForTest(t, stateRoot, id)
 
-	grilled, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhaseGrill))
+	grilled, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.PhaseGrill))
 	if err != nil {
 		t.Fatalf("advance to grill: %v", err)
 	}
-	problemEntry, ok := grilled.PhaseLedger[issueops.IssueOpsPhaseProblem]
+	problemEntry, ok := grilled.PhaseLedger[issueops.PhaseProblem]
 	if !ok || problemEntry.CompletedAt == "" {
 		t.Fatalf("leaving problem should stamp its completion: %#v", grilled.PhaseLedger)
 	}
 	if len(problemEntry.Artifacts) == 0 {
 		t.Fatalf("completed problem entry should record artifacts: %#v", problemEntry)
 	}
-	grillEntry, ok := grilled.PhaseLedger[issueops.IssueOpsPhaseGrill]
+	grillEntry, ok := grilled.PhaseLedger[issueops.PhaseGrill]
 	if !ok || grillEntry.EnteredAt == "" {
 		t.Fatalf("entering grill should stamp entered_at: %#v", grilled.PhaseLedger)
 	}

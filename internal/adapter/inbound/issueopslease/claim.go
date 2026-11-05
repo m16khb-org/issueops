@@ -11,14 +11,16 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-type ClaimHandler struct{ service *leaseapp.ClaimService }
+type claimHandler struct{ service *leaseapp.ClaimService }
 
+// NewClaimHandler adapts service to an execution claim handler. The handler
+// fails with ErrClaimHandlerUnavailable when service is nil.
 func NewClaimHandler(service *leaseapp.ClaimService) issueopscontract.ExecutionClaimHandler {
-	handler := ClaimHandler{service: service}
+	handler := claimHandler{service: service}
 	return handler.Handle
 }
 
-func (h ClaimHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
+func (h claimHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
 	if h.service == nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, issueopscontract.ErrClaimHandlerUnavailable
 	}

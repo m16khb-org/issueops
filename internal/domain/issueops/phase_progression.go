@@ -6,11 +6,14 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func ValidatePhaseProgression(from, to issueopscontract.IssueOpsPhase) error {
-	if from == issueopscontract.IssueOpsPhaseDone {
+// ValidatePhaseProgression rejects a move out of the done phase and any move
+// to an earlier phase. Staying in or moving past the current phase is
+// allowed.
+func ValidatePhaseProgression(from, to issueopscontract.Phase) error {
+	if from == issueopscontract.PhaseDone {
 		return fmt.Errorf("cannot leave done phase")
 	}
-	if IssueOpsPhaseRank(to) < IssueOpsPhaseRank(from) {
+	if PhaseRank(to) < PhaseRank(from) {
 		return fmt.Errorf("cannot move issueops phase backward from %s to %s", from, to)
 	}
 	return nil

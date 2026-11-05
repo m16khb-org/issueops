@@ -1,10 +1,16 @@
+// Package update is the application service behind `issueops update`: it turns
+// update options into installer arguments and cleans up stale MCP proxy
+// processes. Process and filesystem effects stay behind the installer and
+// MCPProxyEffects ports.
 package update
 
-// Installer owns the host process and filesystem boundary for a binary update.
-type Installer interface {
+// installer owns the host process and filesystem boundary for a binary update.
+type installer interface {
 	Install(root string, args []string) error
 }
 
+// Options are the user-selected switches of an update run. Each set switch is
+// forwarded to the installer as the matching command-line flag.
 type Options struct {
 	Root         string
 	ProjectLocal bool
@@ -16,10 +22,13 @@ type Options struct {
 	MCPTransport string
 }
 
+// Service runs binary updates through its Installer.
 type Service struct {
-	Installer Installer
+	Installer installer
 }
 
+// Run translates options into installer flags and invokes the installer for
+// options.Root. It returns the installer's error unchanged.
 func (service Service) Run(options Options) error {
 	args := make([]string, 0, 7)
 	if options.ProjectLocal {

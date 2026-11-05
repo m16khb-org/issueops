@@ -10,6 +10,7 @@ import (
 	"issueops/cmd/issueops/jsonout"
 )
 
+// RunEnqueue runs `worker enqueue`: it queues a job of the given kind and redacted payload.
 func (command Command) RunEnqueue(args []string) error {
 	fs := flag.NewFlagSet("worker enqueue", flag.ContinueOnError)
 	kind := fs.String("kind", "", "job kind")
@@ -28,6 +29,7 @@ func (command Command) RunEnqueue(args []string) error {
 	return err
 }
 
+// RunStatus runs `worker status`: it prints the status of the job with the given ID.
 func (command Command) RunStatus(args []string) error {
 	fs := flag.NewFlagSet("worker status", flag.ContinueOnError)
 	id := fs.String("id", "", "job id")
@@ -45,6 +47,7 @@ func (command Command) RunStatus(args []string) error {
 	return err
 }
 
+// RunList runs `worker list`: it prints every known worker job.
 func (command Command) RunList(args []string) error {
 	fs := flag.NewFlagSet("worker list", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -63,6 +66,7 @@ func (command Command) RunList(args []string) error {
 	return err
 }
 
+// RunCleanupStuck runs `worker cleanup-stuck`: it detects stuck jobs and prints them.
 func (command Command) RunCleanupStuck(args []string) error {
 	fs := flag.NewFlagSet("worker cleanup-stuck", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -81,6 +85,7 @@ func (command Command) RunCleanupStuck(args []string) error {
 	return err
 }
 
+// RunCancel runs `worker cancel`: it cancels the queued job with the given ID.
 func (command Command) RunCancel(args []string) error {
 	fs := flag.NewFlagSet("worker cancel", flag.ContinueOnError)
 	id := fs.String("id", "", "job id")

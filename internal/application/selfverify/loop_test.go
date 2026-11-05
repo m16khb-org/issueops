@@ -49,11 +49,11 @@ func TestExecuteLoopTempWorkspaceFailurePreservesFailureResult(t *testing.T) {
 		FailedStep: func(label string, err error) selfverifycontract.StepResult {
 			return selfverifycontract.StepResult{Label: label, Error: err.Error()}
 		},
-		Summarize: func(result selfaugmentcontract.SelfAugmentResult, target float64) selfaugmentcontract.SelfAugmentSummary {
+		Summarize: func(result selfaugmentcontract.Result, target float64) selfaugmentcontract.Summary {
 			if len(result.Runs) != 1 || len(result.Runs[0].Steps) != 1 || target != 95 {
 				t.Fatalf("summary input=%+v target=%v", result, target)
 			}
-			return selfaugmentcontract.SelfAugmentSummary{FailedSteps: 1}
+			return selfaugmentcontract.Summary{FailedSteps: 1}
 		},
 	})
 	if !errors.Is(err, wantErr) || result.OK || result.Summary.FailedSteps != 1 {
@@ -69,7 +69,7 @@ func TestExecuteLoopForwardsScopeAndKeepsScopeFailureNonPassing(t *testing.T) {
 	deps := LoopDeps{
 		IssueOpsRoot: func() string { return "/repo" }, Now: time.Now,
 		MkdirTemp: func() (string, error) { return "/temp", nil }, RemoveAll: func(string) error { return nil }, TempBinaryPath: func(string) string { return "/temp/issueops" },
-		StepDeps: SelfVerifyStepDeps{
+		StepDeps: StepDeps{
 			ValidateHarnessInvariants: func(string) selfverifycontract.StepResult { return selfverifycontract.StepResult{OK: true} },
 			ValidateGoFormat:          func(string) selfverifycontract.StepResult { return selfverifycontract.StepResult{OK: true} },
 			RunCommandStep: func(string, string, time.Duration, string, string, ...string) selfverifycontract.StepResult {
@@ -84,8 +84,8 @@ func TestExecuteLoopForwardsScopeAndKeepsScopeFailureNonPassing(t *testing.T) {
 				return RiskQAEvidence{Step: selfverifycontract.StepResult{Label: "risk QA tier", Error: "base unavailable"}, CoversFullGoTest: false}
 			},
 		},
-		Summarize: func(selfaugmentcontract.SelfAugmentResult, float64) selfaugmentcontract.SelfAugmentSummary {
-			return selfaugmentcontract.SelfAugmentSummary{FailedSteps: 1}
+		Summarize: func(selfaugmentcontract.Result, float64) selfaugmentcontract.Summary {
+			return selfaugmentcontract.Summary{FailedSteps: 1}
 		},
 	}
 	result, err := ExecuteLoop(LoopRequest{BaseRef: "sealed-base", TargetScore: 95}, deps)
@@ -99,12 +99,12 @@ func TestExecuteLoopReportsOneBasedStepProgressUntilFirstFailure(t *testing.T) {
 	deps := LoopDeps{
 		IssueOpsRoot: func() string { return "/repo" }, Now: time.Now,
 		MkdirTemp: func() (string, error) { return "/temp", nil }, RemoveAll: func(string) error { return nil }, TempBinaryPath: func(string) string { return "/temp/issueops" },
-		StepDeps: SelfVerifyStepDeps{
+		StepDeps: StepDeps{
 			ValidateHarnessInvariants: func(string) selfverifycontract.StepResult { return selfverifycontract.StepResult{OK: true} },
 			ValidateGoFormat:          func(string) selfverifycontract.StepResult { return selfverifycontract.StepResult{Error: "unformatted"} },
 		},
-		Summarize: func(selfaugmentcontract.SelfAugmentResult, float64) selfaugmentcontract.SelfAugmentSummary {
-			return selfaugmentcontract.SelfAugmentSummary{FailedSteps: 1}
+		Summarize: func(selfaugmentcontract.Result, float64) selfaugmentcontract.Summary {
+			return selfaugmentcontract.Summary{FailedSteps: 1}
 		},
 	}
 	_, err := ExecuteLoop(LoopRequest{Reporter: reporter, TargetScore: 95}, deps)
@@ -150,7 +150,7 @@ func TestExecuteLoopVerboseReportsElapsedSecondsOnSuccess(t *testing.T) {
 // allPassingLoopDeps fills every step dependency with a passing fake, so a whole evidence pass succeeds.
 func allPassingLoopDeps() LoopDeps {
 	ok := selfverifycontract.StepResult{OK: true}
-	var step SelfVerifyStepDeps
+	var step StepDeps
 	stepValue := reflect.ValueOf(&step).Elem()
 	for _, field := range stepValue.Fields() {
 		if field.Kind() != reflect.Func {
@@ -178,8 +178,8 @@ func allPassingLoopDeps() LoopDeps {
 		IssueOpsRoot: func() string { return "/repo" }, Now: time.Now,
 		MkdirTemp: func() (string, error) { return "/temp", nil }, RemoveAll: func(string) error { return nil }, TempBinaryPath: func(string) string { return "/temp/issueops" },
 		StepDeps: step,
-		Summarize: func(selfaugmentcontract.SelfAugmentResult, float64) selfaugmentcontract.SelfAugmentSummary {
-			return selfaugmentcontract.SelfAugmentSummary{TerminationEligible: true}
+		Summarize: func(selfaugmentcontract.Result, float64) selfaugmentcontract.Summary {
+			return selfaugmentcontract.Summary{TerminationEligible: true}
 		},
 	}
 }

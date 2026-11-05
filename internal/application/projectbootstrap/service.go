@@ -11,7 +11,7 @@ import (
 	projectdoc "issueops/internal/domain/projectdoc"
 )
 
-type Effects interface {
+type effects interface {
 	Analyze(root string) projectdoccontract.ProjectSignals
 	InitLifecycle(root string, write bool, profile projectdoccontract.ProjectProfile) (lifecyclecontract.ProjectLifecycleStatePlan, error)
 	Render(root string, signals projectdoccontract.ProjectSignals) map[string]string
@@ -25,7 +25,7 @@ type Effects interface {
 	ToSlash(rel string) string
 }
 
-func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, effects Effects) (projectbootstrapcontract.ProjectDocsBootstrapResult, error) {
+func bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, effects effects) (projectbootstrapcontract.ProjectDocsBootstrapResult, error) {
 	root := request.RepoRoot
 	signals := effects.Analyze(root)
 	lifecycleState, err := effects.InitLifecycle(root, request.Write, signals.Profile)
@@ -75,10 +75,10 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 	}, nil
 }
 
-// bootstrapRun accumulates the planned files and warnings of one Bootstrap call.
+// bootstrapRun accumulates the planned files and warnings of one bootstrap call.
 type bootstrapRun struct {
 	request         projectbootstrapcontract.ProjectDocsBootstrapRequest
-	effects         Effects
+	effects         effects
 	root            string
 	contents        map[string]string
 	manifestPath    string

@@ -5,21 +5,27 @@ import (
 	"path/filepath"
 	"strings"
 
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
+// BranchPreparationEnvironment supplies the git and path observations that branch
+// preparation needs. RunGit receives the repository directory and git arguments and
+// returns exit code, stdout and stderr.
 type BranchPreparationEnvironment struct {
 	RunGit func(string, ...string) (int, string, string)
 }
 
+// CleanParentPath returns the cleaned path and whether the original path is absolute.
 func (e BranchPreparationEnvironment) CleanParentPath(path string) (string, bool) {
 	return filepath.Clean(path), filepath.IsAbs(path)
 }
 
+// ResolveBaseCommit resolves revision to a commit OID in repo. It fails with a dedicated
+// message when the repository has no commits yet, and when git returns an empty OID.
 func (e BranchPreparationEnvironment) ResolveBaseCommit(repo, revision string) (string, error) {
 	code, stdout, stderr := e.RunGit(repo, "rev-parse", "--verify", "--end-of-options", strings.TrimSpace(revision)+"^{commit}")
 	if code != 0 {
-		if _, any, _ := e.RunGit(repo, "rev-list", "-n", "1", "--all"); strings.TrimSpace(any) == "" {
+		if _, anyRef, _ := e.RunGit(repo, "rev-list", "-n", "1", "--all"); strings.TrimSpace(anyRef) == "" {
 			// Probe: a freshly initialized repository failed with only
 			// "Needed a single revision".
 			return "", fmt.Errorf("the repository has no commits yet; a cycle branches from an existing base commit, so make an initial commit on the base branch (and push it) first")
@@ -46,6 +52,8 @@ func (e BranchPreparationEnvironment) IsAncestor(repo, ancestor, descendant stri
 	}
 }
 
+// ObserveCodeProjectKey derives the provider project key from the origin remote URL of repo.
+// It fails when no git adapter is configured or origin cannot be read.
 func (e BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider string) (string, error) {
 	if e.RunGit == nil {
 		return "", fmt.Errorf("git command adapter is unavailable")
@@ -54,5 +62,5 @@ func (e BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider strin
 	if code != 0 {
 		return "", fmt.Errorf("git remote get-url origin failed: %s", strings.TrimSpace(stderr))
 	}
-	return remote.ProjectKeyFromGitRemoteURL(strings.TrimSpace(stdout), provider)
+	return issueopsremote.ProjectKeyFromGitRemoteURL(strings.TrimSpace(stdout), provider)
 }

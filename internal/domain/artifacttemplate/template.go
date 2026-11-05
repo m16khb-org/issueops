@@ -1,3 +1,7 @@
+// Package artifacttemplate is the domain layer's reader-first body contract for
+// IssueOps remote artifacts (issues, child tasks, and pull or merge requests). It
+// renders a Korean body skeleton from template fields and validates a supplied
+// body against the sections its template requires.
 package artifacttemplate
 
 import (
@@ -7,30 +11,40 @@ import (
 	"strings"
 )
 
+// IssueOpsArtifactKind names the kind of remote artifact a template describes.
 type IssueOpsArtifactKind string
 
+// The IssueOpsArtifact constants are the supported artifact kinds: a top-level
+// issue, a child task, and a pull or merge request.
 const (
 	IssueOpsArtifactIssue IssueOpsArtifactKind = "issue"
 	IssueOpsArtifactChild IssueOpsArtifactKind = "child"
 	IssueOpsArtifactPR    IssueOpsArtifactKind = "pr"
 )
 
+// IssueOpsTemplateKind names one body template. Which templates each artifact kind
+// accepts is decided by SupportsTemplate.
 type IssueOpsTemplateKind string
 
+// The IssueOpsTemplate constants are the exported body templates; the
+// unexported ones are the issue templates chosen by template detection.
 const (
-	IssueOpsTemplateBug                IssueOpsTemplateKind = "bug"
-	IssueOpsTemplateFeature            IssueOpsTemplateKind = "feature"
-	IssueOpsTemplateProposal           IssueOpsTemplateKind = "proposal"
-	IssueOpsTemplateImplementationTask IssueOpsTemplateKind = "implementation_task"
+	issueOpsTemplateBug                IssueOpsTemplateKind = "bug"
+	issueOpsTemplateFeature            IssueOpsTemplateKind = "feature"
+	issueOpsTemplateProposal           IssueOpsTemplateKind = "proposal"
+	issueOpsTemplateImplementationTask IssueOpsTemplateKind = "implementation_task"
 	IssueOpsTemplateChildTask          IssueOpsTemplateKind = "child_task"
 	IssueOpsTemplatePullRequest        IssueOpsTemplateKind = "pull_request"
 )
 
-// SummaryHeading is the canonical first section every rendered body must
+// summaryHeading is the canonical first section every rendered body must
 // carry. Structural validation (summary_section_missing) checks for this
 // exact heading.
-const SummaryHeading = "## 요약"
+const summaryHeading = "## 요약"
 
+// IssueOpsTemplateInput is the request to render or validate an artifact body.
+// Fields carries the per-section content keyed by --field name; an empty Body is
+// rendered from Fields, a non-empty Body is validated as written.
 type IssueOpsTemplateInput struct {
 	Kind         IssueOpsArtifactKind `json:"kind"`
 	Template     IssueOpsTemplateKind `json:"template"`
@@ -41,6 +55,9 @@ type IssueOpsTemplateInput struct {
 	ScoreSummary string               `json:"score_summary,omitempty"`
 }
 
+// IssueOpsTemplateValidation reports the structural findings for a body. Critical
+// codes make OK false; Warnings are advisory. The missing lists name the fields
+// and sections the template requires but the input lacks.
 type IssueOpsTemplateValidation struct {
 	OK                      bool     `json:"ok"`
 	Critical                []string `json:"critical"`
@@ -49,6 +66,9 @@ type IssueOpsTemplateValidation struct {
 	MissingRequiredSections []string `json:"missing_required_sections,omitempty"`
 }
 
+// IssueOpsTemplateResult is the rendered artifact: the trimmed title, the body
+// (supplied or generated), and the Validation that produced OK, Warnings, and
+// MissingRequiredFields.
 type IssueOpsTemplateResult struct {
 	OK                    bool                       `json:"ok"`
 	Kind                  IssueOpsArtifactKind       `json:"kind"`
@@ -61,6 +81,10 @@ type IssueOpsTemplateResult struct {
 	Validation            IssueOpsTemplateValidation `json:"validation"`
 }
 
+// Render returns the artifact for input. When the input body is empty it is
+// generated from the template's sections and validated against the supplied
+// fields; otherwise the given body is kept and validated. It does not fail:
+// problems are reported in the result's Validation.
 func Render(input IssueOpsTemplateInput) IssueOpsTemplateResult {
 	input = normalizeInput(input)
 	originalBodyEmpty := strings.TrimSpace(input.Body) == ""
@@ -96,6 +120,10 @@ func Render(input IssueOpsTemplateInput) IssueOpsTemplateResult {
 	}
 }
 
+// Validate checks input against its template's body contract and returns the
+// findings: unsupported kind or template, missing title or required fields, a
+// body without Korean text, forbidden or missing required sections, and fields
+// no section renders. Critical and Warnings are sorted and de-duplicated.
 func Validate(input IssueOpsTemplateInput) IssueOpsTemplateValidation {
 	input = normalizeInput(input)
 	v := IssueOpsTemplateValidation{OK: true, Critical: []string{}, Warnings: []string{}, MissingRequiredFields: []string{}, MissingRequiredSections: []string{}}
@@ -203,7 +231,7 @@ func SupportsTemplate(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) 
 	switch kind {
 	case IssueOpsArtifactIssue:
 		switch template {
-		case IssueOpsTemplateBug, IssueOpsTemplateFeature, IssueOpsTemplateProposal, IssueOpsTemplateImplementationTask:
+		case issueOpsTemplateBug, issueOpsTemplateFeature, issueOpsTemplateProposal, issueOpsTemplateImplementationTask:
 			return true
 		}
 	case IssueOpsArtifactChild:
@@ -232,7 +260,7 @@ func normalizeInput(input IssueOpsTemplateInput) IssueOpsTemplateInput {
 		case IssueOpsArtifactPR:
 			input.Template = IssueOpsTemplatePullRequest
 		default:
-			input.Template = IssueOpsTemplateImplementationTask
+			input.Template = issueOpsTemplateImplementationTask
 		}
 	}
 	return input
@@ -363,7 +391,7 @@ func sectionsFor(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) []sec
 		}
 	default: // IssueOpsArtifactIssue
 		switch template {
-		case IssueOpsTemplateBug:
+		case issueOpsTemplateBug:
 			return []sectionSpec{
 				{"summary", "요약", true},
 				{"reproduction_steps", "재현 절차", true},
@@ -374,7 +402,7 @@ func sectionsFor(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) []sec
 				{"scope", "범위", false},
 				{"environment_logs", "환경과 로그", false},
 			}
-		case IssueOpsTemplateProposal:
+		case issueOpsTemplateProposal:
 			return []sectionSpec{
 				{"summary", "요약", true},
 				{"background", "배경", true},
@@ -480,9 +508,9 @@ func allSectionSpecs() []sectionSpec {
 		kind     IssueOpsArtifactKind
 		template IssueOpsTemplateKind
 	}{
-		{IssueOpsArtifactIssue, IssueOpsTemplateImplementationTask},
-		{IssueOpsArtifactIssue, IssueOpsTemplateBug},
-		{IssueOpsArtifactIssue, IssueOpsTemplateProposal},
+		{IssueOpsArtifactIssue, issueOpsTemplateImplementationTask},
+		{IssueOpsArtifactIssue, issueOpsTemplateBug},
+		{IssueOpsArtifactIssue, issueOpsTemplateProposal},
 		{IssueOpsArtifactChild, IssueOpsTemplateChildTask},
 		{IssueOpsArtifactPR, IssueOpsTemplatePullRequest},
 	} {
@@ -543,7 +571,7 @@ func SectionContent(body, title string) (string, bool) {
 // section is the summary; the contract requires the summary to come first.
 func SummarySection(body string) (string, bool) {
 	sections := bodySections(body)
-	if len(sections) == 0 || "## "+sections[0].title != SummaryHeading {
+	if len(sections) == 0 || "## "+sections[0].title != summaryHeading {
 		return "", false
 	}
 	return sections[0].content, true
@@ -555,7 +583,7 @@ func hasNonEmptySummarySection(body string) bool {
 }
 
 func sectionContentFromBody(body, title string) (string, bool) {
-	if "## "+title == SummaryHeading {
+	if "## "+title == summaryHeading {
 		return SummarySection(body)
 	}
 	return SectionContent(body, title)
@@ -640,14 +668,17 @@ func InferTemplateKind(kind IssueOpsArtifactKind, body string) IssueOpsTemplateK
 		return IssueOpsTemplatePullRequest
 	}
 	if _, ok := SectionContent(body, "재현 절차"); ok {
-		return IssueOpsTemplateBug
+		return issueOpsTemplateBug
 	}
 	if _, ok := SectionContent(body, "제안"); ok {
-		return IssueOpsTemplateProposal
+		return issueOpsTemplateProposal
 	}
-	return IssueOpsTemplateImplementationTask
+	return issueOpsTemplateImplementationTask
 }
 
+// ParseFieldAssignments converts key=value strings into a field map, trimming
+// whitespace around each key and value. An entry without "=" or with an empty key
+// is an error.
 func ParseFieldAssignments(values []string) (map[string]string, error) {
 	fields := map[string]string{}
 	for _, value := range values {

@@ -1,3 +1,6 @@
+// Package issueopscompletion is the outbound adapter that persists completion
+// transitions of an IssueOps lifecycle record in the transactional record
+// store and answers the completion service's git and filesystem questions.
 package issueopscompletion
 
 import (
@@ -21,10 +24,16 @@ const (
 	holderBucket = port.LeaseHolderBucket
 )
 
+// Repository applies completion transitions to a lifecycle record and removes
+// the holder index of the lease the transition ends, in one store span.
 type Repository struct{ store port.TransactionalRecordStore }
 
+// NewRepository returns a Repository backed by store.
 func NewRepository(store port.TransactionalRecordStore) *Repository { return &Repository{store: store} }
 
+// Update loads the uncleaned lifecycle record id, runs transition on a copy
+// of its snapshot, and persists the result only when the transition reports a
+// change. It fails when the store is missing or the record has a cleanup attempt.
 func (r *Repository) Update(ctx context.Context, id string, transition completionapp.RecordTransition) (completionapp.RepositoryResult, error) {
 	if r == nil || r.store == nil {
 		return completionapp.RepositoryResult{}, fmt.Errorf("transactional record store is required")

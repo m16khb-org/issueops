@@ -160,8 +160,8 @@ func TestBenchmarkCompareAndGateSurfaceMissingRunsAndPrintText(t *testing.T) {
 
 	baseline := benchmarkRunResult("base", 90, true)
 	candidate := benchmarkRunResult("cand", 80, true)
-	for _, run := range []benchmarkcontract.IssueOpsBenchmarkRunResult{baseline, candidate} {
-		if err := saveBenchmarkRunForTest(statestore.StateDir(), run); err != nil {
+	for _, run := range []benchmarkcontract.RunResult{baseline, candidate} {
+		if err := saveBenchmarkRunForTest(statestore.Dir(), run); err != nil {
 			t.Fatal(err)
 		}
 	}

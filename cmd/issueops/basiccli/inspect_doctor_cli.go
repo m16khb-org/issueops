@@ -24,6 +24,10 @@ func (values *doctorRepeatedFlag) Set(value string) error {
 	return nil
 }
 
+// RunInspect implements `issueops inspect [PATH]`: it prints the harness
+// installation, skills and per-host integration status for the target repo,
+// as text or, with --json, as the inspect info. --host-receipts supplies host
+// receipt observations.
 func (command Command) RunInspect(args []string) error {
 	fs := flag.NewFlagSet("inspect", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -56,6 +60,11 @@ func (command Command) RunInspect(args []string) error {
 	return nil
 }
 
+// Run implements `issueops doctor [PATH]`: it collects the operational health
+// snapshot (unless --static-only), runs the doctor service and prints the
+// issues with their fix commands, or the JSON result. Repeated
+// --preserve-cycle values are trimmed, de-duplicated and sorted; an empty
+// value is an error.
 func (command Doctor) Run(args []string) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
@@ -87,7 +96,7 @@ func (command Doctor) Run(args []string) error {
 		observed := command.CollectOperationalHealth(context.Background(), root)
 		snapshot = &observed
 	}
-	result, err := command.Service.Run(doctorcontract.HarnessDoctorRequest{
+	result, err := command.Service.Run(context.Background(), doctorcontract.HarnessDoctorRequest{
 		RepoRoot:            root,
 		IssueOpsRoot:        command.IssueOpsRoot,
 		Home:                command.Home,

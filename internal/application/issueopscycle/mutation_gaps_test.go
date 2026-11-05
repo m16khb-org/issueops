@@ -20,8 +20,8 @@ func (g *baseAdvancedGit) BaseState(_, ref string) (bool, bool) {
 	return true, true
 }
 
-func feedbackRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
+func feedbackRecord() model.Record {
+	return model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
 }
 
 func TestAISlopCleanReadinessReportsMissingImplementationChangesOnlyWithoutEvidence(t *testing.T) {
@@ -32,7 +32,7 @@ func TestAISlopCleanReadinessReportsMissingImplementationChangesOnlyWithoutEvide
 		t.Run(tc.name, func(t *testing.T) {
 			locked, events := false, []string{}
 			ready, _ := readinessForEffects(t, &locked, &events)
-			ready.HasEvidence = func(model.IssueOpsRecord) bool { return tc.hasEvidence }
+			ready.HasEvidence = func(model.Record) bool { return tc.hasEvidence }
 			got := ready.AISlopClean(feedbackRecord())
 			if slices.Contains(got.Missing, "implementation_changes") == tc.hasEvidence {
 				t.Fatalf("hasEvidence=%v missing=%v", tc.hasEvidence, got.Missing)
@@ -50,7 +50,7 @@ func TestAISlopCleanReadinessReportsMissingImplementationChangesOnlyWithoutEvide
 func TestPRReadinessIsNotReadyWhileLocalGatesAreMissing(t *testing.T) {
 	locked, events := false, []string{}
 	ready, _ := readinessForEffects(t, &locked, &events)
-	got := ready.PR(model.IssueOpsRecord{})
+	got := ready.PR(model.Record{})
 	if got.Ready || len(got.Missing) == 0 || !slices.Contains(got.Missing, "issue_url") {
 		t.Fatalf("empty record must report missing gates and not be ready: %+v", got)
 	}
@@ -71,8 +71,8 @@ func TestStrictPRWithFetchAppliesChildGateWhenEitherMissingOrWarningsExist(t *te
 		t.Run(tc.name, func(t *testing.T) {
 			locked, events := false, []string{}
 			ready, _ := readinessForEffects(t, &locked, &events)
-			ready.ChildMissing = func(string, model.IssueOpsRecord) ([]string, []string) { return tc.missing, tc.warnings }
-			got := ready.StrictPRWithFetch("state", feedbackRecord(), ready.Git.Fetch)
+			ready.ChildMissing = func(string, model.Record) ([]string, []string) { return tc.missing, tc.warnings }
+			got := ready.strictPRWithFetch("state", feedbackRecord(), ready.Git.Fetch)
 			if slices.Contains(got.Missing, "child_pr_open") != tc.wantMissing || slices.Contains(got.Warnings, "child #4 still open") != tc.wantWarnings {
 				t.Fatalf("missing=%v warnings=%v", got.Missing, got.Warnings)
 			}
@@ -87,7 +87,7 @@ func TestObservedPRBaseAdvancedWarnsOnlyWhenPreparedBaseIsKnown(t *testing.T) {
 	ready.Git = git
 
 	withBase := feedbackRecord()
-	withBase.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "refs/heads/main"}
+	withBase.BranchPrepare = &model.BranchPrepare{BaseBranch: "refs/heads/main"}
 	got, _ := ready.ObserveLocalPR(withBase)
 	if !slices.Equal(git.refs, []string{"origin/main"}) || !slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.HasPrefix(w, "base_advanced: origin/main ") }) {
 		t.Fatalf("refs=%v warnings=%v", git.refs, got.Warnings)
@@ -108,10 +108,10 @@ func TestObservedPRProbesPlanAndWorktreeOnlyWhenRecordNamesThem(t *testing.T) {
 		ready.Paths = port.ReadinessObservations{
 			WorktreePathValid:        func(path string) bool { worktreeCalls = append(worktreeCalls, path); return true },
 			PlanPathExists:           func(_, path string) bool { planCalls = append(planCalls, path); return true },
-			PlanInLinkedWorktree:     func(model.IssueOpsRecord) bool { return true },
+			PlanInLinkedWorktree:     func(model.Record) bool { return true },
 			WorkspaceMatches:         func(string, string) bool { return true },
-			LinkedPlanDigest:         func(model.IssueOpsRecord) (string, error) { return "", nil },
-			SealedArchitectureDigest: func(model.IssueOpsRecord) (string, error) { return "architecture-digest", nil },
+			LinkedPlanDigest:         func(model.Record) (string, error) { return "", nil },
+			SealedArchitectureDigest: func(model.Record) (string, error) { return "architecture-digest", nil },
 		}
 		return ready
 	}
@@ -143,20 +143,20 @@ func TestObservedPRProbesPlanAndWorktreeOnlyWhenRecordNamesThem(t *testing.T) {
 	})
 }
 
-func implementReadyRecord() model.IssueOpsRecord {
+func implementReadyRecord() model.Record {
 	holder := model.NativeActor{Host: "codex", SessionID: "session", SessionProcess: &model.NativeProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}}
-	return model.IssueOpsRecord{
-		ID: "io-1", Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseCompatibilityReview,
+	return model.Record{
+		ID: "io-1", Repo: "/repo", Branch: "feature", Phase: model.PhaseCompatibilityReview,
 		IssueURL: "https://github.com/acme/repo/issues/1", PlanPath: "plans/p.md", WorktreePath: "/repo.worktrees/feature",
-		BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "feature", BaseBranch: "main", LinkVerified: true},
-		Intent:        &model.IssueOpsIntentContract{RawRequest: "r", InterpretedIntent: "i", SuccessCriteria: []string{"c"}},
+		BranchPrepare: &model.BranchPrepare{Provider: "github", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "feature", BaseBranch: "main", LinkVerified: true},
+		Intent:        &model.IntentContract{RawRequest: "r", InterpretedIntent: "i", SuccessCriteria: []string{"c"}},
 		ArchitectureReview: &reviewcontract.ArchitectureReview{
 			ProblemSummary: "p", ProposedArchitecture: "d", RefactorPlan: "r", Alternatives: []string{"a"}, Risks: []string{"r"},
 			Verification: []string{"architecture review checked alternatives and risks"}, Approved: true,
 			ReviewerContext: "subagent", ReviewedArchitectureDigest: "architecture-digest",
 		},
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{BackwardCompatibility: []string{"b"}, SideEffects: []string{"s"}, RollbackPlan: "r", Verification: []string{"v"}, Approved: true},
-		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "proceed", RecordedAt: "2026-10-12T00:00:00Z", ReviewedPlanDigest: "digest"},
+		DevilsAdvocateReview: &model.DevilsAdvocateReview{Verdict: "proceed", RecordedAt: "2026-10-12T00:00:00Z", ReviewedPlanDigest: "digest"},
 		Execution: &model.Execution{
 			Workspace: model.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/feature", Branch: "feature", BaseHead: "base", LinkedAt: "linked"},
 			Lease:     model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder, ClaimedAt: "claimed"},
@@ -173,25 +173,25 @@ func TestAdvanceReportWritesTrackedMaterialsWhenEnteringImplementIfHookWired(t *
 		t.Run(tc.name, func(t *testing.T) {
 			locked, events := false, []string{}
 			ready, _ := readinessForEffects(t, &locked, &events)
-			ready.Paths.LinkedPlanDigest = func(model.IssueOpsRecord) (string, error) { return "digest", nil }
-			ready.Paths.SealedArchitectureDigest = func(model.IssueOpsRecord) (string, error) { return "architecture-digest", nil }
+			ready.Paths.LinkedPlanDigest = func(model.Record) (string, error) { return "digest", nil }
+			ready.Paths.SealedArchitectureDigest = func(model.Record) (string, error) { return "architecture-digest", nil }
 			p := &phaseFlow{record: implementReadyRecord()}
 			service := flowService(p, ready)
 			calls := 0
 			if tc.hook {
-				service.WriteMaterials = func(record model.IssueOpsRecord) model.IssueOpsTrackedMaterials {
+				service.WriteMaterials = func(record model.Record) model.TrackedMaterials {
 					calls++
-					if record.Phase != model.IssueOpsPhaseCompatibilityReview {
+					if record.Phase != model.PhaseCompatibilityReview {
 						t.Fatalf("materials must be written from the pre-transition record, got phase %s", record.Phase)
 					}
-					return model.IssueOpsTrackedMaterials{}
+					return model.TrackedMaterials{}
 				}
 			}
 			got, _, err := service.AdvanceReport("state", "io-1", "implement")
 			if err != nil {
 				t.Fatal(err)
 			}
-			if calls != tc.wantCalls || got.Phase != model.IssueOpsPhaseImplement || len(p.writes) != 1 {
+			if calls != tc.wantCalls || got.Phase != model.PhaseImplement || len(p.writes) != 1 {
 				t.Fatalf("calls=%d phase=%s writes=%d", calls, got.Phase, len(p.writes))
 			}
 		})
@@ -212,7 +212,7 @@ func TestStrictPRReadinessNamesARewrittenBase(t *testing.T) {
 	git := &rewrittenBaseGit{baseAdvancedGit: baseAdvancedGit{readinessGitFixture: *ready.Git.(*readinessGitFixture)}}
 	ready.Git = git
 	record := feedbackRecord()
-	record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: "sealed"}
+	record.BranchPrepare = &model.BranchPrepare{BaseBranch: "main", BaseSHA: "sealed"}
 	got, _ := ready.observePR(record, nil)
 	joined := strings.Join(got.Warnings, "\n")
 	if !strings.Contains(joined, "base_rewritten: origin/main") || strings.Contains(joined, "base_advanced") {

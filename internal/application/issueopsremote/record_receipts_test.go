@@ -13,13 +13,13 @@ import (
 // memoryRecordStore applies transitions to an in-memory record the way the
 // durable store does: a failing transition leaves the record untouched.
 type memoryRecordStore struct {
-	record model.IssueOpsRecord
+	record model.Record
 	err    error
 }
 
-func (s *memoryRecordStore) Update(_ context.Context, _ string, transition RecordTransition) (model.IssueOpsRecord, error) {
+func (s *memoryRecordStore) Update(_ context.Context, _ string, transition RecordTransition) (model.Record, error) {
 	if s.err != nil {
-		return model.IssueOpsRecord{}, s.err
+		return model.Record{}, s.err
 	}
 	next, err := transition(s.record)
 	if err != nil {
@@ -36,16 +36,16 @@ const receiptStamp = "2026-01-01T18:04:05.000000006Z"
 func TestCompletionReceiptsStampUTCAndKeepEarliestClose(t *testing.T) {
 	store := &memoryRecordStore{}
 	receipts := NewCompletionReceipts(store, receiptClock)
-	got, err := receipts.Closed(t.Context(), "c")
+	got, err := receipts.closed(t.Context(), "c")
 	if err != nil || got.RemoteCompletion == nil || got.RemoteCompletion.IssueClosedAt != receiptStamp || got.UpdatedAt != receiptStamp {
 		t.Fatalf("closed=%+v err=%v", got, err)
 	}
 	later := NewCompletionReceipts(store, func() time.Time { return receiptClock().Add(time.Hour) })
-	got, err = later.Reflected(t.Context(), "c")
+	got, err = later.reflected(t.Context(), "c")
 	if err != nil || got.RemoteCompletion.ReflectedAt == "" || got.RemoteCompletion.IssueClosedAt != receiptStamp {
 		t.Fatalf("reflected must preserve the close receipt: %+v err=%v", got.RemoteCompletion, err)
 	}
-	got, err = later.Closed(t.Context(), "c")
+	got, err = later.closed(t.Context(), "c")
 	if err != nil || got.RemoteCompletion.IssueClosedAt != receiptStamp {
 		t.Fatalf("second close must not move the receipt: %+v err=%v", got.RemoteCompletion, err)
 	}
@@ -53,14 +53,14 @@ func TestCompletionReceiptsStampUTCAndKeepEarliestClose(t *testing.T) {
 
 func TestCompletionReceiptsReportStoreFailureAsNotOK(t *testing.T) {
 	boom := errors.New("store down")
-	got, err := NewCompletionReceipts(&memoryRecordStore{err: boom}, receiptClock).Reflected(t.Context(), "c")
+	got, err := NewCompletionReceipts(&memoryRecordStore{err: boom}, receiptClock).reflected(t.Context(), "c")
 	if !errors.Is(err, boom) || got.OK || got.RemoteCompletion != nil {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }
 
-func issueCreateRequest() model.IssueOpsIssueCreateIntentRequest {
-	return model.IssueOpsIssueCreateIntentRequest{
+func issueCreateRequest() model.IssueCreateIntentRequest {
+	return model.IssueCreateIntentRequest{
 		OperationID: strings.Repeat("b", 32), Provider: "github", ProjectAuthority: "github.com/acme/app",
 		Title: "title", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z",
 	}
@@ -82,12 +82,12 @@ func TestIssueCreateIntentsLifecycleBindsProjectAuthority(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "does not match sealed authority") {
 		t.Fatalf("foreign project accepted: %v", err)
 	}
-	_, err = intents.Outcome(t.Context(), "c", model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/other/repo/issues/9", ObservedAt: "now"})
+	_, err = intents.Outcome(t.Context(), "c", model.IssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/other/repo/issues/9", ObservedAt: "now"})
 	if err == nil {
 		t.Fatal("outcome for a foreign project accepted")
 	}
 
-	rec, err = intents.Outcome(t.Context(), "c", model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/acme/app/issues/9", Failure: "receipt pending", ObservedAt: "t1"})
+	rec, err = intents.Outcome(t.Context(), "c", model.IssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/acme/app/issues/9", Failure: "receipt pending", ObservedAt: "t1"})
 	if err != nil || rec.IssueCreateIntent.CanonicalURL != "https://github.com/acme/app/issues/9" {
 		t.Fatalf("outcome=%+v err=%v", rec.IssueCreateIntent, err)
 	}

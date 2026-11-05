@@ -43,7 +43,7 @@ func withIssue(in Input) Input {
 }
 
 func withBranch(in Input) Input {
-	in.Record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	in.Record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: in.Record.IssueURL, Branch: in.Record.Branch,
 		BaseBranch: "main", BaseSHA: "a1b2c3d4", LinkVerified: true,
 	}
@@ -71,14 +71,14 @@ func withArchitecture(in Input) Input {
 }
 
 func withDA(in Input) Input {
-	in.Record.DevilsAdvocateReview = &issueopscontract.IssueOpsDevilsAdvocateReview{
+	in.Record.DevilsAdvocateReview = &issueopscontract.DevilsAdvocateReview{
 		Verdict: "pass", ReviewedPlanDigest: "digest", RecordedAt: "2026-09-05T00:01:00Z",
 	}
 	return withoutCompletionKey(in, issueopsnextcontract.PhaseImplement, "devils_advocate_review")
 }
 
 func withDAStop(in Input) Input {
-	in.Record.DevilsAdvocateReview = &issueopscontract.IssueOpsDevilsAdvocateReview{
+	in.Record.DevilsAdvocateReview = &issueopscontract.DevilsAdvocateReview{
 		Verdict: "stop", Findings: []string{"finding"}, Waived: false,
 		ReviewedPlanDigest: "digest", RecordedAt: "2026-09-05T00:01:00Z",
 	}
@@ -133,7 +133,7 @@ func withPending(in Input) Input {
 }
 
 func withArtifact(in Input) Input {
-	in.Record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+	in.Record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/12",
 		VerifiedAt: "2026-09-05T00:03:00Z",
 	}
@@ -336,7 +336,7 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 		"worktree_clean", "upstream", "upstream_fetch", "upstream_synced", "branch_match",
 	}
 	for _, key := range keys {
-		command := OwnerCommand("io-test", key)
+		command := ownerCommand("io-test", key)
 		if strings.TrimSpace(command) == "" {
 			t.Fatalf("missing owner command for %q", key)
 		}
@@ -344,7 +344,7 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 			t.Fatalf("owner command for %q must be an issueops command, got %q", key, command)
 		}
 	}
-	if got := OwnerCommand("io-test", "who_knows"); got != "issueops status --id io-test --json" {
+	if got := ownerCommand("io-test", "who_knows"); got != "issueops status --id io-test --json" {
 		t.Fatalf("an unknown gate must fall back to status, got %q", got)
 	}
 }
@@ -357,7 +357,7 @@ func TestRecordOwnerCommandsCarryActorFlagPlaceholder(t *testing.T) {
 		"implementation_review", "project_docs_review", "schema_evidence",
 		"feedback_classification", "feedback_resolution", "contract_feedback_issue_update", "remote_artifact",
 	} {
-		command := OwnerCommand("io-test", key)
+		command := ownerCommand("io-test", key)
 		if !strings.HasSuffix(command, " $RECORD_ACTOR_FLAGS") {
 			t.Errorf("%s: %q lacks $RECORD_ACTOR_FLAGS", key, command)
 		}
@@ -460,7 +460,7 @@ func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
 	if grill.Stage.Key != "prepare" || strings.Contains(grill.NextCommand, "--to grill") {
 		t.Fatalf("grill with issue must not re-advance to grill, got %s %q", grill.Stage.Key, grill.NextCommand)
 	}
-	if grill.NextCommand != fillBranchPrepareIssue(OwnerCommand("io-test", "branch_prepare"), "https://github.com/acme/repo/issues/12")+" --json" {
+	if grill.NextCommand != fillBranchPrepareIssue(ownerCommand("io-test", "branch_prepare"), "https://github.com/acme/repo/issues/12")+" --json" {
 		t.Fatalf("grill next command %q want owner command for branch_prepare", grill.NextCommand)
 	}
 	if len(grill.Missing) != 1 || grill.Missing[0] != "branch_prepare" {
@@ -479,7 +479,7 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 	}
 	plan := classifyTemplate(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
 	if plan.Stage.Key != "prepare" || len(plan.Missing) != 1 || plan.Missing[0] != "branch_link_verified" ||
-		plan.NextCommand != fillBranchPrepareIssue(OwnerCommand("io-test", "branch_link_verified"), "https://github.com/acme/repo/issues/12")+" --json" || !strings.Contains(plan.NextCommand, " --link-verified ") {
+		plan.NextCommand != fillBranchPrepareIssue(ownerCommand("io-test", "branch_link_verified"), "https://github.com/acme/repo/issues/12")+" --json" || !strings.Contains(plan.NextCommand, " --link-verified ") {
 		t.Fatalf("plan with unverified link: %s %v %q", plan.Stage.Key, plan.Missing, plan.NextCommand)
 	}
 	holder := classifyTemplate(withSelfHolder(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
@@ -496,7 +496,7 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 // plan_path step names that file instead of a <PATH> the agent must hunt for.
 func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
 	in := withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
-	if got := classifyTemplate(in).NextCommand; got != OwnerCommand("io-test", "plan_path")+" --json" {
+	if got := classifyTemplate(in).NextCommand; got != ownerCommand("io-test", "plan_path")+" --json" {
 		t.Fatalf("without artifact_dir: %q", got)
 	}
 	root := testsupport.AbsPath("repo.worktrees", "9-x")
@@ -583,7 +583,7 @@ func TestClassifyIssueStageFallsBackToIntentContractWithoutMissingGates(t *testi
 	if got.Stage.Key != "issue" {
 		t.Fatalf("stage %s want issue", got.Stage.Key)
 	}
-	if got.NextCommand != OwnerCommand("io-test", "intent_contract")+" --json" {
+	if got.NextCommand != ownerCommand("io-test", "intent_contract")+" --json" {
 		t.Fatalf("next command %q want owner command for intent_contract", got.NextCommand)
 	}
 }
@@ -719,7 +719,7 @@ func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
 		stage, cmd string
 	}{
 		{pr("new", "ai_slop_clean_stale", "implementation_review_stale"), "clean", "issueops phase --id io-test --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"},
-		{pr("new", "implementation_review_stale"), "verify", OwnerCommand("io-test", "implementation_review_stale") + " --json"},
+		{pr("new", "implementation_review_stale"), "verify", ownerCommand("io-test", "implementation_review_stale") + " --json"},
 		{pr("new"), "commit-push", "issueops phase --id io-test --to pr $RECORD_ACTOR_FLAGS --json"},
 		{pr("old"), "pr.create", ""},
 	}
@@ -1026,7 +1026,7 @@ func TestClassifyPendingWithADeadHolderRoutesToTakeover(t *testing.T) {
 // An unsettled child create surfaces on every stage; a completed one does not.
 func TestClassifyWarnsAboutAnUnsettledChildCreate(t *testing.T) {
 	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhasePlan}}
-	in.Record.ChildCreateOperations = []issueopscontract.ChildCreateOperation{{IssueOpsIssueCreateIntent: issueopscontract.IssueOpsIssueCreateIntent{OperationID: "op1", Status: issueopsnextcontract.IssueCreateIntentPending}}}
+	in.Record.ChildCreateOperations = []issueopscontract.ChildCreateOperation{{IssueCreateIntent: issueopscontract.IssueCreateIntent{OperationID: "op1", Status: issueopsnextcontract.IssueCreateIntentPending}}}
 	if got := Classify(in); !slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "reconcile-child --id io-1 --operation-id op1") }) {
 		t.Fatalf("warnings %q", got.Warnings)
 	}
@@ -1063,7 +1063,7 @@ func TestClassifyUnfinishedCleanupResumesAtItsPreview(t *testing.T) {
 		issueopscontract.CleanupOperationAbandon:      "issueops cleanup abandon --id io-1 --reason <TEXT> --preview --json",
 		issueopscontract.CleanupOperationRemoteBranch: "issueops cleanup remote-branch --id io-1 --preview --json",
 	} {
-		in.Record.CleanupAttempt = &issueopscontract.IssueOpsCleanupAttempt{Operation: op, Token: "t", StartedAt: "2026-10-25T00:00:00Z"}
+		in.Record.CleanupAttempt = &issueopscontract.CleanupAttempt{Operation: op, Token: "t", StartedAt: "2026-10-25T00:00:00Z"}
 		in.Record.Execution = &issueopscontract.Execution{Workspace: issueopscontract.Workspace{Root: "/wt"}}
 		got := Classify(in)
 		if got.NextCommand != want || got.Stage.Key != issueopsnextcontract.StageCleanupResume {
@@ -1079,7 +1079,7 @@ func TestClassifyUnfinishedCleanupResumesAtItsPreview(t *testing.T) {
 // past the merge: next continues at the cleanup finish preview.
 func TestClassifyDoneAfterCompletionReceiptGoesToFinishPreview(t *testing.T) {
 	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhaseDone}}
-	for _, completion := range []issueopscontract.IssueOpsRemoteCompletion{{ReflectedAt: "t"}, {IssueClosedAt: "t"}} {
+	for _, completion := range []issueopscontract.RemoteCompletion{{ReflectedAt: "t"}, {IssueClosedAt: "t"}} {
 		in.Record.RemoteCompletion = &completion
 		if got := Classify(in); got.NextCommand != "issueops cleanup finish --id io-1 --preview --json" {
 			t.Fatalf("%+v: %q", completion, got.NextCommand)
@@ -1091,11 +1091,11 @@ func TestClassifyDoneAfterCompletionReceiptGoesToFinishPreview(t *testing.T) {
 // (which routes the remaining steps) instead of merge-pr (QA: every agent read a repeated merge-pr as "not merged").
 func TestClassifyDoneAfterMergeReceiptGoesToRemoteBranchPreview(t *testing.T) {
 	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhaseDone,
-		RemoteCompletion: &issueopscontract.IssueOpsRemoteCompletion{MergedAt: "t"}}}
+		RemoteCompletion: &issueopscontract.RemoteCompletion{MergedAt: "t"}}}
 	if got := Classify(in); got.NextCommand != "issueops cleanup status --id io-1 --merged --json" || len(got.Warnings) != 0 {
 		t.Fatalf("next = %q warnings=%v", got.NextCommand, got.Warnings)
 	}
-	in.Record.RemoteCompletion = &issueopscontract.IssueOpsRemoteCompletion{MergedAt: "t", IssueClosedAt: "t"}
+	in.Record.RemoteCompletion = &issueopscontract.RemoteCompletion{MergedAt: "t", IssueClosedAt: "t"}
 	if got := Classify(in); got.NextCommand != "issueops cleanup finish --id io-1 --preview --json" {
 		t.Fatalf("later receipts win: %q", got.NextCommand)
 	}
@@ -1109,7 +1109,7 @@ func TestClassifyGrillAfterRegressNamesTheReGrill(t *testing.T) {
 	if slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "regressed") }) {
 		t.Fatalf("no regress yet: %q", got.Warnings)
 	}
-	in.Record.RegressEvents = []issueopscontract.IssueOpsRegressEvent{{Reason: "stop", FromPhase: issueopsnextcontract.PhasePlan}}
+	in.Record.RegressEvents = []issueopscontract.RegressEvent{{Reason: "stop", FromPhase: issueopsnextcontract.PhasePlan}}
 	got = classifyTemplate(in)
 	if !strings.Contains(got.NextCommand, "--to plan") || !slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "contract_change") }) {
 		t.Fatalf("after regress: %q %q", got.NextCommand, got.Warnings)

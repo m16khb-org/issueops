@@ -12,34 +12,40 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-type ChildStatusRecords interface {
+type childStatusRecords interface {
 	branchapp.CycleRecords
-	Scan() ([]model.IssueOpsRecord, error)
+	Scan() ([]model.Record, error)
 }
 
+// StatusService reports the delegated children of a parent cycle and can
+// repair the parent's child index.
 type StatusService struct {
-	Records   ChildStatusRecords
+	Records   childStatusRecords
 	Authority cycleapp.MutationAuthority
 	Now       func() time.Time
 }
 
-func (s StatusService) Status(ctx context.Context, parentID string, repair bool, actor *model.IssueOpsActor) (model.IssueOpsChildStatusResult, error) {
+// Status returns the parent's children as derived from a records scan. With
+// repair set it also appends children missing from the parent's index, after
+// validating the actor's authority, and reports the appended IDs. An empty
+// parentID is an error.
+func (s StatusService) Status(ctx context.Context, parentID string, repair bool, actor *model.Actor) (model.ChildStatusResult, error) {
 	parentID = strings.TrimSpace(parentID)
 	if parentID == "" {
-		return model.IssueOpsChildStatusResult{OK: false}, fmt.Errorf("parent_id is required (--parent: the parent cycle's io-… id)")
+		return model.ChildStatusResult{OK: false}, fmt.Errorf("parent_id is required (--parent: the parent cycle's io-… id)")
 	}
-	var parent model.IssueOpsRecord
+	var parent model.Record
 	err := s.Records.WithinLock(ctx, parentID, func(spanCtx context.Context) error {
 		var err error
 		parent, err = s.Records.Load(parentID)
 		return err
 	})
 	if err != nil {
-		return model.IssueOpsChildStatusResult{OK: false, ParentID: parentID}, err
+		return model.ChildStatusResult{OK: false, ParentID: parentID}, err
 	}
 	records, err := s.Records.Scan()
 	if err != nil {
-		return model.IssueOpsChildStatusResult{OK: false, ParentID: parent.ID}, err
+		return model.ChildStatusResult{OK: false, ParentID: parent.ID}, err
 	}
 	scanned := domain.SelectChildren(parent, records)
 	result := domain.BuildChildStatus(parent, scanned)

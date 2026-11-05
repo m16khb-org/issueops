@@ -192,9 +192,9 @@ func TestRemoteBodySyncMapsFlagsPerKindAndPrintsOutcome(t *testing.T) {
 	var result bodysynccontract.Result
 	var fail error
 	command := stubCommand(RemoteDeps{
-		SyncRemoteBody: func(_ context.Context, root string, input remoteapp.BodySyncInput, _ remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error) {
+		SyncRemoteBody: func(_ context.Context, root string, input remoteapp.BodySyncInput, _ remoteapp.AncestryObserver) (issueopscontract.Record, bodysynccontract.Result, error) {
 			got = input
-			return issueopscontract.IssueOpsRecord{}, result, fail
+			return issueopscontract.Record{}, result, fail
 		},
 	})
 
@@ -342,9 +342,9 @@ func TestRemoteReflectCompletionBodyFileAndOutput(t *testing.T) {
 	var result port.IssueProviderUpdateIssueBodySectionResult
 	var fail error
 	command := stubCommand(RemoteDeps{
-		ReflectRemoteCompletion: func(_ context.Context, _, _, provider, body string, confirm bool, _ remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
+		ReflectRemoteCompletion: func(_ context.Context, _, _, provider, body string, confirm bool, _ remoteapp.MergeVerifier) (issueopscontract.Record, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
 			gotBody, gotProvider, gotConfirm = body, provider, confirm
-			return issueopscontract.IssueOpsRecord{}, result, reportcontract.Report{}, fail
+			return issueopscontract.Record{}, result, reportcontract.Report{}, fail
 		},
 	})
 
@@ -384,9 +384,9 @@ func TestRemoteReflectCompletionBodyFileAndOutput(t *testing.T) {
 
 	// An unreadable body file fails before the operation runs.
 	called := false
-	command.Operations.ReflectRemoteCompletion = func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
+	command.Operations.ReflectRemoteCompletion = func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.Record, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
 		called = true
-		return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, reportcontract.Report{}, nil
+		return issueopscontract.Record{}, port.IssueProviderUpdateIssueBodySectionResult{}, reportcontract.Report{}, nil
 	}
 	sink = &jsonSink{}
 	if err := command.Run([]string{"reflect-completion", "--id", "c1", "--body-file", filepath.Join(dir, "absent.md"), "--json"}, sink.deps()); !errors.Is(err, os.ErrNotExist) {
@@ -397,8 +397,8 @@ func TestRemoteReflectCompletionBodyFileAndOutput(t *testing.T) {
 	}
 
 	fail = errors.New("merge unverified")
-	command.Operations.ReflectRemoteCompletion = func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
-		return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, reportcontract.Report{}, fail
+	command.Operations.ReflectRemoteCompletion = func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.Record, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
+		return issueopscontract.Record{}, port.IssueProviderUpdateIssueBodySectionResult{}, reportcontract.Report{}, fail
 	}
 	sink = &jsonSink{}
 	if err := command.Run([]string{"reflect-completion", "--id", "c1", "--json"}, sink.deps()); !errors.Is(err, fail) {
@@ -414,9 +414,9 @@ func TestRemoteCloseIssueOutputAndErrors(t *testing.T) {
 	var fail error
 	var gotConfirm bool
 	command := stubCommand(RemoteDeps{
-		CloseRemoteIssue: func(_ context.Context, _, _, _ string, confirm bool, _ remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
+		CloseRemoteIssue: func(_ context.Context, _, _, _ string, confirm bool, _ remoteapp.MergeVerifier) (issueopscontract.Record, port.IssueProviderCloseIssueResult, error) {
 			gotConfirm = confirm
-			return issueopscontract.IssueOpsRecord{}, result, fail
+			return issueopscontract.Record{}, result, fail
 		},
 	})
 	result = port.IssueProviderCloseIssueResult{Closed: true, IssueURL: "https://x/issues/5"}
@@ -480,13 +480,13 @@ func TestRemoteSyncGraphTextOutput(t *testing.T) {
 }
 
 func TestRemoteReconcileIssueOutputDistinguishesPreviewFromAdoption(t *testing.T) {
-	var result issueopscontract.IssueOpsIssueCreateReconcileResult
+	var result issueopscontract.IssueCreateReconcileResult
 	command := stubCommand(RemoteDeps{
-		ReconcileIssueCreate: func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error) {
+		ReconcileIssueCreate: func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueCreateReconcileResult, error) {
 			return result, nil
 		},
 	})
-	result = issueopscontract.IssueOpsIssueCreateReconcileResult{WouldAdopt: true, CandidateURL: "https://x/issues/8"}
+	result = issueopscontract.IssueCreateReconcileResult{WouldAdopt: true, CandidateURL: "https://x/issues/8"}
 	out := captureStdout(t, func() {
 		if err := command.Run([]string{"reconcile-issue", "--id", "c8"}, Deps{}); err != nil {
 			t.Fatal(err)
@@ -495,7 +495,7 @@ func TestRemoteReconcileIssueOutputDistinguishesPreviewFromAdoption(t *testing.T
 	if strings.TrimSpace(out) != "would adopt: https://x/issues/8" {
 		t.Fatalf("preview output: %q", out)
 	}
-	result = issueopscontract.IssueOpsIssueCreateReconcileResult{CandidateURL: "https://x/issues/8"}
+	result = issueopscontract.IssueCreateReconcileResult{CandidateURL: "https://x/issues/8"}
 	out = captureStdout(t, func() {
 		if err := command.Run([]string{"reconcile-issue", "--id", "c8", "--confirm"}, Deps{}); err != nil {
 			t.Fatal(err)

@@ -13,8 +13,8 @@ import (
 func TestCleanupPathsKeepAuditOutOfIssueBody(t *testing.T) {
 	stateRoot, record := remoteBranchTestRecord(t)
 	const reflectedAt = "2026-09-24T00:00:00Z"
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.RemoteCompletion = &issueops.IssueOpsRemoteCompletion{ReflectedAt: reflectedAt}
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) {
+		rec.RemoteCompletion = &issueops.RemoteCompletion{ReflectedAt: reflectedAt}
 	})
 	deps := remoteBranchDeps(remoteBranchGit())
 	preview, err := CleanupRemoteBranch(context.Background(), stateRoot, remoteBranchRequest(record.ID, false, ""), deps)

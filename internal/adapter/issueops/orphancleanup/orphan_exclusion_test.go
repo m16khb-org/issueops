@@ -67,7 +67,7 @@ func TestOrphanEffectsExcludeNewOwnersAndCompetingCleanup(t *testing.T) {
 		t.Fatalf("apply=%+v err=%v observed=%t", result, err, observed)
 	}
 	ids := []string{}
-	err = adapter.VisitIssueOpsExisting(root, func(id string, _ model.IssueOpsRecord, _ error) { ids = append(ids, id) })
+	err = adapter.VisitIssueOpsExisting(root, func(id string, _ model.Record, _ error) { ids = append(ids, id) })
 	if err != nil || len(ids) != 0 {
 		t.Fatalf("cleanup manufactured or admitted owner: %v %v", ids, err)
 	}
@@ -104,7 +104,7 @@ func TestOrphanLocalRefreshRefusesInvalidRecordsAndChangedHead(t *testing.T) {
 			if err != nil || !preview.Ready {
 				t.Fatalf("preview=%+v err=%v", preview, err)
 			}
-			deps.VerifyMerged = func(model.IssueOpsRemoteArtifactVerification) error {
+			deps.VerifyMerged = func(model.RemoteArtifactVerification) error {
 				if kind == "changed head" {
 					gitRun(t, fixture.worktree, "commit", "--allow-empty", "-m", "late head")
 					return nil

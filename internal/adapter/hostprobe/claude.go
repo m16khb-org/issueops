@@ -12,6 +12,7 @@ import (
 
 const claudeProbeServer = "issueops_probe"
 
+// ClaudeRunner runs one capture-only MCP episode in an isolated Claude Code session.
 type ClaudeRunner struct {
 	harnessBinary string
 	deps          Dependencies
@@ -27,6 +28,8 @@ type claudeMCPServer struct {
 	Args    []string `json:"args"`
 }
 
+// NewClaudeRunner returns a ClaudeRunner that serves the probe through harnessBinary.
+// Nil members of deps are replaced by the real process, clock, and filesystem implementations.
 func NewClaudeRunner(harnessBinary string, deps Dependencies) ClaudeRunner {
 	return ClaudeRunner{
 		harnessBinary: harnessBinary,
@@ -34,12 +37,19 @@ func NewClaudeRunner(harnessBinary string, deps Dependencies) ClaudeRunner {
 	}
 }
 
+var _ port.HostProbeRunner = ClaudeRunner{}
+
+// Name returns the host name, "claude", used in reports and evidence sources.
 func (ClaudeRunner) Name() string { return "claude" }
 
+// Preflight reports whether the claude executable is installed and answers a version probe in an isolated environment.
 func (r ClaudeRunner) Preflight(ctx context.Context, request port.HostProbeRequest) port.HostProbePreflight {
 	return preflight(ctx, r.deps, r.Name(), "claude", request, isolatedHostEnv(r.deps))
 }
 
+// Run executes one probe episode in a private temporary root with a stdio MCP config and capture hooks, then returns the observed call as a HostProbeResult.
+// Environment failures such as a missing harness binary or executable become failed results with a cause and code, not errors,
+// and the private root is removed afterwards.
 func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	if r.harnessBinary == "" {
@@ -99,11 +109,11 @@ func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) (r
 	environment := isolatedHostEnv(r.deps)
 	environment = replaceEnvironmentValue(environment, "ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
 	environment = replaceEnvironmentValue(environment, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", observationPath)
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Cwd:     root,
 		Argv:    claudeArgvMode(executable, configPath, settingsPath, request, hookSmoke),
 		Env:     environment,
-		Timeout: EpisodeTimeout,
+		Timeout: episodeTimeout,
 	})
 	return hookEpisodeFinish{
 		name: r.Name(), request: request, started: started, deps: r.deps,

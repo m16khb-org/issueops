@@ -23,10 +23,10 @@ func TestValidateReseedRejectsNonHolderlessOrStaleLease(t *testing.T) {
 		expected uint64
 		want     DenyCode
 	}{
-		{name: "active", lease: Lease{Generation: 4, Status: "active"}, expected: 4, want: DenyReseedLease},
-		{name: "revoking", lease: Lease{Generation: 4, Status: "revoking"}, expected: 4, want: DenyReseedLease},
-		{name: "released with holder", lease: Lease{Generation: 4, Status: "released", Holder: &Actor{Host: "codex", SessionID: "stale"}}, expected: 4, want: DenyReseedLease},
-		{name: "claimable with holder", lease: Lease{Generation: 4, Status: "claimable", Holder: &Actor{Host: "codex", SessionID: "stale"}}, expected: 4, want: DenyReseedLease},
+		{name: "active", lease: Lease{Generation: 4, Status: "active"}, expected: 4, want: denyReseedLease},
+		{name: "revoking", lease: Lease{Generation: 4, Status: "revoking"}, expected: 4, want: denyReseedLease},
+		{name: "released with holder", lease: Lease{Generation: 4, Status: "released", Holder: &Actor{Host: "codex", SessionID: "stale"}}, expected: 4, want: denyReseedLease},
+		{name: "claimable with holder", lease: Lease{Generation: 4, Status: "claimable", Holder: &Actor{Host: "codex", SessionID: "stale"}}, expected: 4, want: denyReseedLease},
 		{name: "stale", lease: Lease{Generation: 4, Status: "released"}, expected: 3, want: DenyLeaseGeneration},
 	}
 	for _, test := range tests {

@@ -1,27 +1,31 @@
 package issueops
 
-type IssueOpsPhase string
+// Phase is a stage of the IssueOps cycle lifecycle.
+type Phase string
 
+// The Phase values, in lifecycle order from problem framing to done.
 const (
-	IssueOpsPhaseProblem             IssueOpsPhase = "problem"
-	IssueOpsPhaseGrill               IssueOpsPhase = "grill"
-	IssueOpsPhasePlan                IssueOpsPhase = "plan"
-	IssueOpsPhaseCompatibilityReview IssueOpsPhase = "compatibility-review"
-	IssueOpsPhaseImplement           IssueOpsPhase = "implement"
-	IssueOpsPhaseAISlopClean         IssueOpsPhase = "ai-slop-clean"
-	IssueOpsPhaseFeedback            IssueOpsPhase = "feedback"
-	IssueOpsPhasePR                  IssueOpsPhase = "pr"
-	IssueOpsPhaseDone                IssueOpsPhase = "done"
+	PhaseProblem             Phase = "problem"
+	PhaseGrill               Phase = "grill"
+	PhasePlan                Phase = "plan"
+	PhaseCompatibilityReview Phase = "compatibility-review"
+	PhaseImplement           Phase = "implement"
+	PhaseAISlopClean         Phase = "ai-slop-clean"
+	PhaseFeedback            Phase = "feedback"
+	PhasePR                  Phase = "pr"
+	PhaseDone                Phase = "done"
 )
 
-var IssueOpsPhases = []IssueOpsPhase{
-	IssueOpsPhaseProblem,
-	IssueOpsPhaseGrill,
-	IssueOpsPhasePlan,
-	IssueOpsPhaseCompatibilityReview,
-	IssueOpsPhaseImplement,
-	IssueOpsPhaseAISlopClean,
-	IssueOpsPhaseFeedback,
-	IssueOpsPhasePR,
-	IssueOpsPhaseDone,
+// Phases lists every Phase in lifecycle order. Iterate it instead of a map of
+// phases so rendering and comparison stay deterministic. Callers must not modify it.
+var Phases = []Phase{
+	PhaseProblem,
+	PhaseGrill,
+	PhasePlan,
+	PhaseCompatibilityReview,
+	PhaseImplement,
+	PhaseAISlopClean,
+	PhaseFeedback,
+	PhasePR,
+	PhaseDone,
 }

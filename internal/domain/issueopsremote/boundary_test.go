@@ -1,4 +1,4 @@
-package remote
+package issueopsremote
 
 import (
 	"strings"
@@ -51,13 +51,13 @@ func TestPrepareCreateRequestSizeLimitsAreInclusive(t *testing.T) {
 }
 
 func TestIssueNumberAcceptsEveryDigit(t *testing.T) {
-	if got := IssueNumber("https://github.com/a/b/issues/0123456789"); got != "0123456789" {
-		t.Fatalf("IssueNumber=%q", got)
+	if got := issueNumber("https://github.com/a/b/issues/0123456789"); got != "0123456789" {
+		t.Fatalf("issueNumber=%q", got)
 	}
 }
 
 func TestValidProjectKeyAcceptsHostWithSingleSegment(t *testing.T) {
-	if !ValidProjectKey("github.com/acme") {
+	if !validProjectKey("github.com/acme") {
 		t.Fatal("host plus one path segment must be a valid project key")
 	}
 }
@@ -83,10 +83,10 @@ func TestProviderFromRemoteURLsHostExtractionShapes(t *testing.T) {
 
 func TestScoreIssueOpsRemoteCandidatesThresholdOneIsAccepted(t *testing.T) {
 	one := 1.0
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Threshold:       1,
-		Issue:           IssueOpsRemoteArtifact{Title: "login crash"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{{ID: "a", Score: &one}},
+		Issue:           ArtifactDraft{Title: "login crash"},
+		IssueCandidates: []IssueCandidate{{ID: "a", Score: &one}},
 	})
 	if err != nil || len(res.SelectedRelatedIssues) != 1 {
 		t.Fatalf("threshold 1 must be valid: res=%+v err=%v", res, err)
@@ -95,11 +95,11 @@ func TestScoreIssueOpsRemoteCandidatesThresholdOneIsAccepted(t *testing.T) {
 
 func TestScoreIssueOpsRemoteCandidatesScoreEqualToThresholdIsSelected(t *testing.T) {
 	half := 0.5
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Threshold:       0.5,
-		Issue:           IssueOpsRemoteArtifact{Title: "login crash"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{{ID: "a", Score: &half}},
-		LabelCandidates: []IssueOpsRemoteLabelCandidate{{Name: "bug", Score: &half}},
+		Issue:           ArtifactDraft{Title: "login crash"},
+		IssueCandidates: []IssueCandidate{{ID: "a", Score: &half}},
+		LabelCandidates: []LabelCandidate{{Name: "bug", Score: &half}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +110,7 @@ func TestScoreIssueOpsRemoteCandidatesScoreEqualToThresholdIsSelected(t *testing
 }
 
 func TestScoreIssueOpsRemoteCandidatesReportsReadOnlyJoinContract(t *testing.T) {
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{Issue: IssueOpsRemoteArtifact{Title: "login crash"}})
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{Issue: ArtifactDraft{Title: "login crash"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,10 +120,10 @@ func TestScoreIssueOpsRemoteCandidatesReportsReadOnlyJoinContract(t *testing.T) 
 }
 
 func TestScoreIssueOpsRemoteCandidatesLabelOverlapAddsToIssueScore(t *testing.T) {
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Threshold: 0.95,
-		Issue:     IssueOpsRemoteArtifact{Title: "alpha beta gamma delta"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{
+		Issue:     ArtifactDraft{Title: "alpha beta gamma delta"},
+		IssueCandidates: []IssueCandidate{
 			{ID: "full", Title: "alpha", Labels: []string{"beta"}},
 		},
 	})
@@ -138,10 +138,10 @@ func TestScoreIssueOpsRemoteCandidatesLabelOverlapAddsToIssueScore(t *testing.T)
 
 func TestScoreIssueOpsRemoteCandidatesTiedItemsKeepInputOrder(t *testing.T) {
 	score := 0.8
-	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+	res, err := ScoreIssueOpsRemoteCandidates(ScoringRequest{
 		Threshold: 0.5,
-		Issue:     IssueOpsRemoteArtifact{Title: "login crash"},
-		IssueCandidates: []IssueOpsRemoteIssueCandidate{
+		Issue:     ArtifactDraft{Title: "login crash"},
+		IssueCandidates: []IssueCandidate{
 			{ID: "same", Title: "first", Score: &score},
 			{ID: "same", Title: "second", Score: &score},
 		},

@@ -13,17 +13,17 @@ import (
 	verifyworkapp "issueops/internal/application/verifywork"
 )
 
-func fakeVerifyWorkService(gitErr error) (verifyworkapp.Service, *guardcontract.GuardCheckRequest) {
-	var seen guardcontract.GuardCheckRequest
+func fakeVerifyWorkService(gitErr error) (verifyworkapp.Service, *guardcontract.CheckRequest) {
+	var seen guardcontract.CheckRequest
 	return verifyworkapp.Service{
 		ResolveTarget: func(repo string) string { return repo },
 		GitStatus:     func(string) (string, error) { return "", gitErr },
-		Preflight: func(root string) preflightcontract.PreflightResult {
-			return preflightcontract.PreflightResult{OK: true, Path: root}
+		Preflight: func(root string) preflightcontract.Result {
+			return preflightcontract.Result{OK: true, Path: root}
 		},
-		Guard: func(req guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult {
+		Guard: func(req guardcontract.CheckRequest) guardcontract.CheckResult {
 			seen = req
-			return guardcontract.GuardCheckResult{OK: true}
+			return guardcontract.CheckResult{OK: true}
 		},
 		RunCommand: func(policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
 			return policycontract.CommandRunResult{OK: true}

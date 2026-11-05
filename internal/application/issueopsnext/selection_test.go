@@ -16,7 +16,7 @@ import (
 )
 
 func TestNextOutsideRepositoryNeverListsCycles(t *testing.T) {
-	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan}}, nil)
+	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.PhasePlan}}, nil)
 	ports.Repository = func(string) bool { return false }
 	ports.ListCycles = func(context.Context, string, string) (issueopsinventorycontract.ListResult, error) {
 		t.Fatal("a non-repository cwd must not enumerate cycles")
@@ -77,9 +77,9 @@ func TestNextPropagatesInventoryFailure(t *testing.T) {
 
 func TestNextInvalidInventoryEntryPointsAtStatus(t *testing.T) {
 	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-bad", Invalid: true}}, nil)
-	ports.ReadRecord = func(string, string) (issueopscontract.IssueOpsRecord, error) {
+	ports.ReadRecord = func(string, string) (issueopscontract.Record, error) {
 		t.Fatal("an invalid inventory entry must not be read as a record")
-		return issueopscontract.IssueOpsRecord{}, nil
+		return issueopscontract.Record{}, nil
 	}
 
 	result, err := NewService(ports).Next(t.Context(), "/state", "/repo", "")
@@ -96,9 +96,9 @@ func TestNextInvalidInventoryEntryPointsAtStatus(t *testing.T) {
 }
 
 func TestNextUnreadableRecordIsInvalidWithWarning(t *testing.T) {
-	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan}}, nil)
-	ports.ReadRecord = func(string, string) (issueopscontract.IssueOpsRecord, error) {
-		return issueopscontract.IssueOpsRecord{}, errors.New("disk gone")
+	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.PhasePlan}}, nil)
+	ports.ReadRecord = func(string, string) (issueopscontract.Record, error) {
+		return issueopscontract.Record{}, errors.New("disk gone")
 	}
 
 	result, err := NewService(ports).Next(t.Context(), "/state", "/repo", "")
@@ -116,11 +116,11 @@ func TestNextUnreadableRecordIsInvalidWithWarning(t *testing.T) {
 
 func TestNextSelectsByCurrentBranchWhenNoWorkspaceMatches(t *testing.T) {
 	entries := []issueopsinventorycontract.ListEntry{
-		{ID: "io-a", Phase: issueopscontract.IssueOpsPhaseImplement, Branch: "12-a"},
-		{ID: "io-b", Phase: issueopscontract.IssueOpsPhaseImplement, Branch: "13-b"},
+		{ID: "io-a", Phase: issueopscontract.PhaseImplement, Branch: "12-a"},
+		{ID: "io-b", Phase: issueopscontract.PhaseImplement, Branch: "13-b"},
 	}
-	records := map[string]issueopscontract.IssueOpsRecord{
-		"io-b": {ID: "io-b", Repo: "/repo", Branch: "13-b", Phase: issueopscontract.IssueOpsPhaseImplement},
+	records := map[string]issueopscontract.Record{
+		"io-b": {ID: "io-b", Repo: "/repo", Branch: "13-b", Phase: issueopscontract.PhaseImplement},
 	}
 	ports := testPorts(entries, records)
 	ports.CurrentBranch = func(string) string { return " 13-b\n" }
@@ -145,8 +145,8 @@ func TestNextDuplicateBranchOrWorkspaceStaysAmbiguous(t *testing.T) {
 		{
 			name: "two cycles share the current branch",
 			entries: []issueopsinventorycontract.ListEntry{
-				{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "12-a"},
-				{ID: "io-b", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "12-a"},
+				{ID: "io-a", Phase: issueopscontract.PhasePlan, Branch: "12-a"},
+				{ID: "io-b", Phase: issueopscontract.PhasePlan, Branch: "12-a"},
 			},
 			branch: "12-a",
 			cwd:    "/repo",
@@ -154,8 +154,8 @@ func TestNextDuplicateBranchOrWorkspaceStaysAmbiguous(t *testing.T) {
 		{
 			name: "two cycles claim the cwd workspace",
 			entries: []issueopsinventorycontract.ListEntry{
-				{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan, WorkspaceRoot: "/repo.worktrees/x"},
-				{ID: "io-b", Phase: issueopscontract.IssueOpsPhasePlan, WorkspaceRoot: "/repo.worktrees/x/"},
+				{ID: "io-a", Phase: issueopscontract.PhasePlan, WorkspaceRoot: "/repo.worktrees/x"},
+				{ID: "io-b", Phase: issueopscontract.PhasePlan, WorkspaceRoot: "/repo.worktrees/x/"},
 			},
 			cwd: "/repo.worktrees/x",
 		},
@@ -178,8 +178,8 @@ func TestNextDuplicateBranchOrWorkspaceStaysAmbiguous(t *testing.T) {
 
 func TestNextAmbiguityWithoutSourceRootOffersTemplateCommand(t *testing.T) {
 	ports := testPorts([]issueopsinventorycontract.ListEntry{
-		{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan},
-		{ID: "io-b", Phase: issueopscontract.IssueOpsPhasePlan},
+		{ID: "io-a", Phase: issueopscontract.PhasePlan},
+		{ID: "io-b", Phase: issueopscontract.PhasePlan},
 	}, nil)
 	ports.SourceRoot = func(string) string { return "  " }
 
@@ -217,11 +217,11 @@ func TestNextClassifiesCWDRoleFromSourceRoot(t *testing.T) {
 
 func TestNextReportsClaimedWorktreeRootBeforePrepare(t *testing.T) {
 	entries := []issueopsinventorycontract.ListEntry{
-		{ID: "io-mine", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "feat/x"},
-		{ID: "io-other", Phase: issueopscontract.IssueOpsPhaseDone, Branch: "old", WorkspaceRoot: "/repo.worktrees/feat-x"},
+		{ID: "io-mine", Phase: issueopscontract.PhasePlan, Branch: "feat/x"},
+		{ID: "io-other", Phase: issueopscontract.PhaseDone, Branch: "old", WorkspaceRoot: "/repo.worktrees/feat-x"},
 	}
-	records := map[string]issueopscontract.IssueOpsRecord{
-		"io-mine": {ID: "io-mine", Repo: "/repo", Branch: "feat/x", Phase: issueopscontract.IssueOpsPhasePlan},
+	records := map[string]issueopscontract.Record{
+		"io-mine": {ID: "io-mine", Repo: "/repo", Branch: "feat/x", Phase: issueopscontract.PhasePlan},
 	}
 	ports := testPorts(entries, records)
 	ports.CurrentBranch = func(string) string { return "feat/x" }
@@ -246,7 +246,7 @@ func TestNextRootConflictIgnoresCyclesWithoutBranchOrOwnRoot(t *testing.T) {
 		{"only the cycle's own entry owns the root", "13-b", []issueopsinventorycontract.ListEntry{{ID: "io-a", WorkspaceRoot: "/repo.worktrees/13-b"}}},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
-			record := issueopscontract.IssueOpsRecord{ID: "io-a", Repo: "/repo", Branch: scenario.branch, Phase: issueopscontract.IssueOpsPhasePlan}
+			record := issueopscontract.Record{ID: "io-a", Repo: "/repo", Branch: scenario.branch, Phase: issueopscontract.PhasePlan}
 			if got := rootConflict(Ports{}, record, "/repo", scenario.others); got != "" {
 				t.Fatalf("unexpected conflict with %q", got)
 			}
@@ -260,18 +260,18 @@ func TestNextFeedsStagedArtifactsToClassifier(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fixture architecture must be valid: %v", err)
 	}
-	record := func(reviewDigest string) issueopscontract.IssueOpsRecord {
-		record := issueopscontract.IssueOpsRecord{
-			ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan,
+	record := func(reviewDigest string) issueopscontract.Record {
+		record := issueopscontract.Record{
+			ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.PhasePlan,
 			IssueURL:      "https://example.test/issues/12",
-			BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{BaseSHA: "deadbeef", LinkVerified: true},
+			BranchPrepare: &issueopscontract.BranchPrepare{BaseSHA: "deadbeef", LinkVerified: true},
 		}
 		if reviewDigest != "" {
 			record.ArchitectureReview = &reviewcontract.ArchitectureReview{Approved: true, ReviewerContext: "subagent", ReviewedArchitectureDigest: reviewDigest}
 		}
 		return record
 	}
-	entries := []issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "12-a"}}
+	entries := []issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.PhasePlan, Branch: "12-a"}}
 	for _, scenario := range []struct {
 		name         string
 		reviewDigest string
@@ -288,7 +288,7 @@ func TestNextFeedsStagedArtifactsToClassifier(t *testing.T) {
 		{"staged lookup fails", digest, nil, errors.New("boom"), issueopsnextcontract.StagePlanArchitecture, "architecture_artifact"},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
-			ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{"io-a": record(scenario.reviewDigest)})
+			ports := testPorts(entries, map[string]issueopscontract.Record{"io-a": record(scenario.reviewDigest)})
 			ports.StagedArtifacts = func(_, id string) (map[string]string, error) {
 				if id != "io-a" {
 					t.Fatalf("staged artifacts asked for %q", id)
@@ -309,8 +309,8 @@ func TestNextFeedsStagedArtifactsToClassifier(t *testing.T) {
 
 func TestNextObservesHolderProcessAndWorktreeForExecutions(t *testing.T) {
 	process := issueopscontract.NativeProcessReceipt{PID: 4242, StartedAt: "t0", Executable: "agent"}
-	record := issueopscontract.IssueOpsRecord{
-		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhaseImplement,
+	record := issueopscontract.Record{
+		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.PhaseImplement,
 		Execution: &issueopscontract.Execution{
 			Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/12-a"},
 			Lease: issueopscontract.WriteLease{
@@ -330,7 +330,7 @@ func TestNextObservesHolderProcessAndWorktreeForExecutions(t *testing.T) {
 		{"holder dead", new(false), issueopsnextcontract.StageTakeover},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
-			ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{"io-a": record})
+			ports := testPorts(entries, map[string]issueopscontract.Record{"io-a": record})
 			ports.Actor = func() (string, string, error) { return "claude", "me", nil }
 			var probed issueopscontract.NativeProcessReceipt
 			ports.ProcessLive = func(receipt issueopscontract.NativeProcessReceipt) *bool {
@@ -362,12 +362,12 @@ func TestNextObservesHolderProcessAndWorktreeForExecutions(t *testing.T) {
 }
 
 func TestNextSelectedEntryCarriesRecordLinks(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
-		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan,
+	record := issueopscontract.Record{
+		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.PhasePlan,
 		IssueURL:       "https://example.test/issues/12",
-		RemoteArtifact: &issueopscontract.IssueOpsRemoteArtifactVerification{URL: "https://example.test/pull/9"},
+		RemoteArtifact: &issueopscontract.RemoteArtifactVerification{URL: "https://example.test/pull/9"},
 	}
-	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: record.Phase}}, map[string]issueopscontract.IssueOpsRecord{"io-a": record})
+	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: record.Phase}}, map[string]issueopscontract.Record{"io-a": record})
 
 	result, err := NewService(ports).Next(t.Context(), "/state", "/repo", "")
 
@@ -406,16 +406,16 @@ func TestNextReportsStagedPlanChangedAfterReview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record := issueopscontract.IssueOpsRecord{
-		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan,
+	record := issueopscontract.Record{
+		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.PhasePlan,
 		IssueURL:             "https://example.test/issues/12",
-		BranchPrepare:        &issueopscontract.IssueOpsBranchPrepare{BaseSHA: "deadbeef", LinkVerified: true},
+		BranchPrepare:        &issueopscontract.BranchPrepare{BaseSHA: "deadbeef", LinkVerified: true},
 		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true, ReviewerContext: "subagent", ReviewedArchitectureDigest: archDigest},
 		DevilsAdvocateReview: &reviewcontract.DevilsAdvocateReview{Verdict: "pass", RecordedAt: "now", ReviewedPlanDigest: planDigest},
 	}
-	entries := []issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "12-a"}}
+	entries := []issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.PhasePlan, Branch: "12-a"}}
 	for plan, want := range map[string]string{"# plan": issueopsnextcontract.StagePlanHandoff, "# plan edited": issueopsnextcontract.StagePlanReview} {
-		ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{"io-a": record})
+		ports := testPorts(entries, map[string]issueopscontract.Record{"io-a": record})
 		ports.StagedArtifacts = func(string, string) (map[string]string, error) {
 			return map[string]string{"plan": plan, "architecture": architecture}, nil
 		}

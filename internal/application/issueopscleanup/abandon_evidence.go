@@ -8,7 +8,11 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-func CleanupAbandonFailureSeal(record issueops.IssueOpsRecord, failure *issueops.IssueOpsCleanupAbandonFailure) string {
+// CleanupAbandonFailureSeal returns the SHA-256 hex digest that binds an
+// abandon failure receipt to its record ID, repo and the inventory fields it
+// captured (fingerprint, record SHA, worktree path, branch and OIDs). Preview
+// recomputes it to detect a tampered or mismatched receipt.
+func CleanupAbandonFailureSeal(record issueops.Record, failure *issueops.CleanupAbandonFailure) string {
 	sealed := struct {
 		ID           string `json:"id"`
 		Repo         string `json:"repo"`
@@ -28,7 +32,10 @@ func CleanupAbandonFailureSeal(record issueops.IssueOpsRecord, failure *issueops
 	return hex.EncodeToString(sum[:])
 }
 
-func CleanupAbandonRecordSHA(record issueops.IssueOpsRecord) string {
+// CleanupAbandonRecordSHA returns the SHA-256 hex digest of the JSON-encoded
+// record, or "" when the record cannot be marshaled. It pins the record state
+// the abandon inventory was observed against.
+func CleanupAbandonRecordSHA(record issueops.Record) string {
 	data, err := json.Marshal(record)
 	if err != nil {
 		return ""
@@ -37,7 +44,7 @@ func CleanupAbandonRecordSHA(record issueops.IssueOpsRecord) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func CleanupAbandonFingerprint(inventory issueops.CleanupAbandonInventory) (string, error) {
+func cleanupAbandonFingerprint(inventory issueops.CleanupAbandonInventory) (string, error) {
 	data, err := json.Marshal(inventory)
 	if err != nil {
 		return "", err

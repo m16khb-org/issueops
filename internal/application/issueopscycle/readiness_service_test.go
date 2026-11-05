@@ -18,8 +18,8 @@ type readinessGitFixture struct {
 	t      *testing.T
 }
 
-func (g *readinessGitFixture) Root(model.IssueOpsRecord) string            { return g.root }
-func (g *readinessGitFixture) Head(model.IssueOpsRecord) string            { return "head" }
+func (g *readinessGitFixture) Root(model.Record) string                    { return g.root }
+func (g *readinessGitFixture) Head(model.Record) string                    { return "head" }
 func (g *readinessGitFixture) IsWorktree(string) bool                      { return true }
 func (g *readinessGitFixture) Branch(string) string                        { return "feature" }
 func (g *readinessGitFixture) Clean(string) bool                           { return true }
@@ -39,14 +39,14 @@ func readinessForEffects(t *testing.T, locked *bool, events *[]string) (Readines
 	git := &readinessGitFixture{root: "/repo", locked: locked, events: events, t: t}
 	ready := Readiness{
 		Git: git, Paths: port.ReadinessObservations{
-			WorktreePathValid: func(string) bool { return true }, PlanPathExists: func(string, string) bool { return true }, PlanInLinkedWorktree: func(model.IssueOpsRecord) bool { return true }, WorkspaceMatches: func(string, string) bool { return true }, LinkedPlanDigest: func(model.IssueOpsRecord) (string, error) { return "", nil }},
-		HasEvidence: func(model.IssueOpsRecord) bool { return true },
-		ObserveChanges: func(model.IssueOpsRecord, string) review.LocalChangeObservation {
+			WorktreePathValid: func(string) bool { return true }, PlanPathExists: func(string, string) bool { return true }, PlanInLinkedWorktree: func(model.Record) bool { return true }, WorkspaceMatches: func(string, string) bool { return true }, LinkedPlanDigest: func(model.Record) (string, error) { return "", nil }},
+		HasEvidence: func(model.Record) bool { return true },
+		ObserveChanges: func(model.Record, string) review.LocalChangeObservation {
 			*events = append(*events, "observe")
 			return review.LocalChangeObservation{Paths: []string{"src.go"}, Fingerprint: "fingerprint", Verified: true}
 		},
-		ChangedPaths: func(model.IssueOpsRecord) []string { *events = append(*events, "paths"); return []string{"src.go"} },
-		ChildMissing: func(string, model.IssueOpsRecord) ([]string, []string) { return nil, nil },
+		ChangedPaths: func(model.Record) []string { *events = append(*events, "paths"); return []string{"src.go"} },
+		ChildMissing: func(string, model.Record) ([]string, []string) { return nil, nil },
 	}
 	return ready, git
 }
@@ -55,7 +55,7 @@ func TestReadinessLocalSharesSnapshotAndStrictObservesPathsAfterFetch(t *testing
 	locked := false
 	events := []string{}
 	ready, _ := readinessForEffects(t, &locked, &events)
-	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
+	record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
 	local, changes := ready.ObserveLocalPR(record)
 	if local.Strict || !changes.Verified || !reflect.DeepEqual(events, []string{"observe"}) {
 		t.Fatalf("local observation performed extra effects: %v %+v", events, changes)
@@ -71,11 +71,11 @@ func TestReadinessPrefetchRejectsChangedRootWithoutAnotherFetch(t *testing.T) {
 	locked := false
 	events := []string{}
 	ready, git := readinessForEffects(t, &locked, &events)
-	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
-	fetched := ready.PrefetchUpstream(record)
+	record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
+	fetched := ready.prefetchUpstream(record)
 	git.root = "/other"
 	locked = true
-	result := ready.StrictPRWithFetch("state", record, fetched)
+	result := ready.strictPRWithFetch("state", record, fetched)
 	if !strings.Contains(strings.Join(result.Missing, ","), "upstream_fetch") || !reflect.DeepEqual(events, []string{"fetch", "observe", "paths"}) {
 		t.Fatalf("changed root was not refused with bounded effects: missing=%v events=%v", result.Missing, events)
 	}
@@ -88,10 +88,10 @@ func TestPhaseAdvanceAuthorizesBeforePrefetchAndAgainUnderLock(t *testing.T) {
 			events := []string{}
 			calls, writes := 0, 0
 			ready, _ := readinessForEffects(t, &locked, &events)
-			record := model.IssueOpsRecord{ID: "io-phase", Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
+			record := model.Record{ID: "io-phase", Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
 			denied := errors.New("holder denied")
 			service := PhaseService{Readiness: ready, Store: port.PhaseStore{
-				Read: func(string, string) (model.IssueOpsRecord, error) {
+				Read: func(string, string) (model.Record, error) {
 					events = append(events, "read")
 					return record, nil
 				},
@@ -101,7 +101,7 @@ func TestPhaseAdvanceAuthorizesBeforePrefetchAndAgainUnderLock(t *testing.T) {
 					defer func() { locked = false }()
 					return fn()
 				},
-				ValidateMutation: func(model.IssueOpsRecord) error {
+				ValidateMutation: func(model.Record) error {
 					calls++
 					events = append(events, "authorize")
 					if calls == denyAt {
@@ -109,7 +109,7 @@ func TestPhaseAdvanceAuthorizesBeforePrefetchAndAgainUnderLock(t *testing.T) {
 					}
 					return nil
 				},
-				Write: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { writes++; return r, nil },
+				Write: func(_ string, r model.Record) (model.Record, error) { writes++; return r, nil },
 			}}
 			_, _, err := service.AdvanceReport("state", record.ID, "pr")
 			if err == nil || writes != 0 {
@@ -136,14 +136,14 @@ func TestStrictPRWithFetchMergesChildGateMissingAndWarnings(t *testing.T) {
 	locked := false
 	events := []string{}
 	ready, _ := readinessForEffects(t, &locked, &events)
-	ready.ChildMissing = func(root string, _ model.IssueOpsRecord) ([]string, []string) {
+	ready.ChildMissing = func(root string, _ model.Record) ([]string, []string) {
 		if root != "state" {
 			t.Fatalf("child gate root=%q", root)
 		}
 		return []string{"child_pr_open"}, []string{"child #4 still open"}
 	}
-	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
-	got := ready.StrictPRWithFetch("state", record, ready.Git.Fetch)
+	record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
+	got := ready.strictPRWithFetch("state", record, ready.Git.Fetch)
 	if got.Ready || !strings.Contains(strings.Join(got.Missing, ","), "child_pr_open") || !slices.Contains(got.Warnings, "child #4 still open") {
 		t.Fatalf("child gate not merged: %+v", got)
 	}

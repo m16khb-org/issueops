@@ -13,7 +13,7 @@ import (
 
 func testLifecycleService() lifecycleapp.Service {
 	return lifecycleapp.Service{SchemaVersion: lifecyclemodel.ProjectLifecycleSchemaVersion, Effects: ProfileFiles{
-		Normalize: repopath.NormalizeRoot, StateDir: statestore.StateDir(),
+		Normalize: repopath.NormalizeRoot, StateDir: statestore.Dir(),
 		ObserveFingerprint: func(root string) lifecyclecontract.ProjectFingerprint {
 			return fingerprint.ForRoot(root, projectdocs.ReadGitOriginURL)
 		},

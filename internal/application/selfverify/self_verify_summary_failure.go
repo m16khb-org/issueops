@@ -6,6 +6,8 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
-func ClassifySelfVerificationFailure(result augment.SelfAugmentResult, summary augment.SelfAugmentSummary) (string, string, []verify.SelfVerificationFailureCluster) {
+// ClassifySelfVerificationFailure returns the failure class, its reason and the failure clusters
+// for a result whose summary reports failed steps.
+func ClassifySelfVerificationFailure(result augment.Result, summary augment.Summary) (string, string, []verify.SelfVerificationFailureCluster) {
 	return domain.ClassifyFailure(summary.FailedSteps, summary.TotalRuns, projectRuns(result))
 }

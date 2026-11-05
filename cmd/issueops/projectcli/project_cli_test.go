@@ -40,7 +40,7 @@ func TestRunProjectDocs_printsRouteJSON_whenJSONFlagIsSet(t *testing.T) {
 	})
 
 	// Then
-	var result projectdocs.ProjectDocsRouteResult
+	var result projectdocs.RouteResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode project docs json: %v\n%s", err, out)
 	}
@@ -62,7 +62,7 @@ func TestRunProjectRouteDocs_joinsTaskArgs_whenTaskFlagIsOmitted(t *testing.T) {
 	})
 
 	// Then
-	var result projectdocs.ProjectDocsRouteResult
+	var result projectdocs.RouteResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode route-docs json: %v\n%s", err, out)
 	}
@@ -79,7 +79,7 @@ func TestRunProjectRouteDocs_routesProfilingWithoutCommitReasons(t *testing.T) {
 	out := captureStatusVerifyStdout(t, func() error {
 		return runProjectRouteDocs(testProjectDocsService(), []string{"--repo", repo, "--task", "performance profiling", "--json"})
 	})
-	var result projectdocs.ProjectDocsRouteResult
+	var result projectdocs.RouteResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode route-docs json: %v\n%s", err, out)
 	}
@@ -112,7 +112,7 @@ func TestRunProjectRecord_recordsADR_whenRequiredFieldsAreProvided(t *testing.T)
 	})
 
 	// Then
-	var result projectdocscontract.ProjectDocsAppendResult
+	var result projectdocscontract.AppendResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode record json: %v\n%s", err, out)
 	}
@@ -169,7 +169,7 @@ func TestRunProjectRecord_returnsValidationError_whenTitleIsMissing(t *testing.T
 	}
 }
 
-func projectRouteHasRel(result projectdocs.ProjectDocsRouteResult, rel string) bool {
+func projectRouteHasRel(result projectdocs.RouteResult, rel string) bool {
 	for _, doc := range result.Docs {
 		if doc.RelPath == rel {
 			return true

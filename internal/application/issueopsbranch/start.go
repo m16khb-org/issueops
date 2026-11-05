@@ -12,29 +12,33 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
+// CycleRecords is the persistence port for cycle records: WithinLock runs fn
+// holding the lock of one cycle ID, Load reads and Save writes a record.
 type CycleRecords interface {
 	WithinLock(context.Context, string, func(context.Context) error) error
-	Load(string) (model.IssueOpsRecord, error)
-	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Load(string) (model.Record, error)
+	Save(context.Context, model.Record) (model.Record, error)
 }
 
-// RetiredCycles names the cycles a plain start must not resume: the IDs
+// retiredCycles names the cycles a plain start must not resume: the IDs
 // cleanup already deleted, and live cycles that are already done.
-type RetiredCycles interface {
+type retiredCycles interface {
 	RetiredIDs() (map[string]bool, error)
 	Done(id string) bool
 }
 
-type StartIdentity interface {
+type startIdentity interface {
 	CanonicalRepo(string) string
 	SuccessorID(repo, branch string, n int) string
 	IndependentID(string) (string, error)
 }
 
+// Starter creates a cycle record for a repository and branch, or returns the
+// resumable one that already exists.
 type Starter struct {
 	Records  CycleRecords
-	Retired  RetiredCycles
-	Identity StartIdentity
+	Retired  retiredCycles
+	Identity startIdentity
 	// IsGitRepo refuses a repo outside git (nil skips the check). Probe:
 	// `start --repo <plain dir>` created a cycle that could only fail later,
 	// at branch prepare.
@@ -42,20 +46,23 @@ type Starter struct {
 	Now       func() time.Time
 }
 
-func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (model.IssueOpsRecord, error) {
+// Start validates req and returns the cycle for its repo and branch, creating
+// it when absent. Without req.New it resumes the first unfinished cycle;
+// with it a new independent cycle is created. A repo outside git is refused.
+func (s Starter) Start(ctx context.Context, req model.StartRequest) (model.Record, error) {
 	if err := domain.ValidateNewCycleRequest(req); err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
 	if repo := strings.TrimSpace(req.Repo); repo != "" && s.IsGitRepo != nil && !s.IsGitRepo(repo) {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("repo %s is not a git repository; an issueops cycle needs one: pass the repository root (git rev-parse --show-toplevel), or git init first", repo)
+		return model.Record{OK: false}, fmt.Errorf("repo %s is not a git repository; an issueops cycle needs one: pass the repository root (git rev-parse --show-toplevel), or git init first", repo)
 	}
 	repo := s.Identity.CanonicalRepo(req.Repo)
 	branch := strings.TrimSpace(req.Branch)
 	id, err := s.cycleID(repo, branch, req.New)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.Record{OK: false}, err
 	}
-	var record model.IssueOpsRecord
+	var record model.Record
 	err = s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		repo := strings.TrimSpace(req.Repo)
 		if repo == "" {

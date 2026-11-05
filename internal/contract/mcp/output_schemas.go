@@ -60,7 +60,7 @@ func schemaObject(properties map[string]any, required ...string) map[string]any 
 	return map[string]any{"type": "object", "properties": properties, "required": required, "additionalProperties": false}
 }
 
-// InspectOutputSchema models inspect.InspectInfo, the harness_inspect result.
+// InspectOutputSchema models inspect.Info, the harness_inspect result.
 func InspectOutputSchema() map[string]any {
 	observation := schemaObject(map[string]any{
 		"status":              map[string]any{"type": "string", "description": "verified, failed, unknown, or not_checked."},
@@ -119,7 +119,7 @@ func InspectOutputSchema() map[string]any {
 	return schema
 }
 
-// DocsIndexOutputSchema models docs.DocsIndexResult, the docs_index result.
+// DocsIndexOutputSchema models docs.IndexResult, the docs_index result.
 func DocsIndexOutputSchema() map[string]any {
 	doc := schemaObject(map[string]any{
 		"rel_path": schemaString(),

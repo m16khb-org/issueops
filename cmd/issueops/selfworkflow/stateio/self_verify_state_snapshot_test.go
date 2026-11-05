@@ -16,9 +16,9 @@ import (
 func TestWriteSelfAugmentSnapshotRecordIsLockedAndAtomic(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	summary := augmentcontract.SelfAugmentSummary{TotalRuns: 2, TotalSteps: 5, PassedSteps: 5}
+	summary := augmentcontract.Summary{TotalRuns: 2, TotalSteps: 5, PassedSteps: 5}
 
-	if err := WriteSelfAugmentSnapshotRecord(dir, "snap", augmentcontract.SelfAugmentStateSnapshot{
+	if err := WriteSelfAugmentSnapshotRecord(dir, "snap", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		Summary:       summary,
@@ -58,9 +58,9 @@ func TestWriteSelfAugmentSnapshotRecordIsLockedAndAtomic(t *testing.T) {
 func TestReadSelfAugmentStateSnapshotRejectsBadSchemaAndRetiredKinds(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	summary := augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1}
+	summary := augmentcontract.Summary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1}
 
-	if err := WriteSelfAugmentSnapshotRecord(dir, "bad-kind", augmentcontract.SelfAugmentStateSnapshot{
+	if err := WriteSelfAugmentSnapshotRecord(dir, "bad-kind", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "other",
 		Summary:       summary,
@@ -71,7 +71,7 @@ func TestReadSelfAugmentStateSnapshotRejectsBadSchemaAndRetiredKinds(t *testing.
 		t.Fatalf("expected bad kind error, got %v", err)
 	}
 
-	if err := WriteSelfAugmentSnapshotRecord(dir, "bad-schema", augmentcontract.SelfAugmentStateSnapshot{
+	if err := WriteSelfAugmentSnapshotRecord(dir, "bad-schema", augmentcontract.StateSnapshot{
 		SchemaVersion: 2,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		Summary:       summary,
@@ -82,7 +82,7 @@ func TestReadSelfAugmentStateSnapshotRejectsBadSchemaAndRetiredKinds(t *testing.
 		t.Fatalf("expected bad schema error, got %v", err)
 	}
 
-	if err := WriteSelfAugmentSnapshotRecord(dir, "retired-kind", augmentcontract.SelfAugmentStateSnapshot{
+	if err := WriteSelfAugmentSnapshotRecord(dir, "retired-kind", augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_augment_summary",
 		Summary:       summary,
@@ -137,10 +137,10 @@ func TestReadSelfAugmentStateSnapshotRoundTripsFailureCause(t *testing.T) {
 		Code:   "framing",
 		Source: "mcp",
 	}}
-	want := augmentcontract.SelfAugmentStateSnapshot{
+	want := augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
-		Summary: augmentcontract.SelfAugmentSummary{
+		Summary: augmentcontract.Summary{
 			TotalSteps:           1,
 			FailedSteps:          1,
 			FailureCause:         failurecause.Transport,

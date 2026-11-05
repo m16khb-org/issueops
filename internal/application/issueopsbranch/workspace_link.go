@@ -11,7 +11,7 @@ import (
 	"issueops/internal/domain/stringlist"
 )
 
-type WorkspaceLinkFiles interface {
+type workspaceLinkFiles interface {
 	PlanPath(worktree, path string) string
 	SamePlan(left, right string) bool
 	PlanExists(repo, path string) bool
@@ -22,15 +22,20 @@ type WorkspaceLinkFiles interface {
 	WorktreeBranch(path string) string
 }
 
+// WorkspaceLinker attaches a plan file or a worktree directory to a cycle
+// after checking them against the cycle's branch and plan evidence.
 type WorkspaceLinker struct {
 	Records   CycleRecords
 	Authority cycleapp.MutationAuthority
-	Files     WorkspaceLinkFiles
+	Files     workspaceLinkFiles
 	Now       func() time.Time
 }
 
-func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+// Plan links the plan file at path to the cycle. The plan must exist inside
+// the worktree, the architecture review must be done, and the plan must
+// contain every required section; relinking the same plan is a no-op.
+func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model.Actor) (model.Record, error) {
+	var result model.Record
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
@@ -75,8 +80,11 @@ func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model
 	return result, err
 }
 
-func (s WorkspaceLinker) Worktree(ctx context.Context, id, path string, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
+// Worktree links the worktree directory at path to the cycle after checking
+// that it is a real worktree of the repo on the cycle's branch and contains
+// any linked plan.
+func (s WorkspaceLinker) Worktree(ctx context.Context, id, path string, actor *model.Actor) (model.Record, error) {
+	var result model.Record
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {

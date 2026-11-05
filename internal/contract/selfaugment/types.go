@@ -1,8 +1,11 @@
+// Package selfaugment 패키지는 자기 검증 루프와 자가 증강 계획이 주고받는 DTO와 상수를 정의하는 계약 계층이다.
+// 도메인 로직 없이 결과, 체크포인트 스냅샷, 이력/비교/승격 타입만 담는다.
 package selfaugment
 
 import qualitycatalog "issueops/internal/contract/qualitycatalog"
 
-type SelfAugmentGoal struct {
+// Goal 타입은 자가 증강 계획이 평가하는 목표 하나의 이름, 점수, 목표 점수, 통과 여부와 근거이다.
+type Goal struct {
 	Name        string   `json:"name"`
 	KoreanName  string   `json:"korean_name"`
 	Score       float64  `json:"score"`
@@ -12,7 +15,9 @@ type SelfAugmentGoal struct {
 	Evidence    []string `json:"evidence"`
 }
 
-type SelfAugmentCandidate struct {
+// Candidate 타입은 자가 증강 계획이 제안하는 개선 후보 하나이다.
+// Impact, Feasibility, Novelty, Risk 평가값과 Score를 함께 담는다.
+type Candidate struct {
 	ID                   string   `json:"id"`
 	Title                string   `json:"title"`
 	Category             string   `json:"category"`
@@ -32,7 +37,9 @@ type SelfAugmentCandidate struct {
 	VerificationKind qualitycatalog.VerificationKind `json:"-"`
 }
 
-type SelfAugmentRepoSignals struct {
+// RepoSignals 타입은 저장소에서 관찰한 기능/문서 존재 여부 신호 모음이다.
+// 후보가 이미 충족되었는지 판단하는 근거로 쓰인다.
+type RepoSignals struct {
 	DocsIndexed                         int      `json:"docs_indexed"`
 	Skills                              []string `json:"skills"`
 	HasGeniusThink                      bool     `json:"has_genius_think"`
@@ -72,6 +79,7 @@ type SelfAugmentRepoSignals struct {
 	HasReleaseDogfoodNotes              bool     `json:"has_release_dogfood_notes"`
 }
 
+// CandidateStatusOpen 상수는 아직 처리되지 않은 후보의 상태이고, CandidateStatusSatisfied 상수는 이미 충족된 후보의 상태이다.
 const (
 	CandidateStatusOpen      = "open"
 	CandidateStatusSatisfied = "already_satisfied"

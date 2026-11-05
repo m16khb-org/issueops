@@ -46,6 +46,8 @@ type RemotePullRequestMergeState struct {
 	MergeCommitOID string
 }
 
+// RemoteMergeBlocker is one reason a PR/MR cannot be merged yet: a stable Code
+// (the RemoteMergeBlocker* values) and a human-readable Message.
 type RemoteMergeBlocker struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`

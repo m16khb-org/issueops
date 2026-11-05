@@ -8,33 +8,36 @@ import (
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/artifacttemplate"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/policy"
 )
 
+// PublicationInput 타입은 PR/MR 생성 요청에 본문 파일, 템플릿, 점수 파일, 필드 입력을 더한 값이다.
 type PublicationInput struct {
 	Request                       model.RemotePullRequestRequest
 	BodyFile, Template, ScoreFile string
 	Fields                        []string
 }
 
+// PublicationInvoker 타입은 PR/MR 생성 요청을 실제로 처리하는 핸들러 함수다.
 type PublicationInvoker func(context.Context, model.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
 
+// PublicationCommandService 타입은 PR/MR 생성 요청의 기본값과 본문을 해석·검증해 게시 핸들러에 넘긴다. 미리보기에서는 경고를 모은다.
 type PublicationCommandService struct {
-	records   IssueRecordReader
+	records   issueRecordReader
 	bodies    TemplateBodyResolver
 	observe   AncestryObserver
 	normalize func(context.Context, model.NativeActor) (model.NativeActor, error)
 	publish   PublicationInvoker
 	// issueState reads the linked issue's provider state for the preview.
-	issueState func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)
+	issueState func(ctx context.Context, record model.Record, provider string) (string, error)
 	// readFile reads the repository's own PR/MR template for the preview.
 	readFile func(string) ([]byte, error)
 }
 
 // WithIssueState lets the preview read the linked issue's state, so a PR is
 // not prepared for an issue someone closed meanwhile without saying so.
-func (s *PublicationCommandService) WithIssueState(read func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)) *PublicationCommandService {
+func (s *PublicationCommandService) WithIssueState(read func(ctx context.Context, record model.Record, provider string) (string, error)) *PublicationCommandService {
 	s.issueState = read
 	return s
 }
@@ -46,14 +49,16 @@ func (s *PublicationCommandService) WithRepoTemplates(read func(string) ([]byte,
 	return s
 }
 
-func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(context.Context, model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
+// NewPublicationCommandService 함수는 기록 조회, 본문 해석기, 조상 관찰기, 행위자 정규화 함수, 게시 핸들러를 묶어 서비스를 만든다.
+func NewPublicationCommandService(records issueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(context.Context, model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
 	return &PublicationCommandService{records: records, bodies: bodies, observe: observe, normalize: normalize, publish: publish}
 }
 
+// Create 메서드는 요청을 검증해 PR/MR을 만든다. 미리보기는 연결 이슈·템플릿 경고를 결과에 담고, 확정은 조상 프로세스를 관찰해 행위자를 정규화한 뒤 게시 핸들러를 호출한다.
 func (s *PublicationCommandService) Create(ctx context.Context, input PublicationInput) (PublicationResult, error) {
 	var result PublicationResult
 	req := input.Request
-	req.Labels, req.Assignees = remote.CleanValues(req.Labels), remote.CleanValues(req.Assignees)
+	req.Labels, req.Assignees = issueopsremote.CleanValues(req.Labels), issueopsremote.CleanValues(req.Assignees)
 	record, err := s.records.Read(ctx, req.ID)
 	if err != nil {
 		return result, err
@@ -62,7 +67,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	if err != nil {
 		return result, err
 	}
-	resolved, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactPR, Template: input.Template, Provider: req.Provider, Title: req.Title, Body: req.Body, BodyFile: input.BodyFile, Fields: input.Fields, ScoreFile: input.ScoreFile, Confirm: req.Confirm})
+	resolved, err := s.bodies.Resolve(templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactPR, Template: input.Template, Provider: req.Provider, Title: req.Title, Body: req.Body, BodyFile: input.BodyFile, Fields: input.Fields, ScoreFile: input.ScoreFile, Confirm: req.Confirm})
 	if err != nil {
 		return result, err
 	}
@@ -71,7 +76,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	if err := policy.ValidateRemoteCreateInputs("pr create", req.Title, req.Body, req.Labels, req.Assignees); err != nil {
 		return result, err
 	}
-	if err := remote.ValidateConfirmCreateMetadata(req.Confirm, req.Labels, req.Assignees); err != nil {
+	if err := issueopsremote.ValidateConfirmCreateMetadata(req.Confirm, req.Labels, req.Assignees); err != nil {
 		return result, err
 	}
 	if !req.Confirm {
@@ -99,7 +104,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 // issueWarnings names a linked issue that is no longer open. QA: an issue
 // closed as a duplicate between sessions went unnoticed, and the next session
 // built and published a PR that "Closes" it.
-func (s *PublicationCommandService) issueWarnings(ctx context.Context, record model.IssueOpsRecord, provider string) []string {
+func (s *PublicationCommandService) issueWarnings(ctx context.Context, record model.Record, provider string) []string {
 	if s.issueState == nil || strings.TrimSpace(record.IssueURL) == "" {
 		return nil
 	}
@@ -116,7 +121,7 @@ func (s *PublicationCommandService) issueWarnings(ctx context.Context, record mo
 // templateWarnings names repository PR/MR template sections the body lacks.
 // QA: an agent published a body with only the issueops sections in a
 // repository whose template asked for What, Risk and a checklist.
-func (s *PublicationCommandService) templateWarnings(record model.IssueOpsRecord, provider, body string) []string {
+func (s *PublicationCommandService) templateWarnings(record model.Record, provider, body string) []string {
 	if s.readFile == nil {
 		return nil
 	}
@@ -130,12 +135,12 @@ func (s *PublicationCommandService) templateWarnings(record model.IssueOpsRecord
 	if root == "" {
 		return nil
 	}
-	for _, rel := range remote.RepoPullRequestTemplatePaths(provider) {
+	for _, rel := range issueopsremote.RepoPullRequestTemplatePaths(provider) {
 		content, err := s.readFile(strings.TrimRight(root, "/") + "/" + rel)
 		if err != nil {
 			continue
 		}
-		missing := remote.TemplateSectionsMissing(string(content), body)
+		missing := issueopsremote.TemplateSectionsMissing(string(content), body)
 		if len(missing) == 0 {
 			return nil
 		}

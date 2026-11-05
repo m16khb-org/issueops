@@ -33,7 +33,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           repo,
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		ChildURL:       "https://gitlab.example.com/acme/repo/-/work_items/34",
@@ -63,7 +63,7 @@ exit 2
 // 인정하지 않으므로 여기서 오류를 내면 dry-run만 깨진다.
 func TestGitLabCloseChildPreviewLeavesStateUnobservedWithoutGlab(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	got, err := NewProvider().CloseChild(port.IssueProviderCloseChildRequest{
+	got, err := NewProvider().CloseChild(t.Context(), port.IssueProviderCloseChildRequest{
 		Repo:           t.TempDir(),
 		ParentIssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		ChildURL:       "https://gitlab.example.com/acme/repo/-/work_items/34",

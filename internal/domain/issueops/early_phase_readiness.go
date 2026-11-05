@@ -6,7 +6,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func PlanReadinessMissing(record model.IssueOpsRecord) []string {
+// PlanReadinessMissing lists the gates blocking the plan phase: the intent
+// contract, the linked issue URL, and, where the plan-prep gate applies, the
+// plan-prep items.
+func PlanReadinessMissing(record model.Record) []string {
 	missing := IntentMissing(record)
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")
@@ -17,7 +20,10 @@ func PlanReadinessMissing(record model.IssueOpsRecord) []string {
 	return missing
 }
 
-func GrillReadinessMissing(record model.IssueOpsRecord) []string {
+// GrillReadinessMissing lists the gates blocking the grill phase: the issue
+// URL, the branch, the plan-prep items where required, the split decision,
+// and the domain review.
+func GrillReadinessMissing(record model.Record) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")
@@ -28,11 +34,14 @@ func GrillReadinessMissing(record model.IssueOpsRecord) []string {
 	if PlanPrepGateApplies(record) {
 		missing = append(missing, PlanPrepMissing(record.PlanPrep)...)
 	}
-	missing = append(missing, SplitDecisionMissing(record)...)
-	return append(missing, DomainReviewMissing(record)...)
+	missing = append(missing, splitDecisionMissing(record)...)
+	return append(missing, domainReviewMissing(record)...)
 }
 
-func BranchEvidenceMissing(record model.IssueOpsRecord) []string {
+// BranchEvidenceMissing lists the branch evidence still absent from record:
+// the issue URL, the branch, the branch preparation, and its verified issue
+// link.
+func BranchEvidenceMissing(record model.Record) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")

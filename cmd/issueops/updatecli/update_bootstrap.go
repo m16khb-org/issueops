@@ -1,3 +1,6 @@
+// Package updatecli implements the install/update CLI commands: the bootstrap
+// install flow and MCP proxy cleanup. It parses flags and delegates to the update
+// application service.
 package updatecli
 
 import (
@@ -9,11 +12,16 @@ import (
 	updateapp "issueops/internal/application/update"
 )
 
+// Command runs the install/update bootstrap for the harness at Root through
+// Service.
 type Command struct {
 	Root    string
 	Service updateapp.Service
 }
 
+// Run parses the install flags for commandName (project-local, dry-run, path-mode,
+// interactive, json, skip-build, mcp-transport) and runs the update service.
+// --help returns nil and unexpected positional arguments are an error.
 func (command Command) Run(commandName string, args []string) error {
 	fs := flag.NewFlagSet(commandName, flag.ContinueOnError)
 	projectLocal := fs.Bool("project-local", false, "also write explicit project-local files")

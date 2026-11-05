@@ -1,3 +1,7 @@
+// Package rootcmd is the top-level dispatcher of the issueops CLI: it routes
+// argv to registered subcommand runners, answers help and version, suggests
+// close names for unknown commands, and reports runner errors as plain text or
+// as the single JSON document when --json was requested.
 package rootcmd
 
 import (
@@ -14,8 +18,12 @@ import (
 	cliparse "issueops/internal/domain/cli"
 )
 
+// Runner executes one subcommand with the arguments that follow its name and returns its failure, if any.
 type Runner func([]string) error
 
+// Command is the root command. Runners maps a subcommand name to its Runner;
+// nil Stdout and Stderr discard output, and a nil ErrorExitCode makes every
+// failure exit 1.
 type Command struct {
 	Version string
 	Usage   func()
@@ -27,6 +35,10 @@ type Command struct {
 	ErrorExitCode func(name string, err error) int
 }
 
+// Run dispatches args and returns the process exit code. No arguments print the
+// index and return 2, help and version return 0, an unknown command returns 2,
+// and a Runner failure returns ErrorExitCode's value (1 by default). A help
+// request answered by the runner itself returns 0.
 func (c Command) Run(args []string) int {
 	if len(args) < 1 {
 		c.printIndex()
@@ -48,7 +60,7 @@ func (c Command) Run(args []string) int {
 	if ok, exitCode := c.runSubcommand(args[0], args[1:]); ok {
 		return exitCode
 	}
-	if JSONRequested(args[1:]) {
+	if jsonRequested(args[1:]) {
 		// QA (codex): `issueops project-docs-route --json` left stdout empty;
 		// under --json the refusal is the one JSON document there too.
 		message := fmt.Sprintf("unknown command %q", args[0])
@@ -117,7 +129,7 @@ func (c Command) runSubcommand(name string, args []string) (bool, int) {
 			// `--json 2>&1 | jq` parses it; otherwise a plain stderr line. A
 			// command that already printed its JSON result keeps stdout to
 			// that one document and the error goes to stderr.
-			if JSONRequested(args) && !jsonout.WroteStdoutDocument() {
+			if jsonRequested(args) && !jsonout.WroteStdoutDocument() {
 				message := err.Error()
 				if !strings.HasPrefix(message, name+" ") && !strings.HasPrefix(message, name+":") {
 					message = name + ": " + message
@@ -150,9 +162,9 @@ func HelpRequested(args []string) bool {
 	return false
 }
 
-// JSONRequested reports whether args ask for JSON output: a --json flag (or
+// jsonRequested reports whether args ask for JSON output: a --json flag (or
 // --json=true) before any "--" passthrough separator.
-func JSONRequested(args []string) bool {
+func jsonRequested(args []string) bool {
 	for _, arg := range args {
 		switch arg {
 		case "--":

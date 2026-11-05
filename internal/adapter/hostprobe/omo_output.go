@@ -19,7 +19,7 @@ func (o *omoOutput) Write(data []byte) (int, error) {
 		if end < 0 {
 			end = len(data)
 		}
-		if len(o.line)+end > MaxOutputBytes {
+		if len(o.line)+end > maxOutputBytes {
 			o.output.truncated = true
 			o.line = nil
 			break

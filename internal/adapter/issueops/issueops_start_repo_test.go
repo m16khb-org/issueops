@@ -16,7 +16,7 @@ func TestStartIssueOpsStoresAbsoluteRepoWhenRelativePathProvided(t *testing.T) {
 	}
 	t.Chdir(repo)
 
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: ".", Branch: "12-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: ".", Branch: "12-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,11 +29,11 @@ func TestStartIssueOpsExplicitNewCreatesDistinctBranchlessCycles(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
 
-	first, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
+	first, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, New: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
+	second, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, New: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestStartIssueOpsExplicitNewCreatesDistinctBranchlessCycles(t *testing.T) {
 	if first.ID == second.ID {
 		t.Fatalf("explicit new branchless starts reused lifecycle %q", first.ID)
 	}
-	for _, record := range []issueops.IssueOpsRecord{first, second} {
+	for _, record := range []issueops.Record{first, second} {
 		if record.Repo != repo || record.Branch != "" {
 			t.Fatalf("new cycle changed source identity: %+v", record)
 		}
@@ -59,15 +59,15 @@ func TestStartIssueOpsDefaultStillResumesBranchlessCycle(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
 
-	first, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo})
+	first, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo})
 	if err != nil {
 		t.Fatal(err)
 	}
-	newCycle, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
+	newCycle, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, New: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	resumed, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo})
+	resumed, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestStartIssueOpsDefaultStillResumesBranchlessCycle(t *testing.T) {
 }
 
 func TestStartIssueOpsExplicitNewRequiresBranchlessRequest(t *testing.T) {
-	if _, err := startIssueOpsFixture(t.TempDir(), issueops.IssueOpsStartRequest{
+	if _, err := startIssueOpsFixture(t.TempDir(), issueops.StartRequest{
 		Repo: t.TempDir(), Branch: "123-already-named", New: true,
 	}); err == nil {
 		t.Fatal("explicit new start with a branch must fail closed")

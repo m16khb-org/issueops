@@ -14,17 +14,17 @@ import (
 )
 
 func TestCloseChildrenRequiresMergeEvidence(t *testing.T) {
-	store := newCloseChildrenStoreForTest(model.IssueOpsRecord{
+	store := newCloseChildrenStoreForTest(model.Record{
 		ID:       "io-close-children",
 		IssueURL: "https://github.com/acme/repo/issues/1",
-		IssueLinks: []model.IssueOpsIssueLink{{
+		IssueLinks: []model.IssueLink{{
 			Type:     "child",
 			URL:      "https://github.com/acme/repo/issues/2",
 			Provider: "github",
 		}},
 	})
 
-	result, err := ByID(store.store(), t.TempDir(), "io-close-children", model.IssueOpsCloseChildrenRequest{Merged: false})
+	result, err := ByID(store.store(), t.TempDir(), "io-close-children", model.CloseChildrenRequest{Merged: false})
 	if err == nil || !strings.Contains(err.Error(), "merge evidence") {
 		t.Fatalf("expected merge evidence failure, got result=%+v err=%v", result, err)
 	}
@@ -34,12 +34,12 @@ func TestCloseChildrenRequiresMergeEvidence(t *testing.T) {
 }
 
 func TestCloseChildrenDryRunDoesNotMutateState(t *testing.T) {
-	record := model.IssueOpsRecord{
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+	record := model.Record{
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
 		ID:             "io-close-children",
 		Repo:           "/repo",
 		IssueURL:       "https://github.com/acme/repo/issues/1",
-		IssueLinks: []model.IssueOpsIssueLink{{
+		IssueLinks: []model.IssueLink{{
 			Type:     "child",
 			URL:      "https://github.com/acme/repo/issues/2",
 			Provider: "github",
@@ -47,7 +47,7 @@ func TestCloseChildrenDryRunDoesNotMutateState(t *testing.T) {
 	}
 	store := newCloseChildrenStoreForTest(record)
 
-	result, err := ByID(store.store(), t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{Merged: true, Confirm: false})
+	result, err := ByID(store.store(), t.TempDir(), record.ID, model.CloseChildrenRequest{Merged: true, Confirm: false})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,12 +63,12 @@ func TestCloseChildrenDryRunDoesNotMutateState(t *testing.T) {
 }
 
 func TestCloseChildrenConfirmRecordsVerifiedEvidence(t *testing.T) {
-	record := model.IssueOpsRecord{
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+	record := model.Record{
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
 		ID:             "io-close-children",
 		Repo:           "/repo",
 		IssueURL:       "https://github.com/acme/repo/issues/1",
-		IssueLinks: []model.IssueOpsIssueLink{{
+		IssueLinks: []model.IssueLink{{
 			Type:      "child",
 			URL:       "https://github.com/acme/repo/issues/2",
 			Provider:  "github",
@@ -85,7 +85,7 @@ func TestCloseChildrenConfirmRecordsVerifiedEvidence(t *testing.T) {
 		State:             "closed",
 	}
 
-	result, err := ByID(store.store(), t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{Merged: true, Confirm: true})
+	result, err := ByID(store.store(), t.TempDir(), record.ID, model.CloseChildrenRequest{Merged: true, Confirm: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,12 +99,12 @@ func TestCloseChildrenConfirmRecordsVerifiedEvidence(t *testing.T) {
 }
 
 func TestCloseChildrenRunsIndependentProviderCallsConcurrently(t *testing.T) {
-	record := model.IssueOpsRecord{
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+	record := model.Record{
+		RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
 		ID:             "io-close-children",
 		Repo:           "/repo",
 		IssueURL:       "https://github.com/acme/repo/issues/1",
-		IssueLinks: []model.IssueOpsIssueLink{
+		IssueLinks: []model.IssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/2", Provider: "github"},
 			{Type: "child", URL: "https://github.com/acme/repo/issues/3", Provider: "github"},
 		},
@@ -121,10 +121,10 @@ func TestCloseChildrenRunsIndependentProviderCallsConcurrently(t *testing.T) {
 		}
 	}()
 	store := Store{
-		Read: func(string, string) (model.IssueOpsRecord, error) {
+		Read: func(string, string) (model.Record, error) {
 			return record, nil
 		},
-		TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 			return record, nil
 		},
 		Provider: func(string) (port.IssueProvider, error) {
@@ -133,7 +133,7 @@ func TestCloseChildrenRunsIndependentProviderCallsConcurrently(t *testing.T) {
 	}
 	result := make(chan error, 1)
 	go func() {
-		_, err := ByID(store, t.TempDir(), record.ID, model.IssueOpsCloseChildrenRequest{Merged: true, Confirm: true})
+		_, err := ByID(store, t.TempDir(), record.ID, model.CloseChildrenRequest{Merged: true, Confirm: true})
 		result <- err
 	}()
 
@@ -153,13 +153,13 @@ func TestCloseChildrenRunsIndependentProviderCallsConcurrently(t *testing.T) {
 }
 
 type closeChildrenStoreForTest struct {
-	records  map[string]model.IssueOpsRecord
+	records  map[string]model.Record
 	provider *fakeCloseChildProvider
 }
 
-func newCloseChildrenStoreForTest(records ...model.IssueOpsRecord) *closeChildrenStoreForTest {
+func newCloseChildrenStoreForTest(records ...model.Record) *closeChildrenStoreForTest {
 	store := &closeChildrenStoreForTest{
-		records:  map[string]model.IssueOpsRecord{},
+		records:  map[string]model.Record{},
 		provider: &fakeCloseChildProvider{result: port.IssueProviderCloseChildResult{OK: true, Provider: "github", HierarchyVerified: true, Closed: true, State: "closed"}},
 	}
 	for _, record := range records {
@@ -178,15 +178,15 @@ func (s *closeChildrenStoreForTest) store() Store {
 	}
 }
 
-func (s *closeChildrenStoreForTest) read(_ string, id string) (model.IssueOpsRecord, error) {
+func (s *closeChildrenStoreForTest) read(_ string, id string) (model.Record, error) {
 	record, ok := s.records[id]
 	if !ok {
-		return model.IssueOpsRecord{}, fmt.Errorf("missing record")
+		return model.Record{}, fmt.Errorf("missing record")
 	}
 	return record, nil
 }
 
-func (s *closeChildrenStoreForTest) touchWrite(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *closeChildrenStoreForTest) touchWrite(_ string, record model.Record) (model.Record, error) {
 	s.records[record.ID] = record
 	return record, nil
 }
@@ -203,15 +203,15 @@ type fakeCloseChildProvider struct {
 
 func (p *fakeCloseChildProvider) Name() string { return "github" }
 
-func (p *fakeCloseChildProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p *fakeCloseChildProvider) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (p *fakeCloseChildProvider) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *fakeCloseChildProvider) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
 
@@ -223,7 +223,7 @@ func (p *fakeCloseChildProvider) CloseIssue(context.Context, port.IssueProviderC
 	return port.IssueProviderCloseIssueResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p *fakeCloseChildProvider) CloseChild(_ context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.calls = append(p.calls, req)
@@ -249,7 +249,7 @@ type blockingCloseChildProvider struct {
 	release chan struct{}
 }
 
-func (provider *blockingCloseChildProvider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (provider *blockingCloseChildProvider) CloseChild(_ context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	provider.started <- req.ChildURL
 	<-provider.release
 	return port.IssueProviderCloseChildResult{

@@ -62,7 +62,7 @@ func TestAbandonPendingIntentBlockNamesTheReconcileCommand(t *testing.T) {
 	}
 }
 
-func abandonLeaseRecord(t *testing.T, status issueops.LeaseStatus) (string, issueops.IssueOpsRecord) {
+func abandonLeaseRecord(t *testing.T, status issueops.LeaseStatus) (string, issueops.Record) {
 	t.Helper()
 	stateRoot, record := abandonTestRecord(t)
 	lease := issueops.WriteLease{Generation: 1, Status: status}

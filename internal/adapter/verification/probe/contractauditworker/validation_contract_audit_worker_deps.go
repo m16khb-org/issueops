@@ -10,7 +10,7 @@ import (
 
 const commandOutputBudgetBytes = 32 * 1024
 
-type ValidationDeps struct {
+type validationDeps struct {
 	MkdirTemp         func(string, string) (string, error)
 	RemoveAll         func(string) error
 	ReadFile          func(string) ([]byte, error)
@@ -18,7 +18,7 @@ type ValidationDeps struct {
 	RunCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) verifycontract.StepResult
 }
 
-func (deps ValidationDeps) withDefaults() ValidationDeps {
+func (deps validationDeps) withDefaults() validationDeps {
 	if deps.MkdirTemp == nil {
 		deps.MkdirTemp = os.MkdirTemp
 	}

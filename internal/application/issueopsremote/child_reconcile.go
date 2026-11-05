@@ -7,36 +7,40 @@ import (
 	"fmt"
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 	"strings"
 )
 
+// ChildReconcileCommand 타입은 중단된 자식 생성 작업을 복구하는 명령의 입력이다. Confirm이 false이면 미리보기만 한다.
 type ChildReconcileCommand struct {
 	ID, OperationID string
 	Confirm         bool
-	Actor           model.IssueOpsActor
+	Actor           model.Actor
 }
+
+// ChildReconciler 타입은 provider에서 자식 이슈 후보를 찾아 기록된 생성 작업에 채택하거나, 정착한 중단 작업을 해제한다.
 type ChildReconciler struct {
-	Records IssueRecordReader
+	Records issueRecordReader
 	Resolve func(string) (port.IssueProviderChildCreateRecovery, error)
 	Intents *ChildCreateIntents
 	// Settled proves that a pending child create whose caller died created
 	// nothing and can no longer create anything (nil: never release).
-	Settled func(context.Context, model.IssueOpsRecord, model.ChildCreateOperation) (bool, error)
+	Settled func(context.Context, model.Record, model.ChildCreateOperation) (bool, error)
 }
 
 // childRecoveryRun은 Reconcile 한 번 동안 고정되는 기록·작업·행위자·자식 URL이다.
 type childRecoveryRun struct {
-	record   model.IssueOpsRecord
+	record   model.Record
 	op       model.ChildCreateOperation
-	actor    model.IssueOpsActor
+	actor    model.Actor
 	childURL string
 	confirm  bool
 }
 
+// Reconcile 메서드는 자식 이슈를 찾아 검증하고 확정 모드에서만 계층 연결과 완료 영수증, 해제를 기록한다.
 func (s ChildReconciler) Reconcile(ctx context.Context, cmd ChildReconcileCommand, observe AncestryObserver) (model.ChildReconcileResult, error) {
-	result := model.ChildReconcileResult{OperationID: cmd.OperationID, RecoveryCommand: ChildRecoveryCommand(cmd.ID, cmd.OperationID, cmd.Actor)}
+	result := model.ChildReconcileResult{OperationID: cmd.OperationID, RecoveryCommand: childRecoveryCommand(cmd.ID, cmd.OperationID, cmd.Actor)}
 	run, err := s.beginChildRecovery(ctx, cmd, observe, &result)
 	if err != nil {
 		return result, err
@@ -141,7 +145,7 @@ func (s ChildReconciler) releaseCrashedChild(ctx context.Context, cmd ChildRecon
 	if err := s.reauthorizeChildRecovery(ctx, cmd.ID, run); err != nil {
 		return result, true, err
 	}
-	if err := s.Intents.ReleaseCrashed(ctx, run.record, op, run.actor); err != nil {
+	if err := s.Intents.releaseCrashed(ctx, run.record, op, run.actor); err != nil {
 		return result, true, err
 	}
 	result.OK, result.Released, result.RecoveryCommand = true, true, ""
@@ -175,7 +179,7 @@ func (s ChildReconciler) recoveryFailure(ctx context.Context, run childRecoveryR
 	if !run.confirm {
 		return cause
 	}
-	return errors.Join(cause, s.Intents.RecoveryFailure(context.WithoutCancel(ctx), run.record, run.op, run.childURL, status, remote.IssueCreateFailure(cause), run.actor))
+	return errors.Join(cause, s.Intents.recoveryFailure(context.WithoutCancel(ctx), run.record, run.op, run.childURL, status, issueopsremote.IssueCreateFailure(cause), run.actor))
 }
 
 // reauthorizeChildRecovery는 유일한 원격 쓰기 전에 기록을 다시 읽는다: 관찰만으로는 바뀐 holder에게 권한을 줄 수 없다.
@@ -216,7 +220,7 @@ func validateChildSnapshot(op model.ChildCreateOperation, snapshot port.ChildSna
 	if snapshot.URL == op.ParentURL {
 		return fmt.Errorf("child cannot be its own parent")
 	}
-	if err := remote.ValidateChildMatchesParent(op.ParentURL, snapshot.URL); err != nil {
+	if err := issueopsremote.ValidateChildMatchesParent(op.ParentURL, snapshot.URL); err != nil {
 		return err
 	}
 	if op.CanonicalURL != "" && op.CanonicalURL != snapshot.URL {
@@ -252,7 +256,7 @@ func containsChildValues(actual, want []string) bool {
 	}
 	return true
 }
-func sameChildRecoveryAuthority(before, after model.IssueOpsRecord) bool {
+func sameChildRecoveryAuthority(before, after model.Record) bool {
 	if before.IssueURL != after.IssueURL || before.Repo != after.Repo || before.Branch != after.Branch {
 		return false
 	}

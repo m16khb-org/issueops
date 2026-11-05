@@ -6,9 +6,10 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
-func GoalPassed(score, target float64) bool { return score > target }
+func goalPassed(score, target float64) bool { return score > target }
 
-func AllGoalsPassed(goals []contract.SelfAugmentGoal) bool {
+// AllGoalsPassed reports whether goals is non-empty and every goal has Passed set.
+func AllGoalsPassed(goals []contract.Goal) bool {
 	if len(goals) == 0 {
 		return false
 	}
@@ -20,6 +21,7 @@ func AllGoalsPassed(goals []contract.SelfAugmentGoal) bool {
 	return true
 }
 
+// ScoreBool maps ok to a goal score: 100 when true, 0 otherwise.
 func ScoreBool(ok bool) float64 {
 	if ok {
 		return 100
@@ -27,7 +29,7 @@ func ScoreBool(ok bool) float64 {
 	return 0
 }
 
-func PrioritizeCandidates(candidates []contract.SelfAugmentCandidate) {
+func prioritizeCandidates(candidates []contract.Candidate) {
 	sort.Slice(candidates, func(i, j int) bool {
 		leftOpen := candidates[i].Status == contract.CandidateStatusOpen
 		rightOpen := candidates[j].Status == contract.CandidateStatusOpen
@@ -41,7 +43,7 @@ func PrioritizeCandidates(candidates []contract.SelfAugmentCandidate) {
 	})
 }
 
-func SelectedCandidate(candidates []contract.SelfAugmentCandidate) *contract.SelfAugmentCandidate {
+func selectedCandidate(candidates []contract.Candidate) *contract.Candidate {
 	for _, candidate := range candidates {
 		if candidate.Status == contract.CandidateStatusOpen {
 			copyCandidate := candidate
@@ -51,7 +53,8 @@ func SelectedCandidate(candidates []contract.SelfAugmentCandidate) *contract.Sel
 	return nil
 }
 
-func SelectedCandidateID(candidate *contract.SelfAugmentCandidate) string {
+// SelectedCandidateID returns the ID of candidate, or an empty string when candidate is nil.
+func SelectedCandidateID(candidate *contract.Candidate) string {
 	if candidate == nil {
 		return ""
 	}

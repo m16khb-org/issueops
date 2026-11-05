@@ -54,12 +54,12 @@ func (c *testClient) Send(context.Context, cmux.SendRequest) (cmux.SendReceipt, 
 	return cmux.SendReceipt{Accepted: c.sendErr == nil}, c.sendErr
 }
 
-func releasedRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "cycle", WorktreePath: workspaceRoot, Execution: &model.Execution{Workspace: model.Workspace{Root: workspaceRoot}, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 2}}}
+func releasedRecord() model.Record {
+	return model.Record{ID: "cycle", WorktreePath: workspaceRoot, Execution: &model.Execution{Workspace: model.Workspace{Root: workspaceRoot}, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 2}}}
 }
 func rootEnvironment(d *testDirectory) port.RootEnvironment {
 	return port.RootEnvironment{
-		Read:      func(string, string) (model.IssueOpsRecord, error) { return releasedRecord(), nil },
+		Read:      func(string, string) (model.Record, error) { return releasedRecord(), nil },
 		Directory: func(string) (port.Directory, error) { return d, nil },
 		Getwd:     func() (string, error) { return workspaceRoot, nil }, GitTop: func(s string) (string, error) { return s, nil },
 	}
@@ -85,10 +85,10 @@ func TestHandoffFailureStopsEffectsAndPreservesRecovery(t *testing.T) {
 			dir := &testDirectory{}
 			client := &testClient{createErr: tc.createErr, sendErr: tc.sendErr}
 			awaited, cleaned := 0, 0
-			var observations []model.IssueOpsHandoffDeliveryObservation
+			var observations []model.HandoffDeliveryObservation
 			service := Service{Client: client, Roots: rootEnvironment(dir), Now: func() time.Time { return time.Unix(0, 0) }, ArtifactRoot: artifactRoot,
-				ReadAudit: func() ([]model.IssueOpsHandoffDeliveryObservation, error) { return nil, nil },
-				Observe: func(_ model.IssueOpsRecord, o model.IssueOpsHandoffDeliveryObservation) (audit.HandoffDeliveryAuditRecord, error) {
+				ReadAudit: func() ([]model.HandoffDeliveryObservation, error) { return nil, nil },
+				Observe: func(_ model.Record, o model.HandoffDeliveryObservation) (audit.HandoffDeliveryAuditRecord, error) {
 					if tc.stageFail {
 						return audit.HandoffDeliveryAuditRecord{}, errors.New("audit failed")
 					}
@@ -117,7 +117,7 @@ func TestHandoffFailureStopsEffectsAndPreservesRecovery(t *testing.T) {
 			}
 			if tc.createErr != nil || tc.sendErr != nil {
 				last := observations[len(observations)-1]
-				if last.Ambiguous.Status != model.IssueOpsHandoffDeliveryStateObserved || last.InputAccepted.Status == model.IssueOpsHandoffDeliveryStateObserved {
+				if last.Ambiguous.Status != model.HandoffDeliveryStateObserved || last.InputAccepted.Status == model.HandoffDeliveryStateObserved {
 					t.Fatalf("ambiguous audit=%+v", last)
 				}
 			}
@@ -129,10 +129,10 @@ func TestRootFenceClosesPinAfterFailedSecondRead(t *testing.T) {
 	env := rootEnvironment(dir)
 	reads := 0
 	failed := errors.New("read changed")
-	env.Read = func(string, string) (model.IssueOpsRecord, error) {
+	env.Read = func(string, string) (model.Record, error) {
 		reads++
 		if reads == 2 {
-			return model.IssueOpsRecord{}, failed
+			return model.Record{}, failed
 		}
 		return releasedRecord(), nil
 	}

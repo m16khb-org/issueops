@@ -71,7 +71,7 @@ func TestMCPHTTPAPIDocFilesStayInsideAuthorizedWorkspace(t *testing.T) {
 	}
 	grantA := authorizeSessionForTest(t, repoA, "client-a", self)
 	url, _ := startProductionHTTPServer(t, issueOpsMCPHTTPDependencies())
-	bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())
+	bearer, err := mcpcli.EnsureHTTPBearer(statestore.Dir())
 	if err != nil {
 		t.Fatal(err)
 	}

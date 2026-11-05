@@ -47,7 +47,7 @@ func TestInspectCommandHonoursCodexHomeEnvironment(t *testing.T) {
 	t.Setenv("ISSUEOPS_ROOT", t.TempDir())
 	t.Setenv("CODEX_HOME", codexHome)
 	out := captureStdoutForContract(t, func() error { return runInspect([]string{"--json", t.TempDir()}) })
-	var info inspectcontract.InspectInfo
+	var info inspectcontract.Info
 	if err := json.Unmarshal([]byte(out), &info); err != nil {
 		t.Fatalf("inspect output is not JSON: %v\n%s", err, out)
 	}
@@ -56,7 +56,7 @@ func TestInspectCommandHonoursCodexHomeEnvironment(t *testing.T) {
 	}
 }
 
-func codexConfigPath(t *testing.T, info inspectcontract.InspectInfo) string {
+func codexConfigPath(t *testing.T, info inspectcontract.Info) string {
 	t.Helper()
 	for _, host := range info.Integration.Hosts {
 		if host.Host == inspectcontract.HostCodex {

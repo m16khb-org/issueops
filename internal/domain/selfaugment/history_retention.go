@@ -2,6 +2,9 @@ package selfaugment
 
 import "fmt"
 
+// HistoryRetentionDecision is the outcome of planning history retention: which checkpoint keys fall
+// within the budget, which are prune candidates, whether the prune is applied or only a dry run,
+// and the recommendation and warning text to report.
 type HistoryRetentionDecision struct {
 	Apply          bool
 	RetainedKeys   []string
@@ -13,6 +16,9 @@ type HistoryRetentionDecision struct {
 	Warning        string
 }
 
+// PlanHistoryRetention splits keys, assumed newest first, into the first limit retained keys and
+// the remaining prune candidates. Pruning is applied only when both pruneRequested and confirm are
+// set; a request without confirm is a dry run.
 func PlanHistoryRetention(keys []string, limit int, pruneRequested, confirm bool) HistoryRetentionDecision {
 	decision := HistoryRetentionDecision{
 		Apply:          pruneRequested && confirm,
@@ -37,7 +43,7 @@ func PlanHistoryRetention(keys []string, limit int, pruneRequested, confirm bool
 	return decision
 }
 
-func ValidateHistoryRetention(limit int, pruneRequested, confirm bool) error {
+func validateHistoryRetention(limit int, pruneRequested, confirm bool) error {
 	if limit < 0 {
 		return fmt.Errorf("retention-limit must be non-negative")
 	}
@@ -50,6 +56,8 @@ func ValidateHistoryRetention(limit int, pruneRequested, confirm bool) error {
 	return nil
 }
 
+// DeletedHistoryRecommendation returns the recommendation text reported after deleted checkpoints
+// beyond limit were removed.
 func DeletedHistoryRecommendation(deleted, limit int) string {
 	return fmt.Sprintf("deleted %d history checkpoint(s) beyond retention-limit=%d", deleted, limit)
 }

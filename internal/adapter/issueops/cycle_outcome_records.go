@@ -12,11 +12,11 @@ import (
 // cycleOutcomeBucket keeps one metrics summary per deleted cycle record. Cleanup
 // writes it in the same transaction that deletes the record, so the summary
 // exists exactly when the record is gone.
-var cycleOutcomeBucket = fmt.Sprintf("issueops_cycle_outcome_v%d", model.IssueOpsCycleOutcomeSchemaVersion)
+var cycleOutcomeBucket = fmt.Sprintf("issueops_cycle_outcome_v%d", model.CycleOutcomeSchemaVersion)
 
-func cycleOutcomeMutation(recordID string, outcome model.IssueOpsCycleOutcome) (port.RecordMutation, error) {
-	if outcome.SchemaVersion != model.IssueOpsCycleOutcomeSchemaVersion || outcome.ID != recordID {
-		return port.RecordMutation{}, fmt.Errorf("cycle outcome for %q does not match record %q at schema %d", outcome.ID, recordID, model.IssueOpsCycleOutcomeSchemaVersion)
+func cycleOutcomeMutation(recordID string, outcome model.CycleOutcome) (port.RecordMutation, error) {
+	if outcome.SchemaVersion != model.CycleOutcomeSchemaVersion || outcome.ID != recordID {
+		return port.RecordMutation{}, fmt.Errorf("cycle outcome for %q does not match record %q at schema %d", outcome.ID, recordID, model.CycleOutcomeSchemaVersion)
 	}
 	data, err := json.Marshal(outcome)
 	if err != nil {
@@ -27,7 +27,7 @@ func cycleOutcomeMutation(recordID string, outcome model.IssueOpsCycleOutcome) (
 
 // ListCycleOutcomes reads every retained cycle outcome. Rows that fail to decode
 // or carry another schema are returned as unreadable IDs instead of guessed.
-func ListCycleOutcomes(stateRoot string) ([]model.IssueOpsCycleOutcome, []string, error) {
+func ListCycleOutcomes(stateRoot string) ([]model.CycleOutcome, []string, error) {
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return nil, nil, err
@@ -36,11 +36,11 @@ func ListCycleOutcomes(stateRoot string) ([]model.IssueOpsCycleOutcome, []string
 	if err != nil {
 		return nil, nil, err
 	}
-	outcomes := make([]model.IssueOpsCycleOutcome, 0, len(rows))
+	outcomes := make([]model.CycleOutcome, 0, len(rows))
 	var unreadable []string
 	for _, row := range rows {
-		var outcome model.IssueOpsCycleOutcome
-		if err := json.Unmarshal(row.Data, &outcome); err != nil || outcome.SchemaVersion != model.IssueOpsCycleOutcomeSchemaVersion || outcome.ID != row.ID {
+		var outcome model.CycleOutcome
+		if err := json.Unmarshal(row.Data, &outcome); err != nil || outcome.SchemaVersion != model.CycleOutcomeSchemaVersion || outcome.ID != row.ID {
 			unreadable = append(unreadable, row.ID)
 			continue
 		}

@@ -53,11 +53,11 @@ func benchmarkInventoryStateRoot(b *testing.B, count int) string {
 	}
 	for index := range count {
 		id := fmt.Sprintf("io-benchmark%04d", index)
-		encoded, err := Encode(issueopscontract.IssueOpsRecord{
-			SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		encoded, err := Encode(issueopscontract.Record{
+			SchemaVersion: issueopscontract.SchemaVersion,
 			ID:            id,
 			Repo:          "/repo",
-			Phase:         issueopscontract.IssueOpsPhaseProblem,
+			Phase:         issueopscontract.PhaseProblem,
 		})
 		if err != nil {
 			b.Fatal(err)

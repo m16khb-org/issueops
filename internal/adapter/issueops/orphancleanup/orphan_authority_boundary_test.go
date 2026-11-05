@@ -24,7 +24,7 @@ func TestOrphanApplyPreservesOwnerCreatedDuringMergeObservation(t *testing.T) {
 	collect := func(context.Context, string) (corehealth.Snapshot, error) {
 		snapshot := fixture.snapshot()
 		var readErr error
-		err := coreissueops.VisitIssueOpsExisting(stateRoot, func(_ string, record model.IssueOpsRecord, err error) {
+		err := coreissueops.VisitIssueOpsExisting(stateRoot, func(_ string, record model.Record, err error) {
 			if err != nil {
 				readErr = errors.Join(readErr, err)
 				return
@@ -40,7 +40,7 @@ func TestOrphanApplyPreservesOwnerCreatedDuringMergeObservation(t *testing.T) {
 	}
 	owner := domain.NewCycleRecord("io-late-owner", fixture.repo, fixture.branch, "2026-09-29T00:00:00Z")
 	owner.WorktreePath = fixture.worktree
-	deps.VerifyMerged = func(model.IssueOpsRemoteArtifactVerification) error {
+	deps.VerifyMerged = func(model.RemoteArtifactVerification) error {
 		_, err := (coreissueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), owner)
 		return err
 	}
@@ -66,7 +66,7 @@ func TestOrphanApplyCancellationDuringMergeObservationPreservesResources(t *test
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	deps.VerifyMerged = func(model.IssueOpsRemoteArtifactVerification) error { cancel(); return nil }
+	deps.VerifyMerged = func(model.RemoteArtifactVerification) error { cancel(); return nil }
 	result, applyErr := Apply(ctx, request, contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
 	_, statErr := os.Stat(fixture.worktree)
 	branch := strings.TrimSpace(gitOutputNoFail(fixture.repo, "rev-parse", "--verify", "refs/heads/"+fixture.branch))

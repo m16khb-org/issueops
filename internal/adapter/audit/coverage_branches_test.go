@@ -161,7 +161,7 @@ func TestRedactedHandoffDeliveryObservationScrubsEveryExecutablePathWithoutMutat
 
 func TestHandoffDeliveryAuditErrorAffectsOnlyReadersOfTheSameLineage(t *testing.T) {
 	record := func(lifecycle, lineage string) auditcontract.HandoffDeliveryAuditRecord {
-		return auditcontract.HandoffDeliveryAuditRecord{Observation: issueopscontract.IssueOpsHandoffDeliveryObservation{LifecycleID: lifecycle, LineageID: lineage}}
+		return auditcontract.HandoffDeliveryAuditRecord{Observation: issueopscontract.HandoffDeliveryObservation{LifecycleID: lifecycle, LineageID: lineage}}
 	}
 	for _, tt := range []struct {
 		name                       string
@@ -289,7 +289,7 @@ func TestHandoffDeliveryReadForFiltersByLineageAndPoisonsOnUnidentifiableCorrupt
 	sameLifecycleOtherLineage := auditDeliveryObservationFixture()
 	sameLifecycleOtherLineage.LineageID = "lineage-2"
 	sameLifecycleOtherLineage.AttemptID = "attempt-2"
-	for _, observation := range []issueopscontract.IssueOpsHandoffDeliveryObservation{auditDeliveryObservationFixture(), sameLifecycleOtherLineage} {
+	for _, observation := range []issueopscontract.HandoffDeliveryObservation{auditDeliveryObservationFixture(), sameLifecycleOtherLineage} {
 		if _, err := store.Append(observation); err != nil {
 			t.Fatal(err)
 		}
@@ -337,7 +337,7 @@ func TestHandoffDeliveryAppendRejectsRecordBeyondReaderLimit(t *testing.T) {
 	store := auditStoreForTest(stateRoot)
 	record := auditcontract.HandoffDeliveryAuditRecord{OK: true, Kind: "handoff_delivery_observation", SchemaVersion: 1}
 	record.Observation.Launcher.Name = strings.Repeat("x", 256*1024)
-	if err := store.append(record); err == nil || !strings.Contains(err.Error(), "exceeds reader limit") {
+	if err := store.writeRecord(record); err == nil || !strings.Contains(err.Error(), "exceeds reader limit") {
 		t.Fatalf("oversized record: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(stateRoot, "audit")); !os.IsNotExist(err) {

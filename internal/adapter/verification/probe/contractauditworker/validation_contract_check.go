@@ -9,11 +9,13 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
+// ValidateContractCheck runs `contract check --json` and verifies that it passed,
+// reported a hash, and lists the worker, contract, and policy CLI commands.
 func ValidateContractCheck(binary, root string) selfverify.StepResult {
-	return ValidateContractCheckWithDeps(binary, root, ValidationDeps{})
+	return validateContractCheckWithDeps(binary, root, validationDeps{})
 }
 
-func ValidateContractCheckWithDeps(binary, root string, deps ValidationDeps) selfverify.StepResult {
+func validateContractCheckWithDeps(binary, root string, deps validationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	step := deps.RunCommandStep(root, "contract check", 30*time.Second, "", binary, "contract", "check", "--json")
 	if !step.OK {

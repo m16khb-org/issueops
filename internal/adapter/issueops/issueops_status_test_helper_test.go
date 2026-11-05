@@ -9,7 +9,7 @@ import (
 	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
 )
 
-func readIssueOpsStatusForTest(stateRoot, id string) (issueopscontract.IssueOpsRecord, error) {
+func readIssueOpsStatusForTest(stateRoot, id string) (issueopscontract.Record, error) {
 	service := issueopsstatusapplication.NewService(
 		issueopsstatusoutbound.Repository{},
 		issueopsstatusdomain.NewProjector(IssueOpsPhaseCompletion),

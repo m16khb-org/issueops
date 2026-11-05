@@ -1,4 +1,4 @@
-// Package policy는 command policy의 DTO를 소유한다.
+// Package policy 패키지는 command policy의 DTO를 소유한다.
 //
 // 평가 규칙과 redaction은 domain에 남고, 결과를 주고받는 계층은 이 타입만 안다.
 package policy
@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// CommandPolicyRequest 타입은 command policy 평가를 요청하는 입력이다.
+// 명령은 Argv로만 받고, Network·Write·Shell 허용 플래그가 false인 능력은 허용하지 않는 것으로 평가한다.
 type CommandPolicyRequest struct {
 	WorkspaceRoot  string   `json:"workspace_root"`
 	CWD            string   `json:"cwd"`
@@ -20,20 +22,8 @@ type CommandPolicyRequest struct {
 	AuditLogID     string   `json:"audit_log_id,omitempty"`
 }
 
-// PolicyTier is a host-neutral synthesis of the scattered capability flags
-// (write/network/shell) into one named privilege envelope, derived from
-// Qwen Code's tiered-approval model. It classifies what a request is permitted
-// to attempt; it does not decide whether a specific command is allowed (that
-// stays in DenyReasons). The YOLO/auto-escalation tiers are deliberately
-// excluded so a single approval never raises the whole session's safety level.
-
-const (
-	PolicyTierReadOnly       = TierReadOnly
-	PolicyTierWorkspaceWrite = TierWorkspaceWrite
-	PolicyTierNetworkAccess  = TierNetworkAccess
-	PolicyTierShellException = TierShellException
-)
-
+// CommandPolicyEvaluation 타입은 command policy 평가 결과다.
+// Allowed가 false이면 DenyReasons에 거부 사유가 있고, AuditLogID는 감사 로그 항목을 가리킨다.
 type CommandPolicyEvaluation struct {
 	OK             bool     `json:"ok"`
 	Allowed        bool     `json:"allowed"`
@@ -53,6 +43,7 @@ type CommandPolicyEvaluation struct {
 	GeneratedAt    string   `json:"generated_at"`
 }
 
+// CommandFakeRunResult 타입은 실제 실행 없이 policy 판정만 검증한 fake run 결과다.
 type CommandFakeRunResult struct {
 	OK         bool                    `json:"ok"`
 	Executed   bool                    `json:"executed"`
@@ -65,6 +56,8 @@ type CommandFakeRunResult struct {
 	Policy     CommandPolicyEvaluation `json:"policy"`
 }
 
+// CommandRunResult 타입은 policy를 통과한 명령의 실행 결과다.
+// Executed가 false이면 실행되지 않은 것이며, TimedOut은 제한 시간 초과로 끝났음을 뜻한다.
 type CommandRunResult struct {
 	OK         bool                    `json:"ok"`
 	Executed   bool                    `json:"executed"`
@@ -79,18 +72,21 @@ type CommandRunResult struct {
 	Policy     CommandPolicyEvaluation `json:"policy"`
 }
 
-type PolicyDeniedError struct {
+// DeniedError 타입은 command policy가 명령을 거부했음을 나타내는 에러다. Reasons에 거부 사유를 담는다.
+type DeniedError struct {
 	Reasons []string
 }
 
-func (e PolicyDeniedError) Error() string {
+func (e DeniedError) Error() string {
 	if len(e.Reasons) == 0 {
 		return "command denied by policy"
 	}
 	return "command denied by policy: " + strings.Join(e.Reasons, "; ")
 }
 
+// IsPolicyDenied 함수는 err가 DeniedError 값 자체인지 판별한다.
+// 감싼 에러는 인정하지 않는다. 호출 쪽에서 policy 거부를 종료 코드 3으로 대응시키는 데 쓴다.
 func IsPolicyDenied(err error) bool {
-	_, ok := err.(PolicyDeniedError) //nolint:errorlint // exit code 3 maps only a direct policy denial; TestIsPolicyDeniedMatchesDirectErrorOnly pins it
+	_, ok := err.(DeniedError) //nolint:errorlint // exit code 3 maps only a direct policy denial; TestIsPolicyDeniedMatchesDirectErrorOnly pins it
 	return ok
 }

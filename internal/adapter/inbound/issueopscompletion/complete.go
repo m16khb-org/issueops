@@ -16,13 +16,15 @@ type service interface {
 	Complete(context.Context, completionapp.Request) (completionapp.Result, error)
 }
 
-type Handler struct{ service service }
+type handler struct{ service service }
 
+// NewHandler returns the execution-complete handler backed by service. The
+// handler reports ErrCompleteHandlerUnavailable when service is nil.
 func NewHandler(service service) issueopscontract.ExecutionCompleteHandler {
-	return Handler{service: service}.Handle
+	return handler{service: service}.Handle
 }
 
-func (h Handler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionCompleteRequest) (issueopscontract.ExecutionResult, error) {
+func (h handler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionCompleteRequest) (issueopscontract.ExecutionResult, error) {
 	if h.service == nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, issueopscontract.ErrCompleteHandlerUnavailable
 	}

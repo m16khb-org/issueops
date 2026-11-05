@@ -1,3 +1,8 @@
+// Package installutil is the shared adapter toolkit of the host installers
+// (Claude, Codex and others): planning and applying file, JSON and symlink
+// writes with dry-run support, skill link planning and pruning, hook config
+// validation and drift/generation checks, activation evidence capture, and the
+// transaction that adopts a regular command file as a managed symlink.
 package installutil
 
 import (
@@ -14,14 +19,18 @@ import (
 	"issueops/internal/port"
 )
 
+// PlanHostSkillLinks plans the symlinks that expose the shared skills of root
+// in destRoot for host. It returns the enabled skill names, the planned
+// links (including stale-link prunes), human-readable messages, and
+// errors. With dryRun nothing on disk changes.
 func PlanHostSkillLinks(root, destRoot string, skillNames []string, host string, dryRun bool) ([]string, []port.InstallLink, []string, []error) {
 	enabledSkills, skippedSkills := SkillNamesForHost(root, skillNames, host)
 	messages := make([]string, 0, len(skippedSkills))
 	for _, skillName := range skippedSkills {
 		messages = append(messages, "skip skill for "+host+": "+skillName)
 	}
-	links, errs := PlanSkillLinks(root, destRoot, enabledSkills, dryRun)
-	pruned, pruneErrs := PruneStaleSkillLinks(root, destRoot, dryRun)
+	links, errs := planSkillLinks(root, destRoot, enabledSkills, dryRun)
+	pruned, pruneErrs := pruneStaleSkillLinks(root, destRoot, dryRun)
 	for _, link := range pruned {
 		verb := "prune"
 		if link.WouldRemove {
@@ -34,14 +43,14 @@ func PlanHostSkillLinks(root, destRoot string, skillNames []string, host string,
 	return enabledSkills, links, messages, errs
 }
 
-// PruneStaleSkillLinks removes symlinks in destRoot that point into this
+// pruneStaleSkillLinks removes symlinks in destRoot that point into this
 // checkout's skills/ directory but whose target no longer exists, which is what
 // a removed or renamed shared skill leaves behind in every host skill
 // directory. Only harness-owned links are touched: links that point elsewhere,
 // links whose target still exists, and non-symlink entries are left alone.
 // dryRun reports WouldRemove without deleting. A missing destRoot is not an
 // error because a fresh install has nothing to prune.
-func PruneStaleSkillLinks(root, destRoot string, dryRun bool) ([]port.InstallLink, []error) {
+func pruneStaleSkillLinks(root, destRoot string, dryRun bool) ([]port.InstallLink, []error) {
 	entries, err := os.ReadDir(destRoot)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -89,7 +98,7 @@ func PruneStaleSkillLinks(root, destRoot string, dryRun bool) ([]port.InstallLin
 	return links, errs
 }
 
-func PlanSkillLinks(root, destRoot string, skillNames []string, dryRun bool) ([]port.InstallLink, []error) {
+func planSkillLinks(root, destRoot string, skillNames []string, dryRun bool) ([]port.InstallLink, []error) {
 	links := make([]port.InstallLink, 0, len(skillNames))
 	var errs []error
 	for _, skillName := range skillNames {
@@ -102,6 +111,9 @@ func PlanSkillLinks(root, destRoot string, skillNames []string, dryRun bool) ([]
 	return links, errs
 }
 
+// WriteTextPlan writes content to path when it differs from the current
+// file, creating parent directories and applying perm. With dryRun it only
+// marks the result WouldWrite. An unchanged file reports neither flag.
 func WriteTextPlan(path, kind, content string, perm os.FileMode, dryRun bool) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: kind}
 	if existing, err := os.ReadFile(path); err == nil && bytes.Equal(existing, []byte(content)) {
@@ -123,6 +135,8 @@ func WriteTextPlan(path, kind, content string, perm os.FileMode, dryRun bool) (p
 	return file, nil
 }
 
+// WriteJSONPlan writes value to path as indented JSON with a trailing newline
+// through WriteTextPlan.
 func WriteJSONPlan(path, kind string, value any, perm os.FileMode, dryRun bool) (port.InstallFile, error) {
 	b, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
@@ -131,6 +145,10 @@ func WriteJSONPlan(path, kind string, value any, perm os.FileMode, dryRun bool) 
 	return WriteTextPlan(path, kind, string(append(b, '\n')), perm, dryRun)
 }
 
+// EnsureSymlinkPlan ensures path is a symlink to target, creating parent
+// directories and replacing a symlink that points elsewhere. It refuses to
+// replace a non-symlink path. With dryRun it only marks the result
+// WouldCreate.
 func EnsureSymlinkPlan(target, path string, dryRun bool) (port.InstallLink, error) {
 	link := port.InstallLink{Path: path, Target: target}
 	info, err := os.Lstat(path)
@@ -166,6 +184,9 @@ func EnsureSymlinkPlan(target, path string, dryRun bool) (port.InstallLink, erro
 	return link, nil
 }
 
+// TOMLString returns value as a double-quoted string using JSON escaping,
+// which the installers embed in generated TOML; an encoding failure yields
+// the empty string literal.
 func TOMLString(value string) string {
 	b, err := json.Marshal(value)
 	if err != nil {

@@ -47,7 +47,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 
 // validateCompare는 회귀 없는 비교와 경과 시간 임계값 초과 비교를 순서대로 검증한다.
 func (s *stateRoundtripSelfVerifySession) validateCompare(baselineCompareKey, candidateCompareKey string) selfverify.StepResult {
-	compareOK, failed := runSelfVerifyJSON[selfaugment.SelfAugmentCompareResult](s, "self verify compare ok", "self-verify", "compare", "--baseline-key", baselineCompareKey, "--candidate-key", candidateCompareKey, "--json")
+	compareOK, failed := runSelfVerifyJSON[selfaugment.CompareResult](s, "self verify compare ok", "self-verify", "compare", "--baseline-key", baselineCompareKey, "--candidate-key", candidateCompareKey, "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -55,7 +55,7 @@ func (s *stateRoundtripSelfVerifySession) validateCompare(baselineCompareKey, ca
 		return s.fail("self-verify compare reported unexpected non-regression result")
 	}
 
-	compareRegression, failed := runSelfVerifyJSON[selfaugment.SelfAugmentCompareResult](s, "self verify compare regression", "self-verify", "compare", "--baseline-key", baselineCompareKey, "--candidate-key", candidateCompareKey, "--max-elapsed-regression-pct", "5", "--json")
+	compareRegression, failed := runSelfVerifyJSON[selfaugment.CompareResult](s, "self verify compare regression", "self-verify", "compare", "--baseline-key", baselineCompareKey, "--candidate-key", candidateCompareKey, "--max-elapsed-regression-pct", "5", "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -68,7 +68,7 @@ func (s *stateRoundtripSelfVerifySession) validateCompare(baselineCompareKey, ca
 // validatePromote는 dry-run이 상태를 바꾸지 않고, confirm이 기준선을 기록하는지 검증한다.
 func (s *stateRoundtripSelfVerifySession) validatePromote(candidateCompareKey, promotedBaselineKey string) selfverify.StepResult {
 	input := s.input
-	promoteDry, failed := runSelfVerifyJSON[selfaugment.SelfAugmentPromoteResult](s, "self verify promote dry-run", "self-verify", "promote", "--from-key", candidateCompareKey, "--baseline-key", promotedBaselineKey, "--json")
+	promoteDry, failed := runSelfVerifyJSON[selfaugment.PromoteResult](s, "self verify promote dry-run", "self-verify", "promote", "--from-key", candidateCompareKey, "--baseline-key", promotedBaselineKey, "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -79,7 +79,7 @@ func (s *stateRoundtripSelfVerifySession) validatePromote(candidateCompareKey, p
 		return s.fail("self-verify promote dry-run wrote baseline unexpectedly")
 	}
 
-	promoteConfirm, failed := runSelfVerifyJSON[selfaugment.SelfAugmentPromoteResult](s, "self verify promote confirm", "self-verify", "promote", "--from-key", candidateCompareKey, "--baseline-key", promotedBaselineKey, "--allow-failed-source", "--confirm", "--json")
+	promoteConfirm, failed := runSelfVerifyJSON[selfaugment.PromoteResult](s, "self verify promote confirm", "self-verify", "promote", "--from-key", candidateCompareKey, "--baseline-key", promotedBaselineKey, "--allow-failed-source", "--confirm", "--json")
 	if failed != nil {
 		return *failed
 	}
@@ -91,7 +91,7 @@ func (s *stateRoundtripSelfVerifySession) validatePromote(candidateCompareKey, p
 
 // validatePromotedCompare는 승격된 기준선이 후보와 깨끗하게 비교되는지 검증한다.
 func (s *stateRoundtripSelfVerifySession) validatePromotedCompare(candidateCompareKey, promotedBaselineKey string) selfverify.StepResult {
-	comparePromoted, failed := runSelfVerifyJSON[selfaugment.SelfAugmentCompareResult](s, "self verify compare promoted", "self-verify", "compare", "--baseline-key", promotedBaselineKey, "--candidate-key", candidateCompareKey, "--json")
+	comparePromoted, failed := runSelfVerifyJSON[selfaugment.CompareResult](s, "self verify compare promoted", "self-verify", "compare", "--baseline-key", promotedBaselineKey, "--candidate-key", candidateCompareKey, "--json")
 	if failed != nil {
 		return *failed
 	}

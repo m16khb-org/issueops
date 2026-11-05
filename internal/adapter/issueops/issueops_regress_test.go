@@ -12,20 +12,20 @@ import (
 // recordAtPhaseForRegressTest persists a started cycle at the given phase with a
 // completed plan-phase ledger entry, so a Brooks regression has something to
 // invalidate.
-func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (string, string) {
+func recordAtPhaseForRegressTest(t *testing.T, phase issueops.Phase) (string, string) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-architecture-review"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "1-architecture-review"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
 	rec.Phase = phase
 	rec.ArchitectureReview = &reviewcontract.ArchitectureReview{ProblemSummary: "s", ProposedArchitecture: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
-	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
+	rec.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
 	rec.PlanPath = "/repo/plans/x.md"
-	rec.PhaseLedger = issueops.IssueOpsPhaseLedger{
-		issueops.IssueOpsPhasePlan: issueops.IssueOpsPhaseLedgerEntry{Phase: issueops.IssueOpsPhasePlan, CompletedAt: "2026-06-29T00:01:00Z", Artifacts: []string{"plan_path"}},
+	rec.PhaseLedger = issueops.PhaseLedger{
+		issueops.PhasePlan: issueops.PhaseLedgerEntry{Phase: issueops.PhasePlan, CompletedAt: "2026-06-29T00:01:00Z", Artifacts: []string{"plan_path"}},
 	}
 	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatalf("seed write: %v", err)
@@ -36,7 +36,7 @@ func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (st
 func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 	t.Parallel()
 
-	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.PhasePlan)
 
 	if _, err := RegressIssueOpsForReplan(stateRoot, id, "  "); err == nil {
 		t.Fatal("empty regression reason must be rejected")
@@ -46,7 +46,7 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("regress: %v", err)
 	}
-	if out.Phase != issueops.IssueOpsPhaseGrill {
+	if out.Phase != issueops.PhaseGrill {
 		t.Fatalf("architecture-review stop must regress to grill, got %s", out.Phase)
 	}
 	if out.ArchitectureReview == nil || out.ArchitectureReview.Approved {
@@ -66,7 +66,7 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 		t.Fatalf("regression must record a scope decision with the stop reason: %#v", out.Decisions)
 	}
 	// rule 12: downstream plan ledger entry retained but marked stale
-	planEntry, ok := out.PhaseLedger[issueops.IssueOpsPhasePlan]
+	planEntry, ok := out.PhaseLedger[issueops.PhasePlan]
 	if !ok || planEntry.CompletedAt != "" {
 		t.Fatalf("plan ledger entry should be marked incomplete (stale) after regression: %#v", planEntry)
 	}
@@ -84,7 +84,7 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 func TestRegressIssueOpsForReplanRejectedOutsidePlanCompat(t *testing.T) {
 	t.Parallel()
 
-	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhaseProblem)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.PhaseProblem)
 	if _, err := RegressIssueOpsForReplan(stateRoot, id, "too early"); err == nil {
 		t.Fatal("regression from problem phase must be rejected")
 	}
@@ -95,7 +95,7 @@ func TestRegressRefusedForImplementPhaseParentWithChildren(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	if _, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	if _, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-child-regress-implement",
 		Title:              "regress implement child",
@@ -114,7 +114,7 @@ func TestRegressIssueOpsForReplanBlockedByActiveChildren(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
+	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.ChildStartRequest{
 		ParentID:           parent.ID,
 		Branch:             "123-child-regress-active",
 		Title:              "regress active child",
@@ -128,8 +128,8 @@ func TestRegressIssueOpsForReplanBlockedByActiveChildren(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rec.Phase = issueops.IssueOpsPhasePlan
-	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"scope drift"}, RecordedAt: "2026-07-07T00:00:00Z", IssueReflectedAt: "2026-07-07T00:01:00Z"}
+	rec.Phase = issueops.PhasePlan
+	rec.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{Verdict: "stop", Findings: []string{"scope drift"}, RecordedAt: "2026-07-07T00:00:00Z", IssueReflectedAt: "2026-07-07T00:01:00Z"}
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, rec)
 
 	if _, err := RegressIssueOpsForReplanWithActor(stateRoot, parent.ID, "active child still owns delegated work", issueOpsActorForTest(parent.WorktreePath)); err == nil || !strings.Contains(err.Error(), "children_active") {
@@ -142,7 +142,7 @@ func TestRegressIssueOpsForReplanBlockedByActiveChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("regress should pass after child is dropped: %v", err)
 	}
-	if out.Phase != issueops.IssueOpsPhaseGrill {
+	if out.Phase != issueops.PhaseGrill {
 		t.Fatalf("regress should still rewind to grill after child resolution, got %s", out.Phase)
 	}
 }
@@ -151,7 +151,7 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 	t.Parallel()
 
 	// No devil's-advocate stop verdict → rejected.
-	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.PhasePlan)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +165,7 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 	}
 
 	// Stop verdict recorded but findings not yet reflected to the issue → rejected.
-	stateRoot2, id2 := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
+	stateRoot2, id2 := recordAtPhaseForRegressTest(t, issueops.PhasePlan)
 	rec2, err := ReadIssueOps(stateRoot2, id2)
 	if err != nil {
 		t.Fatal(err)
@@ -182,12 +182,12 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 func TestRegressIssueOpsForReplanExplainsReviseRecovery(t *testing.T) {
 	t.Parallel()
 
-	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhaseCompatibilityReview)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.PhaseCompatibilityReview)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
+	rec.DevilsAdvocateReview = &issueops.DevilsAdvocateReview{
 		Verdict:    "revise",
 		Findings:   []string{"probe 경합의 openUntil은 선택값이어야 한다"},
 		RecordedAt: "2026-07-29T00:00:00Z",
@@ -210,7 +210,7 @@ func TestRegressIssueOpsForReplanExplainsReviseRecovery(t *testing.T) {
 func TestShortKoreanStopReflectsAndRegresses(t *testing.T) {
 	t.Parallel()
 
-	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.PhasePlan)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		t.Fatal(err)
@@ -222,7 +222,7 @@ func TestShortKoreanStopReflectsAndRegresses(t *testing.T) {
 		t.Fatal(err)
 	}
 	prov := &fakeCompletionProvider{updateRes: portUpdateResult(true)}
-	if _, _, err := reflectReviewForTest(stateRoot, id, true, prov, issueops.IssueOpsActor{}); err != nil {
+	if _, _, err := reflectReviewForTest(stateRoot, id, true, prov, issueops.Actor{}); err != nil {
 		t.Fatalf("a short Korean stop finding must reflect: %v", err)
 	}
 	req := prov.updateReq

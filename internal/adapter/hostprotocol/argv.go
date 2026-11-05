@@ -1,3 +1,6 @@
+// Package hostprotocol builds host-specific launch argv, hook output, role
+// agent arguments, and lifecycle extension sources for the native hosts
+// (Codex, Claude, Omo, Omp, opencode).
 package hostprotocol
 
 import (

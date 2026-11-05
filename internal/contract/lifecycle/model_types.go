@@ -1,12 +1,19 @@
+// Package lifecycle defines the project lifecycle DTOs: fingerprint, stored
+// profile, and the resolved state plan. It sits in the contract layer.
 package lifecycle
 
 import projectdoccontract "issueops/internal/contract/projectdoc"
 
+// ProjectFingerprint identifies a repository by root, git dir, and a hash of
+// its origin URL, so state can be keyed to the project rather than a path.
 type ProjectFingerprint struct {
 	RepoRoot      string `json:"repo_root"`
 	GitDir        string `json:"git_dir,omitempty"`
 	GitOriginHash string `json:"git_origin_hash,omitempty"`
 }
+
+// ProjectLifecycleProfile is the project.json record persisted per project,
+// with RFC 3339 CreatedAt and UpdatedAt timestamps.
 type ProjectLifecycleProfile struct {
 	SchemaVersion int                                `json:"schema_version"`
 	RepoID        string                             `json:"repo_id"`
@@ -15,6 +22,10 @@ type ProjectLifecycleProfile struct {
 	CreatedAt     string                             `json:"created_at"`
 	UpdatedAt     string                             `json:"updated_at"`
 }
+
+// ProjectLifecycleStatePlan reports where a project's lifecycle state lives and
+// whether its profile exists with a valid namespace. OK is false when the plan
+// could not be resolved; Warnings carries non-fatal read problems.
 type ProjectLifecycleStatePlan struct {
 	OK              bool                     `json:"ok"`
 	SchemaVersion   int                      `json:"schema_version"`

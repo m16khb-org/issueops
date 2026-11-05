@@ -6,7 +6,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ArmCleanupAbandon(record model.IssueOpsRecord, attempt model.IssueOpsCleanupAttempt, failure model.IssueOpsCleanupAbandonFailure) (model.IssueOpsRecord, error) {
+// ArmCleanupAbandon arms an abandon attempt and stores the failure receipt on
+// the record. It requires the abandon operation, delegates the arm to
+// ArmCleanup, and releases a claimable execution lease at the attempt start
+// time.
+func ArmCleanupAbandon(record model.Record, attempt model.CleanupAttempt, failure model.CleanupAbandonFailure) (model.Record, error) {
 	if attempt.Operation != model.CleanupOperationAbandon {
 		return record, fmt.Errorf("abandon requires its own cleanup operation")
 	}
@@ -25,7 +29,10 @@ func ArmCleanupAbandon(record model.IssueOpsRecord, attempt model.IssueOpsCleanu
 	return next, nil
 }
 
-func ApplyCleanupAbandonFailure(record model.IssueOpsRecord, failure model.IssueOpsCleanupAbandonFailure, drained bool) model.IssueOpsRecord {
+// ApplyCleanupAbandonFailure stores failure as the abandon receipt and stamps
+// the record with its time. It also clears the cleanup attempt when the apply
+// drained.
+func ApplyCleanupAbandonFailure(record model.Record, failure model.CleanupAbandonFailure, drained bool) model.Record {
 	record.CleanupAbandonFailure = &failure
 	record.UpdatedAt = failure.At
 	if drained {

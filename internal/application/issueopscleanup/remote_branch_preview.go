@@ -7,23 +7,27 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
-type RemoteBranchEnvironment interface {
+type remoteBranchEnvironment interface {
 	RemoteRef(context.Context, string, string) (string, error)
 	OriginURL(context.Context, string) (string, error)
 	TipReachedBase(context.Context, string, string, string) bool
 	Delete(context.Context, string, string, string) error
 }
 
+// RemoteBranchPreviewer observes the remote branch, merged-artifact and
+// superseding-artifact evidence needed to preview a remote-branch cleanup.
 type RemoteBranchPreviewer struct {
-	Environment          RemoteBranchEnvironment
-	VerifyMergedArtifact func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
-	ObserveArtifact      func(string) (domain.ArtifactObservation, error)
+	Environment          remoteBranchEnvironment
+	VerifyMergedArtifact func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
+	ObserveArtifact      func(context.Context, string) (domain.ArtifactObservation, error)
 }
 
-func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
+// Plan reads the remote branch OID and merge, supersede and identity evidence
+// and returns the inventory with the domain-built preview.
+func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	inventory := domain.CleanupRemoteBranchTargets(record)
 	facts := domain.CleanupRemoteBranchObservation{MergeConfigured: s.VerifyMergedArtifact != nil}
 	s.observeArtifactFacts(ctx, record, req, &facts)
@@ -37,7 +41,7 @@ func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.IssueOpsRe
 			}
 		}
 		if !facts.TipReachedBase {
-			facts.TipSupersedeError = s.verifySuperseding(record, req.SupersededBy)
+			facts.TipSupersedeError = s.verifySuperseding(ctx, record, req.SupersededBy)
 			if facts.TipSupersedeError == nil {
 				facts.TipSupersededBy = strings.TrimSpace(req.SupersededBy)
 			}
@@ -47,7 +51,7 @@ func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.IssueOpsRe
 }
 
 // observeArtifactFacts records the merged-artifact, superseding and identity evidence for the record's remote artifact.
-func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, facts *domain.CleanupRemoteBranchObservation) {
+func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record model.Record, req model.CleanupRemoteBranchRequest, facts *domain.CleanupRemoteBranchObservation) {
 	artifact := record.RemoteArtifact
 	if artifact == nil {
 		return
@@ -55,29 +59,29 @@ func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record 
 	if facts.MergeConfigured {
 		facts.Head, facts.MergeError = s.VerifyMergedArtifact(*artifact)
 		if facts.MergeError != nil {
-			facts.ArtifactSupersedeError = s.verifySuperseding(record, req.SupersededBy)
+			facts.ArtifactSupersedeError = s.verifySuperseding(ctx, record, req.SupersededBy)
 			if facts.ArtifactSupersedeError == nil {
 				facts.ArtifactSupersededBy = strings.TrimSpace(req.SupersededBy)
 			}
 		}
 	}
-	key, err := remote.CleanupBranchArtifactProject(artifact.URL, artifact.Provider, artifact.Kind)
+	key, err := issueopsremote.CleanupBranchArtifactProject(artifact.URL, artifact.Provider, artifact.Kind)
 	if err == nil {
 		var origin string
 		origin, err = s.Environment.OriginURL(ctx, record.Repo)
 		if err == nil {
-			err = remote.ValidateCleanupBranchOrigin(key, origin, artifact.Provider)
+			err = issueopsremote.ValidateCleanupBranchOrigin(key, origin, artifact.Provider)
 		}
 	}
 	facts.IdentityError = err
 }
 
-func (s RemoteBranchPreviewer) verifySuperseding(record model.IssueOpsRecord, candidate string) error {
+func (s RemoteBranchPreviewer) verifySuperseding(ctx context.Context, record model.Record, candidate string) error {
 	candidate = strings.TrimSpace(candidate)
 	if err := domain.ValidateCleanupSupersedeInput(record, candidate, s.ObserveArtifact != nil); err != nil {
 		return err
 	}
-	replacement, err := s.ObserveArtifact(candidate)
+	replacement, err := s.ObserveArtifact(ctx, candidate)
 	if err != nil {
 		return fmt.Errorf("superseding artifact %s could not be observed: %w", candidate, err)
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 func TestClaudeAgentsJSON(t *testing.T) {
-	got, err := ClaudeAgentsJSON([]RoleAgent{
+	got, err := claudeAgentsJSON([]RoleAgent{
 		{Role: modelcontract.RoleResearch, Model: "claude-sonnet-5-5", Effort: "medium"},
 		{Role: modelcontract.RoleReaderCheck, Model: "claude-haiku-5-5"},
 		{Role: modelcontract.RoleDiffReview},
@@ -32,13 +32,13 @@ func TestClaudeAgentsJSON(t *testing.T) {
 	if _, ok := decoded["issueops-reader-check"]["effort"]; ok {
 		t.Fatalf("an empty effort must be omitted: %v", decoded["issueops-reader-check"])
 	}
-	if _, err := ClaudeAgentsJSON([]RoleAgent{{Role: "reviewer", Model: "opus"}}); err == nil {
+	if _, err := claudeAgentsJSON([]RoleAgent{{Role: "reviewer", Model: "opus"}}); err == nil {
 		t.Fatal("an unknown role must be rejected")
 	}
 }
 
 func TestCodexRoleFile(t *testing.T) {
-	got, err := CodexRoleFile(RoleAgent{Role: modelcontract.RoleResearch, Model: "gpt-6-luna", Effort: "low"})
+	got, err := codexRoleFile(RoleAgent{Role: modelcontract.RoleResearch, Model: "gpt-6-luna", Effort: "low"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestCodexRoleFile(t *testing.T) {
 	if !strings.Contains(got, "description = \"") || !strings.Contains(got, "developer_instructions = \"") {
 		t.Fatalf("role file:\n%s", got)
 	}
-	noEffort, _ := CodexRoleFile(RoleAgent{Role: modelcontract.RoleResearch, Model: "gpt-6-luna"})
+	noEffort, _ := codexRoleFile(RoleAgent{Role: modelcontract.RoleResearch, Model: "gpt-6-luna"})
 	if strings.Contains(noEffort, "model_reasoning_effort") {
 		t.Fatalf("an empty effort must be omitted:\n%s", noEffort)
 	}

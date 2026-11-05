@@ -42,7 +42,7 @@ func TestSchemaChangeDetection(t *testing.T) {
 func TestSchemaEvidenceGateInactiveWithoutSchemaChange(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
+	record := issueops.Record{Execution: &issueops.Execution{}}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, []string{"main.go", "README.md"}, ""); got != "" {
 		t.Fatalf("non-schema change set must not activate the gate: %q", got)
 	}
@@ -52,11 +52,11 @@ func TestSchemaEvidenceGateActivatesOnSchemaChange(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{"main.go", "src/migrations/1730000000-add-index.ts"}
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
+	record := issueops.Record{Execution: &issueops.Execution{}}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
 		t.Fatalf("schema change must activate the gate: %q", got)
 	}
-	record.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{
+	record.SchemaEvidence = &issueops.SchemaEvidence{
 		Measurements: []string{"orders row count = 8,412,003"},
 		Sources:      []string{"db-bc-prod execute_sql_bc_prod_market"},
 	}
@@ -67,11 +67,11 @@ func TestSchemaEvidenceGateActivatesOnSchemaChange(t *testing.T) {
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, "new"); got != "schema_evidence_stale" {
 		t.Fatalf("drifted fingerprint must be stale: %q", got)
 	}
-	record.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{Waived: true, WaiverRationale: "read-only view, no index impact"}
+	record.SchemaEvidence = &issueops.SchemaEvidence{Waived: true, WaiverRationale: "read-only view, no index impact"}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "" {
 		t.Fatalf("waived evidence must clear the gate: %q", got)
 	}
-	record.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{Waived: true}
+	record.SchemaEvidence = &issueops.SchemaEvidence{Waived: true}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
 		t.Fatalf("waiver without rationale must not clear the gate: %q", got)
 	}
@@ -82,24 +82,24 @@ func TestRecordIssueOpsSchemaEvidenceValidation(t *testing.T) {
 
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "92-schema"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "92-schema"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.Phase = issueops.PhaseImplement })
 
-	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{}); err == nil {
+	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.SchemaEvidenceRequest{}); err == nil {
 		t.Fatal("empty request must be rejected")
 	}
-	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{
+	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.SchemaEvidenceRequest{
 		Measurements: []string{"row count 12"},
 	}); err == nil || !strings.Contains(err.Error(), "source") {
 		t.Fatalf("measurement without a source must be rejected: %v", err)
 	}
-	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{Waive: true}); err == nil {
+	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.SchemaEvidenceRequest{Waive: true}); err == nil {
 		t.Fatal("waiver without rationale must be rejected")
 	}
-	got, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{
+	got, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.SchemaEvidenceRequest{
 		Measurements: []string{"idx_orders_user_id 미존재, orders 8.4M rows"},
 		Sources:      []string{"mcp db-bc-prod execute_sql_bc_prod_market"},
 	})
@@ -117,7 +117,7 @@ func TestPRReadinessSurfacesDocsGateButNotSchemaGate(t *testing.T) {
 	t.Parallel()
 
 	repo := gitRepoWithSchemaChangeForTest(t)
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		Repo:      repo,
 		Execution: &issueops.Execution{},
 	}

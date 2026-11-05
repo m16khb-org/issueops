@@ -8,7 +8,12 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func BeginIssueCreateIntent(record model.IssueOpsRecord, request model.IssueOpsIssueCreateIntentRequest) (model.IssueOpsRecord, error) {
+// BeginIssueCreateIntent seals the intent to create an issue before the
+// provider call. It fails when the record already links an issue. A first
+// call stores a pending intent with a deterministic marker; a retry is
+// allowed only for a not-invoked intent with an identical request and
+// increments the attempt. Any other intent status requires reconcile.
+func BeginIssueCreateIntent(record model.Record, request model.IssueCreateIntentRequest) (model.Record, error) {
 	if strings.TrimSpace(record.IssueURL) != "" {
 		return record, fmt.Errorf("issueops record already links issue %s", record.IssueURL)
 	}
@@ -30,7 +35,7 @@ func BeginIssueCreateIntent(record model.IssueOpsRecord, request model.IssueOpsI
 		record.IssueCreateIntent = &intent
 		return record, nil
 	}
-	record.IssueCreateIntent = &model.IssueOpsIssueCreateIntent{
+	record.IssueCreateIntent = &model.IssueCreateIntent{
 		OperationID: strings.TrimSpace(request.OperationID), Marker: "<!-- issueops:issue-create:" + strings.TrimSpace(request.OperationID) + " -->",
 		Provider: strings.TrimSpace(request.Provider), ProjectAuthority: strings.TrimSpace(request.ProjectAuthority),
 		Title: strings.TrimSpace(request.Title), BodySHA256: strings.ToLower(strings.TrimSpace(request.BodySHA256)),
@@ -41,7 +46,11 @@ func BeginIssueCreateIntent(record model.IssueOpsRecord, request model.IssueOpsI
 	return record, nil
 }
 
-func RecordIssueCreateOutcome(record model.IssueOpsRecord, outcome model.IssueOpsIssueCreateOutcome, projectAuthority string) (model.IssueOpsRecord, error) {
+// RecordIssueCreateOutcome records the observed outcome of an issue create
+// call on the sealed intent. The transition must be legal, and an observed
+// canonical URL must belong to the sealed project authority. A completed
+// intent cannot be changed.
+func RecordIssueCreateOutcome(record model.Record, outcome model.IssueCreateOutcome, projectAuthority string) (model.Record, error) {
 	if record.IssueCreateIntent == nil {
 		return record, fmt.Errorf("no pending issue create intent")
 	}
@@ -62,14 +71,18 @@ func RecordIssueCreateOutcome(record model.IssueOpsRecord, outcome model.IssueOp
 	if err := model.ValidateIssueCreateIntent(next); err != nil {
 		return record, err
 	}
-	if err := ValidateIssueCreateIntentInvariants(next); err != nil {
+	if err := validateIssueCreateIntentInvariants(next); err != nil {
 		return record, err
 	}
 	record.IssueCreateIntent = &next
 	return record, nil
 }
 
-func CompleteIssueCreateIntent(record model.IssueOpsRecord, issueURL, completedAt, projectAuthority string) (model.IssueOpsRecord, error) {
+// CompleteIssueCreateIntent finishes the intent with the created issue URL:
+// it validates the URL and the project authority, links the issue to the
+// record, and advances a record that now meets the plan readiness gates to
+// the plan phase. It fails for a not-invoked or already completed intent.
+func CompleteIssueCreateIntent(record model.Record, issueURL, completedAt, projectAuthority string) (model.Record, error) {
 	if record.IssueCreateIntent == nil {
 		return record, fmt.Errorf("no pending issue create intent")
 	}
@@ -96,13 +109,13 @@ func CompleteIssueCreateIntent(record model.IssueOpsRecord, issueURL, completedA
 	next.UpdatedAt = strings.TrimSpace(completedAt)
 	record.IssueURL = canonicalURL
 	record.IssueCreateIntent = &next
-	if len(PlanReadinessMissing(record)) == 0 && IssueOpsPhaseRank(record.Phase) < IssueOpsPhaseRank(model.IssueOpsPhasePlan) {
-		record.Phase = model.IssueOpsPhasePlan
+	if len(PlanReadinessMissing(record)) == 0 && PhaseRank(record.Phase) < PhaseRank(model.PhasePlan) {
+		record.Phase = model.PhasePlan
 	}
 	return record, nil
 }
 
-func validateIssueCreateIntentRequest(request model.IssueOpsIssueCreateIntentRequest) error {
+func validateIssueCreateIntentRequest(request model.IssueCreateIntentRequest) error {
 	for _, field := range []struct{ name, value string }{
 		{"operation_id", request.OperationID},
 		{"provider", request.Provider},
@@ -121,7 +134,7 @@ func validateIssueCreateIntentRequest(request model.IssueOpsIssueCreateIntentReq
 	return nil
 }
 
-func sameIssueCreateRequest(intent model.IssueOpsIssueCreateIntent, request model.IssueOpsIssueCreateIntentRequest) bool {
+func sameIssueCreateRequest(intent model.IssueCreateIntent, request model.IssueCreateIntentRequest) bool {
 	return intent.OperationID == strings.TrimSpace(request.OperationID) &&
 		intent.Provider == strings.TrimSpace(request.Provider) &&
 		intent.ProjectAuthority == strings.TrimSpace(request.ProjectAuthority) &&

@@ -62,8 +62,8 @@ func (s fakeOpencodeServer) Stop() error {
 type opencodeHarness struct {
 	root       string
 	events     []string
-	server     ServerRequest
-	run        CommandRequest
+	server     serverRequest
+	run        commandRequest
 	infoStatus int
 	mcpBody    string
 	runErr     error
@@ -85,7 +85,7 @@ func (h *opencodeHarness) runner(t *testing.T) OpencodeRunner {
 		t.Fatal(err)
 	}
 	runner := NewOpencodeRunner(harness, opencodeTestPlugin(harness), Dependencies{
-		Process: &omoFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
+		Process: &omoFakeProcess{run: func(_ context.Context, request commandRequest) (CommandOutput, error) {
 			if len(request.Argv) > 1 && request.Argv[1] == "--version" {
 				return CommandOutput{Stdout: []byte("opencode v2.0.32\n")}, nil
 			}
@@ -110,7 +110,7 @@ func (h *opencodeHarness) runner(t *testing.T) OpencodeRunner {
 			return h.root, os.Mkdir(h.root, 0o700)
 		},
 		Environ: func() []string { return h.environ },
-		StartServer: func(_ context.Context, request ServerRequest) (ServerProcess, error) {
+		StartServer: func(_ context.Context, request serverRequest) (serverProcess, error) {
 			h.events = append(h.events, "serve")
 			h.server = request
 			return fakeOpencodeServer{events: &h.events}, nil

@@ -1,3 +1,6 @@
+// Package verifycmd implements the `issueops self-verify` command: it runs the
+// verification gates, optionally applies the host-agent LLM evaluation, saves
+// the summary, and reports progress.
 package verifycmd
 
 import (
@@ -17,16 +20,23 @@ import (
 	model "issueops/internal/contract/selfaugment"
 )
 
+// Deps injects the environment lookup, progress reporting, verification run,
+// LLM evaluation, persistence, and JSON output used by Run. Nil fields use
+// defaults that read the process environment or fail with a "dependency is
+// required" error.
 type Deps struct {
 	LookupEnv           func(string) (string, bool)
 	ProgressWriter      io.Writer
 	NewProgressReporter func(string, io.Writer) (*progress.SelfVerifyProgressReporter, error)
-	Verify              func(application.LoopRequest) (model.SelfAugmentResult, error)
-	ApplyLLMEval        func(model.SelfAugmentResult, selfverify.LLMEvalOptions) (model.SelfAugmentResult, error)
-	SaveSummary         func(*model.SelfAugmentResult, string) error
+	Verify              func(application.LoopRequest) (model.Result, error)
+	ApplyLLMEval        func(model.Result, selfverify.LLMEvalOptions) (model.Result, error)
+	SaveSummary         func(*model.Result, string) error
 	PrintJSON           func(any) error
 }
 
+// Run executes `issueops self-verify` with the parsed flags. Under --json the
+// summary is printed even when the gate fails, and the failure is reported
+// alongside it.
 func Run(args []string, deps Deps) error {
 	deps = deps.withDefaults()
 	fs := flag.NewFlagSet("self-verify", flag.ContinueOnError)
@@ -100,15 +110,15 @@ func (deps Deps) withDefaults() Deps {
 		deps.NewProgressReporter = progress.NewSelfVerifyProgressReporter
 	}
 	if deps.Verify == nil {
-		deps.Verify = func(application.LoopRequest) (model.SelfAugmentResult, error) {
-			return model.SelfAugmentResult{}, fmt.Errorf("self-verify runner dependency is required")
+		deps.Verify = func(application.LoopRequest) (model.Result, error) {
+			return model.Result{}, fmt.Errorf("self-verify runner dependency is required")
 		}
 	}
 	if deps.ApplyLLMEval == nil {
 		deps.ApplyLLMEval = llmeval.ApplySelfVerifyLLMEval
 	}
 	if deps.SaveSummary == nil {
-		deps.SaveSummary = func(*model.SelfAugmentResult, string) error {
+		deps.SaveSummary = func(*model.Result, string) error {
 			return fmt.Errorf("self-verify state dependency is required")
 		}
 	}

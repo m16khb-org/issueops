@@ -9,10 +9,10 @@ import (
 
 func TestSkillEnabledForHostDefaultsToAllHosts(t *testing.T) {
 	root := t.TempDir()
-	if !SkillEnabledForHost(root, "missing", "codex") {
+	if !skillEnabledForHost(root, "missing", "codex") {
 		t.Fatalf("missing install config should enable skill for codex")
 	}
-	if !SkillEnabledForHost(root, "missing", "claude") {
+	if !skillEnabledForHost(root, "missing", "claude") {
 		t.Fatalf("missing install config should enable skill for claude")
 	}
 }
@@ -26,10 +26,10 @@ func TestSkillEnabledForHostHonorsHostList(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "install.json"), []byte(`{"hosts":["codex"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if !SkillEnabledForHost(root, "codex-only", "codex") {
+	if !skillEnabledForHost(root, "codex-only", "codex") {
 		t.Fatalf("codex should be enabled")
 	}
-	if SkillEnabledForHost(root, "codex-only", "claude") {
+	if skillEnabledForHost(root, "codex-only", "claude") {
 		t.Fatalf("claude should be disabled")
 	}
 }
@@ -43,10 +43,10 @@ func TestSkillEnabledForHostDefaultsToAllHostsForInvalidConfig(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "install.json"), []byte(`{`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if !SkillEnabledForHost(root, "invalid", "codex") {
+	if !skillEnabledForHost(root, "invalid", "codex") {
 		t.Fatalf("invalid install config should keep historical default for codex")
 	}
-	if !SkillEnabledForHost(root, "invalid", "claude") {
+	if !skillEnabledForHost(root, "invalid", "claude") {
 		t.Fatalf("invalid install config should keep historical default for claude")
 	}
 }

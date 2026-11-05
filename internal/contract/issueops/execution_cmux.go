@@ -2,6 +2,10 @@ package issueops
 
 import "context"
 
+// ExecutionCmuxHandoffRequest asks to hand the execution lease at Generation
+// over to a new agent session launched through cmux. It pins the cmux build,
+// the host, and the SHA-256 of the prompt and materials so the delivery can be
+// verified afterwards.
 type ExecutionCmuxHandoffRequest struct {
 	ID             string `json:"id"`
 	Generation     uint64 `json:"generation"`
@@ -20,19 +24,23 @@ type ExecutionCmuxHandoffRequest struct {
 	MaterialSHA256 string `json:"material_sha256"`
 }
 
+// ExecutionCmuxHandoffResult reports a cmux handoff: where it was delivered, how
+// far delivery progressed (input accepted, native turn observed, owner claimed),
+// and the receipt behind that observation.
 type ExecutionCmuxHandoffResult struct {
-	OK                  bool                            `json:"ok"`
-	ID                  string                          `json:"id"`
-	Generation          uint64                          `json:"generation"`
-	Status              string                          `json:"status"`
-	Launcher            IssueOpsHandoffDeliveryLauncher `json:"launcher"`
-	Target              IssueOpsHandoffDeliveryTarget   `json:"target"`
-	Timing              *IssueOpsHandoffDeliveryTiming  `json:"timing,omitempty"`
-	InputAccepted       bool                            `json:"input_accepted"`
-	NativeTurnObserved  bool                            `json:"native_turn_observed"`
-	OwnerClaimed        bool                            `json:"owner_claimed"`
-	RecoveryArtifactDir string                          `json:"recovery_artifact_dir,omitempty"`
-	ObservationReceipt  IssueOpsHandoffDeliveryReceipt  `json:"observation_receipt"`
+	OK                  bool                    `json:"ok"`
+	ID                  string                  `json:"id"`
+	Generation          uint64                  `json:"generation"`
+	Status              string                  `json:"status"`
+	Launcher            HandoffDeliveryLauncher `json:"launcher"`
+	Target              HandoffDeliveryTarget   `json:"target"`
+	Timing              *HandoffDeliveryTiming  `json:"timing,omitempty"`
+	InputAccepted       bool                    `json:"input_accepted"`
+	NativeTurnObserved  bool                    `json:"native_turn_observed"`
+	OwnerClaimed        bool                    `json:"owner_claimed"`
+	RecoveryArtifactDir string                  `json:"recovery_artifact_dir,omitempty"`
+	ObservationReceipt  HandoffDeliveryReceipt  `json:"observation_receipt"`
 }
 
+// ExecutionCmuxHandoffHandler runs a cmux handoff for the cycle with the given ID.
 type ExecutionCmuxHandoffHandler func(context.Context, string, ExecutionCmuxHandoffRequest) (ExecutionCmuxHandoffResult, error)

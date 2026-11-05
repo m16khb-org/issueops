@@ -7,23 +7,31 @@ import (
 	"time"
 )
 
+// CleanupOperation names which destructive cleanup command owns a
+// CleanupAttempt.
 type CleanupOperation string
 
+// The CleanupOperation values a CleanupAttempt may carry. CleanupOperationFinish
+// is post-merge cleanup, CleanupOperationAbandon is local teardown of an
+// unmerged cycle, and CleanupOperationRemoteBranch deletes the remote branch.
 const (
 	CleanupOperationFinish       CleanupOperation = "finish"
 	CleanupOperationAbandon      CleanupOperation = "abandon"
 	CleanupOperationRemoteBranch CleanupOperation = "remote-branch"
 )
 
-// IssueOpsCleanupAttempt binds one cleanup operation to its execution owner.
+// CleanupAttempt binds one cleanup operation to its execution owner.
 // It remains present until that execution has drained its child processes.
-type IssueOpsCleanupAttempt struct {
+type CleanupAttempt struct {
 	Operation CleanupOperation `json:"operation"`
 	Token     string           `json:"token"`
 	StartedAt string           `json:"started_at"`
 }
 
-func ValidateCleanupAttempt(attempt *IssueOpsCleanupAttempt) error {
+// ValidateCleanupAttempt reports whether attempt is a well-formed sealed
+// attempt: a known Operation, a 64-character lowercase hex Token, and an RFC 3339
+// StartedAt. A nil attempt is valid because no cleanup is in flight.
+func ValidateCleanupAttempt(attempt *CleanupAttempt) error {
 	if attempt == nil {
 		return nil
 	}

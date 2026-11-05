@@ -5,6 +5,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ValidateIssueCreateTransition checks a move between issue create intent
+// statuses. Pending may move to any status except itself; an invoked-unknown,
+// URL-observed, verification-failed, or receipt-failed intent may stay or
+// settle (verification failed, receipt failed, or completed). All other moves
+// are illegal.
 func ValidateIssueCreateTransition(from, to string) error {
 	allowed := false
 	switch from {

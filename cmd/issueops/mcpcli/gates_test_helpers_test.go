@@ -12,6 +12,6 @@ func testGatesService() app.Service {
 	return app.Service{Store: adapter.FileStore{}, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policy.Evaluate, Execute: policy.Run}}
 }
 
-func testHandleGatesMCPToolCall(call MCPToolCall) MCPToolOutcome {
+func testHandleGatesMCPToolCall(call MCPToolCall) mcpToolOutcome {
 	return handleGatesMCPToolCall(call, testGatesService())
 }

@@ -1,3 +1,6 @@
+// Package historycompare implements the `self-verify history` and `self-verify
+// compare` command line handlers. It is a CLI-layer package; storage access is
+// injected through CLIDeps.
 package historycompare
 
 import (
@@ -8,12 +11,18 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// CLIDeps supplies the effects the self-verify history and compare commands
+// need: JSON output, summary history listing, and summary comparison. PrintJSON
+// must be set for --json output.
 type CLIDeps struct {
 	PrintJSON func(any) error
-	History   func(string, int, contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error)
-	Compare   func(string, string, float64) (contract.SelfAugmentCompareResult, error)
+	History   func(string, int, contract.HistoryRetentionOptions) (contract.HistoryResult, error)
+	Compare   func(string, string, float64) (contract.CompareResult, error)
 }
 
+// RunSelfVerifyCompare runs `self-verify compare`: it compares the baseline and
+// candidate summary snapshots named by --baseline-key and --candidate-key and
+// prints text or JSON. With --fail-on-regression a regression returns an error.
 func RunSelfVerifyCompare(args []string, deps CLIDeps) error {
 	fs := flag.NewFlagSet("self-verify compare", flag.ContinueOnError)
 	baselineKey := fs.String("baseline-key", "", "state key containing the baseline self-verification summary snapshot")
@@ -51,6 +60,9 @@ func RunSelfVerifyCompare(args []string, deps CLIDeps) error {
 	return nil
 }
 
+// RunSelfVerifyHistory runs `self-verify history`: it lists saved summary
+// snapshots under --prefix, newest first, and can plan or, with --confirm,
+// apply retention pruning. It prints text or JSON.
 func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 	fs := flag.NewFlagSet("self-verify history", flag.ContinueOnError)
 	prefix := fs.String("prefix", "self-verify", "state key prefix to scan; empty string scans all keys")
@@ -62,7 +74,7 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
-	result, err := deps.History(*prefix, *limit, contract.SelfAugmentHistoryRetentionOptions{
+	result, err := deps.History(*prefix, *limit, contract.HistoryRetentionOptions{
 		Limit:          *retentionLimit,
 		PruneRequested: *pruneRetention,
 		Confirm:        *confirm,
@@ -80,7 +92,7 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 	return nil
 }
 
-func printSelfVerifyHistoryText(result contract.SelfAugmentHistoryResult) {
+func printSelfVerifyHistoryText(result contract.HistoryResult) {
 	fmt.Printf("self-verify history: %d/%d entries from %s (prefix=%q)\n", result.Returned, result.TotalMatches, result.StateDir, result.Prefix)
 	for _, entry := range result.Entries {
 		status := "fail"

@@ -11,16 +11,16 @@ import (
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
 
-func testPorts(entries []issueopsinventorycontract.ListEntry, records map[string]issueopscontract.IssueOpsRecord) Ports {
+func testPorts(entries []issueopsinventorycontract.ListEntry, records map[string]issueopscontract.Record) Ports {
 	return Ports{
 		ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
 			return issueopsinventorycontract.ListResult{OK: true, Entries: entries}, nil
 		},
-		ReadRecord: func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error) {
+		ReadRecord: func(stateRoot, id string) (issueopscontract.Record, error) {
 			return records[id], nil
 		},
-		Completion: func(record issueopscontract.IssueOpsRecord, phase issueopscontract.IssueOpsPhase) issueopscontract.IssueOpsReadiness {
-			return issueopscontract.IssueOpsReadiness{OK: true, Ready: true}
+		Completion: func(record issueopscontract.Record, phase issueopscontract.Phase) issueopscontract.Readiness {
+			return issueopscontract.Readiness{OK: true, Ready: true}
 		},
 		SourceRoot: func(cwd string) string { return "/repo" },
 		Env:        func(string) string { return "" },
@@ -47,11 +47,11 @@ func TestNextWithoutCyclesOffersStart(t *testing.T) {
 
 func TestNextSelectsTheCycleOwningTheWorkingDirectory(t *testing.T) {
 	entries := []issueopsinventorycontract.ListEntry{
-		{ID: "io-a", Phase: issueopscontract.IssueOpsPhaseImplement, Branch: "12-a", WorkspaceRoot: "/repo.worktrees/12-a"},
-		{ID: "io-b", Phase: issueopscontract.IssueOpsPhaseImplement, Branch: "13-b", WorkspaceRoot: "/repo.worktrees/13-b"},
+		{ID: "io-a", Phase: issueopscontract.PhaseImplement, Branch: "12-a", WorkspaceRoot: "/repo.worktrees/12-a"},
+		{ID: "io-b", Phase: issueopscontract.PhaseImplement, Branch: "13-b", WorkspaceRoot: "/repo.worktrees/13-b"},
 	}
-	records := map[string]issueopscontract.IssueOpsRecord{
-		"io-b": {ID: "io-b", Repo: "/repo", Branch: "13-b", Phase: issueopscontract.IssueOpsPhaseImplement},
+	records := map[string]issueopscontract.Record{
+		"io-b": {ID: "io-b", Repo: "/repo", Branch: "13-b", Phase: issueopscontract.PhaseImplement},
 	}
 	service := NewService(testPorts(entries, records))
 	result, err := service.Next(context.Background(), "/state", "/repo.worktrees/13-b", "")
@@ -68,8 +68,8 @@ func TestNextSelectsTheCycleOwningTheWorkingDirectory(t *testing.T) {
 
 func TestNextReportsAmbiguityInsteadOfGuessing(t *testing.T) {
 	entries := []issueopsinventorycontract.ListEntry{
-		{ID: "io-a", Phase: issueopscontract.IssueOpsPhaseImplement, Branch: "12-a"},
-		{ID: "io-b", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "13-b"},
+		{ID: "io-a", Phase: issueopscontract.PhaseImplement, Branch: "12-a"},
+		{ID: "io-b", Phase: issueopscontract.PhasePlan, Branch: "13-b"},
 	}
 	service := NewService(testPorts(entries, nil))
 	result, err := service.Next(context.Background(), "/state", "/repo", "")
@@ -87,11 +87,11 @@ func TestNextReportsAmbiguityInsteadOfGuessing(t *testing.T) {
 // done 사이클은 자동 선택 후보가 아니다. 남은 활성 사이클이 하나면 그것을 고른다.
 func TestNextIgnoresDoneCyclesWhenAutoSelecting(t *testing.T) {
 	entries := []issueopsinventorycontract.ListEntry{
-		{ID: "io-old", Phase: issueopscontract.IssueOpsPhaseDone, Branch: "11-old"},
-		{ID: "io-live", Phase: issueopscontract.IssueOpsPhaseGrill, Branch: "12-live"},
+		{ID: "io-old", Phase: issueopscontract.PhaseDone, Branch: "11-old"},
+		{ID: "io-live", Phase: issueopscontract.PhaseGrill, Branch: "12-live"},
 	}
-	records := map[string]issueopscontract.IssueOpsRecord{
-		"io-live": {ID: "io-live", Repo: "/repo", Branch: "12-live", Phase: issueopscontract.IssueOpsPhaseGrill},
+	records := map[string]issueopscontract.Record{
+		"io-live": {ID: "io-live", Repo: "/repo", Branch: "12-live", Phase: issueopscontract.PhaseGrill},
 	}
 	service := NewService(testPorts(entries, records))
 	result, err := service.Next(context.Background(), "/state", "/repo", "")
@@ -110,8 +110,8 @@ func TestNextIgnoresDoneCyclesWhenAutoSelecting(t *testing.T) {
 // read that as finished. next still offers start but names what is waiting.
 func TestNextNamesDoneCyclesThatStillAwaitMerge(t *testing.T) {
 	entries := []issueopsinventorycontract.ListEntry{
-		{ID: "io-a", Phase: issueopscontract.IssueOpsPhaseDone, Branch: "41-a"},
-		{ID: "io-b", Phase: issueopscontract.IssueOpsPhaseDone, Branch: "42-b"},
+		{ID: "io-a", Phase: issueopscontract.PhaseDone, Branch: "41-a"},
+		{ID: "io-b", Phase: issueopscontract.PhaseDone, Branch: "42-b"},
 	}
 	result, err := NewService(testPorts(entries, nil)).Next(context.Background(), "/state", "/repo", "")
 	if err != nil || result.Stage.Key != "none" || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "2 cycle(s) in done still await merge and cleanup, or abandon: io-a, io-b") {
@@ -123,14 +123,14 @@ func TestNextNamesDoneCyclesThatStillAwaitMerge(t *testing.T) {
 func TestNextReadsLocalReadinessOnlyAfterImplement(t *testing.T) {
 	calls := 0
 	ports := testPorts(
-		[]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "12-a"}},
-		map[string]issueopscontract.IssueOpsRecord{
-			"io-a": {ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan},
+		[]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.PhasePlan, Branch: "12-a"}},
+		map[string]issueopscontract.Record{
+			"io-a": {ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.PhasePlan},
 		},
 	)
-	ports.LocalReadiness = func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
+	ports.LocalReadiness = func(record issueopscontract.Record) issueopscontract.Readiness {
 		calls++
-		return issueopscontract.IssueOpsReadiness{OK: true, Ready: true}
+		return issueopscontract.Readiness{OK: true, Ready: true}
 	}
 	if _, err := NewService(ports).Next(context.Background(), "/state", "/repo", ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -167,7 +167,7 @@ func TestNextWarnsAboutUnreadableRecordsBeforeStart(t *testing.T) {
 func TestNextBoundsAmbiguousCandidatesToTheMostRecent(t *testing.T) {
 	var entries []issueopsinventorycontract.ListEntry
 	for i := range 25 {
-		entries = append(entries, issueopsinventorycontract.ListEntry{ID: fmt.Sprintf("io-%02d", i), Phase: issueopscontract.IssueOpsPhasePlan, UpdatedAt: fmt.Sprintf("2026-10-25T00:00:%02dZ", i)})
+		entries = append(entries, issueopsinventorycontract.ListEntry{ID: fmt.Sprintf("io-%02d", i), Phase: issueopscontract.PhasePlan, UpdatedAt: fmt.Sprintf("2026-10-25T00:00:%02dZ", i)})
 	}
 	result, err := NewService(testPorts(entries, nil)).Next(context.Background(), "/state", "/repo", "")
 	if err != nil || len(result.Candidates) != 20 || result.Candidates[0].ID != "io-24" || result.Candidates[19].ID != "io-05" {

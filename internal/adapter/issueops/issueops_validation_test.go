@@ -13,11 +13,11 @@ func TestIssueOpsStartRequiresIssueBranch(t *testing.T) {
 
 	stateRoot := t.TempDir()
 	for _, branch := range []string{"main", "development", "feature/2387-fix-grpc-ai-dmm-tag-replication-lag"} {
-		if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: branch}); err == nil || !strings.Contains(err.Error(), "issue number") {
+		if _, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: branch}); err == nil || !strings.Contains(err.Error(), "issue number") {
 			t.Fatalf("start should reject non-IssueOps branch %q, got %v", branch, err)
 		}
 	}
-	if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "2387-fix-grpc-ai-dmm-tag-replication-lag"}); err != nil {
+	if _, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: "2387-fix-grpc-ai-dmm-tag-replication-lag"}); err != nil {
 		t.Fatalf("start should accept GitLab-linked IssueOps branch: %v", err)
 	}
 }
@@ -26,7 +26,7 @@ func TestIssueOpsImplementationLinksRequireBranchEvidence(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestIssueOpsImplementationLinksRequireBranchEvidence(t *testing.T) {
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, "plans/demo.md"); err == nil || !strings.Contains(err.Error(), "branch_prepare") {
 		t.Fatalf("plan link before branch prepare should fail, got %v", err)
 	}
-	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   record.IssueURL,
 		Branch:     "1-demo",
@@ -55,7 +55,7 @@ func TestIssueOpsImplementationLinksRequireBranchEvidence(t *testing.T) {
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, "plans/demo.md"); err == nil || !strings.Contains(err.Error(), "branch_link_verified") {
 		t.Fatalf("plan link before verified branch should fail, got %v", err)
 	}
-	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     record.IssueURL,
 		Branch:       "1-demo",
@@ -73,11 +73,11 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssue(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	_, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/1",
 		Branch:     "1-demo",
@@ -111,7 +111,7 @@ func TestIssueOpsBranchPrepareRequiresResolvableLocalBaseCommit(t *testing.T) {
 	}
 	head := preflight.GitOut(repo, "rev-parse", "HEAD")
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "194-base-commit"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "194-base-commit"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestIssueOpsBranchPrepareRequiresResolvableLocalBaseCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	_, err = PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   record.IssueURL,
 		Branch:     record.Branch,
@@ -135,7 +135,7 @@ func TestIssueOpsBranchPrepareRequiresResolvableLocalBaseCommit(t *testing.T) {
 		t.Fatalf("failed prepare must not persist branch metadata: record=%+v err=%v", unchanged.BranchPrepare, readErr)
 	}
 
-	prepared, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	prepared, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   record.IssueURL,
 		Branch:     record.Branch,
@@ -154,7 +154,7 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "123-provider-linked-branch"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: "123-provider-linked-branch"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:   "gitlab",
 		IssueURL:   record.IssueURL,
 		Branch:     "456-provider-linked-branch",
@@ -170,7 +170,7 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "123-") {
 		t.Fatalf("gitlab branch missing issue number prefix should fail, got %v", err)
 	}
-	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:     "gitlab",
 		IssueURL:     record.IssueURL,
 		Branch:       "123-provider-linked-branch",
@@ -180,7 +180,7 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 		t.Fatalf("gitlab branch with issue number prefix should pass, got %v", err)
 	}
 
-	record, err = startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "456-provider-linked-branch"})
+	record, err = startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: "456-provider-linked-branch"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.IssueOpsBranchPrepareRequest{
+	if _, err := PrepareIssueOpsBranch(stateRoot, record.ID, issueops.BranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   record.IssueURL,
 		Branch:     "456-provider-linked-branch",
@@ -202,7 +202,7 @@ func TestIssueOpsChildLinkRequiresLinkedParentIssue(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,10 +223,10 @@ func TestIssueOpsRejectsUnsafeInputs(t *testing.T) {
 	t.Parallel()
 
 	stateRoot := t.TempDir()
-	if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{}); err == nil || !strings.Contains(err.Error(), "repo") {
+	if _, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{}); err == nil || !strings.Contains(err.Error(), "repo") {
 		t.Fatalf("expected repo validation error, got %v", err)
 	}
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: "/repo/example"})
 	if err != nil {
 		t.Fatal(err)
 	}

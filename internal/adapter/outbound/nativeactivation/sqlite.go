@@ -1,3 +1,6 @@
+// Package nativeactivation 패키지는 native activation 전이를 SQLite 기반 트랜잭션
+// 저장소에 기록하는 outbound 어댑터다. pending 기록과 봉인된 receipt를 같은
+// 저장소에서 원자적으로 교체하며, 전이 규칙 자체는 도메인과 응용 계층이 맡는다.
 package nativeactivation
 
 import (
@@ -30,10 +33,13 @@ const (
 	receiptID      = "receipt"
 )
 
-type StoreOpen func(string) (port.TransactionalRecordStore, error)
+type storeOpen func(string) (port.TransactionalRecordStore, error)
 
+// Backend 타입은 activationport.Backend를 트랜잭션 저장소로 구현한다.
+// 상태 루트마다 native-activation 저장소를 열어 pending 기록과 receipt를 한
+// 번에 하나씩만 유지한다.
 type Backend struct {
-	open       StoreOpen
+	open       storeOpen
 	executable func() (string, error)
 	now        func() time.Time
 	transition func() (string, error)
@@ -78,10 +84,16 @@ type receiptRecord struct {
 
 var _ activationport.Backend = Backend{}
 
-func NewBackend(open StoreOpen) Backend {
+// NewBackend 함수는 open으로 상태 루트의 저장소를 여는 Backend를 만든다.
+// 실행 파일 경로, 시계, transition ID 생성기는 운영 기본값으로 채운다.
+func NewBackend(open storeOpen) Backend {
 	return Backend{open: open, executable: os.Executable, now: time.Now, transition: newTransitionID}
 }
 
+// Begin 메서드는 현재 실행 중인 바이너리를 후보로 검증하고 새 transition ID와
+// 함께 pending 기록을 저장한다. 같은 저장소의 이전 receipt는 같은 트랜잭션에서
+// 지운다. 후보는 대상 바이너리이거나 같은 디렉터리의 임시 staged 바이너리여야
+// 한다.
 func (backend Backend) Begin(ctx context.Context, request activationport.BeginRequest) (activationport.Result, error) {
 	if err := validatePaths(request.StateRoot, request.IssueOpsRoot, request.TargetBinary); err != nil {
 		return activationport.Result{}, err
@@ -124,6 +136,9 @@ func (backend Backend) Begin(ctx context.Context, request activationport.BeginRe
 	}, nil
 }
 
+// Seal 메서드는 대상 바이너리에서 실행 중일 때 pending 기록을 검증하고
+// receipt로 교체해 봉인한다. pending 기록이 없으면 이미 봉인된 receipt가 요청과
+// 일치하는지만 확인해 같은 결과를 돌려준다.
 func (backend Backend) Seal(ctx context.Context, request activationport.SealRequest) (activationport.Result, error) {
 	if err := validatePaths(request.StateRoot, request.IssueOpsRoot, request.TargetBinary); err != nil {
 		return activationport.Result{}, err
@@ -204,6 +219,9 @@ func (backend Backend) sealPending(spanCtx context.Context, store port.Transacti
 	return sealedResult(receipt), nil
 }
 
+// Abort 메서드는 요청과 일치하는 pending 기록을 삭제해 전이를 취소한다.
+// pending 기록이 없거나 transition ID, 경로, 후보 바이너리가 요청과 다르면
+// 오류를 돌려준다.
 func (backend Backend) Abort(ctx context.Context, request activationport.AbortRequest) (activationport.Result, error) {
 	if err := validatePaths(request.StateRoot, request.IssueOpsRoot, request.TargetBinary); err != nil {
 		return activationport.Result{}, err
@@ -246,7 +264,7 @@ func (backend Backend) Abort(ctx context.Context, request activationport.AbortRe
 	return result, nil
 }
 
-func backendStore(stateRoot string, open StoreOpen) (port.TransactionalRecordStore, error) {
+func backendStore(stateRoot string, open storeOpen) (port.TransactionalRecordStore, error) {
 	if open == nil {
 		return nil, fmt.Errorf("native activation store factory is unavailable")
 	}

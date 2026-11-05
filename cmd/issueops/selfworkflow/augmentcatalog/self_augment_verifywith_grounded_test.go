@@ -15,7 +15,7 @@ import (
 // guardrail). Before B1 only the 10 refilled quality candidates were checked
 // for non-empty VerifyWith; the 21 base candidates had no grounding enforcement.
 func TestEverySelfAugmentCandidateVerifyWithIsGrounded(t *testing.T) {
-	candidates := app.Candidates(contract.SelfAugmentRepoSignals{})
+	candidates := app.Candidates(contract.RepoSignals{})
 	if len(candidates) < 20 {
 		t.Fatalf("expected the full candidate catalog, got %d", len(candidates))
 	}
@@ -30,7 +30,7 @@ func TestEverySelfAugmentCandidateVerifyWithIsGrounded(t *testing.T) {
 }
 
 func TestSelfAugmentCandidateVerifyWithUsesLiveSelfVerifyFlags(t *testing.T) {
-	for _, candidate := range app.Candidates(contract.SelfAugmentRepoSignals{}) {
+	for _, candidate := range app.Candidates(contract.RepoSignals{}) {
 		for _, mechanism := range candidate.VerifyWith {
 			if !strings.Contains(mechanism, "self-verify") {
 				continue
@@ -46,7 +46,7 @@ func TestSelfAugmentCandidateVerifyWithUsesLiveSelfVerifyFlags(t *testing.T) {
 }
 
 func TestAdapterContractMatrixCandidateCoversEveryFirstPartyHost(t *testing.T) {
-	for _, candidate := range app.Candidates(contract.SelfAugmentRepoSignals{}) {
+	for _, candidate := range app.Candidates(contract.RepoSignals{}) {
 		if candidate.ID != "adapter-contract-matrix" {
 			continue
 		}

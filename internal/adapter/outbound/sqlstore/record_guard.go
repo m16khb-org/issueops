@@ -22,7 +22,7 @@ var _ authorityport.RecordReader = (*DB)(nil)
 
 var errRecordGuardContext = errors.New("sqlstore record guard must return a context derived from the span context")
 
-// WithRecordGuard는 root가 보호하는 state root(grant database)에만 binder를 건다.
+// WithRecordGuard 함수는 root가 보호하는 state root(grant database)에만 binder를 건다.
 // 그 root의 span은 lock을 잡은 뒤 같은 root의 DB를 reader로 binder를 호출하고
 // 반환된 context로 callback을 실행한다. 실패하면 callback과 data write 없이 lock을
 // 풀고 그 오류를 반환한다. 그 root의 data write(Apply, CompareAndApply,

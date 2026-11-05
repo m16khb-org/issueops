@@ -1,3 +1,5 @@
+// Package secretdetection detects secret-like values in text so they are not
+// stored or echoed.
 package secretdetection
 
 import (
@@ -27,6 +29,8 @@ type Match struct {
 	Kind string
 }
 
+// Contains reports whether value matches any secret-like pattern (credential
+// assignment, private key block, GitHub/GitLab token, or JWT).
 func Contains(value string) bool {
 	for _, p := range patterns() {
 		if p.re.MatchString(value) {

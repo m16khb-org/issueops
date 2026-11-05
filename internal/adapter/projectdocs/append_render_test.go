@@ -10,7 +10,7 @@ import (
 var appendRenderNow = time.Date(2026, time.March, 4, 23, 59, 0, 0, time.UTC)
 
 func TestAppendFilesRenderCautionRecordWithEveryField(t *testing.T) {
-	got := AppendFiles{}.Render("caution", "n", "d", projectdocscontract.ProjectDocsAppendRequest{
+	got := AppendFiles{}.Render("caution", "n", "d", projectdocscontract.AppendRequest{
 		Title:        "  Title  ",
 		Source:       " src ",
 		Summary:      " sum ",
@@ -37,7 +37,7 @@ func TestAppendFilesRenderCautionRecordWithEveryField(t *testing.T) {
 }
 
 func TestAppendFilesRenderDecisionRecordWithEveryField(t *testing.T) {
-	got := AppendFiles{}.Render("decision", "n", "d", projectdocscontract.ProjectDocsAppendRequest{
+	got := AppendFiles{}.Render("decision", "n", "d", projectdocscontract.AppendRequest{
 		Title:        "T",
 		Source:       "s",
 		Summary:      "sum",
@@ -61,7 +61,7 @@ func TestAppendFilesRenderDecisionRecordWithEveryField(t *testing.T) {
 }
 
 func TestAppendFilesRenderOmitsBlankOptionalFields(t *testing.T) {
-	blank := projectdocscontract.ProjectDocsAppendRequest{
+	blank := projectdocscontract.AppendRequest{
 		Title:        "T",
 		Source:       "  ",
 		Summary:      "sum",
@@ -83,7 +83,7 @@ func TestAppendFilesRenderOmitsBlankOptionalFields(t *testing.T) {
 		}
 	}
 
-	none := projectdocscontract.ProjectDocsAppendRequest{Title: "T", Summary: "sum"}
+	none := projectdocscontract.AppendRequest{Title: "T", Summary: "sum"}
 	got := AppendFiles{}.Render("decision", "n", "d", none, appendRenderNow)
 	if want := "---\nname: n\ndescription: d\n---\n\n# T\n\n- Date: 2026-03-04\n- Kind: `decision`\n- Summary: sum\n"; got != want {
 		t.Fatalf("got %q, want %q", got, want)

@@ -25,10 +25,10 @@ func TestOperationalHealthInstancesKeepCapturedState(t *testing.T) {
 	t.Setenv("PATH", path)
 	roots := []string{t.TempDir(), t.TempDir(), t.TempDir()}
 	var commands [2]basiccli.Doctor
-	var records [2]model.IssueOpsRecord
+	var records [2]model.Record
 	for i := range commands {
 		t.Setenv("ISSUEOPS_STATE_DIR", roots[i])
-		records[i], err = startIssueOpsFixture(issueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "991-health-isolation"})
+		records[i], err = startIssueOpsFixture(issueOpsStateRoot(), model.StartRequest{Repo: repo, Branch: "991-health-isolation"})
 		if err != nil {
 			t.Fatal(err)
 		}

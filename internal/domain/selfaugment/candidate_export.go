@@ -5,6 +5,9 @@ import (
 	verify "issueops/internal/domain/selfverify"
 )
 
+// NewCandidateExport builds the self-verification candidate export from the built-in catalog.
+// sourceExists reports whether skills/self-verify/CANDIDATES.md was found; when false a warning
+// notes the built-in fallback. The caller fills source path, root and timestamp.
 func NewCandidateExport(sourceExists bool) contract.SelfVerificationCandidateExportResult {
 	candidates := verify.CandidateCatalog()
 	warnings := []string{}

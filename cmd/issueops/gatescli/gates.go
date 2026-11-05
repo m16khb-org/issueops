@@ -1,4 +1,4 @@
-// Package gatescli는 태스크 게이트 ledger CLI의 flag 해석과 출력을 소유한다.
+// Package gatescli 패키지는 태스크 게이트 ledger CLI의 flag 해석과 출력을 소유한다.
 // 저장소 조립은 composition root가 하고(Dependencies), 여기서는 게이트 파일
 // 형식이나 policy를 모른다.
 package gatescli
@@ -15,7 +15,7 @@ import (
 	gatescontract "issueops/internal/contract/gates"
 )
 
-// UnmetError는 게이트가 남아있는 상태의 종료 오류이다(exit 1).
+// UnmetError 타입은 게이트가 남아있는 상태의 종료 오류이다(exit 1).
 type UnmetError struct {
 	Unmet      int
 	Unreadable int
@@ -40,12 +40,12 @@ func unmetError(result gatescontract.CheckResult) UnmetError {
 	return failure
 }
 
-// UsageError는 잘못된 사용법 오류이다(exit 2).
+// UsageError 타입은 잘못된 사용법 오류이다(exit 2).
 type UsageError struct{ Message string }
 
 func (e UsageError) Error() string { return e.Message }
 
-// Dependencies는 gates CLI가 필요한 연산을 함수로 받는다.
+// Dependencies 타입은 gates CLI가 필요한 연산을 함수로 받는다.
 type Dependencies struct {
 	Check   func(gatescontract.CheckRequest) (gatescontract.CheckResult, error)
 	Init    func(gatescontract.InitRequest) (gatescontract.InitResult, error)
@@ -53,16 +53,19 @@ type Dependencies struct {
 	Lint    func(gatescontract.LintRequest) (gatescontract.LintResult, error)
 }
 
-// LintError는 lint가 문제를 찾은 상태의 종료 오류이다(exit 1).
-type LintError struct {
+// lintError는 lint가 문제를 찾은 상태의 종료 오류이다(exit 1).
+type lintError struct {
 	Gates    int
 	Unparsed int
 }
 
-func (e LintError) Error() string {
+func (e lintError) Error() string {
 	return fmt.Sprintf("%d gate(s) cannot be met as written, %d gate-like plan line(s) could not be read", e.Gates, e.Unparsed)
 }
 
+// Run 함수는 gates 서브커맨드(init, check, status, report, abandon, lint)를 실행한다. 인자가 없거나
+// 도움말 요청이면 사용법을 stderr에 출력한다. 알 수 없는 서브커맨드는 UsageError로 돌려주고,
+// 남은 게이트가 있으면 UnmetError를 돌려준다.
 func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		gatesUsage()
@@ -276,7 +279,7 @@ func runLint(deps Dependencies, args []string) error {
 		printLintText(result)
 	}
 	if !result.Clean {
-		return reportedIf(*jsonOut, LintError{Gates: result.GatesWithProblems, Unparsed: len(result.UnparsedLines)})
+		return reportedIf(*jsonOut, lintError{Gates: result.GatesWithProblems, Unparsed: len(result.UnparsedLines)})
 	}
 	return nil
 }

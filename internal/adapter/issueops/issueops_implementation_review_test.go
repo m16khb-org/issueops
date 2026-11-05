@@ -16,18 +16,18 @@ func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitInitedRepoForReviewTest(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "83-review"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "83-review"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.IssueOpsImplementationReviewRequest{Verdict: "approve"}); err == nil {
+	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.ImplementationReviewRequest{Verdict: "approve"}); err == nil {
 		t.Fatal("unknown verdict must be rejected")
 	}
-	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.IssueOpsImplementationReviewRequest{Verdict: "pass"}); err == nil {
+	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.ImplementationReviewRequest{Verdict: "pass"}); err == nil {
 		t.Fatal("pass without findings/evidence must be rejected")
 	}
-	valid := issueops.IssueOpsImplementationReviewRequest{
+	valid := issueops.ImplementationReviewRequest{
 		Verdict: "pass", Findings: []string{"경계 조건 검토 완료"}, Evidence: []string{"go test ./... ok"},
 		ReviewerHost: "codex", ReviewerModel: "gpt-6-sol", ReviewerEffort: "xhigh",
 	}
@@ -35,7 +35,7 @@ func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, valid); err == nil || !strings.Contains(err.Error(), "implement phase") {
 		t.Fatalf("pre-implement recording must be rejected: %v", err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.Phase = issueops.PhaseImplement })
 	got, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, valid)
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func gitInitedRepoForReviewTest(t *testing.T) string {
 func TestImplementationReviewMissingAppliesWhenExecutionExists(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{}
+	record := issueops.Record{}
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("record without execution must not be gated: %q", got)
 	}
@@ -79,7 +79,7 @@ func TestImplementationReviewMissingAppliesWhenExecutionExists(t *testing.T) {
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "implementation_review" {
 		t.Fatalf("execution without review must be gated: %q", got)
 	}
-	record.ImplementationReview = &issueops.IssueOpsImplementationReview{Verdict: "revise"}
+	record.ImplementationReview = &issueops.ImplementationReview{Verdict: "revise"}
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "implementation_review_verdict_revise" {
 		t.Fatalf("non-pass verdict must be gated with its verdict: %q", got)
 	}
@@ -103,11 +103,11 @@ func TestImplementationReviewMissingAppliesWhenExecutionExists(t *testing.T) {
 func TestPRReadinessRequiresImplementationReview(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
+	record := issueops.Record{Execution: &issueops.Execution{}}
 	if ready := IssueOpsPRReadiness(record); !containsString(ready.Missing, "implementation_review") {
 		t.Fatalf("pr readiness must surface the implementation review gate: %+v", ready.Missing)
 	}
-	record.ImplementationReview = &issueops.IssueOpsImplementationReview{Verdict: "pass"}
+	record.ImplementationReview = &issueops.ImplementationReview{Verdict: "pass"}
 	if ready := IssueOpsPRReadiness(record); containsString(ready.Missing, "implementation_review") {
 		t.Fatalf("a recorded pass review must clear the gate: %+v", ready.Missing)
 	}
@@ -119,9 +119,9 @@ func TestPRReadinessRequiresImplementationReview(t *testing.T) {
 func TestImplementationReviewSealsAnEmptyFingerprintAndCatchesItLater(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{
+	record := issueops.Record{
 		Execution:            &issueops.Execution{},
-		ImplementationReview: &issueops.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: ""},
+		ImplementationReview: &issueops.ImplementationReview{Verdict: "pass", ReviewedFingerprint: ""},
 	}
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("an empty seal with no computable fingerprint must pass: %q", got)

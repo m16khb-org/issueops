@@ -13,18 +13,18 @@ import (
 
 func TestReviewReflectionCompositionRechecksHolderBeforeStamp(t *testing.T) {
 	root, repo, worktree := t.TempDir(), t.TempDir(), t.TempDir()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "63-review-reflection"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: repo, Branch: "63-review-reflection"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	process := liveFixtureReceipt(t)
 	record.IssueURL = "https://github.com/acme/repo/issues/63"
-	record.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"review finding"}, RecordedAt: "then"}
+	record.DevilsAdvocateReview = &model.DevilsAdvocateReview{Verdict: "stop", Findings: []string{"review finding"}, RecordedAt: "then"}
 	record.Execution = &model.Execution{Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: strings.Repeat("a", 40), LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}, ClaimedAt: "then"}}
 	if _, err := (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
-	actor := model.IssueOpsActor{Host: "codex", SessionID: "holder", CWD: worktree}
+	actor := model.Actor{Host: "codex", SessionID: "holder", CWD: worktree}
 	provider := &completionProvider{}
 	mode := "preview"
 	provider.update = func(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {

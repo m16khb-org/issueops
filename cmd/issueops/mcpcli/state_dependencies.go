@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-// StateDependencies는 서버별 state application 연산이다.
+// StateDependencies 타입은 서버별 state application 연산이다.
 type StateDependencies struct {
-	Doctor   func() (statecontract.StateDoctorResult, error)
-	List     func() (statecontract.StateListResult, error)
-	Maintain func() (statecontract.StateMaintainResult, error)
-	Prune    func(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error)
-	Read     func(key string) (statecontract.StateResult, error)
-	Write    func(ctx context.Context, key, content string) (statecontract.StateResult, error)
+	Doctor   func() (statecontract.DoctorResult, error)
+	List     func() (statecontract.ListResult, error)
+	Maintain func() (statecontract.MaintainResult, error)
+	Prune    func(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.PruneResult, error)
+	Read     func(key string) (statecontract.Result, error)
+	Write    func(ctx context.Context, key, content string) (statecontract.Result, error)
 }

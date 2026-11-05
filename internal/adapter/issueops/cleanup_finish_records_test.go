@@ -15,7 +15,7 @@ func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-records", Phase: model.IssueOpsPhaseDone})
+	record, err := writeIssueOps(context.Background(), root, model.Record{SchemaVersion: 1, ID: "io-finish-records", Phase: model.PhaseDone})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 		t.Run(operation, func(t *testing.T) {
 			root := t.TempDir()
 			ctx := context.Background()
-			record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-replaced", Phase: model.IssueOpsPhaseDone})
+			record, err := writeIssueOps(context.Background(), root, model.Record{SchemaVersion: 1, ID: "io-finish-replaced", Phase: model.PhaseDone})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -123,7 +123,7 @@ func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
 
 	ctx := context.Background()
 	root := t.TempDir()
-	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-drain", Phase: model.IssueOpsPhaseDone, RemoteCompletion: &model.IssueOpsRemoteCompletion{IssueClosedAt: "first"}})
+	record, err := writeIssueOps(context.Background(), root, model.Record{SchemaVersion: 1, ID: "io-finish-drain", Phase: model.PhaseDone, RemoteCompletion: &model.RemoteCompletion{IssueClosedAt: "first"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
 		}
 	}
 	outcomes, unreadable, err := ListCycleOutcomes(root)
-	if err != nil || len(unreadable) != 0 || len(outcomes) != 1 || outcomes[0].ID != record.ID || outcomes[0].Outcome != model.IssueOpsCycleOutcomeFinished {
+	if err != nil || len(unreadable) != 0 || len(outcomes) != 1 || outcomes[0].ID != record.ID || outcomes[0].Outcome != model.CycleOutcomeFinished {
 		t.Fatalf("retained outcomes = %+v unreadable=%v err=%v", outcomes, unreadable, err)
 	}
 }
@@ -200,7 +200,7 @@ func TestFinishRecordsRejectOutcomeForAnotherRecord(t *testing.T) {
 
 	ctx := context.Background()
 	root := t.TempDir()
-	record, err := writeIssueOps(ctx, root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-outcome", Phase: model.IssueOpsPhaseDone})
+	record, err := writeIssueOps(ctx, root, model.Record{SchemaVersion: 1, ID: "io-finish-outcome", Phase: model.PhaseDone})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,15 +223,15 @@ func TestFinishRecordsRejectOutcomeForAnotherRecord(t *testing.T) {
 	}
 }
 
-func finishOutcome(snapshot model.CleanupSnapshot) model.IssueOpsCycleOutcome {
-	return domain.CycleOutcomeForRecord(snapshot.Record, model.IssueOpsCycleOutcomeFinished, "2026-09-29T00:00:02Z")
+func finishOutcome(snapshot model.CleanupSnapshot) model.CycleOutcome {
+	return domain.CycleOutcomeForRecord(snapshot.Record, model.CycleOutcomeFinished, "2026-09-29T00:00:02Z")
 }
 
-func finishRecordsAttempt(char string) model.IssueOpsCleanupAttempt {
-	return model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat(char, 64), StartedAt: "2026-09-29T00:00:00Z"}
+func finishRecordsAttempt(char string) model.CleanupAttempt {
+	return model.CleanupAttempt{Operation: "finish", Token: strings.Repeat(char, 64), StartedAt: "2026-09-29T00:00:00Z"}
 }
-func finishRecordsFailure() model.IssueOpsCleanupFinishFailure {
-	return model.IssueOpsCleanupFinishFailure{Step: model.CleanupFailureStepWorktreeRemove, Message: "remove failed", At: "2026-09-29T00:00:01Z"}
+func finishRecordsFailure() model.CleanupFinishFailure {
+	return model.CleanupFinishFailure{Step: model.CleanupFailureStepWorktreeRemove, Message: "remove failed", At: "2026-09-29T00:00:01Z"}
 }
 
 func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
@@ -239,7 +239,7 @@ func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
 
 	ctx := context.Background()
 	root := t.TempDir()
-	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-forged", Phase: model.IssueOpsPhaseDone})
+	record, err := writeIssueOps(context.Background(), root, model.Record{SchemaVersion: 1, ID: "io-finish-forged", Phase: model.PhaseDone})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,17 +11,17 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func retargetTestRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
+func retargetTestRecord() model.Record {
+	return model.Record{
 		ID:       "io-1",
 		OK:       true,
 		Repo:     "/repo/example",
 		Branch:   "2819-child",
 		IssueURL: "https://gitlab.example/group/project/-/issues/2819",
-		BranchPrepare: &model.IssueOpsBranchPrepare{
+		BranchPrepare: &model.BranchPrepare{
 			Provider: "gitlab", Branch: "2819-child", BaseBranch: "release/stg", BaseSHA: "abc123",
 		},
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{
+		RemoteArtifact: &model.RemoteArtifactVerification{
 			Provider: "gitlab", Kind: "mr", URL: "https://gitlab.example/group/project/-/merge_requests/5606",
 			TargetBranch: "release/stg",
 		},
@@ -29,7 +29,7 @@ func retargetTestRecord() model.IssueOpsRecord {
 }
 
 type retargetRepository struct {
-	record     model.IssueOpsRecord
+	record     model.Record
 	locked     bool
 	saves      int
 	beforeLock func()
@@ -43,8 +43,8 @@ func (s *retargetRepository) WithinLock(ctx context.Context, _ string, fn func(c
 	defer func() { s.locked = false }()
 	return fn(ctx)
 }
-func (s *retargetRepository) Load(string) (model.IssueOpsRecord, error) { return s.record, nil }
-func (s *retargetRepository) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *retargetRepository) Load(string) (model.Record, error) { return s.record, nil }
+func (s *retargetRepository) Save(_ context.Context, record model.Record) (model.Record, error) {
 	if !s.locked {
 		panic("save outside lock")
 	}
@@ -52,9 +52,9 @@ func (s *retargetRepository) Save(_ context.Context, record model.IssueOpsRecord
 	s.saves++
 	return record, nil
 }
-func retargetTestStore(record model.IssueOpsRecord, observedTarget string, remotePresent bool) (*retargetRepository, Retargeter) {
+func retargetTestStore(record model.Record, observedTarget string, remotePresent bool) (*retargetRepository, Retargeter) {
 	s := &retargetRepository{record: record}
-	service := Retargeter{Records: s, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }, TargetBranch: func(artifact model.IssueOpsRemoteArtifactVerification) (string, error) {
+	service := Retargeter{Records: s, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }, TargetBranch: func(artifact model.RemoteArtifactVerification) (string, error) {
 		if s.locked {
 			panic("network under lock")
 		}
@@ -70,14 +70,14 @@ func retargetTestStore(record model.IssueOpsRecord, observedTarget string, remot
 	}}
 	return s, service
 }
-func runRetarget(service Retargeter, id string, req model.IssueOpsBranchRetargetRequest) (model.IssueOpsRecord, error) {
-	return service.Retarget(context.Background(), id, req, model.IssueOpsActor{})
+func runRetarget(service Retargeter, id string, req model.BranchRetargetRequest) (model.Record, error) {
+	return service.Retarget(context.Background(), id, req, model.Actor{})
 }
 
 func TestRetargetRecordsProviderObservedBaseChange(t *testing.T) {
 	_, store := retargetTestStore(retargetTestRecord(), "2803-umbrella", true)
 
-	record, err := runRetarget(store, "io-1", model.IssueOpsBranchRetargetRequest{
+	record, err := runRetarget(store, "io-1", model.BranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "child MR retargeted to the umbrella branch",
 	})
 	if err != nil {
@@ -106,7 +106,7 @@ func TestRetargetRecordsProviderObservedBaseChange(t *testing.T) {
 func TestRetargetRejectsBaseTheProviderDoesNotShow(t *testing.T) {
 	s, store := retargetTestStore(retargetTestRecord(), "release/stg", true)
 
-	_, err := runRetarget(store, "io-1", model.IssueOpsBranchRetargetRequest{
+	_, err := runRetarget(store, "io-1", model.BranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "wishful",
 	})
 	if err == nil || !strings.Contains(err.Error(), "release/stg") {
@@ -120,7 +120,7 @@ func TestRetargetRejectsBaseTheProviderDoesNotShow(t *testing.T) {
 func TestRetargetRejectsBaseAbsentFromRemote(t *testing.T) {
 	_, store := retargetTestStore(retargetTestRecord(), "2803-umbrella", false)
 
-	_, err := runRetarget(store, "io-1", model.IssueOpsBranchRetargetRequest{
+	_, err := runRetarget(store, "io-1", model.BranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "gone",
 	})
 	if err == nil || !strings.Contains(err.Error(), "origin") {
@@ -130,11 +130,11 @@ func TestRetargetRejectsBaseAbsentFromRemote(t *testing.T) {
 
 func TestRetargetFailsClosedWhenObservationFails(t *testing.T) {
 	_, store := retargetTestStore(retargetTestRecord(), "2803-umbrella", true)
-	store.TargetBranch = func(model.IssueOpsRemoteArtifactVerification) (string, error) {
+	store.TargetBranch = func(model.RemoteArtifactVerification) (string, error) {
 		return "", fmt.Errorf("network down")
 	}
 
-	_, err := runRetarget(store, "io-1", model.IssueOpsBranchRetargetRequest{
+	_, err := runRetarget(store, "io-1", model.BranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "x",
 	})
 	if err == nil || !strings.Contains(err.Error(), "network down") {
@@ -147,15 +147,15 @@ func TestRetargetRequiresRemoteArtifactAndReason(t *testing.T) {
 	record.RemoteArtifact = nil
 	_, store := retargetTestStore(retargetTestRecord(), "2803-umbrella", true)
 	store.Records.(*retargetRepository).record = record
-	if _, err := runRetarget(store, "io-1", model.IssueOpsBranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "x"}); err == nil || !strings.Contains(err.Error(), "remote artifact") {
+	if _, err := runRetarget(store, "io-1", model.BranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "x"}); err == nil || !strings.Contains(err.Error(), "remote artifact") {
 		t.Fatalf("retarget without a verified remote artifact must be rejected: %v", err)
 	}
 
 	_, store = retargetTestStore(retargetTestRecord(), "2803-umbrella", true)
-	if _, err := runRetarget(store, "io-1", model.IssueOpsBranchRetargetRequest{BaseBranch: "2803-umbrella"}); err == nil || !strings.Contains(err.Error(), "reason") {
+	if _, err := runRetarget(store, "io-1", model.BranchRetargetRequest{BaseBranch: "2803-umbrella"}); err == nil || !strings.Contains(err.Error(), "reason") {
 		t.Fatalf("retarget without a reason must be rejected: %v", err)
 	}
-	if _, err := runRetarget(store, "io-1", model.IssueOpsBranchRetargetRequest{BaseBranch: "release/stg", Reason: "same"}); err == nil || !strings.Contains(err.Error(), "already") {
+	if _, err := runRetarget(store, "io-1", model.BranchRetargetRequest{BaseBranch: "release/stg", Reason: "same"}); err == nil || !strings.Contains(err.Error(), "already") {
 		t.Fatalf("retarget to the current base must be rejected: %v", err)
 	}
 }
@@ -173,7 +173,7 @@ func TestRetargetRejectsDriftBeforeWrite(t *testing.T) {
 					s.record.Repo += "-changed"
 				}
 			}
-			_, err := runRetarget(service, "io-1", model.IssueOpsBranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"})
+			_, err := runRetarget(service, "io-1", model.BranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"})
 			if err == nil || !strings.Contains(err.Error(), "changed while") || s.saves != 0 {
 				t.Fatalf("err=%v saves=%d", err, s.saves)
 			}
@@ -183,7 +183,7 @@ func TestRetargetRejectsDriftBeforeWrite(t *testing.T) {
 func TestRetargetDoesNotMutateObservedSnapshot(t *testing.T) {
 	original := retargetTestRecord()
 	_, service := retargetTestStore(original, "2803-umbrella", true)
-	_, err := runRetarget(service, "io-1", model.IssueOpsBranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"})
+	_, err := runRetarget(service, "io-1", model.BranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func TestRetargetRechecksHolderAfterObservation(t *testing.T) {
 	repo, service := retargetTestStore(record, "2803-umbrella", true)
 	service.Authority = cycleapp.NewMutationAuthority(func(a, b string) bool { return a == b }, liveVerifier())
 	repo.beforeLock = func() { next := holder; next.SessionID = "new-owner"; repo.record.Execution.Lease.Holder = &next }
-	_, err := service.Retarget(context.Background(), record.ID, model.IssueOpsBranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"}, model.IssueOpsActor{Host: "codex", SessionID: "owner", CWD: root, NativeProcessAncestry: []model.NativeProcessReceipt{*holder.SessionProcess}})
+	_, err := service.Retarget(context.Background(), record.ID, model.BranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"}, model.Actor{Host: "codex", SessionID: "owner", CWD: root, NativeProcessAncestry: []model.NativeProcessReceipt{*holder.SessionProcess}})
 	if err == nil || repo.saves != 0 {
 		t.Fatalf("stale holder accepted: error=%v saves=%d", err, repo.saves)
 	}
@@ -211,11 +211,11 @@ func TestRetargetRejectsNonHolderBeforeNetwork(t *testing.T) {
 	record := retargetTestRecord()
 	record.Execution = active.Execution
 	repo, service := retargetTestStore(record, "2803-umbrella", true)
-	service.TargetBranch = func(model.IssueOpsRemoteArtifactVerification) (string, error) {
+	service.TargetBranch = func(model.RemoteArtifactVerification) (string, error) {
 		t.Fatal("unauthorized caller reached network")
 		return "", nil
 	}
-	_, err := runRetarget(service, record.ID, model.IssueOpsBranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"})
+	_, err := runRetarget(service, record.ID, model.BranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"})
 	if err == nil || repo.saves != 0 {
 		t.Fatalf("nonholder accepted: %v", err)
 	}

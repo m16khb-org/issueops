@@ -33,16 +33,16 @@ const (
 	opencodeGuardErrorText = "issueops context injection missing"
 )
 
-// ServerRequest starts one private background server.
-type ServerRequest struct {
+// serverRequest starts one private background server.
+type serverRequest struct {
 	Cwd  string
 	Argv []string
 	Env  []string
 }
 
-// ServerProcess is a started private server. Stop ends its whole process
+// serverProcess is a started private server. Stop ends its whole process
 // group and waits for it within a bounded time.
-type ServerProcess interface {
+type serverProcess interface {
 	Stop() error
 }
 
@@ -79,6 +79,9 @@ type opencodeEpisodeConfig struct {
 	Permissions []opencodePermission `json:"permissions"`
 }
 
+// NewOpencodeRunner returns an OpencodeRunner that serves the probe through harnessBinary and loads lifecyclePlugin in the private server.
+// canonicalPlugin maps the plugin path to its canonical form for validation.
+// Nil members of deps are replaced by the real implementations, and the ready and warm waits use their default limits.
 func NewOpencodeRunner(harnessBinary, lifecyclePlugin string, deps Dependencies, canonicalPlugin func(string) string) OpencodeRunner {
 	return OpencodeRunner{
 		canonicalPlugin: canonicalPlugin,
@@ -90,8 +93,10 @@ func NewOpencodeRunner(harnessBinary, lifecyclePlugin string, deps Dependencies,
 	}
 }
 
+// Name returns the host name, "opencode", used in reports and evidence sources.
 func (OpencodeRunner) Name() string { return "opencode" }
 
+// Preflight reports whether the opencode executable is installed and ready to run an episode, with a failure cause and code when it is not.
 func (r OpencodeRunner) Preflight(ctx context.Context, request port.HostProbeRequest) (result port.HostProbePreflight) {
 	result = port.HostProbePreflight{Host: r.Name(), RequestedModel: request.Model, EvidenceSource: "opencode_preflight"}
 	fail := func(code string) port.HostProbePreflight {
@@ -119,11 +124,11 @@ func (r OpencodeRunner) Preflight(ctx context.Context, request port.HostProbeReq
 	if err != nil {
 		return fail("episode_prepare_failed")
 	}
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Cwd:     root,
 		Argv:    []string{executable, "--version"},
 		Env:     isolatedOpencodeEnv(r.deps, root, password),
-		Timeout: VersionTimeout,
+		Timeout: versionTimeout,
 	})
 	if err != nil || output.ExitCode != 0 {
 		return fail("version_probe_failed")
@@ -157,6 +162,8 @@ func (r OpencodeRunner) validLifecyclePlugin() bool {
 	return err == nil && r.canonicalPlugin != nil && r.lifecyclePlugin == r.canonicalPlugin(absolute)
 }
 
+// Run starts a private opencode server inside a temporary root, waits for it to connect the probe MCP server, runs one episode against it,
+// and returns the observed call as a HostProbeResult. Environment failures become failed results with a cause and code, not errors.
 func (r OpencodeRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	fail := func(cause, code string) port.HostProbeResult {
@@ -205,12 +212,12 @@ func (r OpencodeRunner) Run(ctx context.Context, request port.HostProbeRequest) 
 	if code != "" {
 		return fail("harness_environment", code)
 	}
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Cwd:     work,
 		Argv:    []string{executable, "run", "--server", base, "--model", request.Model, "--format", "json"},
 		Env:     env,
 		Stdin:   request.Prompt,
-		Timeout: EpisodeTimeout,
+		Timeout: episodeTimeout,
 	})
 	return opencodeEpisodeFinish(r.Name(), request, started, r.deps, resultPath, targetTool, output, err)
 }
@@ -237,12 +244,12 @@ func (r OpencodeRunner) episodeInputs(request port.HostProbeRequest) (harnessBin
 // startEpisodeServer starts the private server and waits until it is ready and
 // its location has connected the probe MCP server. The caller stops a non-nil
 // server even when a failure code comes back.
-func (r OpencodeRunner) startEpisodeServer(ctx context.Context, executable, work string, env []string, password string) (server ServerProcess, base, code string) {
+func (r OpencodeRunner) startEpisodeServer(ctx context.Context, executable, work string, env []string, password string) (server serverProcess, base, code string) {
 	serverPort, err := freeLoopbackPort()
 	if err != nil {
 		return nil, "", "server_port_unavailable"
 	}
-	server, err = r.deps.StartServer(ctx, ServerRequest{
+	server, err = r.deps.StartServer(ctx, serverRequest{
 		Cwd:  work,
 		Argv: []string{executable, "serve", "--hostname", "127.0.0.1", "--port", strconv.Itoa(serverPort)},
 		Env:  env,
@@ -501,7 +508,7 @@ func opencodeReportedError(stdout []byte) string {
 // tool_use line is one executed tool call, and only the probe tool may run.
 func observeOpencodeStream(data []byte, targetTool string) (omoStreamObservation, error) {
 	var observation omoStreamObservation
-	if len(data) == 0 || len(data) > MaxOutputBytes {
+	if len(data) == 0 || len(data) > maxOutputBytes {
 		return observation, fmt.Errorf("host_stream_invalid")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -557,7 +564,7 @@ type execServer struct {
 
 // startExecServer starts the server in its own process group and discards its
 // output, so a full pipe can never stall it.
-func startExecServer(_ context.Context, request ServerRequest) (ServerProcess, error) {
+func startExecServer(_ context.Context, request serverRequest) (serverProcess, error) {
 	if len(request.Argv) == 0 {
 		return nil, fmt.Errorf("empty_argv")
 	}
@@ -604,7 +611,7 @@ func basicAuthGet(ctx context.Context, address, user, password string) (int, []b
 		return 0, nil, err
 	}
 	defer response.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(response.Body, MaxOutputBytes))
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxOutputBytes))
 	return response.StatusCode, body, err
 }
 

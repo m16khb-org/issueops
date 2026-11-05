@@ -14,11 +14,11 @@ func TestListWorkerJobsReportsQueueDepth(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", dir)
 
 	statuses := []string{
-		workercontract.WorkerStatusQueued, workercontract.WorkerStatusQueued,
-		workercontract.WorkerStatusRunning,
-		workercontract.WorkerStatusSucceeded,
-		workercontract.WorkerStatusFailed,
-		workercontract.WorkerStatusCancelled,
+		workercontract.StatusQueued, workercontract.StatusQueued,
+		workercontract.StatusRunning,
+		workercontract.StatusSucceeded,
+		workercontract.StatusFailed,
+		workercontract.StatusCancelled,
 	}
 	for i, s := range statuses {
 		job, err := EnqueueWorkerJob("queue-test", fmt.Sprintf("p%d", i))

@@ -2,7 +2,7 @@ package issueopsbenchmark
 
 import contract "issueops/internal/contract/issueopsbenchmark"
 
-func SummarizeDimensionScores(scores []contract.IssueOpsDimensionScore) (float64, float64) {
+func summarizeDimensionScores(scores []contract.IssueOpsDimensionScore) (float64, float64) {
 	total := 0.0
 	counted := 0
 	minimum := 0.0
@@ -22,7 +22,7 @@ func SummarizeDimensionScores(scores []contract.IssueOpsDimensionScore) (float64
 	return total / float64(counted), minimum
 }
 
-func SummarizeRunScores(scores []contract.IssueOpsBenchmarkScore) (float64, float64) {
+func summarizeRunScores(scores []contract.Score) (float64, float64) {
 	if len(scores) == 0 {
 		return 0, 0
 	}

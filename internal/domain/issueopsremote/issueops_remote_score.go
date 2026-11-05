@@ -1,31 +1,32 @@
-package remote
+package issueopsremote
 
 import (
 	"fmt"
 	"strings"
 )
 
-func ScoreIssueOpsRemoteCandidates(req IssueOpsRemoteScoringRequest) (IssueOpsRemoteScoringResult, error) {
+// ScoreIssueOpsRemoteCandidates scores the related-issue and label candidates of req against the draft by token overlap and type keywords, and returns the selected and rejected sets ordered by score. The provider defaults to github and a non-positive threshold to 0.70; it errors for an unsupported provider, a threshold above 1, or an empty draft.
+func ScoreIssueOpsRemoteCandidates(req ScoringRequest) (ScoringResult, error) {
 	provider := strings.ToLower(strings.TrimSpace(firstNonEmpty(req.Provider, req.Issue.Provider)))
 	if provider == "" {
 		provider = "github"
 	}
 	if provider != "github" && provider != "gitlab" {
-		return IssueOpsRemoteScoringResult{OK: false, Provider: provider}, fmt.Errorf("unsupported issueops remote provider %q", provider)
+		return ScoringResult{OK: false, Provider: provider}, fmt.Errorf("unsupported issueops remote provider %q", provider)
 	}
 	threshold := req.Threshold
 	if threshold <= 0 {
 		threshold = defaultIssueOpsRemoteThreshold
 	}
 	if threshold > 1 {
-		return IssueOpsRemoteScoringResult{OK: false, Provider: provider}, fmt.Errorf("threshold must be between 0 and 1")
+		return ScoringResult{OK: false, Provider: provider}, fmt.Errorf("threshold must be between 0 and 1")
 	}
 	issueText := strings.TrimSpace(req.Issue.Title + "\n" + req.Issue.Body)
 	if issueText == "" {
-		return IssueOpsRemoteScoringResult{OK: false, Provider: provider, Threshold: threshold}, fmt.Errorf("issue.title or issue.body is required in the scoring request")
+		return ScoringResult{OK: false, Provider: provider, Threshold: threshold}, fmt.Errorf("issue.title or issue.body is required in the scoring request")
 	}
 	issueTokens := issueOpsRemoteTokens(issueText)
-	result := normalizeIssueOpsRemoteScoringResult(IssueOpsRemoteScoringResult{OK: true, Provider: provider, Threshold: threshold})
+	result := normalizeIssueOpsRemoteScoringResult(ScoringResult{OK: true, Provider: provider, Threshold: threshold})
 	typeEvidence := issueOpsRemoteLabelEvidence(issueTokens)
 	scoreIssueOpsRemoteIssueCandidates(&result, provider, threshold, issueTokens, req.IssueCandidates)
 	scoreIssueOpsRemoteLabelCandidates(&result, provider, threshold, issueTokens, typeEvidence, req.LabelCandidates)
@@ -44,7 +45,7 @@ func ScoreIssueOpsRemoteCandidates(req IssueOpsRemoteScoringRequest) (IssueOpsRe
 	return normalizeIssueOpsRemoteScoringResult(result), nil
 }
 
-func scoreIssueOpsRemoteIssueCandidates(result *IssueOpsRemoteScoringResult, provider string, threshold float64, issueTokens map[string]bool, candidates []IssueOpsRemoteIssueCandidate) {
+func scoreIssueOpsRemoteIssueCandidates(result *ScoringResult, provider string, threshold float64, issueTokens map[string]bool, candidates []IssueCandidate) {
 	for _, candidate := range candidates {
 		item := scoreIssueOpsRemoteIssue(provider, threshold, issueTokens, candidate)
 		if item.Selected {
@@ -55,7 +56,7 @@ func scoreIssueOpsRemoteIssueCandidates(result *IssueOpsRemoteScoringResult, pro
 	}
 }
 
-func scoreIssueOpsRemoteLabelCandidates(result *IssueOpsRemoteScoringResult, provider string, threshold float64, issueTokens map[string]bool, typeEvidence issueOpsRemoteTypeEvidence, candidates []IssueOpsRemoteLabelCandidate) {
+func scoreIssueOpsRemoteLabelCandidates(result *ScoringResult, provider string, threshold float64, issueTokens map[string]bool, typeEvidence issueOpsRemoteTypeEvidence, candidates []LabelCandidate) {
 	for _, candidate := range candidates {
 		item := scoreIssueOpsRemoteLabel(provider, threshold, issueTokens, typeEvidence, candidate)
 		if item.Selected {
@@ -66,7 +67,7 @@ func scoreIssueOpsRemoteLabelCandidates(result *IssueOpsRemoteScoringResult, pro
 	}
 }
 
-func normalizeIssueOpsRemoteScoringResult(result IssueOpsRemoteScoringResult) IssueOpsRemoteScoringResult {
+func normalizeIssueOpsRemoteScoringResult(result ScoringResult) ScoringResult {
 	if strings.TrimSpace(result.ExecutionClass) == "" {
 		result.ExecutionClass = "background_join"
 	}
@@ -75,16 +76,16 @@ func normalizeIssueOpsRemoteScoringResult(result IssueOpsRemoteScoringResult) Is
 		result.JoinBefore = "remote_artifact_write"
 	}
 	if result.SelectedRelatedIssues == nil {
-		result.SelectedRelatedIssues = []IssueOpsRemoteScoredItem{}
+		result.SelectedRelatedIssues = []ScoredItem{}
 	}
 	if result.RejectedRelatedIssues == nil {
-		result.RejectedRelatedIssues = []IssueOpsRemoteScoredItem{}
+		result.RejectedRelatedIssues = []ScoredItem{}
 	}
 	if result.SelectedLabels == nil {
-		result.SelectedLabels = []IssueOpsRemoteScoredItem{}
+		result.SelectedLabels = []ScoredItem{}
 	}
 	if result.RejectedLabels == nil {
-		result.RejectedLabels = []IssueOpsRemoteScoredItem{}
+		result.RejectedLabels = []ScoredItem{}
 	}
 	if result.ApplyInstructions == nil {
 		result.ApplyInstructions = []string{}
@@ -95,7 +96,7 @@ func normalizeIssueOpsRemoteScoringResult(result IssueOpsRemoteScoringResult) Is
 	return result
 }
 
-func scoreIssueOpsRemoteIssue(provider string, threshold float64, issueTokens map[string]bool, candidate IssueOpsRemoteIssueCandidate) IssueOpsRemoteScoredItem {
+func scoreIssueOpsRemoteIssue(provider string, threshold float64, issueTokens map[string]bool, candidate IssueCandidate) ScoredItem {
 	score := scorePtr(candidate.Score)
 	evidence := []string{}
 	if candidate.Score != nil {
@@ -109,7 +110,7 @@ func scoreIssueOpsRemoteIssue(provider string, threshold float64, issueTokens ma
 		evidence = append(evidence, fmt.Sprintf("token_overlap=%.2f", overlap), fmt.Sprintf("title_overlap=%.2f", titleOverlap), fmt.Sprintf("label_overlap=%.2f", labelOverlap))
 	}
 	selected := score >= threshold
-	item := IssueOpsRemoteScoredItem{
+	item := ScoredItem{
 		ID:        strings.TrimSpace(candidate.ID),
 		Title:     strings.TrimSpace(candidate.Title),
 		URL:       strings.TrimSpace(candidate.URL),
@@ -126,7 +127,7 @@ func scoreIssueOpsRemoteIssue(provider string, threshold float64, issueTokens ma
 	return item
 }
 
-func scoreIssueOpsRemoteLabel(provider string, threshold float64, issueTokens map[string]bool, typeEvidence issueOpsRemoteTypeEvidence, candidate IssueOpsRemoteLabelCandidate) IssueOpsRemoteScoredItem {
+func scoreIssueOpsRemoteLabel(provider string, threshold float64, issueTokens map[string]bool, typeEvidence issueOpsRemoteTypeEvidence, candidate LabelCandidate) ScoredItem {
 	score := scorePtr(candidate.Score)
 	evidence := []string{}
 	rejectReason := "score below threshold"
@@ -147,7 +148,7 @@ func scoreIssueOpsRemoteLabel(provider string, threshold float64, issueTokens ma
 		evidence = append(evidence, fmt.Sprintf("token_overlap=%.2f", overlap), "type_heuristic=0.00")
 	}
 	selected := score >= threshold
-	item := IssueOpsRemoteScoredItem{
+	item := ScoredItem{
 		Name:      strings.TrimSpace(candidate.Name),
 		Score:     score,
 		Threshold: threshold,

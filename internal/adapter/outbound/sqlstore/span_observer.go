@@ -6,23 +6,25 @@ import (
 	"time"
 )
 
+// SpanOutcomeSuccess와 SpanOutcomeError는 SpanObservation.Outcome이 span callback의 성공과 실패를
+// 나타내는 값이다.
 const (
 	SpanOutcomeSuccess  = "success"
 	SpanOutcomeError    = "error"
-	SpanOutcomeCanceled = "canceled"
-	SpanOutcomeNested   = "nested"
+	spanOutcomeCanceled = "canceled"
+	spanOutcomeNested   = "nested"
 )
 
 const (
-	// SpanCommitCoverageComplete는 lock 보유 동안 이 핸들의 모든 data commit이
+	// SpanCommitCoverageComplete 상수는 lock 보유 동안 이 핸들의 모든 data commit이
 	// span context를 통해 관측됐다는 뜻이다. 이때만 Commit 합계(0 포함)를 보고한다.
 	SpanCommitCoverageComplete = "complete"
-	// SpanCommitCoverageUnknown은 span context에 귀속할 수 없는 write(autocommit
+	// SpanCommitCoverageUnknown 상수는 span context에 귀속할 수 없는 write(autocommit
 	// Put/Delete, span 밖 context의 Apply, 같은 핸들의 동시 writer)가 있었다는 뜻이다.
 	SpanCommitCoverageUnknown = "unknown"
 )
 
-// SpanObservation은 span 하나의 단계 지연이다. 단계는 서로 겹치므로 더하지 않는다.
+// SpanObservation 타입은 span 하나의 단계 지연이다. 단계는 서로 겹치므로 더하지 않는다.
 //   - Wait: 진입부터 SQLite span lock 획득까지(local gate 대기 포함). 미획득이면 진입부터 반환까지.
 //   - Hold: lock 획득부터 lock rollback 완료까지. 미획득이면 0이고 Acquired=false다.
 //   - Callback: fn 진입부터 반환까지의 inclusive 시간(commit 포함). 미진입이면 nil.
@@ -42,10 +44,13 @@ type SpanObservation struct {
 	CommitCoverage string
 }
 
+// SpanObserver 타입은 span이 끝날 때마다 그 단계 지연(SpanObservation)을 받는 콜백이다.
 type SpanObserver func(SpanObservation)
 
 type spanObserverKey struct{}
 
+// WithSpanObserver 함수는 이 ctx로 시작하는 span의 관측 결과를 observer로 전달하도록 ctx를 감싼다.
+// ctx나 observer가 nil이면 ctx를 그대로 반환한다.
 func WithSpanObserver(ctx context.Context, observer SpanObserver) context.Context {
 	if ctx == nil || observer == nil {
 		return ctx

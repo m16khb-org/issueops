@@ -29,6 +29,7 @@ func containsAnyFold(s string, needles ...string) bool {
 	return false
 }
 
+// ContainsFold reports whether s contains needle, ignoring letter case.
 func ContainsFold(s, needle string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(needle))
 }

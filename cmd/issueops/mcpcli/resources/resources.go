@@ -1,3 +1,6 @@
+// Package resources 패키지는 MCP resources/read 요청을 처리하는 CLI 어댑터다.
+// issueops:// URI를 문서 색인, 프로젝트 문서 라우팅, 상태 목록, 정책 요약, 하네스 파일로 연결하며,
+// 실제 조회 기능은 composition root가 Config로 주입한다.
 package resources
 
 import (
@@ -7,20 +10,23 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
+// Config 타입은 resources/read 처리에 필요한 의존성이다. 함수 필드는 composition root가 주입하며,
+// nil인 DocsIndex와 StateList는 해당 리소스를 읽을 수 없다는 에러로 응답한다.
 type Config struct {
 	CommandPolicySummary func() map[string]any
 	// RouteProjectDocs는 composition root가 주입한다.
-	RouteProjectDocs func(repoRoot, task string) (projectdocscontract.ProjectDocsRouteResult, error)
+	RouteProjectDocs func(repoRoot, task string) (projectdocscontract.RouteResult, error)
 	// DocsIndex는 composition root가 주입한다.
-	DocsIndex func(root, version string, includeHistory bool) docscontract.DocsIndexResult
+	DocsIndex func(root, version string, includeHistory bool) docscontract.IndexResult
 	// StateList는 composition root가 주입한다.
-	StateList       func() (statecontract.StateListResult, error)
+	StateList       func() (statecontract.ListResult, error)
 	IssueOpsRoot    string
 	Version         string
 	SkillName       string
 	ReadHarnessFile func(parts ...string) (string, error)
 }
 
+// ReadError 타입은 resources/read가 JSON-RPC 에러로 돌려줄 코드, 메시지, 부가 데이터다.
 type ReadError struct {
 	Code    int
 	Message string
@@ -62,6 +68,8 @@ Do not invent repo facts. If evidence is missing, mark the section as "Unknown /
 `
 }
 
+// HandleResourceRead 함수는 params의 uri에 해당하는 리소스 내용을 돌려준다.
+// params가 잘못되었거나 알 수 없는 uri이면 -32602, 읽기에 실패하면 -32000인 ReadError를 돌려준다.
 func HandleResourceRead(params json.RawMessage, config Config) (any, *ReadError) {
 	var req struct {
 		URI string `json:"uri"`

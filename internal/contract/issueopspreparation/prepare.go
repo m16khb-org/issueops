@@ -1,3 +1,5 @@
+// Package issueopspreparation defines the transport-neutral contract for preparing an issueops cycle: the command,
+// result, snapshot, and workspace types shared by domain, application, and adapters.
 package issueopspreparation
 
 import (
@@ -6,10 +8,13 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
+// Record aliases the lease contract's cycle record under this package's name.
 // domain/issueopspreparation은 이 contract 패키지만 import할 수 있어서
 // (preparation domain의 dependency 규칙) lease 어휘를 여기서 이 이름으로 둔다.
 type Record = leasecontract.Record
 
+// Command is the request to prepare a cycle: the cycle ID, the acting caller, the working directory,
+// and whether to apply (Confirm) or only preview.
 type Command struct {
 	ID      string              `json:"id"`
 	Actor   leasecontract.Actor `json:"actor"`
@@ -17,12 +22,15 @@ type Command struct {
 	Confirm bool                `json:"confirm,omitempty"`
 }
 
+// Clone returns a copy that shares no mutable state with command.
 func (command Command) Clone() Command {
 	cloned := command
 	cloned.Actor = cloneActor(command.Actor)
 	return cloned
 }
 
+// Result reports a preparation: the cycle ID, whether it was only a preview, the workspace,
+// the resulting execution, the claim token path, and the next command to run.
 type Result struct {
 	OK             bool                     `json:"ok"`
 	ID             string                   `json:"id"`
@@ -33,12 +41,15 @@ type Result struct {
 	NextCommand    string                   `json:"next_command,omitempty"`
 }
 
+// Clone returns a copy that shares no mutable state with result.
 func (result Result) Clone() Result {
 	cloned := result
 	cloned.Execution = cloneExecutionPointer(result.Execution)
 	return cloned
 }
 
+// Snapshot is the persisted state preparation reads: the cycle record with its raw bytes,
+// the canonical root, and the claim token path.
 type Snapshot struct {
 	Record         leasecontract.Record
 	RecordRaw      []byte
@@ -62,6 +73,8 @@ type WorkspaceRequest struct {
 	CWD            string `json:"-"`
 }
 
+// WorkspaceReceipt reports the worktree that exists after preparation: source root, root, branch,
+// base head, optional parent worktree, and whether it already existed.
 type WorkspaceReceipt struct {
 	SourceRoot     string `json:"source_root"`
 	Root           string `json:"root"`
@@ -71,12 +84,15 @@ type WorkspaceReceipt struct {
 	Exists         bool   `json:"exists,omitempty"`
 }
 
+// AccessResult is the decision of the access check on preparation: whether the caller is allowed and, if
+// not, the denial code and the command to relaunch with.
 type AccessResult struct {
 	Allowed         bool   `json:"allowed"`
 	Code            string `json:"code,omitempty"`
 	RelaunchCommand string `json:"relaunch_command,omitempty"`
 }
 
+// Clone returns a deep copy of the snapshot, including the record and its raw bytes.
 func (snapshot Snapshot) Clone() Snapshot {
 	cloned := snapshot
 	cloned.Record = cloneRecord(snapshot.Record)

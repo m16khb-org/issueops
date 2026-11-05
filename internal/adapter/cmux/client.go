@@ -1,3 +1,8 @@
+// Package cmux is the adapter that drives the cmux terminal multiplexer CLI to
+// deliver a handoff into a new workspace: it pins the supported cmux version
+// and socket endpoint, creates a workspace, sends the launcher command, and
+// verifies the bootstrap receipt. It also holds the Unix-socket, directory and
+// prompt-file identity checks the delivery depends on.
 package cmux
 
 import (
@@ -27,6 +32,8 @@ import (
 
 const commandTimeout = 5 * time.Second
 
+// SupportedVersion and SupportedBuildIdentity are the only cmux release and
+// build string Preflight accepts.
 const (
 	SupportedVersion       = "0.64.10"
 	SupportedBuildIdentity = "cmux 0.64.10 (90) [fafa50702]"
@@ -36,31 +43,41 @@ var (
 	cmuxWorkspaceRefPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^workspace:[0-9]+$`) })
 )
 
-type CommandRequest struct {
+type commandRequest struct {
 	Executable string
 	Args       []string
 	Env        map[string]string
 	Timeout    time.Duration
 }
 
+// CommandOutput is what a cmux command run captured: bounded stdout and
+// stderr, and whether the process was actually started. Invoked separates a
+// failure before launch from an ambiguous one after it.
 type CommandOutput struct {
 	Stdout  []byte
 	Stderr  []byte
 	Invoked bool
 }
 
-type Runner interface {
-	Run(context.Context, CommandRequest) (CommandOutput, error)
+type runner interface {
+	Run(context.Context, commandRequest) (CommandOutput, error)
 }
 
-type EndpointObserver func(path string, expectedUID int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error)
+type endpointObserver func(path string, expectedUID int) (issueops.HandoffDeliveryEndpointIncarnation, error)
 
+// Client performs the cmux CLI operations of a handoff delivery. Runner
+// executes the commands, ObserveEndpoint identifies the socket endpoint, and
+// UID is the user the socket must belong to.
 type Client struct {
-	Runner          Runner
-	ObserveEndpoint EndpointObserver
+	Runner          runner
+	ObserveEndpoint endpointObserver
 	UID             int
 }
 
+// Preflight checks that the cmux executable matches the supported version and
+// build, answers ping and capability queries, and identifies the requested
+// window on the socket. The socket endpoint must keep the same incarnation
+// from before the first command to after the last one.
 func (client Client) Preflight(ctx context.Context, request cmuxcontract.PreflightRequest) (cmuxcontract.PreflightResult, error) {
 	if err := validatePreflightRequest(client, request); err != nil {
 		return cmuxcontract.PreflightResult{}, err
@@ -76,7 +93,7 @@ func (client Client) Preflight(ctx context.Context, request cmuxcontract.Preflig
 	if err != nil {
 		return cmuxcontract.PreflightResult{}, err
 	}
-	if !SameEndpoint(before, after) {
+	if !sameEndpoint(before, after) {
 		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux socket endpoint incarnation changed during preflight")
 	}
 	return cmuxcontract.PreflightResult{Executable: request.Executable, Version: request.ExpectedVersion, Build: request.ExpectedBuild, SocketPath: request.SocketPath, WindowID: request.WindowID, Endpoint: before}, nil
@@ -125,6 +142,10 @@ func (client Client) verifyPreflightCommands(ctx context.Context, request cmuxco
 	return validateIdentify(identifyOutput.Stdout, request.SocketPath, request.WindowID, "", "", false)
 }
 
+// CreateWorkspace creates a named workspace in the preflighted window with the
+// given working directory, then resolves its window, workspace and surface
+// IDs. A failure after cmux was invoked is a MutationError marked ambiguous,
+// because the workspace may exist.
 func (client Client) CreateWorkspace(ctx context.Context, request cmuxcontract.CreateRequest) (cmuxcontract.CreatedWorkspace, error) {
 	if !validUUID(request.Preflight.WindowID) || !filepath.IsAbs(request.CWD) || filepath.Clean(request.CWD) != request.CWD || strings.TrimSpace(request.AttemptID) == "" {
 		return cmuxcontract.CreatedWorkspace{}, fmt.Errorf("cmux create request identity is invalid")
@@ -156,6 +177,9 @@ func (client Client) CreateWorkspace(ctx context.Context, request cmuxcontract.C
 	return result, nil
 }
 
+// Send types request.Command plus a newline into the created surface and
+// confirms that cmux queued it for that exact target. Failures after cmux was
+// invoked are ambiguous MutationErrors; the receipt carries the send latency.
 func (client Client) Send(ctx context.Context, request cmuxcontract.SendRequest) (cmuxcontract.SendReceipt, error) {
 	created := request.Created
 	if !validUUID(created.WindowID) || !validUUID(created.WorkspaceID) || !validUUID(created.SurfaceID) || strings.TrimSpace(request.Command) == "" {
@@ -298,14 +322,14 @@ func (client Client) ensureEndpoint(preflight cmuxcontract.PreflightResult) erro
 	if err != nil {
 		return err
 	}
-	if !SameEndpoint(preflight.Endpoint, current) {
+	if !sameEndpoint(preflight.Endpoint, current) {
 		return fmt.Errorf("cmux socket endpoint incarnation changed")
 	}
 	return nil
 }
 
 func (client Client) run(ctx context.Context, executable, socketPath string, args ...string) (CommandOutput, error) {
-	return client.Runner.Run(ctx, CommandRequest{
+	return client.Runner.Run(ctx, commandRequest{
 		Executable: executable, Args: append([]string{"--socket", socketPath}, args...), Timeout: commandTimeout,
 		Env: map[string]string{"CMUX_SOCKET_PATH": socketPath, "CMUX_SOCKET": "", "CMUX_WORKSPACE_ID": "", "CMUX_SURFACE_ID": ""},
 	})
@@ -469,9 +493,14 @@ func decodeJSONArray(decoder *json.Decoder) (any, error) {
 	return array, nil
 }
 
+// ExecRunner runs cmux commands as child processes, bounded by the request
+// timeout and a 1 MiB cap on each output stream.
 type ExecRunner struct{}
 
-func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutput, error) {
+// Run executes request and returns its output. On timeout it kills the whole
+// process group; output over 1 MiB and a non-zero exit are errors, and the
+// captured output is still returned.
+func (ExecRunner) Run(ctx context.Context, request commandRequest) (CommandOutput, error) {
 	runCtx, cancel := context.WithTimeout(ctx, request.Timeout)
 	defer cancel()
 	command := exec.CommandContext(runCtx, request.Executable, request.Args...)

@@ -43,7 +43,7 @@ func (d *fakeDir) Close()                      { d.closed++ }
 
 func fenceEnv(dir *fakeDir) port.RootEnvironment {
 	return port.RootEnvironment{
-		Read:      func(string, string) (model.IssueOpsRecord, error) { return releasedRecord(), nil },
+		Read:      func(string, string) (model.Record, error) { return releasedRecord(), nil },
 		Directory: func(string) (port.Directory, error) { return dir, nil },
 		Getwd:     func() (string, error) { return workspaceRoot, nil },
 		GitTop:    func(path string) (string, error) { return path, nil },
@@ -66,14 +66,14 @@ func TestOpenRootFenceRejectsEachIdentityMismatchWithItsOwnReason(t *testing.T) 
 		{
 			name: "record read fails",
 			mutate: func(env *port.RootEnvironment, _ *fakeDir) {
-				env.Read = func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, readFailure }
+				env.Read = func(string, string) (model.Record, error) { return model.Record{}, readFailure }
 			},
 			wantIs: readFailure,
 		},
 		{
 			name: "execution is not a released direct lease",
 			mutate: func(env *port.RootEnvironment, _ *fakeDir) {
-				env.Read = func(string, string) (model.IssueOpsRecord, error) {
+				env.Read = func(string, string) (model.Record, error) {
 					record := releasedRecord()
 					record.Execution.Lease.Status = model.LeaseStatusActive
 					return record, nil
@@ -163,35 +163,35 @@ func TestOpenRootFenceRejectsEachIdentityMismatchWithItsOwnReason(t *testing.T) 
 func TestRootFenceCheckDetectsDriftAfterOpen(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		drift  func(record *model.IssueOpsRecord, dir *fakeDir)
+		drift  func(record *model.Record, dir *fakeDir)
 		want   string
 		closed bool
 	}{
 		{
 			name:  "execution removed",
-			drift: func(record *model.IssueOpsRecord, _ *fakeDir) { record.Execution = nil },
+			drift: func(record *model.Record, _ *fakeDir) { record.Execution = nil },
 			want:  "durable worktree path changed",
 		},
 		{
 			name:  "workspace root rewritten",
-			drift: func(record *model.IssueOpsRecord, _ *fakeDir) { record.Execution.Workspace.Root = otherRoot },
+			drift: func(record *model.Record, _ *fakeDir) { record.Execution.Workspace.Root = otherRoot },
 			want:  "durable worktree path changed",
 		},
 		{
 			name:  "worktree path rewritten",
-			drift: func(record *model.IssueOpsRecord, _ *fakeDir) { record.WorktreePath = otherRoot },
+			drift: func(record *model.Record, _ *fakeDir) { record.WorktreePath = otherRoot },
 			want:  "durable worktree path changed",
 		},
 		{
 			name: "lease no longer released",
-			drift: func(record *model.IssueOpsRecord, _ *fakeDir) {
+			drift: func(record *model.Record, _ *fakeDir) {
 				record.Execution.Lease.Status = model.LeaseStatusActive
 			},
 			want: "exact released direct execution generation",
 		},
 		{
 			name:  "filesystem identity replaced",
-			drift: func(_ *model.IssueOpsRecord, dir *fakeDir) { dir.notMatch = true },
+			drift: func(_ *model.Record, dir *fakeDir) { dir.notMatch = true },
 			want:  "filesystem identity changed",
 		},
 	} {
@@ -199,7 +199,7 @@ func TestRootFenceCheckDetectsDriftAfterOpen(t *testing.T) {
 			dir := &fakeDir{path: workspaceRoot}
 			env := fenceEnv(dir)
 			drifted := false
-			env.Read = func(string, string) (model.IssueOpsRecord, error) {
+			env.Read = func(string, string) (model.Record, error) {
 				record := releasedRecord()
 				if drifted {
 					tc.drift(&record, dir)
@@ -236,12 +236,12 @@ type handoffHarness struct {
 	client                             *harnessClient
 	reads, observeCalls                int
 	failReadAt, failObserveAt          int
-	observations                       []model.IssueOpsHandoffDeliveryObservation
+	observations                       []model.HandoffDeliveryObservation
 	prepared, awaited, cleaned         int
 	prepareErr, receiptErr, cleanupErr error
 	request                            model.ExecutionCmuxHandoffRequest
 	created                            cmux.CreatedWorkspace
-	existing                           []model.IssueOpsHandoffDeliveryObservation
+	existing                           []model.HandoffDeliveryObservation
 	readAuditErr, promptErr, execErr   error
 	profileErr                         error
 	preflightCalls                     int
@@ -291,10 +291,10 @@ func newHarness() *handoffHarness {
 	}
 	h.client = &harnessClient{h: h, sendAccepted: true}
 	env := fenceEnv(h.dir)
-	env.Read = func(string, string) (model.IssueOpsRecord, error) {
+	env.Read = func(string, string) (model.Record, error) {
 		h.reads++
 		if h.failReadAt != 0 && h.reads == h.failReadAt {
-			return model.IssueOpsRecord{}, errors.New("record read failed")
+			return model.Record{}, errors.New("record read failed")
 		}
 		return releasedRecord(), nil
 	}
@@ -302,8 +302,8 @@ func newHarness() *handoffHarness {
 		Client: h.client, Roots: env, ArtifactRoot: artifactRoot,
 		Now:       func() time.Time { return time.Unix(100, 0) },
 		SamePath:  func(a, b string) bool { return h.samePath(a, b) },
-		ReadAudit: func() ([]model.IssueOpsHandoffDeliveryObservation, error) { return h.existing, h.readAuditErr },
-		Observe: func(_ model.IssueOpsRecord, o model.IssueOpsHandoffDeliveryObservation) (audit.HandoffDeliveryAuditRecord, error) {
+		ReadAudit: func() ([]model.HandoffDeliveryObservation, error) { return h.existing, h.readAuditErr },
+		Observe: func(_ model.Record, o model.HandoffDeliveryObservation) (audit.HandoffDeliveryAuditRecord, error) {
 			h.observeCalls++
 			if o.Timing != nil {
 				snapshot := *o.Timing
@@ -348,13 +348,13 @@ func TestHandoffRejectsBeforeAnyExternalCall(t *testing.T) {
 		{"audit history unreadable", func(h *handoffHarness) { h.readAuditErr = errors.New("audit unreadable") }, "audit unreadable"},
 		{"lineage already attempted", func(h *handoffHarness) {
 			_, lineageID := issueopsdomain.ManualCmuxHandoffIDs(h.request)
-			h.existing = []model.IssueOpsHandoffDeliveryObservation{{LifecycleID: "cycle", LineageID: lineageID}}
+			h.existing = []model.HandoffDeliveryObservation{{LifecycleID: "cycle", LineageID: lineageID}}
 		}, "attempt already exists"},
 		{"generation already staged under another lineage", func(h *handoffHarness) {
-			h.existing = []model.IssueOpsHandoffDeliveryObservation{{
+			h.existing = []model.HandoffDeliveryObservation{{
 				LifecycleID: "cycle", LineageID: "other", SourceGeneration: 2,
-				Launcher:   model.IssueOpsHandoffDeliveryLauncher{Name: model.IssueOpsHandoffDeliveryLauncherCmux},
-				CallStaged: model.IssueOpsHandoffDeliveryState{Status: model.IssueOpsHandoffDeliveryStateObserved},
+				Launcher:   model.HandoffDeliveryLauncher{Name: model.HandoffDeliveryLauncherCmux},
+				CallStaged: model.HandoffDeliveryState{Status: model.HandoffDeliveryStateObserved},
 			}}
 		}, "generation already has a staged attempt"},
 		{"prompt outside the worktree", func(h *handoffHarness) { h.request.PromptFile = testsupport.AbsPath("tmp", "prompt") }, "prompt file must be inside the canonical worktree"},
@@ -541,7 +541,7 @@ func TestHandoffCreateWorkspaceFailures(t *testing.T) {
 			if h.observeCalls != tc.wantObs {
 				t.Fatalf("observe calls = %d, want %d", h.observeCalls, tc.wantObs)
 			}
-			if last := h.observations[len(h.observations)-1]; last.Ambiguous.Status == model.IssueOpsHandoffDeliveryStateObserved {
+			if last := h.observations[len(h.observations)-1]; last.Ambiguous.Status == model.HandoffDeliveryStateObserved {
 				t.Fatalf("a definite failure must not be flagged ambiguous: %+v", last.Ambiguous)
 			}
 		})
@@ -559,7 +559,7 @@ func TestHandoffRecordsCreatedTargetAndTimingBeforeSending(t *testing.T) {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 	staged := h.observations[0]
-	if staged.CallStaged.Status != model.IssueOpsHandoffDeliveryStateObserved || staged.InputAccepted.Status == model.IssueOpsHandoffDeliveryStateObserved {
+	if staged.CallStaged.Status != model.HandoffDeliveryStateObserved || staged.InputAccepted.Status == model.HandoffDeliveryStateObserved {
 		t.Fatalf("first audit must stage the call before any input: %+v", staged)
 	}
 	if staged.Launcher.Version != "build-7" || staged.Launcher.Path != cmuxExecutable || staged.Timing.PreflightMS < 1 {
@@ -639,7 +639,7 @@ func TestHandoffSendOutcomes(t *testing.T) {
 			if h.awaited != 0 || h.cleaned != 0 {
 				t.Fatalf("no receipt may be awaited after a failed send: awaited=%d cleaned=%d", h.awaited, h.cleaned)
 			}
-			if last := h.observations[len(h.observations)-1]; last.Ambiguous.Status == model.IssueOpsHandoffDeliveryStateObserved || last.InputAccepted.Status == model.IssueOpsHandoffDeliveryStateObserved {
+			if last := h.observations[len(h.observations)-1]; last.Ambiguous.Status == model.HandoffDeliveryStateObserved || last.InputAccepted.Status == model.HandoffDeliveryStateObserved {
 				t.Fatalf("definite failure audited as accepted/ambiguous: %+v", last)
 			}
 		})

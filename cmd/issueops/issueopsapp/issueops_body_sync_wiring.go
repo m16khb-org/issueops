@@ -13,10 +13,10 @@ import (
 	"issueops/internal/port"
 )
 
-func syncIssueOpsRemoteArtifactBody(ctx context.Context, stateRoot, id string, command contract.Command, provider port.IssueProvider, actor model.IssueOpsActor) (model.IssueOpsRecord, contract.Result, error) {
+func syncIssueOpsRemoteArtifactBody(ctx context.Context, stateRoot, id string, command contract.Command, provider port.IssueProvider, actor model.Actor) (model.Record, contract.Result, error) {
 	gateway, err := issueops.NewBodySyncProvider(provider)
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, contract.Result{}, err
+		return model.Record{OK: false}, contract.Result{}, err
 	}
 	service := application.NewService(issueops.BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()), time.Now)
 	return service.Sync(ctx, id, command, actor)

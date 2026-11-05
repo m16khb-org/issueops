@@ -10,6 +10,8 @@ import (
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
+// Service 타입은 실행 lease 교체를 수행한다. 필드는 기록, 작업공간, 프로세스 관찰,
+// 산출물, base sync 점검, 행위자 검증을 주입받는 의존성이다. Verifier는 필수다.
 type Service struct {
 	Records          port.ReplacementRecords
 	Workspace        port.ReplacementWorkspace
@@ -22,6 +24,9 @@ type Service struct {
 	Now              func() string
 }
 
+// Run 메서드는 호출자를 검증한 뒤 req.Action(preview, finalize-preview, revoke,
+// finalize)에 맞는 교체 단계를 실행한다. revoke와 finalize는 req.Confirm이 있어야 하며,
+// 알 수 없는 action은 오류다.
 func (s Service) Run(ctx context.Context, req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
 	if s.Verifier == nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, fmt.Errorf("execution replace actor verifier is required")
@@ -95,7 +100,7 @@ func (s Service) previewExecutionReplacement(ctx context.Context, req issueops.E
 	return result, nil
 }
 
-func observeCompletedExecutionBase(ctx context.Context, record issueops.IssueOpsRecord, selectedGeneration uint64, inspector basesyncport.Inspector) error {
+func observeCompletedExecutionBase(ctx context.Context, record issueops.Record, selectedGeneration uint64, inspector basesyncport.Inspector) error {
 	needed, err := domain.CompletedReplacementBase(record, selectedGeneration)
 	if err != nil || !needed {
 		return err
@@ -140,7 +145,7 @@ func (s Service) previewExecutionFinalization(req issueops.ExecutionReplaceReque
 }
 
 func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
-	var persisted issueops.IssueOpsRecord
+	var persisted issueops.Record
 	var tokenPath string
 	err := s.Records.WithinLock(ctx, req.ID, func(spanCtx context.Context) error {
 		record, err := s.recordAtGeneration(req.ID, req.ExpectedGeneration)
@@ -178,7 +183,7 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 	return result, nil
 }
 
-func (s Service) revokeReplacement(spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, now string, persisted *issueops.IssueOpsRecord) error {
+func (s Service) revokeReplacement(spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.Record, lease *issueops.WriteLease, now string, persisted *issueops.Record) error {
 	if err := domain.ValidateReplacementRevoke(*lease, req.Reason); err != nil {
 		return err
 	}
@@ -198,7 +203,7 @@ func (s Service) revokeReplacement(spanCtx context.Context, req issueops.Executi
 	return err
 }
 
-func (s Service) finalizeReplacement(spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, persisted *issueops.IssueOpsRecord, tokenPath *string) error {
+func (s Service) finalizeReplacement(spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.Record, lease *issueops.WriteLease, persisted *issueops.Record, tokenPath *string) error {
 	if lease.Status != issueops.LeaseStatusRevoking {
 		return fmt.Errorf("finalize requires a revoking lease")
 	}
@@ -243,20 +248,20 @@ func (s Service) finalizeReplacement(spanCtx context.Context, req issueops.Execu
 	return nil
 }
 
-func (s Service) recordAtGeneration(id string, generation uint64) (issueops.IssueOpsRecord, error) {
+func (s Service) recordAtGeneration(id string, generation uint64) (issueops.Record, error) {
 	record, err := s.Records.Load(id)
 	if err != nil {
 		return record, err
 	}
 	return record, domain.ValidateReplacementGeneration(record, generation, false)
 }
-func (s Service) cleanupFailure(record issueops.IssueOpsRecord, cause error) error {
+func (s Service) cleanupFailure(record issueops.Record, cause error) error {
 	if err := s.Artifacts.Cleanup(record); err != nil {
 		return fmt.Errorf("%w; replacement residue cleanup failed: %v", cause, err) //nolint:errorlint // only the cause belongs in the chain; the cleanup failure is diagnostic text
 	}
 	return cause
 }
-func replaceResult(record issueops.IssueOpsRecord, action, inventory, quiescence, tokenPath string) issueops.ExecutionReplaceResult {
+func replaceResult(record issueops.Record, action, inventory, quiescence, tokenPath string) issueops.ExecutionReplaceResult {
 	return issueops.ExecutionReplaceResult{
 		OK: true, ID: record.ID, Action: action, Execution: *record.Execution,
 		InventoryFingerprint: inventory, QuiescenceFingerprint: quiescence, ClaimTokenPath: tokenPath,

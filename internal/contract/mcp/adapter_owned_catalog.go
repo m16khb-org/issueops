@@ -1,5 +1,6 @@
 package mcp
 
+// AdapterOwnedTools returns the contract and worker tools whose schemas the MCP adapter owns rather than an application capability.
 func AdapterOwnedTools() []Tool {
 	return []Tool{
 		{

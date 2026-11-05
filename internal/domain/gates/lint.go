@@ -12,7 +12,7 @@ import (
 	model "issueops/internal/contract/gates"
 )
 
-// LintCandidate는 lint할 게이트 하나와 그 출처다. Problems는 spec을 원장으로 옮기는
+// LintCandidate 타입은 lint할 게이트 하나와 그 출처다. Problems는 spec을 원장으로 옮기는
 // 단계에서 이미 난 오류다(이때 Gate는 비어 있을 수 있다).
 type LintCandidate struct {
 	Source   string
@@ -33,7 +33,7 @@ var (
 	})
 )
 
-// LintSpecCandidate는 gates init과 같은 방식으로 spec 하나를 원장 게이트로 옮긴다.
+// LintSpecCandidate 함수는 gates init과 같은 방식으로 spec 하나를 원장 게이트로 옮긴다.
 func LintSpecCandidate(source, spec string) LintCandidate {
 	rendered, err := renderGateSpec(spec)
 	if err != nil {
@@ -46,7 +46,7 @@ func LintSpecCandidate(source, spec string) LintCandidate {
 	return LintCandidate{Source: source, Gate: gates[0]}
 }
 
-// PlanLintCandidates는 계획 문서에서 게이트를 찾는다. 한 줄짜리 spec과 원장 형식
+// PlanLintCandidates 함수는 계획 문서에서 게이트를 찾는다. 한 줄짜리 spec과 원장 형식
 // (`- [ ] G1: ...` 아래 들여쓴 CHECK/EXPECT)을 모두 읽는다. 둘 다 아닌데 `CHECK:`가
 // 들어 있거나 게이트 ID로 시작하는 줄 번호는 unparsed로 돌려준다. 그런 게이트는
 // 검사되지 않았다는 뜻이다.
@@ -75,7 +75,7 @@ func PlanLintCandidates(file, text string) (candidates []LintCandidate, unparsed
 	return candidates, unparsed
 }
 
-// LedgerLintCandidates는 기존 원장 파일의 게이트를 돌려준다. ABANDON된 게이트는
+// LedgerLintCandidates 함수는 기존 원장 파일의 게이트를 돌려준다. ABANDON된 게이트는
 // 실행되지 않으므로 뺀다.
 func LedgerLintCandidates(file, text string) []LintCandidate {
 	var candidates []LintCandidate
@@ -97,7 +97,7 @@ func LedgerLintCandidates(file, text string) []LintCandidate {
 	return candidates
 }
 
-// LintStatic는 실행이나 정책 평가 없이 판정할 수 있는 문제를 찾는다. argv가 nil이면
+// LintStatic 함수는 실행이나 정책 평가 없이 판정할 수 있는 문제를 찾는다. argv가 nil이면
 // CHECK를 argv로 옮기지 못한 것이므로 정책 평가를 건너뛴다.
 func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) {
 	gate := candidate.Gate
@@ -175,7 +175,7 @@ func lintRegexExpect(expect string, compileErr error) (problem, warning string) 
 	case compileErr != nil:
 		return fmt.Sprintf("EXPECT regex does not compile (RE2), so it never matches: %v", compileErr), ""
 	case strings.Contains(expect, `\n\z`):
-		// DecideCheck trims trailing newlines before matching.
+		// decideCheck trims trailing newlines before matching.
 		return `EXPECT regex requires a newline before \z, but output is matched with trailing newlines trimmed, so it never matches; drop the \n before \z`, ""
 	case strings.HasPrefix(expect, "/^") && !strings.HasSuffix(expect, "$/") && !strings.Contains(expect[strings.LastIndex(expect, "/"):], "m"):
 		// Rust QA: /^test result: ok/ never matched; cargo prints the summary
@@ -223,19 +223,19 @@ func literalLooksLikeRegex(expect string) bool {
 	return false
 }
 
-// DeniedLint는 command policy가 거부한 CHECK를 문제로 기록한다.
+// DeniedLint 함수는 command policy가 거부한 CHECK를 문제로 기록한다.
 func DeniedLint(result model.LintGate, denyReasons []string) model.LintGate {
 	result.PolicyDenied = true
-	result.Problems = append(result.Problems, DeniedMessage(denyReasons))
+	result.Problems = append(result.Problems, deniedMessage(denyReasons))
 	return result
 }
 
-// DeniedMessage names the policy denial with the remedy for the denials an
+// deniedMessage names the policy denial with the remedy for the denials an
 // agent can fix itself: a shell interpreter (CHECK runs one argv without a
 // shell, so `sh script.sh`, the form project docs often give, is refused
 // while the script itself runs) and a cwd or path outside the workspace root
 // (a cycle ledger is checked from its canonical worktree).
-func DeniedMessage(denyReasons []string) string {
+func deniedMessage(denyReasons []string) string {
 	message := "check denied by policy: " + strings.Join(denyReasons, "; ")
 	if slices.Contains(denyReasons, "shell_interpreter_not_allowed") {
 		message += " (CHECK runs one argv without a shell; run an executable script directly, e.g. ./script.sh, instead of sh/bash script.sh; a syntax check sh -n FILE is allowed)"
@@ -251,7 +251,7 @@ func DeniedMessage(denyReasons []string) string {
 	return message
 }
 
-// SummarizeLint는 게이트별 결과를 응답으로 묶는다. unparsed는 읽지 못한 계획 줄 위치다.
+// SummarizeLint 함수는 게이트별 결과를 응답으로 묶는다. unparsed는 읽지 못한 계획 줄 위치다.
 func SummarizeLint(gates []model.LintGate, unparsed []string, warnings []string) model.LintResult {
 	result := model.LintResult{OK: true, SchemaVersion: model.SchemaVersion, Gates: gates, UnparsedLines: unparsed,
 		Warnings: warnings, TotalGates: len(gates)}
@@ -264,7 +264,7 @@ func SummarizeLint(gates []model.LintGate, unparsed []string, warnings []string)
 	return result
 }
 
-// UnparsedWarning은 게이트처럼 보이지만 읽지 못한 계획 줄을 알린다.
+// UnparsedWarning 함수는 게이트처럼 보이지만 읽지 못한 계획 줄을 알린다.
 func UnparsedWarning(file string, lines []int) string {
 	parts := make([]string, len(lines))
 	for i, line := range lines {

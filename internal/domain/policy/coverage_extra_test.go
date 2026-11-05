@@ -12,7 +12,7 @@ import (
 
 func TestCatalogApplyExtendsExistingAndNewCommandsAcrossCategories(t *testing.T) {
 	catalog := BuiltinCatalog()
-	catalog.Apply(policycontract.PolicyOverrides{
+	catalog.Apply(policycontract.Overrides{
 		AdditionalShellInterpreters:   []string{"nu"},
 		AdditionalNetworkCommands:     []string{"aria2c"},
 		AdditionalNetworkSubcommands:  map[string][]string{"git": {"bundle"}, "hg": {"pull"}},
@@ -78,7 +78,7 @@ func TestCatalogSnapshotIsSortedAndDetachedFromCatalog(t *testing.T) {
 	if !slices.Contains(snap.ShellInterpreters, "bash") || !slices.Contains(snap.WriteSubcommands["go"], "test") {
 		t.Fatalf("snapshot missing builtin entries: %+v", snap)
 	}
-	catalog.Apply(policycontract.PolicyOverrides{AdditionalShellInterpreters: []string{"nu"}})
+	catalog.Apply(policycontract.Overrides{AdditionalShellInterpreters: []string{"nu"}})
 	if slices.Contains(snap.ShellInterpreters, "nu") || !slices.Contains(catalog.Snapshot().ShellInterpreters, "nu") {
 		t.Fatal("snapshot must not follow later overrides, but a new snapshot must include them")
 	}
@@ -99,7 +99,7 @@ func TestCommandTimeoutParsing(t *testing.T) {
 		want   time.Duration
 		wantOK bool
 	}{
-		{"", DefaultCommandTimeout, false}, // omitted: displayed as default but invalid until the adapter supplies it
+		{"", defaultCommandTimeout, false}, // omitted: displayed as default but invalid until the adapter supplies it
 		{"90s", 90 * time.Second, true},
 		{"1h30m", 90 * time.Minute, true},
 		{"soon", 0, false},

@@ -91,7 +91,7 @@ func issueOpsCycleIDLister(observers ...issueopsrecord.Observer) func(string, st
 // issueOpsCycleOutcomeLister filters retained cycle outcomes with the same path
 // normalization inventory list applies to live records, so --repo selects the
 // same repository for both populations.
-func issueOpsCycleOutcomeLister(stateRoot, repo string) ([]issueopscontract.IssueOpsCycleOutcome, []string, error) {
+func issueOpsCycleOutcomeLister(stateRoot, repo string) ([]issueopscontract.CycleOutcome, []string, error) {
 	outcomes, unreadable, err := issueopscore.ListCycleOutcomes(stateRoot)
 	if err != nil || repo == "" {
 		return outcomes, unreadable, err

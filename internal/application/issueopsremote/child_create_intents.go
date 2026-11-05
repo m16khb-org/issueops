@@ -8,39 +8,44 @@ import (
 	"time"
 )
 
+// ChildCreateIntents 타입은 자식 이슈 생성 작업의 시작·결과·완료를 기록에 durable하게 남긴다. 모든 갱신은 행위자 권한 검사를 거친다.
 type ChildCreateIntents struct {
 	Store     RecordStore
-	Authority Authority
+	Authority authority
 	Now       func() time.Time
 }
 
 func (s *ChildCreateIntents) timestamp() string { return s.Now().UTC().Format(time.RFC3339Nano) }
-func (s *ChildCreateIntents) update(ctx context.Context, id string, actor model.IssueOpsActor, transition RecordTransition) (model.IssueOpsRecord, error) {
-	return s.Store.Update(ctx, id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) update(ctx context.Context, id string, actor model.Actor, transition RecordTransition) (model.Record, error) {
+	return s.Store.Update(ctx, id, func(record model.Record) (model.Record, error) {
 		if err := s.Authority.Authorize(ctx, record, actor); err != nil {
 			return record, err
 		}
 		return transition(record)
 	})
 }
-func (s *ChildCreateIntents) Begin(ctx context.Context, id string, op model.ChildCreateOperation, explicitID string, actor model.IssueOpsActor) (model.ChildCreateOperation, bool, error) {
+
+// Begin 메서드는 봉인된 자식 생성 작업을 기록에 시작으로 남기고 선택된 작업과 provider를 실제로 호출해야 하는지를 돌려준다.
+func (s *ChildCreateIntents) Begin(ctx context.Context, id string, op model.ChildCreateOperation, explicitID string, actor model.Actor) (model.ChildCreateOperation, bool, error) {
 	var selected model.ChildCreateOperation
 	var invoke bool
-	_, err := s.update(ctx, id, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	_, err := s.update(ctx, id, actor, func(record model.Record) (model.Record, error) {
 		updated, current, shouldInvoke, err := domain.BeginChildOperation(record, op, explicitID)
 		selected, invoke = current, shouldInvoke
 		return updated, err
 	})
 	return selected, invoke, err
 }
-func (s *ChildCreateIntents) Outcome(ctx context.Context, id, operation, status, url, failure string, actor model.IssueOpsActor) error {
-	_, err := s.update(ctx, id, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) outcome(ctx context.Context, id, operation, status, url, failure string, actor model.Actor) error {
+	_, err := s.update(ctx, id, actor, func(record model.Record) (model.Record, error) {
 		return domain.RecordChildOutcome(record, operation, status, url, failure, s.timestamp())
 	})
 	return err
 }
-func (s *ChildCreateIntents) Complete(ctx context.Context, expected model.IssueOpsRecord, observed model.ChildCreateOperation, url string, actor model.IssueOpsActor, reconcile bool) error {
-	_, err := s.update(ctx, expected.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+
+// Complete 메서드는 관찰한 작업이 검증 중 바뀌지 않았는지 확인한 뒤 완료로 표시한다. reconcile이 true이면 작업을 현재 holder에 다시 묶는다.
+func (s *ChildCreateIntents) Complete(ctx context.Context, expected model.Record, observed model.ChildCreateOperation, url string, actor model.Actor, reconcile bool) error {
+	_, err := s.update(ctx, expected.ID, actor, func(record model.Record) (model.Record, error) {
 		if !sameChildRecoveryAuthority(expected, record) {
 			return record, fmt.Errorf("child recovery authority changed")
 		}
@@ -67,10 +72,10 @@ func (s *ChildCreateIntents) Complete(ctx context.Context, expected model.IssueO
 // the same create-child run again.
 const childCrashReleased = "the create-child caller died before the provider created the child; settled: no candidate, no create running, quiet period passed"
 
-// ReleaseCrashed records not_invoked for the exact pending attempt that was
+// releaseCrashed records not_invoked for the exact pending attempt that was
 // settled (compare-and-swap on status, attempt, and updated_at).
-func (s *ChildCreateIntents) ReleaseCrashed(ctx context.Context, observed model.IssueOpsRecord, op model.ChildCreateOperation, actor model.IssueOpsActor) error {
-	_, err := s.update(ctx, observed.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) releaseCrashed(ctx context.Context, observed model.Record, op model.ChildCreateOperation, actor model.Actor) error {
+	_, err := s.update(ctx, observed.ID, actor, func(record model.Record) (model.Record, error) {
 		if !sameChildRecoveryAuthority(observed, record) {
 			return record, fmt.Errorf("child recovery authority changed")
 		}
@@ -89,8 +94,8 @@ func (s *ChildCreateIntents) ReleaseCrashed(ctx context.Context, observed model.
 	return err
 }
 
-func (s *ChildCreateIntents) RecoveryFailure(ctx context.Context, observed model.IssueOpsRecord, op model.ChildCreateOperation, url, status, failure string, actor model.IssueOpsActor) error {
-	_, err := s.update(ctx, observed.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *ChildCreateIntents) recoveryFailure(ctx context.Context, observed model.Record, op model.ChildCreateOperation, url, status, failure string, actor model.Actor) error {
+	_, err := s.update(ctx, observed.ID, actor, func(record model.Record) (model.Record, error) {
 		if !sameChildRecoveryAuthority(observed, record) {
 			return record, fmt.Errorf("child recovery authority changed")
 		}

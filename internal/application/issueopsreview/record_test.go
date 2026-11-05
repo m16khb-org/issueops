@@ -12,12 +12,12 @@ import (
 func TestRecordDevilsAdvocateDoesNotWriteWithoutPlanDigest(t *testing.T) {
 	writes := 0
 	store := reviewport.DevilsAdvocateStore{
-		Read: func(_, id string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{ID: id}, nil },
-		TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		Read: func(_, id string) (model.Record, error) { return model.Record{ID: id}, nil },
+		TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 			writes++
 			return record, nil
 		},
-		PlanDigest: func(string, model.IssueOpsRecord) (string, error) { return "", errors.New("no plan") },
+		PlanDigest: func(string, model.Record) (string, error) { return "", errors.New("no plan") },
 	}
 	_, err := RecordDevilsAdvocate(store, "state", "io-review", reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"tested rollback"},
@@ -31,21 +31,21 @@ func TestRecordCompatibilityReviewAdvancesOnlyAfterReadiness(t *testing.T) {
 	writes := 0
 	ready := false
 	store := reviewport.CompatibilityStore{
-		Read: func(_, id string) (model.IssueOpsRecord, error) {
-			return model.IssueOpsRecord{ID: id, Phase: model.IssueOpsPhasePlan}, nil
+		Read: func(_, id string) (model.Record, error) {
+			return model.Record{ID: id, Phase: model.PhasePlan}, nil
 		},
-		TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		TouchWrite: func(_ string, record model.Record) (model.Record, error) {
 			writes++
 			return record, nil
 		},
-		Ready: func(model.IssueOpsRecord) model.IssueOpsReadiness {
+		Ready: func(model.Record) model.Readiness {
 			if ready {
-				return model.IssueOpsReadiness{Ready: true}
+				return model.Readiness{Ready: true}
 			}
-			return model.IssueOpsReadiness{Missing: []string{"plan_path"}}
+			return model.Readiness{Missing: []string{"plan_path"}}
 		},
-		PhaseRank: func(phase model.IssueOpsPhase) int {
-			if phase == model.IssueOpsPhaseCompatibilityReview {
+		PhaseRank: func(phase model.Phase) int {
+			if phase == model.PhaseCompatibilityReview {
 				return 2
 			}
 			return 1
@@ -60,7 +60,7 @@ func TestRecordCompatibilityReviewAdvancesOnlyAfterReadiness(t *testing.T) {
 	}
 	ready = true
 	record, err := RecordCompatibilityReview(store, "state", "io-review", req, "now")
-	if err != nil || writes != 1 || record.Phase != model.IssueOpsPhaseCompatibilityReview {
+	if err != nil || writes != 1 || record.Phase != model.PhaseCompatibilityReview {
 		t.Fatalf("ready record = %+v, error = %v, writes = %d", record, err, writes)
 	}
 }

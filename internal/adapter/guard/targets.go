@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func guardTargetFiles(root string, req guardcontract.GuardCheckRequest) []string {
+func guardTargetFiles(root string, req guardcontract.CheckRequest) []string {
 	if len(req.Files) > 0 {
 		return cleanGuardFiles(req.Files)
 	}

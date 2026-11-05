@@ -13,24 +13,31 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
+// Validator records the parent's verdict (accepted, rejected, dropped) on a
+// delegated child cycle.
 type Validator struct {
 	Records   branchapp.CycleRecords
 	Authority cycleapp.MutationAuthority
 	Now       func() time.Time
 }
 
-func (s Validator) Accept(ctx context.Context, parentID, childID string, evidence []string, actor *model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+// Accept marks the child as accepted by the parent, attaching evidence.
+func (s Validator) Accept(ctx context.Context, parentID, childID string, evidence []string, actor *model.Actor) (model.ChildValidationResult, error) {
 	return s.validate(ctx, parentID, childID, "accepted", "", evidence, actor)
 }
-func (s Validator) Reject(ctx context.Context, parentID, childID, reason string, evidence []string, actor *model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+
+// Reject marks the child as rejected by the parent with a reason and evidence.
+func (s Validator) Reject(ctx context.Context, parentID, childID, reason string, evidence []string, actor *model.Actor) (model.ChildValidationResult, error) {
 	return s.validate(ctx, parentID, childID, "rejected", reason, evidence, actor)
 }
-func (s Validator) Drop(ctx context.Context, parentID, childID, reason string, actor *model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+
+// Drop marks the child as dropped by the parent with a reason, without evidence.
+func (s Validator) Drop(ctx context.Context, parentID, childID, reason string, actor *model.Actor) (model.ChildValidationResult, error) {
 	return s.validate(ctx, parentID, childID, "dropped", reason, nil, actor)
 }
-func (s Validator) validate(ctx context.Context, parentID, childID, verdict, reason string, evidence []string, actor *model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
+func (s Validator) validate(ctx context.Context, parentID, childID, verdict, reason string, evidence []string, actor *model.Actor) (model.ChildValidationResult, error) {
 	parentID, childID = strings.TrimSpace(parentID), strings.TrimSpace(childID)
-	result := model.IssueOpsChildValidationResult{OK: false, ParentID: parentID, ChildID: childID}
+	result := model.ChildValidationResult{OK: false, ParentID: parentID, ChildID: childID}
 	reason, evidence, err := domain.PrepareChildVerdict(verdict, reason, evidence)
 	if err != nil {
 		return result, err
@@ -38,7 +45,7 @@ func (s Validator) validate(ctx context.Context, parentID, childID, verdict, rea
 	if err := domain.ValidateChildValidationIDs(parentID, childID); err != nil {
 		return result, err
 	}
-	var child model.IssueOpsRecord
+	var child model.Record
 	err = s.Records.WithinLock(ctx, childID, func(spanCtx context.Context) error {
 		var err error
 		child, err = s.Records.Load(childID)
@@ -69,8 +76,8 @@ func (s Validator) validate(ctx context.Context, parentID, childID, verdict, rea
 }
 
 // applyVerdictToParent는 부모 잠금 안에서 권한을 확인하고 자식 판정을 부모 레코드에 반영해 저장한다.
-func (s Validator) applyVerdictToParent(ctx, spanCtx context.Context, parentID, childID, verdict, reason string, evidence []string, actor *model.IssueOpsActor, archived bool) (model.IssueOpsChildCycleRef, error) {
-	var ref model.IssueOpsChildCycleRef
+func (s Validator) applyVerdictToParent(ctx, spanCtx context.Context, parentID, childID, verdict, reason string, evidence []string, actor *model.Actor, archived bool) (model.ChildCycleRef, error) {
+	var ref model.ChildCycleRef
 	parent, err := s.Records.Load(parentID)
 	if err != nil {
 		return ref, err

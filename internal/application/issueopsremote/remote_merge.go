@@ -10,25 +10,25 @@ import (
 	"issueops/internal/port"
 )
 
-type MergeProviderResolver func(string) (port.IssueProviderPullRequestMerger, error)
+type mergeProviderResolver func(string) (port.IssueProviderPullRequestMerger, error)
 
 // RemoteMergeService merges the PR/MR of a completed cycle. Cleanup re-reads
 // the merged state from the provider itself; the record only gets a merged
 // receipt so next can route past the merge.
 type RemoteMergeService struct {
-	records IssueRecordReader
-	resolve MergeProviderResolver
-	merged  func(context.Context, string) (model.IssueOpsRecord, error)
+	records issueRecordReader
+	resolve mergeProviderResolver
+	merged  func(context.Context, string) (model.Record, error)
 }
 
 // WithMergedReceipt records merged_at once the provider reads the PR/MR back
 // merged. A failed receipt write never turns a done merge into an error.
-func (s *RemoteMergeService) WithMergedReceipt(record func(context.Context, string) (model.IssueOpsRecord, error)) *RemoteMergeService {
+func (s *RemoteMergeService) WithMergedReceipt(record func(context.Context, string) (model.Record, error)) *RemoteMergeService {
 	s.merged = record
 	return s
 }
 
-func (s *RemoteMergeService) recordMerged(ctx context.Context, record model.IssueOpsRecord, result *model.RemoteMergeResult) {
+func (s *RemoteMergeService) recordMerged(ctx context.Context, record model.Record, result *model.RemoteMergeResult) {
 	if s.merged == nil || (record.RemoteCompletion != nil && record.RemoteCompletion.MergedAt != "") {
 		return
 	}
@@ -37,7 +37,8 @@ func (s *RemoteMergeService) recordMerged(ctx context.Context, record model.Issu
 	}
 }
 
-func NewRemoteMergeService(records IssueRecordReader, resolve MergeProviderResolver) *RemoteMergeService {
+// NewRemoteMergeService 함수는 기록 조회와 provider 해석 함수를 묶어 서비스를 만든다.
+func NewRemoteMergeService(records issueRecordReader, resolve mergeProviderResolver) *RemoteMergeService {
 	return &RemoteMergeService{records: records, resolve: resolve}
 }
 
@@ -88,7 +89,7 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 }
 
 // mergeConfirmed merges pinned to the completed head and requires the readback to show the merge.
-func (s *RemoteMergeService) mergeConfirmed(ctx context.Context, merger port.IssueProviderPullRequestMerger, record model.IssueOpsRecord, target domain.MergeTarget, method string, before model.RemotePullRequestMergeState, result model.RemoteMergeResult) (model.RemoteMergeResult, error) {
+func (s *RemoteMergeService) mergeConfirmed(ctx context.Context, merger port.IssueProviderPullRequestMerger, record model.Record, target domain.MergeTarget, method string, before model.RemotePullRequestMergeState, result model.RemoteMergeResult) (model.RemoteMergeResult, error) {
 	after, err := merger.MergePullRequest(ctx, port.IssueProviderPullRequestMergeRequest{
 		Repo: record.Repo, URL: target.URL, Method: method, HeadOID: target.ExpectedHead, MarkReady: before.Draft,
 	})

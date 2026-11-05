@@ -18,7 +18,7 @@ import (
 )
 
 type linkStoreForTest struct {
-	records map[string]model.IssueOpsRecord
+	records map[string]model.Record
 	locked  bool
 	writes  int
 }
@@ -28,7 +28,7 @@ func (s *linkStoreForTest) WithinLock(ctx context.Context, _ string, fn func(con
 	defer func() { s.locked = false }()
 	return fn(ctx)
 }
-func (s *linkStoreForTest) Load(id string) (model.IssueOpsRecord, error) {
+func (s *linkStoreForTest) Load(id string) (model.Record, error) {
 	if !s.locked {
 		panic("read outside lock")
 	}
@@ -38,7 +38,7 @@ func (s *linkStoreForTest) Load(id string) (model.IssueOpsRecord, error) {
 	}
 	return r, nil
 }
-func (s *linkStoreForTest) Save(_ context.Context, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *linkStoreForTest) Save(_ context.Context, r model.Record) (model.Record, error) {
 	if !s.locked {
 		panic("write outside lock")
 	}
@@ -46,28 +46,28 @@ func (s *linkStoreForTest) Save(_ context.Context, r model.IssueOpsRecord) (mode
 	s.writes++
 	return r, nil
 }
-func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, branchapp.WorkspaceLinker) {
-	s := &linkStoreForTest{records: map[string]model.IssueOpsRecord{}}
+func newLinkStoreForTest(records ...model.Record) (*linkStoreForTest, branchapp.WorkspaceLinker) {
+	s := &linkStoreForTest{records: map[string]model.Record{}}
 	for _, r := range records {
 		if r.IssueURL == "" {
 			r.IssueURL = "https://github.com/example/repo/issues/10"
 		}
-		r.BranchPrepare = &model.IssueOpsBranchPrepare{LinkVerified: true}
+		r.BranchPrepare = &model.BranchPrepare{LinkVerified: true}
 		r.ArchitectureReview = &reviewcontract.ArchitectureReview{ProblemSummary: "problem", ProposedArchitecture: "architecture", Verification: []string{"architecture review checked alternatives and risks"}, Approved: true, RefactorPlan: "plan", Alternatives: []string{"alternative"}, Risks: []string{"risk"}}
 		s.records[r.ID] = r
 	}
 	return s, branchapp.WorkspaceLinker{Records: s, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Files: core.LinkEnvironment{}, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
 }
-func LinkPlan(s branchapp.WorkspaceLinker, _ string, id, path string) (model.IssueOpsRecord, error) {
+func LinkPlan(s branchapp.WorkspaceLinker, _ string, id, path string) (model.Record, error) {
 	return s.Plan(context.Background(), id, path, nil)
 }
-func LinkWorktree(s branchapp.WorkspaceLinker, _ string, id, path string) (model.IssueOpsRecord, error) {
+func LinkWorktree(s branchapp.WorkspaceLinker, _ string, id, path string) (model.Record, error) {
 	return s.Worktree(context.Background(), id, path, nil)
 }
-func ValidateIsolatedWorktreePath(record model.IssueOpsRecord, path string) error {
+func ValidateIsolatedWorktreePath(record model.Record, path string) error {
 	return issueopsdomain.ValidateWorktreeLocation((core.LinkEnvironment{}).ObserveWorktree(record.Repo, path))
 }
-func ValidateWorktreeBranch(record model.IssueOpsRecord, path string) error {
+func ValidateWorktreeBranch(record model.Record, path string) error {
 	return issueopsdomain.ValidateLinkedWorktreeBranch(record.Branch, (core.LinkEnvironment{}).WorktreeBranch(path))
 }
 func planBodyForTest() []byte {
@@ -83,11 +83,11 @@ func TestLinkPlanValidatesReadinessAndPersistsAbsolutePath(t *testing.T) {
 	if err := os.WriteFile(planPath, planBodyForTest(), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:           "io-link-plan",
 		Repo:         repo,
 		Branch:       "feature/plan",
-		Phase:        model.IssueOpsPhasePlan,
+		Phase:        model.PhasePlan,
 		IssueURL:     "https://github.com/example/repo/issues/10",
 		WorktreePath: worktree,
 	}
@@ -100,8 +100,8 @@ func TestLinkPlanValidatesReadinessAndPersistsAbsolutePath(t *testing.T) {
 	if got.PlanPath != planPath {
 		t.Fatalf("PlanPath=%q, want %q", got.PlanPath, planPath)
 	}
-	if got.Phase != model.IssueOpsPhasePlan {
-		t.Fatalf("Phase=%q, want %q", got.Phase, model.IssueOpsPhasePlan)
+	if got.Phase != model.PhasePlan {
+		t.Fatalf("Phase=%q, want %q", got.Phase, model.PhasePlan)
 	}
 }
 
@@ -118,11 +118,11 @@ func TestLinkPlanIsIdempotentButRejectsPathReplacement(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:           "io-link-plan-cas",
 		Repo:         repo,
 		Branch:       "feature/plan-cas",
-		Phase:        model.IssueOpsPhasePlan,
+		Phase:        model.PhasePlan,
 		IssueURL:     "https://github.com/example/repo/issues/10",
 		WorktreePath: worktree,
 		PlanPath:     linkedPlan,
@@ -147,11 +147,11 @@ func TestLinkPlanRejectsBoundaryViolations(t *testing.T) {
 	if err := os.WriteFile(outsidePlanPath, planBodyForTest(), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:           "io-link-plan-boundary",
 		Repo:         repo,
 		Branch:       "feature/plan-boundary",
-		Phase:        model.IssueOpsPhasePlan,
+		Phase:        model.PhasePlan,
 		IssueURL:     "https://github.com/example/repo/issues/10",
 		WorktreePath: worktree,
 	}
@@ -206,11 +206,11 @@ func TestLinkPlanRejectsPlanWithoutRequiredSections(t *testing.T) {
 	if err := os.WriteFile(planPath, []byte("# plan\n## 적용되는 결정과 주의사항\n- 없음\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:           "io-link-plan-sections",
 		Repo:         repo,
 		Branch:       "feature/plan-sections",
-		Phase:        model.IssueOpsPhasePlan,
+		Phase:        model.PhasePlan,
 		IssueURL:     "https://github.com/example/repo/issues/10",
 		WorktreePath: worktree,
 	}
@@ -227,11 +227,11 @@ func TestLinkWorktreeValidatesIsolationBranchAndExistingPlan(t *testing.T) {
 	if err := os.WriteFile(planPath, planBodyForTest(), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-link-worktree",
 		Repo:     repo,
 		Branch:   "feature/worktree",
-		Phase:    model.IssueOpsPhasePlan,
+		Phase:    model.PhasePlan,
 		PlanPath: planPath,
 	}
 	_, store := newLinkStoreForTest(record)
@@ -262,11 +262,11 @@ func TestLinkWorktreeValidatesIsolationBranchAndExistingPlan(t *testing.T) {
 
 func TestLinkWorktreeRejectsBoundaryViolations(t *testing.T) {
 	repo, worktree := issueOpsRepoAndWorktreeFixture(t, "feature/worktree-boundary")
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:     "io-link-worktree-boundary",
 		Repo:   repo,
 		Branch: "feature/worktree-boundary",
-		Phase:  model.IssueOpsPhasePlan,
+		Phase:  model.PhasePlan,
 	}
 	for _, tc := range []struct {
 		name    string
@@ -333,7 +333,7 @@ func TestValidateIssueURL(t *testing.T) {
 
 func TestValidateIsolatedWorktreePath(t *testing.T) {
 	repo, worktree := issueOpsRepoAndWorktreeFixture(t, "feature/isolation")
-	record := model.IssueOpsRecord{Repo: repo}
+	record := model.Record{Repo: repo}
 	if err := ValidateIsolatedWorktreePath(record, worktree); err != nil {
 		t.Fatalf("valid worktree rejected: %v", err)
 	}
@@ -358,17 +358,17 @@ func TestValidateIsolatedWorktreePath(t *testing.T) {
 
 func TestValidateWorktreeBranch(t *testing.T) {
 	_, worktree := issueOpsRepoAndWorktreeFixture(t, "feature/branch")
-	if err := ValidateWorktreeBranch(model.IssueOpsRecord{Branch: "feature/branch"}, worktree); err != nil {
+	if err := ValidateWorktreeBranch(model.Record{Branch: "feature/branch"}, worktree); err != nil {
 		t.Fatalf("matching branch rejected: %v", err)
 	}
-	if err := ValidateWorktreeBranch(model.IssueOpsRecord{}, worktree); err != nil {
+	if err := ValidateWorktreeBranch(model.Record{}, worktree); err != nil {
 		t.Fatalf("empty expected branch should be allowed: %v", err)
 	}
-	if err := ValidateWorktreeBranch(model.IssueOpsRecord{Branch: "feature/other"}, worktree); err == nil || !strings.Contains(err.Error(), "does not match") {
+	if err := ValidateWorktreeBranch(model.Record{Branch: "feature/other"}, worktree); err == nil || !strings.Contains(err.Error(), "does not match") {
 		t.Fatalf("expected branch mismatch, got %v", err)
 	}
 	noGit := t.TempDir()
-	if err := ValidateWorktreeBranch(model.IssueOpsRecord{Branch: "feature/branch"}, noGit); err == nil || !strings.Contains(err.Error(), "must be a git worktree") {
+	if err := ValidateWorktreeBranch(model.Record{Branch: "feature/branch"}, noGit); err == nil || !strings.Contains(err.Error(), "must be a git worktree") {
 		t.Fatalf("expected git worktree error, got %v", err)
 	}
 }
@@ -400,7 +400,7 @@ func TestPlanRelinkKeepsIdentityBeforeReadingSectionsAndDoesNotWrite(t *testing.
 	if err := os.WriteFile(plan, []byte("in-progress edit without sections"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	before := model.IssueOpsRecord{ID: "id", Repo: repo, Branch: "63-plan", WorktreePath: worktree, PlanPath: "plan.md", UpdatedAt: "before"}
+	before := model.Record{ID: "id", Repo: repo, Branch: "63-plan", WorktreePath: worktree, PlanPath: "plan.md", UpdatedAt: "before"}
 	store, s := newLinkStoreForTest(before)
 	got, err := s.Plan(context.Background(), "id", plan, nil)
 	if err != nil || got.PlanPath != "plan.md" || got.UpdatedAt != "before" || store.writes != 0 {
@@ -428,7 +428,7 @@ func TestWorktreeLinkRejectsResolvedSiblingEscape(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Dir(worktree)); err != nil {
 		t.Fatal(err)
 	}
-	store, s := newLinkStoreForTest(model.IssueOpsRecord{ID: "id", Repo: repo, Branch: "63-plan"})
+	store, s := newLinkStoreForTest(model.Record{ID: "id", Repo: repo, Branch: "63-plan"})
 	if _, err := s.Worktree(context.Background(), "id", worktree, nil); err == nil || !strings.Contains(err.Error(), "resolve under sibling") {
 		t.Fatalf("resolved escape accepted: %v", err)
 	}

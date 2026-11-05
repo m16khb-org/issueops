@@ -10,7 +10,7 @@ import (
 func TestDiagnoseCommandRendersPromptForFailedCommand(t *testing.T) {
 	root := t.TempDir()
 
-	result, err := DiagnoseCommand(lintdiagnosecontract.LintDiagnoseRequest{
+	result, err := DiagnoseCommand(lintdiagnosecontract.Request{
 		RepoRoot:    root,
 		CommandArgv: []string{testsupport.WriteFakeCommand(t, t.TempDir(), "lintfail", "#!/bin/sh\necho lint failed >&2\nexit 2\n")},
 	})

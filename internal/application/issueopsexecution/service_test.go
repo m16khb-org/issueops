@@ -12,9 +12,9 @@ import (
 
 func TestServiceStatusDoesNotReadRecord(t *testing.T) {
 	calls := 0
-	service := Service{ReadRecord: func(string, string) (model.IssueOpsRecord, error) {
+	service := Service{ReadRecord: func(string, string) (model.Record, error) {
 		t.Fatal("status read record")
-		return model.IssueOpsRecord{}, nil
+		return model.Record{}, nil
 	}}
 	got, err := service.Execute(t.Context(), "state", model.ExecutionActionRequest{ID: "cycle", Action: model.ExecutionActionStatus}, port.ExecutionActionDependencies{Status: func(_ context.Context, root, id string) (model.ExecutionResult, error) {
 		calls++

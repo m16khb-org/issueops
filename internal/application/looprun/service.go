@@ -9,27 +9,31 @@ import (
 	loopdomain "issueops/internal/domain/looprun"
 )
 
-type Store interface {
+type store interface {
 	WithLock(context.Context, string, func(context.Context) error) error
 	Read(string) (loopcontract.LoopRun, error)
 	Write(context.Context, loopcontract.LoopRun) (loopcontract.LoopRun, error)
 }
 
-type Identity interface {
+type identity interface {
 	NormalizeRepo(string) (string, error)
 	NormalizeID(string) (string, error)
 	NewID(repo, name string) string
 }
 
-type Clock interface{ Now() string }
+type clock interface{ Now() string }
 
+// Service runs loop lifecycle commands (start, record attempt, stop) against a Store, serializing
+// each loop's read-modify-write under the store's per-loop lock.
 type Service struct {
-	Store         Store
-	Identity      Identity
-	Clock         Clock
+	Store         store
+	Identity      identity
+	Clock         clock
 	SchemaVersion int
 }
 
+// Start creates the loop for the request, or resumes an existing one with the same repo and name.
+// Resuming fails when the existing loop can no longer be resumed.
 func (service Service) Start(ctx context.Context, request loopcontract.StartLoopRequest) (loopcontract.LoopRun, error) {
 	repo, err := service.Identity.NormalizeRepo(request.Repo)
 	if err != nil {
@@ -60,6 +64,8 @@ func (service Service) Start(ctx context.Context, request loopcontract.StartLoop
 	return loop, err
 }
 
+// RecordAttempt appends a pass or fail attempt to the loop and persists the result.
+// The loop may exhaust itself when the failed-attempt limit is reached.
 func (service Service) RecordAttempt(ctx context.Context, loopID string, request loopcontract.RecordAttemptRequest) (loopcontract.LoopRun, error) {
 	loopID, err := service.Identity.NormalizeID(loopID)
 	if err != nil {
@@ -86,6 +92,8 @@ func (service Service) RecordAttempt(ctx context.Context, loopID string, request
 	return loop, err
 }
 
+// Stop ends the loop. A successful stop requires the latest attempt to have passed;
+// a non-success stop needs a reason.
 func (service Service) Stop(ctx context.Context, loopID string, success bool, reason string) (loopcontract.LoopRun, error) {
 	loopID, err := service.Identity.NormalizeID(loopID)
 	if err != nil {

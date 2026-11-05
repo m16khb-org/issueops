@@ -188,7 +188,7 @@ func TestIssueOpsRootFromFollowsExecutableSymlink(t *testing.T) {
 }
 
 func TestSplitCSVContainsAndStateIssueHelpers(t *testing.T) {
-	if Exists(filepath.Join(t.TempDir(), "missing")) {
+	if exists(filepath.Join(t.TempDir(), "missing")) {
 		t.Fatal("missing path should not exist")
 	}
 	if got := SplitCSV(" a, ,b,c "); !reflect.DeepEqual(got, []string{"a", "b", "c"}) {
@@ -200,7 +200,7 @@ func TestSplitCSVContainsAndStateIssueHelpers(t *testing.T) {
 	if !ContainsString([]string{"a", "b"}, "b") || ContainsString([]string{"a"}, "z") {
 		t.Fatal("ContainsString mismatch")
 	}
-	issues := []statecontract.StateDoctorIssue{{Code: "bad_json"}}
+	issues := []statecontract.DoctorIssue{{Code: "bad_json"}}
 	if !StateDoctorHasIssueCode(issues, "bad_json") || StateDoctorHasIssueCode(issues, "missing") {
 		t.Fatal("StateDoctorHasIssueCode mismatch")
 	}

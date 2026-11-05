@@ -30,7 +30,7 @@ func TestWorkerMCPInstancesKeepSameIDInSeparateStores(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		job := workercontract.WorkerJob{OK: true, ID: "same-id", Kind: "fixture", Payload: payload, Status: "queued", NoShell: true, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"}
+		job := workercontract.Job{OK: true, ID: "same-id", Kind: "fixture", Payload: payload, Status: "queued", NoShell: true, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"}
 		data, err := json.Marshal(job)
 		if err != nil {
 			t.Fatal(err)
@@ -66,21 +66,21 @@ func TestWorkerMCPInstancesKeepSameIDInSeparateStores(t *testing.T) {
 	}
 	for _, sdk := range []bool{false, true} {
 		for i, want := range []string{"first store", "second store"} {
-			var job workercontract.WorkerJob
+			var job workercontract.Job
 			call(i, sdk, "worker_status", map[string]any{"id": "same-id"}, &job)
 			if job.Payload != want || job.WorkerDir != directories[i] {
 				t.Fatalf("instance %d sdk=%t leaked: %+v", i, sdk, job)
 			}
 		}
 	}
-	var cancelled workercontract.WorkerJob
+	var cancelled workercontract.Job
 	call(0, true, "worker_cancel", map[string]any{"id": "same-id"}, &cancelled)
 	if cancelled.Status != "cancelled" {
 		t.Fatalf("cancel: %+v", cancelled)
 	}
 	for i, want := range []string{"cancelled", "queued"} {
 		for _, sdk := range []bool{false, true} {
-			var list workercontract.WorkerListResult
+			var list workercontract.ListResult
 			call(i, sdk, "worker_list", map[string]any{}, &list)
 			if len(list.Jobs) != 1 || list.Jobs[0].Status != want || list.Queue == nil || list.Queue.Total != 1 {
 				t.Fatalf("instance %d sdk=%t list: %+v", i, sdk, list)
@@ -121,7 +121,7 @@ func TestWorkerCLIKeepsCapturedRelativeStateAndDefaultCWD(t *testing.T) {
 	wrong := filepath.Join(other, "wrong-worker")
 	t.Setenv("ISSUEOPS_WORKER_DIR", wrong)
 	raw := captureStdoutForContract(t, func() error { return command.Run([]string{"run", "--read-only", "--json", "--", "cat", "note.txt"}) })
-	var job workercontract.WorkerJob
+	var job workercontract.Job
 	if err := json.Unmarshal([]byte(raw), &job); err != nil {
 		t.Fatal(err)
 	}

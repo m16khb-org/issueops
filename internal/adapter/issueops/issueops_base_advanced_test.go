@@ -9,22 +9,22 @@ import (
 )
 
 // baseAdvancedRecord는 준비된 base가 있는 최소 strict readiness record다.
-func baseAdvancedRecord(repo, baseBranch string) issueops.IssueOpsRecord {
-	return issueops.IssueOpsRecord{
+func baseAdvancedRecord(repo, baseBranch string) issueops.Record {
+	return issueops.Record{
 		OK: true, Repo: repo, Branch: "main", WorktreePath: repo,
 		IssueURL:           "https://gitlab.example/group/project/-/issues/1",
 		PlanPath:           "plans/demo.md",
 		Intent:             issueOpsIntentContractForTest(),
 		ArchitectureReview: issueOpsArchitectureReviewForTest(),
-		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: baseBranch, LinkVerified: true},
+		BranchPrepare:      &issueops.BranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: baseBranch, LinkVerified: true},
 		AISlopCleanAt:      "2026-06-05T00:00:00Z",
-		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{
+		ProjectDocsReview: &issueops.ProjectDocsReview{
 			Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"},
 		},
 	}
 }
 
-func hasBaseAdvancedWarning(ready issueops.IssueOpsReadiness) bool {
+func hasBaseAdvancedWarning(ready issueops.Readiness) bool {
 	for _, warning := range ready.Warnings {
 		if strings.HasPrefix(warning, "base_advanced:") {
 			return true
@@ -133,7 +133,7 @@ func TestStrictReadinessWarnsWhenBaseWasDeletedOnOrigin(t *testing.T) {
 	}
 }
 
-func hasWarningPrefix(ready issueops.IssueOpsReadiness, prefix string) bool {
+func hasWarningPrefix(ready issueops.Readiness, prefix string) bool {
 	for _, warning := range ready.Warnings {
 		if strings.HasPrefix(warning, prefix) {
 			return true

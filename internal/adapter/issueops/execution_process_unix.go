@@ -25,7 +25,7 @@ func processTableArguments(ctx context.Context) (string, error) {
 	return string(out), err
 }
 
-// ObserveNativeProcessReceipt는 PID 재사용을 방지하는 데 쓰는 운영체제
+// ObserveNativeProcessReceipt 함수는 PID 재사용을 방지하는 데 쓰는 운영체제
 // identity를 읽는다. 호출자는 자체 보고한 시간이 아니라 이 receipt를
 // 그대로 영속화한다.
 func ObserveNativeProcessReceipt(pid int) (issueops.NativeProcessReceipt, error) {

@@ -7,9 +7,9 @@ import (
 
 func TestPlanRequiresEveryGoalAboveTargetAndSelectsAfterPenalty(t *testing.T) {
 	for _, target := range []float64{95, 100} {
-		facts := PlanFacts{Signals: contract.SelfAugmentRepoSignals{HasGeniusThink: true}, DocsOK: true, ImplementationDelta: true, VerificationPassed: true, LessonsCaptured: true}
-		candidates := []contract.SelfAugmentCandidate{{ID: "repeat", Status: contract.CandidateStatusOpen, Score: 90}, {ID: "next", Status: contract.CandidateStatusOpen, Score: 80}}
-		result := NewPlan(contract.SelfAugmentPlanRequest{TargetScore: target}, facts, candidates, map[string]int{"repeat": 2})
+		facts := PlanFacts{Signals: contract.RepoSignals{HasGeniusThink: true}, DocsOK: true, ImplementationDelta: true, VerificationPassed: true, LessonsCaptured: true}
+		candidates := []contract.Candidate{{ID: "repeat", Status: contract.CandidateStatusOpen, Score: 90}, {ID: "next", Status: contract.CandidateStatusOpen, Score: 80}}
+		result := NewPlan(contract.PlanRequest{TargetScore: target}, facts, candidates, map[string]int{"repeat": 2})
 		if result.TerminationEligible != (target < 100) {
 			t.Fatalf("target=%v termination=%v", target, result.TerminationEligible)
 		}
@@ -18,7 +18,7 @@ func TestPlanRequiresEveryGoalAboveTargetAndSelectsAfterPenalty(t *testing.T) {
 		}
 	}
 	for i := range 4 {
-		facts := PlanFacts{Signals: contract.SelfAugmentRepoSignals{HasGeniusThink: true}, DocsOK: true, ImplementationDelta: true, VerificationPassed: true, LessonsCaptured: true}
+		facts := PlanFacts{Signals: contract.RepoSignals{HasGeniusThink: true}, DocsOK: true, ImplementationDelta: true, VerificationPassed: true, LessonsCaptured: true}
 		switch i {
 		case 0:
 			facts.DocsOK = false
@@ -29,7 +29,7 @@ func TestPlanRequiresEveryGoalAboveTargetAndSelectsAfterPenalty(t *testing.T) {
 		case 3:
 			facts.LessonsCaptured = false
 		}
-		result := NewPlan(contract.SelfAugmentPlanRequest{TargetScore: 95}, facts, nil, nil)
+		result := NewPlan(contract.PlanRequest{TargetScore: 95}, facts, nil, nil)
 		if result.TerminationEligible || result.Goals[i].Score != 0 || result.Goals[i].Passed {
 			t.Fatalf("failed observable admitted: %+v", result.Goals)
 		}

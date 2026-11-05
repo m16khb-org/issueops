@@ -60,23 +60,23 @@ func TestFullContentRejectsEscapesAndTerminatesEveryFileWithNewline(t *testing.T
 	writeRepoFile(t, repo, "sub/b.ts", "with newline\n")
 	writeRepoFile(t, repo, "empty.ts", "")
 
-	got, err := FullContent(repo, []string{"a.ts", "./sub/b.ts", "empty.ts"})
+	got, err := fullContent(repo, []string{"a.ts", "./sub/b.ts", "empty.ts"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := "\n--- FILE: a.ts ---\nno newline\n" + "\n--- FILE: " + filepath.Join("sub", "b.ts") + " ---\nwith newline\n" + "\n--- FILE: empty.ts ---\n\n"
 	if got != want {
-		t.Fatalf("FullContent =\n%q\nwant\n%q", got, want)
+		t.Fatalf("fullContent =\n%q\nwant\n%q", got, want)
 	}
 	for _, unsafe := range []string{"..", "../x.ts", "/etc/passwd", "a/../../x.ts"} {
-		if _, err := FullContent(repo, []string{unsafe}); err == nil || !strings.Contains(err.Error(), "unsafe file path") {
-			t.Errorf("FullContent(%q) error = %v, want unsafe file path", unsafe, err)
+		if _, err := fullContent(repo, []string{unsafe}); err == nil || !strings.Contains(err.Error(), "unsafe file path") {
+			t.Errorf("fullContent(%q) error = %v, want unsafe file path", unsafe, err)
 		}
 	}
-	if _, err := FullContent(repo, []string{"absent.ts"}); err == nil {
+	if _, err := fullContent(repo, []string{"absent.ts"}); err == nil {
 		t.Fatal("missing file must be an error")
 	}
-	if got, err := FullContent(repo, nil); err != nil || got != "" {
+	if got, err := fullContent(repo, nil); err != nil || got != "" {
 		t.Fatalf("no files = %q, %v", got, err)
 	}
 }

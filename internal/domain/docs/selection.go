@@ -1,3 +1,5 @@
+// Package docs holds the domain rules that choose which scanned files belong
+// in the project document index.
 package docs
 
 import (
@@ -10,6 +12,8 @@ import (
 	docscontract "issueops/internal/contract/docs"
 )
 
+// Roots returns the repository-relative files and directories scanned for
+// project documents, in scan order.
 func Roots() []string {
 	return []string{"AGENTS.md", "CLAUDE.md", "GENIUS_THINK.md", ".issueops", "skills/self-verify", "skills/self-augment"}
 }

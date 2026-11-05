@@ -13,12 +13,12 @@ import "encoding/json"
 // lets docs/contract/state builders and their golden tests share one source of
 // truth instead of each re-deciding which fields are volatile.
 
-// VolatileContextFields are JSON field names whose values are expected to
+// volatileContextFields are JSON field names whose values are expected to
 // change between otherwise-identical builds. They belong to the volatile
 // region and must be excluded before asserting prefix byte-determinism. The
 // set mirrors the dynamic time keys normalized by the response-contract golden
 // test so the two surfaces cannot drift apart.
-var VolatileContextFields = map[string]bool{
+var volatileContextFields = map[string]bool{
 	"generated_at": true,
 	"updated_at":   true,
 	"cutoff":       true,
@@ -35,7 +35,7 @@ func StableProjection(value any) any {
 	case map[string]any:
 		out := make(map[string]any, len(v))
 		for key, child := range v {
-			if VolatileContextFields[key] {
+			if volatileContextFields[key] {
 				continue
 			}
 			out[key] = StableProjection(child)
@@ -52,11 +52,11 @@ func StableProjection(value any) any {
 	}
 }
 
-// StableProjectionJSON marshals value, strips volatile context fields, and
+// stableProjectionJSON marshals value, strips volatile context fields, and
 // returns the canonical JSON of the stable (immutable-prefix) portion. Map
 // keys are sorted by encoding/json, so the output only varies when the
 // stable content itself changes.
-func StableProjectionJSON(value any) (string, error) {
+func stableProjectionJSON(value any) (string, error) {
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		return "", err
@@ -78,11 +78,11 @@ func StableProjectionJSON(value any) (string, error) {
 // builder assembles context, repeated builds of unchanged inputs must yield an
 // identical stable prefix. The returned JSON is that stable prefix.
 func ContextSerializationStable(build func() any) (bool, string, error) {
-	first, err := StableProjectionJSON(build())
+	first, err := stableProjectionJSON(build())
 	if err != nil {
 		return false, "", err
 	}
-	second, err := StableProjectionJSON(build())
+	second, err := stableProjectionJSON(build())
 	if err != nil {
 		return false, "", err
 	}

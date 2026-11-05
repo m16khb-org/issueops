@@ -9,16 +9,16 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-// CleanupAbandonFailureEvidence contains path identity and seal checks performed
+// cleanupAbandonFailureEvidence contains path identity and seal checks performed
 // outside the domain; resolving symlinks and encoding evidence are not policy.
-type CleanupAbandonFailureEvidence struct {
+type cleanupAbandonFailureEvidence struct {
 	SameWorktree bool
 	SealMatches  bool
 }
 
-// CleanupAbandonReasonLimit는 --reason 상한이다. 감사 문자열의 표현력 한계가
-// 아니라, lease 가드의 exact-command 파싱(commandparse)이 명령 전체를 토큰
-// 단위로 재구성한다는 사실에서 오는 보수적 여유값이다.
+// CleanupAbandonReasonLimit 상수는 --reason 상한(바이트)이다. 감사 문자열의 표현력 한계가 아니라,
+// lease 가드의 exact-command 파싱(commandparse)이 명령 전체를 토큰 단위로 재구성한다는 사실에서 오는 보수적
+// 여유값이다.
 const CleanupAbandonReasonLimit = 512
 
 // cleanupAbandonReasonForbidden은 exact-command 파서가 "활성 셸 구성"으로
@@ -27,6 +27,9 @@ const CleanupAbandonReasonLimit = 512
 // 거부보다 reason_required가 훨씬 읽기 쉽다).
 const cleanupAbandonReasonForbidden = "\"'`$\\|&;<>()*?~"
 
+// CleanupAbandonRemoteFlags renders the remote-effect flags of req
+// (--close-pr, --close-issue, --delete-remote-branch) with a leading space
+// each, in a fixed order, so preview and apply commands stay in sync.
 func CleanupAbandonRemoteFlags(req issueops.CleanupAbandonRequest) string {
 	flags := ""
 	if req.ClosePR {
@@ -41,12 +44,15 @@ func CleanupAbandonRemoteFlags(req issueops.CleanupAbandonRequest) string {
 	return flags
 }
 
+// CleanupAbandonPreviewCommand returns the exact preview command for
+// abandoning cycle id with the quoted reason and the same remote-effect flags
+// as req.
 func CleanupAbandonPreviewCommand(id, reason string, req issueops.CleanupAbandonRequest) string {
 	return fmt.Sprintf("issueops cleanup abandon --id %s --reason %q%s --preview --json",
 		id, reason, CleanupAbandonRemoteFlags(req))
 }
 
-func CleanupAbandonPartialBranchRetry(record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
+func cleanupAbandonPartialBranchRetry(record issueops.Record, inventory issueops.CleanupAbandonInventory, evidence cleanupAbandonFailureEvidence) bool {
 	branchPresent := inventory.BranchOID != ""
 	failure := record.CleanupAbandonFailure
 	return !inventory.WorktreePresent && branchPresent && failure != nil &&
@@ -56,7 +62,7 @@ func CleanupAbandonPartialBranchRetry(record issueops.IssueOpsRecord, inventory 
 		failure.WorktreeHead == inventory.BranchOID
 }
 
-func CleanupAbandonFailureInventoryMatches(record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
+func cleanupAbandonFailureInventoryMatches(record issueops.Record, inventory issueops.CleanupAbandonInventory, evidence cleanupAbandonFailureEvidence) bool {
 	failure := record.CleanupAbandonFailure
 	if failure == nil {
 		return true
@@ -85,7 +91,7 @@ func CleanupAbandonFailureInventoryMatches(record issueops.IssueOpsRecord, inven
 
 // cleanupAbandonReceiptSealed는 receipt의 지문들이 형식에 맞고 봉인·worktree
 // 증거와 branch 이름이 현재 inventory와 일치하는지 확인한다.
-func cleanupAbandonReceiptSealed(failure *issueops.IssueOpsCleanupAbandonFailure, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
+func cleanupAbandonReceiptSealed(failure *issueops.CleanupAbandonFailure, inventory issueops.CleanupAbandonInventory, evidence cleanupAbandonFailureEvidence) bool {
 	return cleanupAbandonValidFingerprint(failure.Fingerprint) &&
 		cleanupAbandonValidFingerprint(failure.RecordSHA) &&
 		cleanupAbandonValidFingerprint(failure.InventorySHA256) &&
@@ -96,14 +102,14 @@ func cleanupAbandonReceiptSealed(failure *issueops.IssueOpsCleanupAbandonFailure
 // cleanupAbandonReceiptMatcher는 receipt가 기록한 원래 자원 모양과 현재
 // inventory를 비교한다.
 type cleanupAbandonReceiptMatcher struct {
-	failure       *issueops.IssueOpsCleanupAbandonFailure
+	failure       *issueops.CleanupAbandonFailure
 	inventory     issueops.CleanupAbandonInventory
 	origWorktree  bool
 	origBranch    bool
 	branchPresent bool
 }
 
-func newCleanupAbandonReceiptMatcher(failure *issueops.IssueOpsCleanupAbandonFailure, inventory issueops.CleanupAbandonInventory) cleanupAbandonReceiptMatcher {
+func newCleanupAbandonReceiptMatcher(failure *issueops.CleanupAbandonFailure, inventory issueops.CleanupAbandonInventory) cleanupAbandonReceiptMatcher {
 	return cleanupAbandonReceiptMatcher{
 		failure: failure, inventory: inventory,
 		origWorktree:  failure.WorktreeHead != "",
@@ -166,7 +172,10 @@ func cleanupAbandonValidFingerprint(value string) bool {
 	return err == nil
 }
 
-func CleanupAbandonRemovalPlan(record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory) []string {
+// CleanupAbandonRemovalPlan lists what an abandon apply would remove, in
+// order: the local worktree and local branch when inventory shows them, the
+// cycle record, and each unresolved external intent operation.
+func CleanupAbandonRemovalPlan(record issueops.Record, inventory issueops.CleanupAbandonInventory) []string {
 	plan := []string{}
 	if inventory.WorktreePresent {
 		plan = append(plan, "local_worktree:"+inventory.WorktreeRoot)
@@ -181,17 +190,20 @@ func CleanupAbandonRemovalPlan(record issueops.IssueOpsRecord, inventory issueop
 	return plan
 }
 
-// CleanupAbandonPendingError는 미해결 외부 intent가 남은 사이클의 abandon을 막는
-// 사유다. 해결 중인 intent는 reconcile이 정리해야 하므로, 비어 있지 않은 값은
-// pending_intent_safe 게이트를 미충족으로 만든다.
-func CleanupAbandonPendingError(record issueops.IssueOpsRecord) string {
+// CleanupAbandonPendingError 함수는 미해결 외부 intent가 남은 사이클의 abandon을 막는 사유를 돌려준다.
+// 해결 중인 intent는 reconcile이 정리해야 하므로, 비어 있지 않은 값은 pending_intent_safe 게이트를
+// 미충족으로 만든다. 대기 중인 intent가 없으면 빈 문자열이다.
+func CleanupAbandonPendingError(record issueops.Record) string {
 	if record.Execution == nil || record.Execution.Pending == nil {
 		return ""
 	}
 	return fmt.Sprintf("pending external intent kind %q is unresolved; run `issueops execution reconcile --id %s --preview --json` until it settles before retrying abandon", record.Execution.Pending.Kind, record.ID)
 }
 
-func CleanupAbandonIntentOperationIDs(record issueops.IssueOpsRecord) []string {
+// CleanupAbandonIntentOperationIDs returns the distinct, non-blank operation
+// IDs of the pending and failed execution intents of record, in that order.
+// It returns nil when the record has no execution.
+func CleanupAbandonIntentOperationIDs(record issueops.Record) []string {
 	if record.Execution == nil {
 		return nil
 	}
@@ -215,7 +227,11 @@ func CleanupAbandonIntentOperationIDs(record issueops.IssueOpsRecord) []string {
 	return out
 }
 
-func CleanupAbandonUnresolvedChildren(record issueops.IssueOpsRecord, resolved map[string]bool) []string {
+// CleanupAbandonUnresolvedChildren lists the children that still block
+// abandon: indexed child cycles absent from resolved, and child issue links
+// whose close was never verified. A link to the cycle own issue URL is
+// ignored.
+func CleanupAbandonUnresolvedChildren(record issueops.Record, resolved map[string]bool) []string {
 	var unresolved []string
 	for _, child := range record.ChildCycles {
 		id := strings.TrimSpace(child.CycleID)
@@ -234,7 +250,7 @@ func CleanupAbandonUnresolvedChildren(record issueops.IssueOpsRecord, resolved m
 	return unresolved
 }
 
-func ValidateCleanupAbandonReason(reason string) error {
+func validateCleanupAbandonReason(reason string) error {
 	trimmed := strings.TrimSpace(reason)
 	if trimmed == "" {
 		return fmt.Errorf("--reason is required")
@@ -253,7 +269,12 @@ func ValidateCleanupAbandonReason(reason string) error {
 	return nil
 }
 
-func CleanupAbandonTargets(record issueops.IssueOpsRecord) issueops.CleanupAbandonInventory {
+// CleanupAbandonTargets builds the local part of the abandon inventory from
+// record: identity, phase, lease status ("none" without execution), the
+// workspace branch and worktree root (falling back to the recorded worktree
+// path), and the pending operation ID. Filesystem and git observations are
+// filled in by the caller.
+func CleanupAbandonTargets(record issueops.Record) issueops.CleanupAbandonInventory {
 	inventory := issueops.CleanupAbandonInventory{
 		ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch),
 		Phase: string(record.Phase), LeaseStatus: "none",
@@ -274,12 +295,13 @@ func CleanupAbandonTargets(record issueops.IssueOpsRecord) issueops.CleanupAband
 	return inventory
 }
 
-// Only an observed done record resolves a child. Missing or unreadable child
-// records provide no completion evidence.
-func CleanupAbandonResolvedChildren(children []issueops.IssueOpsRecord) map[string]bool {
+// CleanupAbandonResolvedChildren returns the IDs of children that count as
+// resolved for abandon. Only an observed done record resolves a child.
+// Missing or unreadable child records provide no completion evidence.
+func CleanupAbandonResolvedChildren(children []issueops.Record) map[string]bool {
 	resolved := map[string]bool{}
 	for _, child := range children {
-		if child.Phase == issueops.IssueOpsPhaseDone {
+		if child.Phase == issueops.PhaseDone {
 			resolved[child.ID] = true
 		}
 	}

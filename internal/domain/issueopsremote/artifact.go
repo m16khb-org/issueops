@@ -1,16 +1,18 @@
-package remote
+package issueopsremote
 
 import (
 	"fmt"
 	"strings"
 )
 
+// ArtifactAuthority carries the cycle facts a remote PR/MR artifact is verified against: the record phase, the linked issue URL, and the sealed code project key (empty when issue and code live in the same project).
 type ArtifactAuthority struct {
 	Phase          string
 	IssueURL       string
 	CodeProjectKey string
 }
 
+// Artifact is a remote PR/MR candidate, or its verified projection: provider, kind (pr or mr), canonical URL, labels, assignees, and an optional target branch.
 type Artifact struct {
 	Provider     string
 	Kind         string
@@ -20,6 +22,7 @@ type Artifact struct {
 	TargetBranch string
 }
 
+// ProjectArtifact validates candidate against authority and returns the normalized artifact. It requires phase pr, a github or gitlab provider matching the linked issue, a kind valid for that provider, a canonical artifact URL inside the expected project, and non-empty labels and non-placeholder assignees.
 func ProjectArtifact(authority ArtifactAuthority, candidate Artifact) (Artifact, error) {
 	if err := validateArtifactPhase(authority.Phase); err != nil {
 		return Artifact{}, err
@@ -81,7 +84,7 @@ func requiredArtifactPeople(candidate Artifact) (labels, assignees []string, err
 	if len(assignees) == 0 {
 		return nil, nil, fmt.Errorf("remote artifact assignees are required")
 	}
-	if invalid := InvalidAssignee(assignees); invalid != "" {
+	if invalid := invalidAssignee(assignees); invalid != "" {
 		return nil, nil, fmt.Errorf("remote artifact assignee must be a verified provider user, not placeholder %q", invalid)
 	}
 	return labels, assignees, nil

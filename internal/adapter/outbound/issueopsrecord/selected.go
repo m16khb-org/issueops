@@ -10,12 +10,12 @@ import (
 )
 
 // ReadSelected preserves selection semantics without enumerating sibling rows.
-func (store Store) ReadSelected(ctx context.Context, stateRoot, id string) (issueopscontract.IssueOpsRecord, error) {
+func (store Store) ReadSelected(ctx context.Context, stateRoot, id string) (issueopscontract.Record, error) {
 	if err := ctx.Err(); err != nil {
-		return issueopscontract.IssueOpsRecord{OK: false}, err
+		return issueopscontract.Record{OK: false}, err
 	}
-	invalid := issueopscontract.IssueOpsRecord{ID: id, Invalid: true}
-	if _, err := NormalizeID(id); err != nil {
+	invalid := issueopscontract.Record{ID: id, Invalid: true}
+	if _, err := normalizeID(id); err != nil {
 		return invalid, nil
 	}
 	record, err := store.Read(ctx, stateRoot, id)

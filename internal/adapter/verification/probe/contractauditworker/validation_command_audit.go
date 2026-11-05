@@ -1,3 +1,6 @@
+// Package contractauditworker holds the self-verify probes that run the built
+// binary's contract check, tool conformance baseline, command audit, and worker
+// lifecycle smoke tests.
 package contractauditworker
 
 import (
@@ -10,11 +13,14 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
+// ValidateCommandAudit runs `policy audit` with a temporary audit log and checks
+// that the log has the command_policy_audit fields and no unredacted secret
+// fixture. seed is unused.
 func ValidateCommandAudit(binary, root string, seed int64) selfverify.StepResult {
-	return ValidateCommandAuditWithDeps(binary, root, seed, ValidationDeps{})
+	return validateCommandAuditWithDeps(binary, root, seed, validationDeps{})
 }
 
-func ValidateCommandAuditWithDeps(binary, root string, seed int64, deps ValidationDeps) selfverify.StepResult {
+func validateCommandAuditWithDeps(binary, root string, seed int64, deps validationDeps) selfverify.StepResult {
 	_ = seed
 	deps = deps.withDefaults()
 	auditDir, err := deps.MkdirTemp("", "issueops-audit-*")

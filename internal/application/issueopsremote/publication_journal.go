@@ -9,19 +9,22 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 	cycledomain "issueops/internal/domain/issueops"
 	domain "issueops/internal/domain/issueopspublication"
-	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/issueopsremote"
 )
 
+// PublicationJournal 타입은 PR/MR 게시 의도를 기록과 payload로 durable하게 남기고 시작·재시도·실패·완료를 한 트랜잭션 안에서 전이시킨다.
 type PublicationJournal struct {
 	store       PublicationStore
 	environment PublicationEnvironment
-	authority   Authority
+	authority   authority
 }
 
-func NewPublicationJournal(store PublicationStore, environment PublicationEnvironment, authority Authority) *PublicationJournal {
+// NewPublicationJournal 함수는 저장소, 환경, 권한 검사를 묶어 PublicationJournal을 만든다.
+func NewPublicationJournal(store PublicationStore, environment PublicationEnvironment, authority authority) *PublicationJournal {
 	return &PublicationJournal{store: store, environment: environment, authority: authority}
 }
 
+// BeginCreate 메서드는 작업 ID와 marker를 붙인 게시 의도를 기록에 시작으로 남긴다. 행위자 권한, 실행 lease, 기존 아티팩트·대기 의도가 없음을 같은 트랜잭션에서 검증한다.
 func (j *PublicationJournal) BeginCreate(ctx context.Context, prepared contract.PreparedCreate) (contract.Intent, error) {
 	operationID, err := j.environment.NewOperationID()
 	if err != nil {
@@ -33,8 +36,8 @@ func (j *PublicationJournal) BeginCreate(ctx context.Context, prepared contract.
 	marker := "<!-- issueops:issueops-v1 operation=" + operationID + " -->"
 	request := prepared.Request.Clone()
 	request.Body = strings.TrimSpace(request.Body) + "\n\n" + marker
-	payload := contract.IntentPayload{SchemaVersion: model.IssueOpsSchemaVersion, OperationID: operationID, Provider: prepared.Command.Provider, Kind: prepared.Eligibility.Kind, Request: request, InvocationState: string(contract.InvocationUnknown)}
-	var persisted model.IssueOpsRecord
+	payload := contract.IntentPayload{SchemaVersion: model.SchemaVersion, OperationID: operationID, Provider: prepared.Command.Provider, Kind: prepared.Eligibility.Kind, Request: request, InvocationState: string(contract.InvocationUnknown)}
+	var persisted model.Record
 	err = j.store.WithinTransaction(ctx, prepared.Command.ID, func(tx context.Context) error {
 		current, err := j.store.Read(tx, prepared.Command.ID)
 		if err != nil {
@@ -62,6 +65,7 @@ func (j *PublicationJournal) BeginCreate(ctx context.Context, prepared contract.
 	return j.loadSnapshot(ctx, persisted, payload, prepared.Eligibility)
 }
 
+// MarkRetry 메서드는 대기 중인 게시 의도의 재시도 횟수를 올린다. 저장된 payload가 바뀌었으면 거부한다.
 func (j *PublicationJournal) MarkRetry(ctx context.Context, intent contract.Intent) (contract.Intent, error) {
 	record, expected, err := j.store.DecodeSnapshot(intent)
 	if err != nil {
@@ -96,6 +100,7 @@ func (j *PublicationJournal) MarkRetry(ctx context.Context, intent contract.Inte
 	return j.loadSnapshot(ctx, record, updated, intent.Eligibility)
 }
 
+// RecordFailure 메서드는 provider 호출 결과(invocation 상태, 알려진 URL)와 실패 진단을 대기 의도에 남긴다. 의도는 유지되어 재시도·복구에 쓰인다.
 func (j *PublicationJournal) RecordFailure(ctx context.Context, intent contract.Intent, invocation contract.InvocationState, knownURL string, cause error) error {
 	record, expected, err := j.store.DecodeSnapshot(intent)
 	if err != nil {
@@ -114,12 +119,13 @@ func (j *PublicationJournal) RecordFailure(ctx context.Context, intent contract.
 			return err
 		}
 		payload = domain.FailurePayload(payload, string(invocation), expected.RetryCount, knownURL)
-		current = cycledomain.FailPublication(current, expected.OperationID, remote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), false)
+		current = cycledomain.FailPublication(current, expected.OperationID, issueopsremote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), false)
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Payload: &payload})
 		return err
 	})
 }
 
+// Complete 메서드는 검증된 URL로 아티팩트를 기록에 확정하고 대기 의도를 지운다. enforceOriginalGeneration이 true이면 의도를 시작한 lease 세대와 작업 디렉터리가 같아야 한다.
 func (j *PublicationJournal) Complete(ctx context.Context, intent contract.Intent, url string, enforceOriginalGeneration bool) (contract.RecordSnapshot, error) {
 	record, payload, err := j.store.DecodeSnapshot(intent)
 	if err != nil {
@@ -141,15 +147,15 @@ func (j *PublicationJournal) Complete(ctx context.Context, intent contract.Inten
 		if err := domain.ValidatePayloadUnchanged(stored, payload, domain.CheckpointReceipt); err != nil {
 			return err
 		}
-		authority := remote.ArtifactAuthority{Phase: string(current.Phase), IssueURL: current.IssueURL}
+		authority := issueopsremote.ArtifactAuthority{Phase: string(current.Phase), IssueURL: current.IssueURL}
 		if current.BranchPrepare != nil {
 			authority.CodeProjectKey = current.BranchPrepare.CodeProjectKey
 		}
-		artifact, err := remote.ProjectArtifact(authority, remote.Artifact{Provider: payload.Provider, Kind: payload.Kind, URL: strings.TrimSpace(url), Labels: payload.Request.Labels, Assignees: payload.Request.Assignees, TargetBranch: payload.Request.BaseBranch})
+		artifact, err := issueopsremote.ProjectArtifact(authority, issueopsremote.Artifact{Provider: payload.Provider, Kind: payload.Kind, URL: strings.TrimSpace(url), Labels: payload.Request.Labels, Assignees: payload.Request.Assignees, TargetBranch: payload.Request.BaseBranch})
 		if err != nil {
 			return err
 		}
-		current = cycledomain.CompletePublication(current, model.IssueOpsRemoteArtifactVerification{Provider: artifact.Provider, Kind: artifact.Kind, URL: artifact.URL, Labels: artifact.Labels, Assignees: artifact.Assignees, TargetBranch: artifact.TargetBranch, VerifiedAt: j.environment.Timestamp()})
+		current = cycledomain.CompletePublication(current, model.RemoteArtifactVerification{Provider: artifact.Provider, Kind: artifact.Kind, URL: artifact.URL, Labels: artifact.Labels, Assignees: artifact.Assignees, TargetBranch: artifact.TargetBranch, VerifiedAt: j.environment.Timestamp()})
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Delete: true})
 		return err
 	})
@@ -159,6 +165,7 @@ func (j *PublicationJournal) Complete(ctx context.Context, intent contract.Inten
 	return j.store.RecordSnapshot(ctx, record.ID)
 }
 
+// CompleteNotInvoked 메서드는 provider가 호출되지 않았음이 확인된 의도를 실패로 기록하고 지워 같은 게시를 다시 시작할 수 있게 한다.
 func (j *PublicationJournal) CompleteNotInvoked(ctx context.Context, intent contract.Intent, cause error) (contract.RecordSnapshot, error) {
 	record, payload, err := j.store.DecodeSnapshot(intent)
 	if err != nil {
@@ -179,7 +186,7 @@ func (j *PublicationJournal) CompleteNotInvoked(ctx context.Context, intent cont
 		if err := domain.ValidatePayloadUnchanged(stored, payload, domain.CheckpointNotInvoked); err != nil {
 			return err
 		}
-		current = cycledomain.FailPublication(current, payload.OperationID, remote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), true)
+		current = cycledomain.FailPublication(current, payload.OperationID, issueopsremote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), true)
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Delete: true})
 		return err
 	})
@@ -189,6 +196,7 @@ func (j *PublicationJournal) CompleteNotInvoked(ctx context.Context, intent cont
 	return j.store.RecordSnapshot(ctx, record.ID)
 }
 
+// LoadIntent 메서드는 기록에 대기 중인 게시 의도를 읽어 스냅샷과 함께 돌려준다. 대기 의도가 없거나 게시 종류가 아니면 오류다.
 func (j *PublicationJournal) LoadIntent(ctx context.Context, id string) (contract.Intent, error) {
 	record, err := j.store.Read(ctx, id)
 	if err != nil {
@@ -209,6 +217,7 @@ func (j *PublicationJournal) LoadIntent(ctx context.Context, id string) (contrac
 	return j.loadSnapshot(ctx, record, payload, publicationEligibility(record, payload))
 }
 
+// Latest 메서드는 기록의 최신 스냅샷을 돌려준다.
 func (j *PublicationJournal) Latest(ctx context.Context, id string) (contract.RecordSnapshot, error) {
 	record, err := j.store.Read(ctx, id)
 	if err != nil {
@@ -217,7 +226,7 @@ func (j *PublicationJournal) Latest(ctx context.Context, id string) (contract.Re
 	return j.store.RecordSnapshot(ctx, record.ID)
 }
 
-func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.IssueOpsRecord, payload contract.IntentPayload, eligibility contract.CreateEligibility) (contract.Intent, error) {
+func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.Record, payload contract.IntentPayload, eligibility contract.CreateEligibility) (contract.Intent, error) {
 	snapshot, err := j.store.RecordSnapshot(ctx, record.ID)
 	if err != nil {
 		return contract.Intent{}, err
@@ -233,7 +242,7 @@ func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.Issu
 	return intent, nil
 }
 
-func (j *PublicationJournal) receiptAuthorityFacts(current model.IssueOpsRecord, payload contract.IntentPayload, enforceOriginalGeneration bool) domain.ReceiptAuthorityFacts {
+func (j *PublicationJournal) receiptAuthorityFacts(current model.Record, payload contract.IntentPayload, enforceOriginalGeneration bool) domain.ReceiptAuthorityFacts {
 	facts := domain.ReceiptAuthorityFacts{Prepared: current.Execution != nil, ExpectedOperationID: payload.OperationID, ExpectedGeneration: payload.Generation}
 	if current.Execution != nil {
 		facts.Pending = current.Execution.Pending != nil
@@ -254,7 +263,7 @@ func (j *PublicationJournal) receiptAuthorityFacts(current model.IssueOpsRecord,
 	return facts
 }
 
-func pendingFacts(record model.IssueOpsRecord, expected string) domain.PendingIntentFacts {
+func pendingFacts(record model.Record, expected string) domain.PendingIntentFacts {
 	facts := domain.PendingIntentFacts{Prepared: record.Execution != nil, ExpectedOperationID: expected}
 	if record.Execution != nil && record.Execution.Pending != nil {
 		facts.Pending = true
@@ -263,8 +272,8 @@ func pendingFacts(record model.IssueOpsRecord, expected string) domain.PendingIn
 	return facts
 }
 
-func publicationEligibility(record model.IssueOpsRecord, payload contract.IntentPayload) contract.CreateEligibility {
-	return contract.CreateEligibility{Provider: strings.ToLower(strings.TrimSpace(payload.Provider)), Kind: payload.Kind, Confirm: payload.Request.Confirm, PhasePR: record.Phase == model.IssueOpsPhasePR, ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive, NoPending: record.Execution == nil || record.Execution.Pending == nil, NoArtifact: record.RemoteArtifact == nil, BranchAuthority: true, CanonicalLabelsAssignees: len(payload.Request.Labels) > 0 && len(payload.Request.Assignees) > 0}
+func publicationEligibility(record model.Record, payload contract.IntentPayload) contract.CreateEligibility {
+	return contract.CreateEligibility{Provider: strings.ToLower(strings.TrimSpace(payload.Provider)), Kind: payload.Kind, Confirm: payload.Request.Confirm, PhasePR: record.Phase == model.PhasePR, ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive, NoPending: record.Execution == nil || record.Execution.Pending == nil, NoArtifact: record.RemoteArtifact == nil, BranchAuthority: true, CanonicalLabelsAssignees: len(payload.Request.Labels) > 0 && len(payload.Request.Assignees) > 0}
 }
 
 var _ publicationapp.Repository = (*PublicationJournal)(nil)

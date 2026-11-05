@@ -70,7 +70,7 @@ func TestShouldCheckSkipsAbandonedStatusOnlyCommandlessAndMetGates(t *testing.T)
 func TestApplyCheckMarksPassingGateAndReportsFailures(t *testing.T) {
 	ledger := Parse("- [ ] G1: one\n  CHECK: true\n  EVIDENCE: pending\n- [ ] G2: two\n  CHECK: false\n")
 	result, warnings, changed := ApplyCheck(&ledger, 0, &CheckOutcome{Passed: true, Evidence: "proof", AuditLogID: "a1"}, "f.md")
-	if !changed || len(warnings) != 0 || result.State != StateMet || !result.Checked || result.Evidence != "proof" || result.AuditLogID != "a1" || !result.HasCheck {
+	if !changed || len(warnings) != 0 || result.State != stateMet || !result.Checked || result.Evidence != "proof" || result.AuditLogID != "a1" || !result.HasCheck {
 		t.Fatalf("pass: result=%+v warnings=%v changed=%v", result, warnings, changed)
 	}
 	if !strings.Contains(Render(ledger), "- [x] G1: one") || !strings.Contains(Render(ledger), "EVIDENCE: proof") {
@@ -78,7 +78,7 @@ func TestApplyCheckMarksPassingGateAndReportsFailures(t *testing.T) {
 	}
 
 	result, warnings, changed = ApplyCheck(&ledger, 1, &CheckOutcome{CheckError: "exit code 1", PolicyDenied: true, AuditLogID: "a2"}, "f.md")
-	if changed || result.State != StateUnchecked || result.CheckError != "exit code 1" || !result.PolicyDenied {
+	if changed || result.State != stateUnchecked || result.CheckError != "exit code 1" || !result.PolicyDenied {
 		t.Fatalf("denied: result=%+v changed=%v", result, changed)
 	}
 	if !reflect.DeepEqual(warnings, []string{"f.md G2: check command denied by policy"}) {
@@ -91,7 +91,7 @@ func TestApplyCheckMarksPassingGateAndReportsFailures(t *testing.T) {
 	}
 
 	result, _, changed = ApplyCheck(&ledger, 1, nil, "f.md")
-	if changed || result.State != StateUnchecked || result.CheckError != "" {
+	if changed || result.State != stateUnchecked || result.CheckError != "" {
 		t.Fatalf("nil outcome must be a pure state report: %+v", result)
 	}
 }

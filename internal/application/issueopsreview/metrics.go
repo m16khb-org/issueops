@@ -13,27 +13,27 @@ import (
 // ListOutcomes returns the summaries cleanup retained for deleted records whose
 // repository matches repo (every summary when repo is empty).
 type MetricsReader struct {
-	ReadRecord   func(stateRoot, id string) (issueops.IssueOpsRecord, error)
+	ReadRecord   func(stateRoot, id string) (issueops.Record, error)
 	ListCycleIDs func(stateRoot, repo string) (ids, unreadable []string, err error)
-	ListOutcomes func(stateRoot, repo string) (outcomes []issueops.IssueOpsCycleOutcome, unreadable []string, err error)
+	ListOutcomes func(stateRoot, repo string) (outcomes []issueops.CycleOutcome, unreadable []string, err error)
 	Now          func() time.Time
 }
 
-func (reader MetricsReader) Read(stateRoot, id, repo string) (issueops.IssueOpsReviewMetricsResult, error) {
+func (reader MetricsReader) Read(stateRoot, id, repo string) (issueops.ReviewMetricsResult, error) {
 	id, repo = strings.TrimSpace(id), strings.TrimSpace(repo)
 	if (id == "") == (repo == "") {
-		return issueops.IssueOpsReviewMetricsResult{OK: false}, fmt.Errorf("review metrics requires exactly one of --id or --repo")
+		return issueops.ReviewMetricsResult{OK: false}, fmt.Errorf("review metrics requires exactly one of --id or --repo")
 	}
-	result := issueops.IssueOpsReviewMetricsResult{
+	result := issueops.ReviewMetricsResult{
 		OK:          true,
-		Cycles:      []issueops.IssueOpsReviewMetricsCycle{},
+		Cycles:      []issueops.ReviewMetricsCycle{},
 		GeneratedAt: reader.Now().UTC().Format(time.RFC3339),
 	}
 	ids := []string{id}
 	if repo != "" {
 		listed, err := reader.listRepoCycleIDs(stateRoot, repo, &result)
 		if err != nil {
-			return issueops.IssueOpsReviewMetricsResult{OK: false}, err
+			return issueops.ReviewMetricsResult{OK: false}, err
 		}
 		ids = listed
 	}
@@ -58,7 +58,7 @@ func (reader MetricsReader) Read(stateRoot, id, repo string) (issueops.IssueOpsR
 	}
 	if repo != "" && reader.ListOutcomes != nil {
 		if err := reader.appendRetainedOutcomes(stateRoot, repo, live, &result); err != nil {
-			return issueops.IssueOpsReviewMetricsResult{OK: false}, err
+			return issueops.ReviewMetricsResult{OK: false}, err
 		}
 	}
 	result.Aggregate = issueopsdomain.AggregateReviewMetrics(result.Cycles)
@@ -67,7 +67,7 @@ func (reader MetricsReader) Read(stateRoot, id, repo string) (issueops.IssueOpsR
 
 // listRepoCycleIDs lists the cycles of repo and records every unreadable one as
 // a read error and warning on result.
-func (reader MetricsReader) listRepoCycleIDs(stateRoot, repo string, result *issueops.IssueOpsReviewMetricsResult) ([]string, error) {
+func (reader MetricsReader) listRepoCycleIDs(stateRoot, repo string, result *issueops.ReviewMetricsResult) ([]string, error) {
 	if reader.ListCycleIDs == nil {
 		return nil, fmt.Errorf("review metrics repo listing is unavailable")
 	}
@@ -84,7 +84,7 @@ func (reader MetricsReader) listRepoCycleIDs(stateRoot, repo string, result *iss
 
 // appendRetainedOutcomes adds the outcomes cleanup retained for repo, skipping
 // any cycle that still has a live record.
-func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live map[string]bool, result *issueops.IssueOpsReviewMetricsResult) error {
+func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live map[string]bool, result *issueops.ReviewMetricsResult) error {
 	outcomes, unreadable, err := reader.ListOutcomes(stateRoot, repo)
 	if err != nil {
 		return err
@@ -104,13 +104,13 @@ func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live 
 
 // readRetained answers a single-cycle query whose record is gone from the
 // outcome cleanup retained, or returns the original record error.
-func (reader MetricsReader) readRetained(stateRoot, id string, result issueops.IssueOpsReviewMetricsResult, recordErr error) (issueops.IssueOpsReviewMetricsResult, error) {
+func (reader MetricsReader) readRetained(stateRoot, id string, result issueops.ReviewMetricsResult, recordErr error) (issueops.ReviewMetricsResult, error) {
 	if reader.ListOutcomes == nil {
-		return issueops.IssueOpsReviewMetricsResult{OK: false}, recordErr
+		return issueops.ReviewMetricsResult{OK: false}, recordErr
 	}
 	outcomes, _, err := reader.ListOutcomes(stateRoot, "")
 	if err != nil {
-		return issueops.IssueOpsReviewMetricsResult{OK: false}, errors.Join(recordErr, err)
+		return issueops.ReviewMetricsResult{OK: false}, errors.Join(recordErr, err)
 	}
 	for _, outcome := range outcomes {
 		if outcome.ID == id {
@@ -119,5 +119,5 @@ func (reader MetricsReader) readRetained(stateRoot, id string, result issueops.I
 			return result, nil
 		}
 	}
-	return issueops.IssueOpsReviewMetricsResult{OK: false}, recordErr
+	return issueops.ReviewMetricsResult{OK: false}, recordErr
 }

@@ -1,3 +1,6 @@
+// Package projectdoc is the filesystem adapter for project documents: it
+// discovers and summarizes the .issueops document catalog of a repository
+// (bounded header reads) and classifies planned doc writes.
 package projectdoc
 
 import (
@@ -26,7 +29,7 @@ const (
 		"it matches shared words only, so grep .issueops/cautions and .issueops/adr for the subsystem you change before relying on its answer."
 )
 
-// projectdocdomain.ProjectDocCatalogEntry describes one project doc in the working repo's
+// projectdocdomain.CatalogEntry describes one project doc in the working repo's
 // .issueops directory: its repo-relative path and a fixed description of
 // what category of information it contains.
 //
@@ -51,7 +54,7 @@ const (
 // name-keyed metadata. The entries are sorted by path so they can live in an
 // immutable context prefix. Everything left out is counted in the returned
 // omissions; stats expose the deterministic cost of the pass.
-func DiscoverProjectDocsReport(repoRoot string) ([]projectdocdomain.ProjectDocCatalogEntry, projectdocdomain.CatalogOmissions, projectdocdomain.CatalogStats) {
+func DiscoverProjectDocsReport(repoRoot string) ([]projectdocdomain.CatalogEntry, projectdocdomain.CatalogOmissions, projectdocdomain.CatalogStats) {
 	var omissions projectdocdomain.CatalogOmissions
 	var stats projectdocdomain.CatalogStats
 	repoRoot = strings.TrimSpace(repoRoot)
@@ -85,7 +88,7 @@ func DiscoverProjectDocsReport(repoRoot string) ([]projectdocdomain.ProjectDocCa
 	omissions.ScanTruncated = scanTruncated
 	omissions.OverCap = selector.overCap
 
-	catalog := []projectdocdomain.ProjectDocCatalogEntry{}
+	catalog := []projectdocdomain.CatalogEntry{}
 	for _, name := range selector.names() {
 		header, truncated, status := readProjectDocCatalogHeader(root, filepath.Join(".issueops", name), &stats)
 		switch status {
@@ -149,7 +152,7 @@ func newProjectDocNameSelector() *projectDocNameSelector {
 	for _, name := range projectdocdomain.OptionalProjectDocNames() {
 		priority[name] = 1
 	}
-	for _, name := range projectdocdomain.ProjectDocNames() {
+	for _, name := range projectdocdomain.Names() {
 		priority[name] = 0
 	}
 	return &projectDocNameSelector{priority: priority, kept: make([]string, 0, projectDocCatalogMaxEntries)}
@@ -231,7 +234,7 @@ func readProjectDocCatalogHeader(root *os.Root, name string, stats *projectdocdo
 // buildProjectDocCatalogEntry derives the entry from the header window. The
 // second result reports a truncated window that did not hold the full metadata:
 // an unclosed frontmatter block or no H1 inside the window.
-func buildProjectDocCatalogEntry(name, header string, truncated bool) (projectdocdomain.ProjectDocCatalogEntry, bool) {
+func buildProjectDocCatalogEntry(name, header string, truncated bool) (projectdocdomain.CatalogEntry, bool) {
 	_, description, body, ok := projectdocdomain.ParseFrontmatter(header)
 	if !ok {
 		body = header
@@ -243,7 +246,7 @@ func buildProjectDocCatalogEntry(name, header string, truncated bool) (projectdo
 	}
 	title := firstMarkdownHeading(body)
 	unclosedFrontmatter := !ok && strings.TrimSpace(strings.SplitN(header, "\n", 2)[0]) == "---"
-	return projectdocdomain.ProjectDocCatalogEntry{
+	return projectdocdomain.CatalogEntry{
 		RelPath:     filepath.ToSlash(filepath.Join(".issueops", name)),
 		Title:       title,
 		Description: description,
@@ -260,7 +263,7 @@ func buildProjectDocCatalogEntry(name, header string, truncated bool) (projectdo
 // route matches shared words only (recall@5 0.178 on committed plan titles,
 // 2026-11-04), so the line pairs it with a grep of the record directories.
 // Returns "" when there is nothing to present.
-func FormatProjectDocCatalog(entries []projectdocdomain.ProjectDocCatalogEntry) string {
+func FormatProjectDocCatalog(entries []projectdocdomain.CatalogEntry) string {
 	if len(entries) == 0 {
 		return ""
 	}

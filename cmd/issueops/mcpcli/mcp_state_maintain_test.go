@@ -19,7 +19,7 @@ func TestMCPStateMaintain(t *testing.T) {
 	if outcome.Err != nil {
 		t.Fatalf("state_maintain failed: %+v", outcome.Err)
 	}
-	result, ok := outcome.Payload.(statecontract.StateMaintainResult)
+	result, ok := outcome.Payload.(statecontract.MaintainResult)
 	if !ok {
 		t.Fatalf("unexpected payload type %T", outcome.Payload)
 	}

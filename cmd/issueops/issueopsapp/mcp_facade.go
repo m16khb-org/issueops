@@ -51,7 +51,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		Execution:     mcpcli.ExecutionDeps{ExecuteExecution: newExecutionService().Execute, ObserveNativeProcessAncestry: issueopsadapter.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return stateRoot }},
 
 		Gates:   newGatesService(),
-		Channel: newChannelService(statestore.StateDir()),
+		Channel: newChannelService(statestore.Dir()),
 		Policy:  policyService, Audit: newCommandAuditService(policyService),
 		Worker:           newWorkerService(),
 		Catalog:          mcpcatalog.Build(),
@@ -64,9 +64,9 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 			ReadHarnessFile: func(parts ...string) (string, error) { return pathutil.ReadHarnessFile(root, parts...) },
 			StateList:       state.List, RouteProjectDocs: docsService.Route, DocsIndex: newDocsService().IndexScoped, CommandPolicySummary: policy.CommandPolicySummary,
 		},
-		SelfHistory:  newSelfWorkflowHistory(statestore.StateDir()),
-		SelfState:    newSelfWorkflowState(statestore.StateDir()),
-		SelfPlanning: newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version),
+		SelfHistory:  newSelfWorkflowHistory(statestore.Dir()),
+		SelfState:    newSelfWorkflowState(statestore.Dir()),
+		SelfPlanning: newSelfWorkflowPlanning(issueOpsRoot(), statestore.Dir(), version),
 		SelfVerify:   newSelfWorkflowExecutor(issueOpsRoot()),
 		Prepare:      execution.Prepare,
 		BaseSync:     basesyncoutbound.NewInspector(basesyncoutbound.RunGit),
@@ -78,7 +78,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 			Create: issueOpsPublicationCreateHandler, Reconcile: issueOpsPublicationReconcileHandler,
 		},
 		RequestScope:  mcpcli.NewRequestScope(authorityoutbound.ScopeResolver{}, issueOpsMCPRecordRoots(stateRoot)),
-		Credentials:   authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()},
+		Credentials:   authorityoutbound.CredentialFiles{StateDir: statestore.Dir()},
 		BindAuthority: bindIssueOpsAuthority,
 		BindTrace:     issueOpsMCPTraceBinding(os.Stderr),
 	}
@@ -95,7 +95,7 @@ func issueOpsMCPHTTPDependencies() mcpcli.MCPDependencies {
 	deps.DefaultTarget = root
 	deps.Inspect = scopedHarnessInspector(root)
 	docsService := newScopedProjectDocsService(root, root)
-	deps.Resources.RouteProjectDocs = func(_ string, task string) (projectdocscontract.ProjectDocsRouteResult, error) {
+	deps.Resources.RouteProjectDocs = func(_ string, task string) (projectdocscontract.RouteResult, error) {
 		return docsService.Route(root, task)
 	}
 	deps.ForRequest = issueOpsMCPRequestDependencies(deps)

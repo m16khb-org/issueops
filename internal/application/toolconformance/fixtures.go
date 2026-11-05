@@ -9,8 +9,10 @@ import (
 	fixtureport "issueops/internal/port/toolconformance"
 )
 
+// FixtureService loads the conformance fixture manifest and regression fixtures through Files and replays regressions.
 type FixtureService struct{ Files fixtureport.FixtureFiles }
 
+// LoadManifest reads the fixture manifest and prepares fixtures and baseline cases against the live tool descriptors.
 func (s FixtureService) LoadManifest(descriptors []contract.ToolDescriptor) ([]contract.Fixture, []contract.BaselineCase, error) {
 	manifest, err := s.Files.ReadManifest()
 	if err != nil {
@@ -19,6 +21,7 @@ func (s FixtureService) LoadManifest(descriptors []contract.ToolDescriptor) ([]c
 	return domain.PrepareManifest(manifest, descriptors)
 }
 
+// LoadRegressionFixture reads the regression fixture at path and validates it before returning it.
 func (s FixtureService) LoadRegressionFixture(path string) (contract.RegressionFixture, error) {
 	fixture, err := s.Files.ReadRegression(path)
 	if err != nil {
@@ -30,6 +33,9 @@ func (s FixtureService) LoadRegressionFixture(path string) (contract.RegressionF
 	return fixture, nil
 }
 
+// ReplayRegression classifies the fixture's canonical arguments against its source tool without invoking the tool.
+// It counts a handler call only when the arguments are valid, records the probe state hashes before and after,
+// and reports whether the replay matches the fixture's expectations.
 func (s FixtureService) ReplayRegression(fixture contract.RegressionFixture, descriptors []contract.ToolDescriptor, stateDir string) (contract.ReplayResult, error) {
 	if err := domain.ValidateRegressionFixture(fixture); err != nil {
 		return contract.ReplayResult{}, err

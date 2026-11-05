@@ -10,8 +10,8 @@ import (
 	"issueops/internal/port"
 )
 
-func githubRecord(generation uint64) model.IssueOpsRecord {
-	record := model.IssueOpsRecord{ID: "cycle", IssueURL: "https://github.com/example/repo/issues/1"}
+func githubRecord(generation uint64) model.Record {
+	record := model.Record{ID: "cycle", IssueURL: "https://github.com/example/repo/issues/1"}
 	if generation != 0 {
 		record.Execution = &model.Execution{Lease: model.WriteLease{Generation: generation}}
 	}
@@ -46,14 +46,14 @@ func TestRemoteBranchInvocationRefusesBeforeRunningCleanup(t *testing.T) {
 		want    error
 		message string
 	}{
-		{name: "record unreadable", service: Invocation{Read: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, readFailure }}, want: readFailure},
-		{name: "provider undeterminable", service: Invocation{Read: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{ID: "cycle"}, nil }}, message: "cannot determine provider"},
+		{name: "record unreadable", service: Invocation{Read: func(string) (model.Record, error) { return model.Record{}, readFailure }}, want: readFailure},
+		{name: "provider undeterminable", service: Invocation{Read: func(string) (model.Record, error) { return model.Record{ID: "cycle"}, nil }}, message: "cannot determine provider"},
 		{name: "provider construction fails", service: Invocation{
-			Read:     func(string) (model.IssueOpsRecord, error) { return githubRecord(0), nil },
+			Read:     func(string) (model.Record, error) { return githubRecord(0), nil },
 			Provider: func(string) (port.IssueProvider, error) { return nil, providerFailure },
 		}, want: providerFailure},
 		{name: "merge verification unavailable", service: Invocation{
-			Read:     func(string) (model.IssueOpsRecord, error) { return githubRecord(0), nil },
+			Read:     func(string) (model.Record, error) { return githubRecord(0), nil },
 			Provider: func(string) (port.IssueProvider, error) { return nil, nil },
 		}, message: "merge verification is not configured"},
 	}
@@ -85,7 +85,7 @@ func TestRemoteBranchInvocationBindsNextCommandToRecordGeneration(t *testing.T) 
 		t.Run(tc.name, func(t *testing.T) {
 			observed := 0
 			service := Invocation{
-				Read:                       func(string) (model.IssueOpsRecord, error) { return githubRecord(5), nil },
+				Read:                       func(string) (model.Record, error) { return githubRecord(5), nil },
 				Provider:                   func(name string) (port.IssueProvider, error) { return nil, nil },
 				MergeVerificationAvailable: true,
 				Provenance:                 invocationObserver{&observed, tc.observeErr},
@@ -115,7 +115,7 @@ func TestLinkedBranchInvocationReadsRecordAndBindsNextCommand(t *testing.T) {
 	readFailure, bindFailure, runFailure := errors.New("record unreadable"), errors.New("binary unavailable"), errors.New("branch refused")
 	t.Run("record unreadable", func(t *testing.T) {
 		service := Invocation{
-			Read: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, readFailure },
+			Read: func(string) (model.Record, error) { return model.Record{}, readFailure },
 			RunLinkedBranch: func(context.Context, model.CleanupLinkedBranchRequest) (model.CleanupLinkedBranchResult, error) {
 				t.Fatal("linked branch cleanup ran without a record")
 				return model.CleanupLinkedBranchResult{}, nil
@@ -127,7 +127,7 @@ func TestLinkedBranchInvocationReadsRecordAndBindsNextCommand(t *testing.T) {
 	t.Run("binds and keeps executor error", func(t *testing.T) {
 		observed := 0
 		service := Invocation{
-			Read: func(string) (model.IssueOpsRecord, error) { return githubRecord(7), nil }, Provenance: invocationObserver{&observed, nil},
+			Read: func(string) (model.Record, error) { return githubRecord(7), nil }, Provenance: invocationObserver{&observed, nil},
 			RunLinkedBranch: func(context.Context, model.CleanupLinkedBranchRequest) (model.CleanupLinkedBranchResult, error) {
 				return model.CleanupLinkedBranchResult{NextCommand: "issueops cleanup linked-branch --id cycle --preview"}, runFailure
 			},
@@ -140,7 +140,7 @@ func TestLinkedBranchInvocationReadsRecordAndBindsNextCommand(t *testing.T) {
 	t.Run("binding failure", func(t *testing.T) {
 		observed := 0
 		service := Invocation{
-			Read: func(string) (model.IssueOpsRecord, error) { return githubRecord(7), nil }, Provenance: invocationObserver{&observed, bindFailure},
+			Read: func(string) (model.Record, error) { return githubRecord(7), nil }, Provenance: invocationObserver{&observed, bindFailure},
 			RunLinkedBranch: func(context.Context, model.CleanupLinkedBranchRequest) (model.CleanupLinkedBranchResult, error) {
 				return model.CleanupLinkedBranchResult{NextCommand: "issueops cleanup linked-branch --id cycle --preview"}, runFailure
 			},
@@ -151,7 +151,7 @@ func TestLinkedBranchInvocationReadsRecordAndBindsNextCommand(t *testing.T) {
 	t.Run("ungenerationed record leaves command untouched", func(t *testing.T) {
 		observed := 0
 		service := Invocation{
-			Read: func(string) (model.IssueOpsRecord, error) { return githubRecord(0), nil }, Provenance: invocationObserver{&observed, nil},
+			Read: func(string) (model.Record, error) { return githubRecord(0), nil }, Provenance: invocationObserver{&observed, nil},
 			RunLinkedBranch: func(context.Context, model.CleanupLinkedBranchRequest) (model.CleanupLinkedBranchResult, error) {
 				return model.CleanupLinkedBranchResult{NextCommand: "issueops cleanup linked-branch --id cycle"}, nil
 			},
@@ -168,10 +168,10 @@ func TestAbandonInvocationReportsUnreadableRecordWhenBindingNeeded(t *testing.T)
 	run := func(context.Context, model.CleanupAbandonRequest) (model.CleanupAbandonResult, error) {
 		return model.CleanupAbandonResult{NextCommand: "issueops cleanup abandon --id cycle --preview"}, nil
 	}
-	_, err := (Invocation{Read: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, readFailure }, RunAbandon: run}).Abandon(t.Context(), model.CleanupAbandonRequest{ID: "cycle"})
+	_, err := (Invocation{Read: func(string) (model.Record, error) { return model.Record{}, readFailure }, RunAbandon: run}).Abandon(t.Context(), model.CleanupAbandonRequest{ID: "cycle"})
 	requireInvocationError(t, err, readFailure)
 	observed := 0
-	_, err = (Invocation{Read: func(string) (model.IssueOpsRecord, error) { return githubRecord(2), nil }, Provenance: invocationObserver{&observed, bindFailure}, RunAbandon: run}).Abandon(t.Context(), model.CleanupAbandonRequest{ID: "cycle"})
+	_, err = (Invocation{Read: func(string) (model.Record, error) { return githubRecord(2), nil }, Provenance: invocationObserver{&observed, bindFailure}, RunAbandon: run}).Abandon(t.Context(), model.CleanupAbandonRequest{ID: "cycle"})
 	requireBindingFailure(t, err)
 }
 
@@ -189,14 +189,14 @@ func TestFinishInvocationRefusesBeforeRunningCleanup(t *testing.T) {
 		want     error
 		message  string
 	}{
-		{name: "record unreadable", service: Invocation{Read: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, readFailure }}, want: readFailure},
-		{name: "provider undeterminable", service: Invocation{Read: func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{ID: "cycle"}, nil }}, message: "pass --provider"},
+		{name: "record unreadable", service: Invocation{Read: func(string) (model.Record, error) { return model.Record{}, readFailure }}, want: readFailure},
+		{name: "provider undeterminable", service: Invocation{Read: func(string) (model.Record, error) { return model.Record{ID: "cycle"}, nil }}, message: "pass --provider"},
 		{name: "provider construction fails", service: Invocation{
-			Read:     func(string) (model.IssueOpsRecord, error) { return githubRecord(0), nil },
+			Read:     func(string) (model.Record, error) { return githubRecord(0), nil },
 			Provider: func(string) (port.IssueProvider, error) { return nil, providerFailure },
 		}, want: providerFailure},
 		{name: "override provider is validated even when record has none", service: Invocation{
-			Read:     func(string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{ID: "cycle"}, nil },
+			Read:     func(string) (model.Record, error) { return model.Record{ID: "cycle"}, nil },
 			Provider: func(name string) (port.IssueProvider, error) { return nil, errors.New("unknown provider " + name) },
 		}, override: "gitea", message: "unknown provider gitea"},
 	}

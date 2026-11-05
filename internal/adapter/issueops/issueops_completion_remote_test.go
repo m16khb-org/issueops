@@ -24,16 +24,16 @@ type fakeCompletionProvider struct {
 }
 
 func (p *fakeCompletionProvider) Name() string { return "github" }
-func (p *fakeCompletionProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+func (p *fakeCompletionProvider) CreateIssue(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (p *fakeCompletionProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (p *fakeCompletionProvider) CreatePullRequest(context.Context, port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
-func (p *fakeCompletionProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+func (p *fakeCompletionProvider) CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil
 }
-func (p *fakeCompletionProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
+func (p *fakeCompletionProvider) CloseChild(context.Context, port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
 func (p *fakeCompletionProvider) CloseIssue(_ context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
@@ -45,16 +45,16 @@ func (p *fakeCompletionProvider) UpdateIssueBodySection(ctx context.Context, req
 	return p.updateRes, p.updateErr
 }
 
-func completionTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
+func completionTestRecord(t *testing.T) (string, issueops.Record) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "81-completion"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "81-completion"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/81"
-	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueops.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/85",
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
@@ -179,7 +179,7 @@ func portUpdateResult(updated bool) port.IssueProviderUpdateIssueBodySectionResu
 
 func completionServiceForTest(root string, prov port.IssueProvider, merged bool) *completionapp.RemoteCompletionService {
 	store := RemoteRecordStore{StateRoot: root}
-	return completionapp.NewRemoteCompletionService(store, completionapp.TrackedMaterials{Files: MaterialFiles{}}, completionapp.NewCompletionReceipts(store, time.Now), func(string) (completionapp.CompletionProvider, error) { return prov, nil }, func(issueops.IssueOpsRemoteArtifactVerification) error {
+	return completionapp.NewRemoteCompletionService(store, completionapp.TrackedMaterials{Files: MaterialFiles{}}, completionapp.NewCompletionReceipts(store, time.Now), func(string) (completionapp.CompletionProvider, error) { return prov, nil }, func(issueops.RemoteArtifactVerification) error {
 		if !merged {
 			return fmt.Errorf("missing merge evidence")
 		}

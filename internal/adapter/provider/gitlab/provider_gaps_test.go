@@ -188,13 +188,13 @@ func TestGitLabReadIssueSnapshotRejectsBadInputsAndResponses(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
 		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
-		if _, err := NewProvider().ReadIssueSnapshot(ctx, executionissue.ExecutionIssueSnapshotRequest{Repo: t.TempDir(), URL: url}); !errors.Is(err, context.Canceled) {
+		if _, err := NewProvider().ReadIssueSnapshot(ctx, executionissue.SnapshotRequest{Repo: t.TempDir(), URL: url}); !errors.Is(err, context.Canceled) {
 			t.Fatalf("error = %v", err)
 		}
 	})
 	t.Run("non issue URL", func(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
-		if _, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.ExecutionIssueSnapshotRequest{Repo: t.TempDir(), URL: "https://gitlab.example.com/acme/repo"}); err == nil {
+		if _, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.SnapshotRequest{Repo: t.TempDir(), URL: "https://gitlab.example.com/acme/repo"}); err == nil {
 			t.Fatal("a URL without an issue marker must be rejected")
 		}
 	})
@@ -207,7 +207,7 @@ func TestGitLabReadIssueSnapshotRejectsBadInputsAndResponses(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			repo := installGlab(t, tt.body)
-			_, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.ExecutionIssueSnapshotRequest{Repo: repo, URL: url})
+			_, err := NewProvider().ReadIssueSnapshot(t.Context(), executionissue.SnapshotRequest{Repo: repo, URL: url})
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}
@@ -524,12 +524,12 @@ exit 1
 
 func TestGitLabCreateIssueConfirmRequiresAuthorityAndRejectsMalformedKey(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	_, err := NewProvider().CreateIssueContext(t.Context(), port.IssueProviderCreateIssueRequest{Title: "t", Confirm: true})
+	_, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Title: "t", Confirm: true})
 	if cerr, ok := errors.AsType[*port.IssueProviderCreateError](err); !ok || cerr.Invoked || !strings.Contains(err.Error(), "project authority is required") {
 		t.Fatalf("error = %v", err)
 	}
 	for _, key := range []string{"GitLab.com/acme/repo", "gitlab.com/acme", "gitlab.com/acme/repo?x=1", "user@gitlab.com/acme/repo", "gitlab.com/acme repo"} {
-		if _, err := NewProvider().CreateIssueContext(t.Context(), port.IssueProviderCreateIssueRequest{Title: "t", ProjectKey: key}); err == nil || !strings.Contains(err.Error(), "malformed") {
+		if _, err := NewProvider().CreateIssue(t.Context(), port.IssueProviderCreateIssueRequest{Title: "t", ProjectKey: key}); err == nil || !strings.Contains(err.Error(), "malformed") {
 			t.Fatalf("project key %q error = %v", key, err)
 		}
 	}
@@ -540,7 +540,7 @@ func TestGitLabCreateIssueConfirmOutcomes(t *testing.T) {
 	t.Run("returns the canonical URL and passes argv", func(t *testing.T) {
 		req := req
 		req.Repo = installGlab(t, "printf 'Creating issue\\nhttps://gitlab.com/acme/repo/-/issues/5\\n'\n")
-		got, err := NewProvider().CreateIssue(req)
+		got, err := NewProvider().CreateIssue(t.Context(), req)
 		if err != nil || !got.OK || got.URL != "https://gitlab.com/acme/repo/-/issues/5" {
 			t.Fatalf("got=%+v err=%v", got, err)
 		}
@@ -552,7 +552,7 @@ func TestGitLabCreateIssueConfirmOutcomes(t *testing.T) {
 	t.Run("success without URL must not be retried", func(t *testing.T) {
 		req := req
 		req.Repo = installGlab(t, "printf 'done\\n'\n")
-		got, err := NewProvider().CreateIssue(req)
+		got, err := NewProvider().CreateIssue(t.Context(), req)
 		cerr, ok := errors.AsType[*port.IssueProviderCreateError](err)
 		if !ok || !cerr.Invoked || got.OK || !strings.Contains(err.Error(), "no canonical URL; do not retry") {
 			t.Fatalf("got=%+v err=%v", got, err)
@@ -561,7 +561,7 @@ func TestGitLabCreateIssueConfirmOutcomes(t *testing.T) {
 	t.Run("failure with a URL reports unknown outcome and keeps the URL", func(t *testing.T) {
 		req := req
 		req.Repo = installGlab(t, "printf 'https://gitlab.com/acme/repo/-/issues/6\\n'\necho 'timeout' >&2\nexit 1\n")
-		got, err := NewProvider().CreateIssue(req)
+		got, err := NewProvider().CreateIssue(t.Context(), req)
 		cerr, ok := errors.AsType[*port.IssueProviderCreateError](err)
 		if !ok || !cerr.Invoked || got.URL != "https://gitlab.com/acme/repo/-/issues/6" || !strings.Contains(err.Error(), "outcome unknown with a canonical URL") {
 			t.Fatalf("got=%+v err=%v", got, err)
@@ -570,7 +570,7 @@ func TestGitLabCreateIssueConfirmOutcomes(t *testing.T) {
 	t.Run("failure without a URL reports unknown outcome", func(t *testing.T) {
 		req := req
 		req.Repo = installGlab(t, "echo 'timeout' >&2\nexit 1\n")
-		got, err := NewProvider().CreateIssue(req)
+		got, err := NewProvider().CreateIssue(t.Context(), req)
 		cerr, ok := errors.AsType[*port.IssueProviderCreateError](err)
 		if !ok || !cerr.Invoked || got.OK || got.URL != "" || !strings.Contains(err.Error(), "outcome unknown; do not retry") {
 			t.Fatalf("got=%+v err=%v", got, err)
@@ -578,7 +578,7 @@ func TestGitLabCreateIssueConfirmOutcomes(t *testing.T) {
 	})
 	t.Run("missing glab is reported as not invoked", func(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
-		_, err := NewProvider().CreateIssue(req)
+		_, err := NewProvider().CreateIssue(t.Context(), req)
 		cerr, ok := errors.AsType[*port.IssueProviderCreateError](err)
 		if !ok || cerr.Invoked || !strings.Contains(err.Error(), "glab CLI is not installed") {
 			t.Fatalf("error = %v", err)

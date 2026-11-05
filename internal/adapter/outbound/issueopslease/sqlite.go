@@ -1,3 +1,5 @@
+// Package issueopslease 패키지는 lease 응용 계층이 쓰는 SQLite 저장소, claim token 파일, 프로세스 조사, 경로 비교, reseed 보조 어댑터를 제공한다.
+// 바깥쪽 어댑터 계층에 속하며 lease 규칙은 domain과 application 패키지가 소유한다.
 package issueopslease
 
 import (
@@ -23,12 +25,16 @@ const (
 	holderBucket = port.LeaseHolderBucket
 )
 
+// SQLiteRepository 타입은 lease 레코드와 holder 역색인을 한 트랜잭션에서 갱신하는 저장소다.
 type SQLiteRepository struct{ store port.TransactionalRecordStore }
 
+// NewSQLiteRepository 함수는 store를 쓰는 SQLiteRepository를 만든다.
 func NewSQLiteRepository(store port.TransactionalRecordStore) *SQLiteRepository {
 	return &SQLiteRepository{store: store}
 }
 
+// Update 메서드는 한 span 안에서 id의 레코드를 읽고 validate, transition 순서로 적용해 바뀐 lease를 저장하고 holder 역색인을 지운다.
+// validate나 transition이 실패하면 아무것도 저장하지 않는다.
 func (r *SQLiteRepository) Update(
 	ctx context.Context,
 	id string,
@@ -54,6 +60,8 @@ func (r *SQLiteRepository) Update(
 	return after, nil
 }
 
+// Claim 메서드는 한 span 안에서 lease claim을 수행해 레코드와 holder 역색인을 저장한다.
+// 같은 세션이 이미 다른 활성 lease를 갖고 있으면 오류를 반환한다.
 func (r *SQLiteRepository) Claim(ctx context.Context, request leaseapp.ClaimRepositoryRequest) (leaseapp.RepositoryResult, error) {
 	if r.store == nil {
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))

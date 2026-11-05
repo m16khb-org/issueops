@@ -12,6 +12,9 @@ import (
 	"strings"
 )
 
+// CollectBranchFunctions 함수는 root 아래 프로덕션 Go 파일을 파싱해 모든 함수와
+// 분기 수를 분기 수 내림차순, 파일, 줄 순으로 정렬해 돌려준다. 스캔과 파싱
+// 실패는 경고로 돌려준다.
 func CollectBranchFunctions(root string) ([]contract.BranchFunction, []string) {
 	functions := []contract.BranchFunction{}
 	warnings := []string{}
@@ -85,6 +88,8 @@ type auditScanner struct {
 	warnings     []string
 }
 
+// CollectAuditItems 함수는 .issueops/PROJECT_AUDIT.md의 open 감사 표를 읽어
+// P0~P2 항목을 돌려준다. 잘못된 표와 모순된 0건 선언은 경고로 돌려준다.
 func CollectAuditItems(root string) ([]contract.AuditItem, []string) {
 	path := filepath.Join(root, ".issueops", "PROJECT_AUDIT.md")
 	b, err := os.ReadFile(path)

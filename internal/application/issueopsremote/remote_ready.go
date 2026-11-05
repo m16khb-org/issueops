@@ -52,7 +52,7 @@ func (s *RemoteMergeService) MarkReady(ctx context.Context, id string, confirm b
 }
 
 // markReadyConfirmed clears the draft state and requires the readback to show it cleared.
-func markReadyConfirmed(ctx context.Context, merger port.IssueProviderPullRequestMerger, record model.IssueOpsRecord, target domain.MergeTarget, result model.RemoteReadyResult) (model.RemoteReadyResult, error) {
+func markReadyConfirmed(ctx context.Context, merger port.IssueProviderPullRequestMerger, record model.Record, target domain.MergeTarget, result model.RemoteReadyResult) (model.RemoteReadyResult, error) {
 	preview := fmt.Sprintf("issueops remote mark-ready --id %s --json", record.ID)
 	readier, ok := merger.(port.IssueProviderPullRequestReadier)
 	if !ok {

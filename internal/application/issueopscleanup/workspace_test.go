@@ -152,7 +152,7 @@ func TestWorkspaceProcessStopperReportsObservationFailuresAfterSignalling(t *tes
 
 func samePath(a, b string) (bool, error) { return a == b, nil }
 
-func cleanerFor(control WorkspaceProcessControl) WorkspaceCleaner {
+func cleanerFor(control workspaceProcessControl) WorkspaceCleaner {
 	return WorkspaceCleaner{Processes: control, SamePath: samePath}
 }
 

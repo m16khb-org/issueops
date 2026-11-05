@@ -8,6 +8,9 @@ import (
 	"issueops/cmd/issueops/cliflag"
 )
 
+// Run dispatches `issueops project` to the subcommand named by args[0]. A
+// missing subcommand prints usage and returns an error; help prints usage and
+// returns flag.ErrHelp.
 func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 {
 		projectUsage()

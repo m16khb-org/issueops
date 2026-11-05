@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func ValidateMCPSmokeContract(step *selfverify.StepResult) {
+func validateMCPSmokeContract(step *selfverify.StepResult) {
 	lines := splitLines(step.Stdout)
 	if len(lines) != 11 {
 		step.OK = false
@@ -23,14 +23,14 @@ func ValidateMCPSmokeContract(step *selfverify.StepResult) {
 			return
 		}
 	}
-	if !MCPSmokeHasExpectedMarkers(step.Stdout) {
+	if !hasExpectedMarkers(step.Stdout) {
 		step.OK = false
 		step.Error = "MCP smoke did not expose expected tool/resource"
 	}
 }
 
-func MCPSmokeHasExpectedMarkers(stdout string) bool {
-	for _, marker := range MCPSmokeExpectedMarkers() {
+func hasExpectedMarkers(stdout string) bool {
+	for _, marker := range expectedMarkers() {
 		if !strings.Contains(stdout, marker) {
 			return false
 		}
@@ -38,7 +38,7 @@ func MCPSmokeHasExpectedMarkers(stdout string) bool {
 	return true
 }
 
-func MCPSmokeExpectedMarkers() []string {
+func expectedMarkers() []string {
 	return []string{
 		"atomic_commit_preflight",
 		"docs_index",

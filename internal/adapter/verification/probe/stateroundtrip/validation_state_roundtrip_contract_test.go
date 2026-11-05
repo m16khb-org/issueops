@@ -79,43 +79,43 @@ func TestStateRoundtripRejectsContractViolatingResponses(t *testing.T) {
 		payload any
 		want    string
 	}{
-		{"write wrong key", "state write", statecontract.StateResult{OK: true, Record: record("other", goodContent)}, "write result did not match expected record"},
-		{"write wrong content", "state write", statecontract.StateResult{OK: true, Record: record(key, "tampered")}, "write result did not match expected record"},
-		{"write wrong byte count", "state write", statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Key: key, Content: goodContent, Bytes: 1}}, "write result did not match expected record"},
-		{"write not ok", "state write", statecontract.StateResult{OK: false, Record: record(key, goodContent)}, "write result did not match expected record"},
-		{"read wrong content", "state read", statecontract.StateResult{OK: true, Record: record(key, "tampered")}, "read result did not match expected record"},
-		{"list missing key", "state list", statecontract.StateListResult{OK: true, Keys: []string{"other"}}, "state list did not include roundtrip key"},
-		{"list not ok", "state list", statecontract.StateListResult{OK: false, Keys: []string{key}}, "state list did not include roundtrip key"},
-		{"prune dry-run not dry", "state prune dry-run", statecontract.StatePruneResult{OK: true, DryRun: false, DeletedKeys: []string{key + "-old"}, KeptKeys: []string{key}}, "state prune dry-run did not classify old/fresh keys"},
-		{"prune dry-run keeps old", "state prune dry-run", statecontract.StatePruneResult{OK: true, DryRun: true, KeptKeys: []string{key, key + "-old"}}, "state prune dry-run did not classify old/fresh keys"},
-		{"prune confirm still dry", "state prune confirm", statecontract.StatePruneResult{OK: true, DryRun: true, Confirm: true, DeletedKeys: []string{key + "-old"}}, "state prune confirm did not delete old key"},
-		{"prune confirm without confirm flag", "state prune confirm", statecontract.StatePruneResult{OK: true, DeletedKeys: []string{key + "-old"}}, "state prune confirm did not delete old key"},
-		{"list after prune lost fresh key", "state list after prune", statecontract.StateListResult{OK: true, Keys: []string{}}, "state prune did not preserve fresh key and remove old key"},
-		{"compare ok regressed", "self verify compare ok", selfaugment.SelfAugmentCompareResult{OK: true, Regressed: true, ElapsedDeltaMS: 100}, "self-verify compare reported unexpected non-regression result"},
-		{"compare ok wrong elapsed delta", "self verify compare ok", selfaugment.SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 99}, "self-verify compare reported unexpected non-regression result"},
-		{"compare ok not ok", "self verify compare ok", selfaugment.SelfAugmentCompareResult{OK: false, ElapsedDeltaMS: 100}, "self-verify compare reported unexpected non-regression result"},
-		{"compare threshold not regressed", "self verify compare regression", selfaugment.SelfAugmentCompareResult{OK: true}, "self-verify compare did not report expected elapsed regression"},
-		{"compare threshold without reasons", "self verify compare regression", selfaugment.SelfAugmentCompareResult{OK: true, Regressed: true}, "self-verify compare did not report expected elapsed regression"},
-		{"promote dry-run promoted", "self verify promote dry-run", selfaugment.SelfAugmentPromoteResult{OK: true, DryRun: true, Promoted: true}, "self-verify promote dry-run mutated state or did not report dry-run"},
-		{"promote dry-run not flagged", "self verify promote dry-run", selfaugment.SelfAugmentPromoteResult{OK: true}, "self-verify promote dry-run mutated state or did not report dry-run"},
-		{"promote confirm not promoted", "self verify promote confirm", selfaugment.SelfAugmentPromoteResult{OK: true}, "self-verify promote confirm did not write baseline"},
-		{"promote confirm still dry-run", "self verify promote confirm", selfaugment.SelfAugmentPromoteResult{OK: true, DryRun: true, Promoted: true}, "self-verify promote confirm did not write baseline"},
-		{"promoted compare drift", "self verify compare promoted", selfaugment.SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 5}, "promoted baseline did not compare cleanly with candidate"},
-		{"promoted compare regressed", "self verify compare promoted", selfaugment.SelfAugmentCompareResult{OK: true, Regressed: true}, "promoted baseline did not compare cleanly with candidate"},
-		{"history too few matches", "self verify history", selfaugment.SelfAugmentHistoryResult{OK: true, TotalMatches: 2, Entries: []selfaugment.SelfAugmentHistoryEntry{{Key: key + "-compare-base"}, {Key: key + "-compare-candidate"}, {Key: key + "-promoted-baseline"}}}, "self-verify history did not list saved baseline/candidate/promoted summaries"},
-		{"history missing promoted entry", "self verify history", selfaugment.SelfAugmentHistoryResult{OK: true, TotalMatches: 3, Entries: []selfaugment.SelfAugmentHistoryEntry{{Key: key + "-compare-base"}, {Key: key + "-compare-candidate"}}}, "self-verify history did not list saved baseline/candidate/promoted summaries"},
-		{"retention dry-run without retention", "self verify history retention dry-run", selfaugment.SelfAugmentHistoryResult{OK: true}, "retention dry-run did not classify prune candidates safely"},
-		{"retention dry-run already deleted", "self verify history retention dry-run", selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{DryRun: true, Limit: 1, CandidateKeys: []string{"a"}, DeletedKeys: []string{"a"}}}, "retention dry-run did not classify prune candidates safely"},
-		{"retention dry-run wrong limit", "self verify history retention dry-run", selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{DryRun: true, Limit: 2, CandidateKeys: []string{"a"}}}, "retention dry-run did not classify prune candidates safely"},
-		{"retention dry-run no candidates", "self verify history retention dry-run", selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{DryRun: true, Limit: 1}}, "retention dry-run did not classify prune candidates safely"},
-		{"retention confirm without retention", "self verify history retention confirm", selfaugment.SelfAugmentHistoryResult{OK: true}, "retention confirm did not delete prune candidates"},
-		{"retention confirm deleted nothing", "self verify history retention confirm", selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{Confirm: true}}, "retention confirm did not delete prune candidates"},
-		{"retention confirm still dry-run", "self verify history retention confirm", selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{DryRun: true, Confirm: true, DeletedKeys: []string{"a"}}}, "retention confirm did not delete prune candidates"},
-		{"history after retention too many", "self verify history after retention", selfaugment.SelfAugmentHistoryResult{OK: true, TotalMatches: 2}, "retention confirm left too many matching summaries"},
-		{"doctor healthy despite corruption", "state doctor", statecontract.StateDoctorResult{OK: true, Healthy: true, ValidKeys: []string{key}, Issues: []statecontract.StateDoctorIssue{{Code: "invalid_state"}}}, "state doctor did not report corrupt fixture and preserve valid key"},
-		{"doctor lost valid key", "state doctor", statecontract.StateDoctorResult{OK: true, ValidKeys: []string{"other"}, Issues: []statecontract.StateDoctorIssue{{Code: "invalid_state"}}}, "state doctor did not report corrupt fixture and preserve valid key"},
-		{"doctor wrong issue code", "state doctor", statecontract.StateDoctorResult{OK: true, ValidKeys: []string{key}, Issues: []statecontract.StateDoctorIssue{{Code: "other"}}}, "state doctor did not report corrupt fixture and preserve valid key"},
-		{"doctor no issues", "state doctor", statecontract.StateDoctorResult{OK: true, ValidKeys: []string{key}}, "state doctor did not report corrupt fixture and preserve valid key"},
+		{"write wrong key", "state write", statecontract.Result{OK: true, Record: record("other", goodContent)}, "write result did not match expected record"},
+		{"write wrong content", "state write", statecontract.Result{OK: true, Record: record(key, "tampered")}, "write result did not match expected record"},
+		{"write wrong byte count", "state write", statecontract.Result{OK: true, Record: statecontract.RecordEnvelope{Key: key, Content: goodContent, Bytes: 1}}, "write result did not match expected record"},
+		{"write not ok", "state write", statecontract.Result{OK: false, Record: record(key, goodContent)}, "write result did not match expected record"},
+		{"read wrong content", "state read", statecontract.Result{OK: true, Record: record(key, "tampered")}, "read result did not match expected record"},
+		{"list missing key", "state list", statecontract.ListResult{OK: true, Keys: []string{"other"}}, "state list did not include roundtrip key"},
+		{"list not ok", "state list", statecontract.ListResult{OK: false, Keys: []string{key}}, "state list did not include roundtrip key"},
+		{"prune dry-run not dry", "state prune dry-run", statecontract.PruneResult{OK: true, DryRun: false, DeletedKeys: []string{key + "-old"}, KeptKeys: []string{key}}, "state prune dry-run did not classify old/fresh keys"},
+		{"prune dry-run keeps old", "state prune dry-run", statecontract.PruneResult{OK: true, DryRun: true, KeptKeys: []string{key, key + "-old"}}, "state prune dry-run did not classify old/fresh keys"},
+		{"prune confirm still dry", "state prune confirm", statecontract.PruneResult{OK: true, DryRun: true, Confirm: true, DeletedKeys: []string{key + "-old"}}, "state prune confirm did not delete old key"},
+		{"prune confirm without confirm flag", "state prune confirm", statecontract.PruneResult{OK: true, DeletedKeys: []string{key + "-old"}}, "state prune confirm did not delete old key"},
+		{"list after prune lost fresh key", "state list after prune", statecontract.ListResult{OK: true, Keys: []string{}}, "state prune did not preserve fresh key and remove old key"},
+		{"compare ok regressed", "self verify compare ok", selfaugment.CompareResult{OK: true, Regressed: true, ElapsedDeltaMS: 100}, "self-verify compare reported unexpected non-regression result"},
+		{"compare ok wrong elapsed delta", "self verify compare ok", selfaugment.CompareResult{OK: true, ElapsedDeltaMS: 99}, "self-verify compare reported unexpected non-regression result"},
+		{"compare ok not ok", "self verify compare ok", selfaugment.CompareResult{OK: false, ElapsedDeltaMS: 100}, "self-verify compare reported unexpected non-regression result"},
+		{"compare threshold not regressed", "self verify compare regression", selfaugment.CompareResult{OK: true}, "self-verify compare did not report expected elapsed regression"},
+		{"compare threshold without reasons", "self verify compare regression", selfaugment.CompareResult{OK: true, Regressed: true}, "self-verify compare did not report expected elapsed regression"},
+		{"promote dry-run promoted", "self verify promote dry-run", selfaugment.PromoteResult{OK: true, DryRun: true, Promoted: true}, "self-verify promote dry-run mutated state or did not report dry-run"},
+		{"promote dry-run not flagged", "self verify promote dry-run", selfaugment.PromoteResult{OK: true}, "self-verify promote dry-run mutated state or did not report dry-run"},
+		{"promote confirm not promoted", "self verify promote confirm", selfaugment.PromoteResult{OK: true}, "self-verify promote confirm did not write baseline"},
+		{"promote confirm still dry-run", "self verify promote confirm", selfaugment.PromoteResult{OK: true, DryRun: true, Promoted: true}, "self-verify promote confirm did not write baseline"},
+		{"promoted compare drift", "self verify compare promoted", selfaugment.CompareResult{OK: true, ElapsedDeltaMS: 5}, "promoted baseline did not compare cleanly with candidate"},
+		{"promoted compare regressed", "self verify compare promoted", selfaugment.CompareResult{OK: true, Regressed: true}, "promoted baseline did not compare cleanly with candidate"},
+		{"history too few matches", "self verify history", selfaugment.HistoryResult{OK: true, TotalMatches: 2, Entries: []selfaugment.HistoryEntry{{Key: key + "-compare-base"}, {Key: key + "-compare-candidate"}, {Key: key + "-promoted-baseline"}}}, "self-verify history did not list saved baseline/candidate/promoted summaries"},
+		{"history missing promoted entry", "self verify history", selfaugment.HistoryResult{OK: true, TotalMatches: 3, Entries: []selfaugment.HistoryEntry{{Key: key + "-compare-base"}, {Key: key + "-compare-candidate"}}}, "self-verify history did not list saved baseline/candidate/promoted summaries"},
+		{"retention dry-run without retention", "self verify history retention dry-run", selfaugment.HistoryResult{OK: true}, "retention dry-run did not classify prune candidates safely"},
+		{"retention dry-run already deleted", "self verify history retention dry-run", selfaugment.HistoryResult{OK: true, Retention: &selfaugment.HistoryRetention{DryRun: true, Limit: 1, CandidateKeys: []string{"a"}, DeletedKeys: []string{"a"}}}, "retention dry-run did not classify prune candidates safely"},
+		{"retention dry-run wrong limit", "self verify history retention dry-run", selfaugment.HistoryResult{OK: true, Retention: &selfaugment.HistoryRetention{DryRun: true, Limit: 2, CandidateKeys: []string{"a"}}}, "retention dry-run did not classify prune candidates safely"},
+		{"retention dry-run no candidates", "self verify history retention dry-run", selfaugment.HistoryResult{OK: true, Retention: &selfaugment.HistoryRetention{DryRun: true, Limit: 1}}, "retention dry-run did not classify prune candidates safely"},
+		{"retention confirm without retention", "self verify history retention confirm", selfaugment.HistoryResult{OK: true}, "retention confirm did not delete prune candidates"},
+		{"retention confirm deleted nothing", "self verify history retention confirm", selfaugment.HistoryResult{OK: true, Retention: &selfaugment.HistoryRetention{Confirm: true}}, "retention confirm did not delete prune candidates"},
+		{"retention confirm still dry-run", "self verify history retention confirm", selfaugment.HistoryResult{OK: true, Retention: &selfaugment.HistoryRetention{DryRun: true, Confirm: true, DeletedKeys: []string{"a"}}}, "retention confirm did not delete prune candidates"},
+		{"history after retention too many", "self verify history after retention", selfaugment.HistoryResult{OK: true, TotalMatches: 2}, "retention confirm left too many matching summaries"},
+		{"doctor healthy despite corruption", "state doctor", statecontract.DoctorResult{OK: true, Healthy: true, ValidKeys: []string{key}, Issues: []statecontract.DoctorIssue{{Code: "invalid_state"}}}, "state doctor did not report corrupt fixture and preserve valid key"},
+		{"doctor lost valid key", "state doctor", statecontract.DoctorResult{OK: true, ValidKeys: []string{"other"}, Issues: []statecontract.DoctorIssue{{Code: "invalid_state"}}}, "state doctor did not report corrupt fixture and preserve valid key"},
+		{"doctor wrong issue code", "state doctor", statecontract.DoctorResult{OK: true, ValidKeys: []string{key}, Issues: []statecontract.DoctorIssue{{Code: "other"}}}, "state doctor did not report corrupt fixture and preserve valid key"},
+		{"doctor no issues", "state doctor", statecontract.DoctorResult{OK: true, ValidKeys: []string{key}}, "state doctor did not report corrupt fixture and preserve valid key"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			deps := depsWithOverride(t, tc.label, func(command []string) selfverify.StepResult {
@@ -156,7 +156,7 @@ func TestStateRoundtripSeedsCompareSnapshotsWithKnownElapsedTimes(t *testing.T) 
 	}
 	var got []written
 	deps := stateRoundtripTestDeps(t, contractSeed)
-	deps.writeSnapshot = func(_ string, key string, snap selfaugment.SelfAugmentStateSnapshot) error {
+	deps.writeSnapshot = func(_ string, key string, snap selfaugment.StateSnapshot) error {
 		got = append(got, written{key, snap.ElapsedMS, snap.BaseSeed})
 		return nil
 	}
@@ -176,7 +176,7 @@ func TestStateRoundtripSeedsCompareSnapshotsWithKnownElapsedTimes(t *testing.T) 
 func TestStateRoundtripSnapshotWriteFailureAbortsBeforeAnyCompare(t *testing.T) {
 	var labels []string
 	deps := stateRoundtripTestDeps(t, contractSeed)
-	deps.writeSnapshot = func(_ string, key string, _ selfaugment.SelfAugmentStateSnapshot) error {
+	deps.writeSnapshot = func(_ string, key string, _ selfaugment.StateSnapshot) error {
 		if strings.HasSuffix(key, "-compare-candidate") {
 			return errors.New("snapshot disk full")
 		}

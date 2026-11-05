@@ -19,9 +19,9 @@ func TestNextExplicitSelectionAvoidsInventory(t *testing.T) {
 		{"environment", "  ", " io-b ", "io-b"},
 	} {
 		t.Run(selection.name, func(t *testing.T) {
-			records := map[string]issueopscontract.IssueOpsRecord{
-				"io-a": {ID: "io-a", Repo: "/repo", Phase: issueopscontract.IssueOpsPhaseGrill, Execution: &issueopscontract.Execution{}},
-				"io-b": {ID: "io-b", Repo: "/repo", Phase: issueopscontract.IssueOpsPhaseGrill, Execution: &issueopscontract.Execution{}},
+			records := map[string]issueopscontract.Record{
+				"io-a": {ID: "io-a", Repo: "/repo", Phase: issueopscontract.PhaseGrill, Execution: &issueopscontract.Execution{}},
+				"io-b": {ID: "io-b", Repo: "/repo", Phase: issueopscontract.PhaseGrill, Execution: &issueopscontract.Execution{}},
 			}
 			ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a"}, {ID: "io-b"}}, records)
 			lists, reads := 0, 0
@@ -29,15 +29,15 @@ func TestNextExplicitSelectionAvoidsInventory(t *testing.T) {
 				lists++
 				return issueopsinventorycontract.ListResult{Entries: []issueopsinventorycontract.ListEntry{{ID: "io-a"}, {ID: "io-b"}}}, nil
 			}
-			ports.ReadRecord = func(_, id string) (issueopscontract.IssueOpsRecord, error) {
+			ports.ReadRecord = func(_, id string) (issueopscontract.Record, error) {
 				reads++
 				return records[id], nil
 			}
 			scans := 0
-			ports.ReadSelected = func(_ context.Context, root, id string) (issueopscontract.IssueOpsRecord, error) {
+			ports.ReadSelected = func(_ context.Context, root, id string) (issueopscontract.Record, error) {
 				return ports.ReadRecord(root, id)
 			}
-			ports.ScanRecords = func(context.Context, string, func(issueopscontract.IssueOpsRecord) error) error {
+			ports.ScanRecords = func(context.Context, string, func(issueopscontract.Record) error) error {
 				scans++
 				return nil
 			}
@@ -79,8 +79,8 @@ func TestNextSelectedRepositoryFence(t *testing.T) {
 			ports.CleanPath = func(path string) string {
 				return strings.TrimPrefix(filepath.ToSlash(filepath.Clean(path)), "/private")
 			}
-			ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
-				return issueopscontract.IssueOpsRecord{ID: "io-selected", Repo: scenario.repo, Invalid: scenario.invalid, Phase: issueopscontract.IssueOpsPhaseGrill}, nil
+			ports.ReadSelected = func(context.Context, string, string) (issueopscontract.Record, error) {
+				return issueopscontract.Record{ID: "io-selected", Repo: scenario.repo, Invalid: scenario.invalid, Phase: issueopscontract.PhaseGrill}, nil
 			}
 			ports.ListCycles = func(context.Context, string, string) (issueopsinventorycontract.ListResult, error) {
 				t.Fatal("explicit selection must not list")
@@ -116,8 +116,8 @@ func TestNextNamesAStaleIssueOpsIDFromTheEnvironment(t *testing.T) {
 		}
 		return ""
 	}
-	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
-		return issueopscontract.IssueOpsRecord{ID: "io-gone", Invalid: true}, nil
+	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.Record, error) {
+		return issueopscontract.Record{ID: "io-gone", Invalid: true}, nil
 	}
 	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
 	if err != nil || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "unset it") {
@@ -128,8 +128,8 @@ func TestNextNamesAStaleIssueOpsIDFromTheEnvironment(t *testing.T) {
 func TestNextSelectedPropagatesIOErrors(t *testing.T) {
 	failure := errors.New("database unavailable")
 	ports := testPorts(nil, nil)
-	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
-		return issueopscontract.IssueOpsRecord{}, failure
+	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.Record, error) {
+		return issueopscontract.Record{}, failure
 	}
 	_, err := NewService(ports).Next(context.Background(), "/state", "/repo", "io-selected")
 	if !errors.Is(err, failure) {
@@ -140,10 +140,10 @@ func TestNextSelectedPropagatesIOErrors(t *testing.T) {
 func TestNextSelectedPropagatesConflictScanErrors(t *testing.T) {
 	failure := errors.New("inventory read failed")
 	ports := testPorts(nil, nil)
-	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
-		return issueopscontract.IssueOpsRecord{ID: "io-selected", Repo: "/repo", Branch: "topic", Phase: issueopscontract.IssueOpsPhasePlan}, nil
+	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.Record, error) {
+		return issueopscontract.Record{ID: "io-selected", Repo: "/repo", Branch: "topic", Phase: issueopscontract.PhasePlan}, nil
 	}
-	ports.ScanRecords = func(context.Context, string, func(issueopscontract.IssueOpsRecord) error) error {
+	ports.ScanRecords = func(context.Context, string, func(issueopscontract.Record) error) error {
 		return failure
 	}
 	_, err := NewService(ports).Next(context.Background(), "/state", "/repo", "io-selected")
@@ -161,13 +161,13 @@ func TestNextSelectedStreamsRootConflictInFirstIDOrder(t *testing.T) {
 		}
 		return path
 	}
-	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
-		return issueopscontract.IssueOpsRecord{ID: "io-selected", Repo: "/repo", Branch: "topic/one", Phase: issueopscontract.IssueOpsPhasePlan}, nil
+	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.Record, error) {
+		return issueopscontract.Record{ID: "io-selected", Repo: "/repo", Branch: "topic/one", Phase: issueopscontract.PhasePlan}, nil
 	}
 	scans := 0
-	ports.ScanRecords = func(_ context.Context, _ string, visit func(issueopscontract.IssueOpsRecord) error) error {
+	ports.ScanRecords = func(_ context.Context, _ string, visit func(issueopscontract.Record) error) error {
 		scans++
-		for _, record := range []issueopscontract.IssueOpsRecord{
+		for _, record := range []issueopscontract.Record{
 			{ID: "io-foreign", Repo: "/foreign", Execution: &issueopscontract.Execution{Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/topic-one"}}},
 			{ID: "io-first", Repo: "/alias", Execution: &issueopscontract.Execution{Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/extra/../topic-one"}}},
 			{ID: "io-last", Repo: "/repo", Execution: &issueopscontract.Execution{Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/topic-one"}}},
@@ -187,8 +187,8 @@ func TestNextSelectedStreamsRootConflictInFirstIDOrder(t *testing.T) {
 }
 
 func TestNextAutoSelectionListsAndReadsEnvironmentOnce(t *testing.T) {
-	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-auto"}}, map[string]issueopscontract.IssueOpsRecord{
-		"io-auto": {ID: "io-auto", Repo: "/repo", Phase: issueopscontract.IssueOpsPhaseGrill},
+	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-auto"}}, map[string]issueopscontract.Record{
+		"io-auto": {ID: "io-auto", Repo: "/repo", Phase: issueopscontract.PhaseGrill},
 	})
 	envs, lists := 0, 0
 	ports.Env = func(string) string { envs++; return "" }

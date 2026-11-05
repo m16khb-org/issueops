@@ -1,3 +1,6 @@
+// Package executioncmd 패키지는 `issueops execution` CLI 서브커맨드(prepare, status, whoami,
+// claim, release, replace, reconcile, complete, sync-base, handoff-cmux)를 구현한다. 플래그를
+// 해석해 주입된 핸들러에 넘기고 결과를 출력하는 CLI 계층이며, 실행 lease 규칙은 하위 계층에 있다.
 package executioncmd
 
 import (
@@ -20,6 +23,8 @@ import (
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
 
+// Deps 타입은 execution 명령이 사용하는 핸들러와 출력 함수 묶음이다. 각 필드는 서브커맨드가
+// 호출하는 의존성이고, Runtime은 실행 오케스트레이션과 프로세스 관측 함수를 제공한다.
 type Deps struct {
 	Runtime                ExecutionDeps
 	StateRoot              func() string
@@ -57,6 +62,7 @@ func execute(req model.ExecutionActionRequest, deps Deps) (any, error) {
 	return deps.Runtime.ExecuteExecution(context.Background(), deps.StateRoot(), req, deps.actionDeps())
 }
 
+// Usage 상수는 `issueops execution` 도움말 텍스트다.
 const Usage = `Usage:
   issueops execution prepare --id ID ACTOR_FLAGS [--confirm] [--json]
   issueops execution status --id ID [--json]
@@ -71,6 +77,8 @@ const Usage = `Usage:
 
 ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH`
 
+// Run 함수는 args[0]의 서브커맨드를 골라 실행한다. 인자가 없거나 도움말 요청이면 Usage를
+// 출력하고, 알 수 없는 서브커맨드는 오류로 돌려준다.
 func Run(args []string, deps Deps) error {
 	if len(args) == 0 || isHelp(args[0]) {
 		fmt.Println(Usage)
@@ -285,7 +293,7 @@ func runStatus(args []string, deps Deps) error {
 	return output(result, *jsonOut, err, deps)
 }
 
-// ExecutionWhoamiResult는 호출 프로세스의 native host/session과 다음 명령에서도
+// ExecutionWhoamiResult 타입은 호출 프로세스의 native host/session과 다음 명령에서도
 // 재사용 가능한 ancestry receipt를 노출한다. owner가 claim identity를 shell
 // 확장 없이 리터럴 값으로 채우기 위한 read-only 표면이다(이슈 #90 발견 3 —
 // 확장이 섞인 claim은 exact 파싱이 fail-closed로 거부하므로, 관측 가능한 대체
@@ -306,7 +314,7 @@ type nativeSessionIdentity struct {
 	Source    string
 }
 
-// ResolveNativeSessionIdentity는 현재 세션의 native host와 session id를
+// ResolveNativeSessionIdentity 함수는 현재 세션의 native host와 session id를
 // 환경변수에서 읽는다. 같은 규칙을 다른 표면이 복제하지 않도록 이 한 곳을
 // 노출한다.
 func ResolveNativeSessionIdentity(getenv func(string) string) (host, sessionID, source string, err error) {
@@ -454,7 +462,7 @@ func RecordActorFlags(getenv func(string) string, cwd string) string {
 	if err != nil || strings.TrimSpace(cwd) == "" {
 		return ""
 	}
-	return recordActorFlags(identity, cwd)
+	return formatRecordActorFlags(identity, cwd)
 }
 
 // ClaimActorFlags is whoami's claim vector for this process with the given
@@ -477,7 +485,7 @@ func ClaimActorFlags(getenv func(string) string, observe func(int) ([]model.Nati
 	return result.ClaimActorFlags[0]
 }
 
-func recordActorFlags(identity nativeSessionIdentity, cwd string) string {
+func formatRecordActorFlags(identity nativeSessionIdentity, cwd string) string {
 	return fmt.Sprintf("--host %s --session-id %s --cwd %s",
 		identity.Host, shellQuoteClaimValue(identity.SessionID), shellQuoteClaimValue(cwd))
 }
@@ -503,7 +511,7 @@ func executionWhoamiResult(
 	// claim 벡터의 receipt 플래그도 선택적으로 받는다(라이브 ancestry와 대조).
 	// whoami는 두 벡터를 모두 내놓아 어느 쪽을 복붙해도 라이프사이클 전체를
 	// 진행할 수 있게 한다.
-	result.RecordActorFlags = recordActorFlags(identity, cwd)
+	result.RecordActorFlags = formatRecordActorFlags(identity, cwd)
 	// claim/release/complete 등 실행 리스 전환은 ACTOR_FLAGS "all or none"
 	// 규칙을 검사한다. whoami 벡터에서 --cwd를 빼면 복붙한 명령이 그 규칙에
 	// 걸려 바로 거부되므로, claim 벡터도 전체 ACTOR_FLAGS를 담아야 한다.

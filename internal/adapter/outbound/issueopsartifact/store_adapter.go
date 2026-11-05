@@ -1,3 +1,5 @@
+// Package issueopsartifact persists the staged plan and architecture artifacts
+// of an issueops cycle. It is an outbound adapter over the issueops record store.
 package issueopsartifact
 
 import (
@@ -11,10 +13,15 @@ import (
 
 const artifactStageBucket = port.ArtifactStageBucket
 
+// Repository stores staged artifacts as a record-related row in the issueops
+// record Store.
 type Repository struct {
 	Store issueopsrecord.Store
 }
 
+// Update loads the staged artifacts of cycle id, applies mutate to them, and
+// stores the result atomically with the record. An empty staged set deletes
+// the stored row. It returns the record.
 func (repository Repository) Update(
 	ctx context.Context,
 	stateRoot string,
@@ -53,6 +60,8 @@ func (repository Repository) Update(
 	)
 }
 
+// ReadStaged returns the staged artifacts of cycle id, or an empty set when
+// nothing is staged.
 func (repository Repository) ReadStaged(
 	ctx context.Context,
 	stateRoot string,

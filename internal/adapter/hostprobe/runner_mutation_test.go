@@ -18,12 +18,12 @@ func runnerMutClaudeStream(userExtra string) string {
 
 func TestExecRunnerOutputExactlyAtBoundIsNotTruncated(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "output")
-	if err := os.WriteFile(path, []byte(strings.Repeat("x", MaxOutputBytes)), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(strings.Repeat("x", maxOutputBytes)), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cat := testsupport.WriteFakeCommand(t, t.TempDir(), "cat", "#!/bin/sh\ncat \"$1\"\n")
-	got, err := (ExecRunner{}).Run(context.Background(), CommandRequest{Argv: []string{cat, path}})
-	if err != nil || got.StdoutTruncated || len(got.Stdout) != MaxOutputBytes {
+	got, err := (execRunner{}).Run(context.Background(), commandRequest{Argv: []string{cat, path}})
+	if err != nil || got.StdoutTruncated || len(got.Stdout) != maxOutputBytes {
 		t.Fatalf("bytes=%d truncated=%t err=%v", len(got.Stdout), got.StdoutTruncated, err)
 	}
 }
@@ -31,7 +31,7 @@ func TestExecRunnerOutputExactlyAtBoundIsNotTruncated(t *testing.T) {
 func TestDecodeEpisodeCaptureAcceptsEvidenceExactlyAtBound(t *testing.T) {
 	request := captureRequest()
 	data := captureJSON(t, request, nil)
-	padded := append(data, []byte(strings.Repeat(" ", MaxOutputBytes-len(data)))...)
+	padded := append(data, []byte(strings.Repeat(" ", maxOutputBytes-len(data)))...)
 	path := filepath.Join(t.TempDir(), "result.json")
 	if err := os.WriteFile(path, padded, 0o600); err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func TestDecodeEpisodeCaptureAcceptsEvidenceExactlyAtBound(t *testing.T) {
 
 func TestObserveHostStreamAcceptsStreamExactlyAtBound(t *testing.T) {
 	stream := string(codexSuccessfulStream("gpt-6-sol"))
-	stream += strings.Repeat(" ", MaxOutputBytes-len(stream))
+	stream += strings.Repeat(" ", maxOutputBytes-len(stream))
 	got, err := observeHostStream([]byte(stream))
 	if err != nil || got.MCPCallCount != 1 || got.Model != "gpt-6-sol" {
 		t.Fatalf("observation=%+v err=%v", got, err)

@@ -19,15 +19,18 @@ const (
 	IssueCreateIntentReceiptFailed      = publicationcontract.IssueCreateIntentReceiptFailed
 	IssueCreateIntentCompleted          = publicationcontract.IssueCreateIntentCompleted
 
-	MaxIssueCreateTitleBytes     = 512
-	MaxIssueCreateAuthorityBytes = 512
-	MaxIssueCreateURLBytes       = 2048
-	MaxIssueCreateFailureBytes   = 2048
-	MaxIssueCreateValues         = 64
-	MaxIssueCreateValueBytes     = 256
+	maxIssueCreateTitleBytes     = 512
+	maxIssueCreateAuthorityBytes = 512
+	maxIssueCreateURLBytes       = 2048
+	maxIssueCreateFailureBytes   = 2048
+	maxIssueCreateValues         = 64
+	maxIssueCreateValueBytes     = 256
 )
 
-type IssueOpsIssueCreateIntent struct {
+// IssueCreateIntent is the sealed record of one remote issue create. The marker
+// and body digest let a later run find the created issue and adopt it instead
+// of creating a duplicate; Status tracks how far the create got.
+type IssueCreateIntent struct {
 	OperationID      string   `json:"operation_id"`
 	Marker           string   `json:"marker"`
 	Provider         string   `json:"provider"`
@@ -44,7 +47,9 @@ type IssueOpsIssueCreateIntent struct {
 	UpdatedAt        string   `json:"updated_at"`
 }
 
-type IssueOpsIssueCreateIntentRequest struct {
+// IssueCreateIntentRequest carries the fields a caller supplies to seal an
+// IssueCreateIntent before the provider is invoked.
+type IssueCreateIntentRequest struct {
 	OperationID      string
 	Provider         string
 	ProjectAuthority string
@@ -55,20 +60,26 @@ type IssueOpsIssueCreateIntentRequest struct {
 	StartedAt        string
 }
 
-type IssueOpsIssueCreateOutcome struct {
+// IssueCreateOutcome is the observed result of the provider call that updates an
+// IssueCreateIntent: the new Status, the canonical URL if one was seen, and a
+// Failure message otherwise.
+type IssueCreateOutcome struct {
 	Status       string
 	CanonicalURL string
 	Failure      string
 	ObservedAt   string
 }
 
-type IssueOpsIssueCreateReconcileResult struct {
-	OK                bool                       `json:"ok"`
-	CandidateCount    int                        `json:"candidate_count"`
-	CandidateURL      string                     `json:"candidate_url"`
-	WouldAdopt        bool                       `json:"would_adopt"`
-	IssueURL          string                     `json:"issue_url"`
-	IssueCreateIntent *IssueOpsIssueCreateIntent `json:"issue_create_intent"`
+// IssueCreateReconcileResult reports what reconciling a pending issue create
+// found: the matching candidates, whether the issue would be (or was) adopted,
+// and the command that completes the recovery.
+type IssueCreateReconcileResult struct {
+	OK                bool               `json:"ok"`
+	CandidateCount    int                `json:"candidate_count"`
+	CandidateURL      string             `json:"candidate_url"`
+	WouldAdopt        bool               `json:"would_adopt"`
+	IssueURL          string             `json:"issue_url"`
+	IssueCreateIntent *IssueCreateIntent `json:"issue_create_intent"`
 	// NextCommand is the --confirm adoption a preview that found the one
 	// matching issue hands back.
 	NextCommand string `json:"next_command,omitempty"`
@@ -77,7 +88,10 @@ type IssueOpsIssueCreateReconcileResult struct {
 	WouldRelease bool `json:"would_release,omitempty"`
 }
 
-func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
+// ValidateIssueCreateIntent reports whether intent is well-formed: required
+// fields, digests and provider, size limits on text and label/assignee lists,
+// and a marker, attempt and status that agree with each other.
+func ValidateIssueCreateIntent(intent IssueCreateIntent) error {
 	if err := validateIssueCreateRequiredFields(intent); err != nil {
 		return err
 	}
@@ -96,7 +110,7 @@ func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
 	return validateIssueCreateMarkerAttemptStatus(intent)
 }
 
-func validateIssueCreateRequiredFields(intent IssueOpsIssueCreateIntent) error {
+func validateIssueCreateRequiredFields(intent IssueCreateIntent) error {
 	for _, field := range []struct{ name, value string }{
 		{"operation_id", intent.OperationID},
 		{"marker", intent.Marker},
@@ -114,7 +128,7 @@ func validateIssueCreateRequiredFields(intent IssueOpsIssueCreateIntent) error {
 	return nil
 }
 
-func validateIssueCreateDigestsAndProvider(intent IssueOpsIssueCreateIntent) error {
+func validateIssueCreateDigestsAndProvider(intent IssueCreateIntent) error {
 	if len(intent.BodySHA256) != 64 {
 		return fmt.Errorf("issue create intent body_sha256 must be 64 hex characters")
 	}
@@ -137,18 +151,18 @@ func validateIssueCreateDigestsAndProvider(intent IssueOpsIssueCreateIntent) err
 	return nil
 }
 
-func validateIssueCreateFieldSizes(intent IssueOpsIssueCreateIntent) error {
-	if len(intent.ProjectAuthority) > MaxIssueCreateAuthorityBytes {
-		return fmt.Errorf("issue create intent project_authority exceeds %d bytes", MaxIssueCreateAuthorityBytes)
+func validateIssueCreateFieldSizes(intent IssueCreateIntent) error {
+	if len(intent.ProjectAuthority) > maxIssueCreateAuthorityBytes {
+		return fmt.Errorf("issue create intent project_authority exceeds %d bytes", maxIssueCreateAuthorityBytes)
 	}
-	if len(intent.Title) > MaxIssueCreateTitleBytes {
-		return fmt.Errorf("issue create intent title exceeds %d bytes", MaxIssueCreateTitleBytes)
+	if len(intent.Title) > maxIssueCreateTitleBytes {
+		return fmt.Errorf("issue create intent title exceeds %d bytes", maxIssueCreateTitleBytes)
 	}
-	if len(intent.CanonicalURL) > MaxIssueCreateURLBytes {
-		return fmt.Errorf("issue create intent canonical_url exceeds %d bytes", MaxIssueCreateURLBytes)
+	if len(intent.CanonicalURL) > maxIssueCreateURLBytes {
+		return fmt.Errorf("issue create intent canonical_url exceeds %d bytes", maxIssueCreateURLBytes)
 	}
-	if len(intent.Failure) > MaxIssueCreateFailureBytes {
-		return fmt.Errorf("issue create intent failure exceeds %d bytes", MaxIssueCreateFailureBytes)
+	if len(intent.Failure) > maxIssueCreateFailureBytes {
+		return fmt.Errorf("issue create intent failure exceeds %d bytes", maxIssueCreateFailureBytes)
 	}
 	if len(intent.StartedAt) > 64 || len(intent.UpdatedAt) > 64 {
 		return fmt.Errorf("issue create intent timestamps exceed 64 bytes")
@@ -156,7 +170,7 @@ func validateIssueCreateFieldSizes(intent IssueOpsIssueCreateIntent) error {
 	return nil
 }
 
-func validateIssueCreateMarkerAttemptStatus(intent IssueOpsIssueCreateIntent) error {
+func validateIssueCreateMarkerAttemptStatus(intent IssueCreateIntent) error {
 	if intent.Marker != "<!-- issueops:issue-create:"+intent.OperationID+" -->" {
 		return fmt.Errorf("issue create intent marker does not match operation_id")
 	}
@@ -178,12 +192,12 @@ func validateIssueCreateMarkerAttemptStatus(intent IssueOpsIssueCreateIntent) er
 }
 
 func validateIssueCreateValues(field string, values []string) error {
-	if len(values) > MaxIssueCreateValues {
-		return fmt.Errorf("issue create intent %s exceeds %d values", field, MaxIssueCreateValues)
+	if len(values) > maxIssueCreateValues {
+		return fmt.Errorf("issue create intent %s exceeds %d values", field, maxIssueCreateValues)
 	}
 	for _, value := range values {
-		if len(value) > MaxIssueCreateValueBytes {
-			return fmt.Errorf("issue create intent %s value exceeds %d bytes", field, MaxIssueCreateValueBytes)
+		if len(value) > maxIssueCreateValueBytes {
+			return fmt.Errorf("issue create intent %s value exceeds %d bytes", field, maxIssueCreateValueBytes)
 		}
 	}
 	return nil

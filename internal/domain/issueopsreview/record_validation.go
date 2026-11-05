@@ -2,6 +2,8 @@ package issueopsreview
 
 import "fmt"
 
+// ValidateDomainReviewRecord requires a domain review to carry model_fit or at least
+// one terminology entry.
 func ValidateDomainReviewRecord(modelFit string, terminologyCount int) error {
 	if modelFit == "" && terminologyCount == 0 {
 		return fmt.Errorf("domain review requires model_fit or terminology (--model-fit TEXT or --terminology TEXT)")
@@ -9,6 +11,8 @@ func ValidateDomainReviewRecord(modelFit string, terminologyCount int) error {
 	return nil
 }
 
+// ValidateImplementationReviewRecord requires verdict pass, revise, or stop, plus at
+// least one finding and one evidence entry.
 func ValidateImplementationReviewRecord(verdict string, findings, evidence int) error {
 	if verdict != "pass" && verdict != "revise" && verdict != "stop" {
 		return fmt.Errorf("implementation review verdict must be pass|revise|stop")
@@ -42,6 +46,8 @@ func ValidateProjectDocsReviewRecord(verdict string, docs, evidence, reviewed in
 	return nil
 }
 
+// ValidateSchemaEvidenceRecord checks schema evidence: a waiver needs a rationale,
+// otherwise at least one measurement and one source are required.
 func ValidateSchemaEvidenceRecord(waive bool, rationale string, measurements, sources int) error {
 	if waive {
 		if rationale == "" {

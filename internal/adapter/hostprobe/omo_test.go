@@ -18,11 +18,11 @@ import (
 )
 
 type omoFakeProcess struct {
-	requests []CommandRequest
-	run      func(context.Context, CommandRequest) (CommandOutput, error)
+	requests []commandRequest
+	run      func(context.Context, commandRequest) (CommandOutput, error)
 }
 
-func (f *omoFakeProcess) Run(ctx context.Context, request CommandRequest) (CommandOutput, error) {
+func (f *omoFakeProcess) Run(ctx context.Context, request commandRequest) (CommandOutput, error) {
 	request.Argv = append([]string(nil), request.Argv...)
 	request.Env = append([]string(nil), request.Env...)
 	f.requests = append(f.requests, request)
@@ -35,7 +35,7 @@ func (f *omoFakeProcess) Run(ctx context.Context, request CommandRequest) (Comma
 func TestOmoRunnerPreflightUsesNativeOmoAndRequiresExplicitModel(t *testing.T) {
 	t.Parallel()
 
-	process := &omoFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
+	process := &omoFakeProcess{run: func(_ context.Context, request commandRequest) (CommandOutput, error) {
 		if !reflect.DeepEqual(request.Argv, []string{fixturePath("opt", "bin", "omo"), "--version"}) {
 			t.Fatalf("argv = %#v", request.Argv)
 		}
@@ -73,7 +73,7 @@ func TestOmoRunnerPreflightRejectsUnverifiedLifecycleContract(t *testing.T) {
 	t.Parallel()
 
 	runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), "export default function issueops() {}\n", Dependencies{
-		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
+		Process: &omoFakeProcess{run: func(_ context.Context, _ commandRequest) (CommandOutput, error) {
 			return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 		}},
 		LookPath: func(string) (string, error) { return "/opt/bin/omo", nil },
@@ -103,7 +103,7 @@ func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
 				t.Fatalf("mutation target %q missing", mutation.old)
 			}
 			runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), source, Dependencies{
-				Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
+				Process: &omoFakeProcess{run: func(_ context.Context, _ commandRequest) (CommandOutput, error) {
 					return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 				}},
 				LookPath: func(string) (string, error) { return "/opt/bin/omo", nil },
@@ -121,7 +121,7 @@ func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testin
 	t.Parallel()
 
 	runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), omoTestLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
-		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
+		Process: &omoFakeProcess{run: func(_ context.Context, _ commandRequest) (CommandOutput, error) {
 			return CommandOutput{}, errors.New("version unavailable")
 		}},
 		LookPath: func(string) (string, error) { return "/opt/bin/omo", nil },
@@ -136,7 +136,7 @@ func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testin
 func TestOmoRunnerPreflightFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "preflight")
 	runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), omoTestLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
-		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
+		Process: &omoFakeProcess{run: func(_ context.Context, _ commandRequest) (CommandOutput, error) {
 			return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 		}},
 		LookPath: func(string) (string, error) { return "/opt/bin/omo", nil },
@@ -179,7 +179,7 @@ func TestOmoRunnerEpisodeFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
 			}
 			return root, nil
 		},
-		Process: &omoFakeProcess{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+		Process: &omoFakeProcess{run: func(context.Context, commandRequest) (CommandOutput, error) {
 			writeOmoCapture(t, filepath.Join(root, "result.json"), request)
 			return CommandOutput{Stdout: omoSuccessfulStream(request, target)}, nil
 		}},
@@ -221,10 +221,10 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 	request := omoProbeRequest()
 	targetTool := "mcp_issueops_probe_" + request.ProbeTool
 	lifecycleSource := omoTestLifecycleExtension(harnessBinary)
-	var received CommandRequest
-	process := &omoFakeProcess{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+	var received commandRequest
+	process := &omoFakeProcess{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 		received = command
-		if command.Cwd != episodeRoot || command.Timeout != EpisodeTimeout {
+		if command.Cwd != episodeRoot || command.Timeout != episodeTimeout {
 			t.Fatalf("command = %+v", command)
 		}
 		if !reflect.DeepEqual(command.Env, isolatedEnvWithHome(filepath.Join(episodeRoot, "home"),
@@ -363,7 +363,7 @@ func TestOmoRunnerRunFailsClosedOnStreamAndProcessFailures(t *testing.T) {
 					}
 					return root, nil
 				},
-				Process: &omoFakeProcess{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+				Process: &omoFakeProcess{run: func(context.Context, commandRequest) (CommandOutput, error) {
 					if test.processErr == nil {
 						writeOmoCapture(t, filepath.Join(root, "result.json"), request)
 					}
@@ -392,7 +392,7 @@ func TestOmoRunnerRunRejectsCaptureCardinalityMismatch(t *testing.T) {
 			}
 			return root, nil
 		},
-		Process: &omoFakeProcess{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+		Process: &omoFakeProcess{run: func(context.Context, commandRequest) (CommandOutput, error) {
 			writeOmoCapture(t, filepath.Join(root, "result.json"), request)
 			multiple := map[string]any{
 				"call_count": 2,
@@ -460,7 +460,7 @@ func TestOmoRunnerDerivesAmbientToolCountFromRejectedStream(t *testing.T) {
 			}
 			return root, nil
 		},
-		Process: &omoFakeProcess{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+		Process: &omoFakeProcess{run: func(context.Context, commandRequest) (CommandOutput, error) {
 			writeOmoCapture(t, filepath.Join(root, "result.json"), request)
 			return CommandOutput{Stdout: stream}, nil
 		}},

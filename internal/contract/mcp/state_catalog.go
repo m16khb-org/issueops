@@ -1,5 +1,6 @@
 package mcp
 
+// StateTools returns the state_write, state_read, state_list, state_prune, state_doctor and state_maintain tools over the agent state checkpoint store.
 func StateTools() []Tool {
 	return []Tool{
 		{

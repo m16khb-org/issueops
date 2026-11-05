@@ -38,15 +38,15 @@ const (
 )
 
 type fakeRepository struct {
-	record  issueops.IssueOpsRecord
+	record  issueops.Record
 	updates int
 }
 
-func (r *fakeRepository) Read(context.Context, string) (issueops.IssueOpsRecord, error) {
+func (r *fakeRepository) Read(context.Context, string) (issueops.Record, error) {
 	return r.record, nil
 }
 
-func (r *fakeRepository) Update(_ context.Context, _ string, transition RecordTransition) (issueops.IssueOpsRecord, error) {
+func (r *fakeRepository) Update(_ context.Context, _ string, transition RecordTransition) (issueops.Record, error) {
 	r.updates++
 	next, err := transition(r.record)
 	if err == nil {
@@ -57,7 +57,7 @@ func (r *fakeRepository) Update(_ context.Context, _ string, transition RecordTr
 
 type allowAll struct{}
 
-func (allowAll) Authorize(context.Context, issueops.IssueOpsRecord, issueops.IssueOpsActor) error {
+func (allowAll) Authorize(context.Context, issueops.Record, issueops.Actor) error {
 	return nil
 }
 
@@ -90,9 +90,9 @@ func (p *fakeProvider) VerifyChildHierarchy(context.Context, port.IssueProviderC
 }
 
 func newSyncService(provider *fakeProvider) (*Service, *fakeRepository) {
-	repository := &fakeRepository{record: issueops.IssueOpsRecord{
+	repository := &fakeRepository{record: issueops.Record{
 		OK: true, ID: "io-sync", IssueURL: syncIssueURL,
-		BodySyncs: []issueops.IssueOpsRemoteBodySync{{Kind: "issue", URL: syncIssueURL, ToSHA256: bodysync.SHA256Body(syncLiveBody), SyncedAt: "2026-10-01T00:00:00Z"}},
+		BodySyncs: []issueops.RemoteBodySync{{Kind: "issue", URL: syncIssueURL, ToSHA256: bodysync.SHA256Body(syncLiveBody), SyncedAt: "2026-10-01T00:00:00Z"}},
 	}}
 	now := func() time.Time { return time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC) }
 	return NewService(repository, provider, allowAll{}, now), repository
@@ -104,7 +104,7 @@ func TestSyncConfirmRefusesAStaleExpectedDigestWithoutWriting(t *testing.T) {
 	_, _, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, ProposedBody: syncNewBody, Confirm: true,
 		ExpectedBodySHA256: strings.Repeat("0", 64),
-	}, issueops.IssueOpsActor{})
+	}, issueops.Actor{})
 	if err == nil || !strings.Contains(err.Error(), "remote body changed since it was read") {
 		t.Fatalf("stale digest error = %v", err)
 	}
@@ -119,7 +119,7 @@ func TestSyncConfirmWritesAndRecordsTheVerifiedBaseline(t *testing.T) {
 	record, result, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, ProposedBody: syncNewBody, Confirm: true,
 		ExpectedBodySHA256: bodysync.SHA256Body(syncLiveBody),
-	}, issueops.IssueOpsActor{})
+	}, issueops.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestSyncChildRefusesAnUnverifiedHierarchyBeforeReadingTheBody(t *testing.T)
 	service, _ := newSyncService(provider)
 	_, _, err := service.Sync(t.Context(), "io-sync", bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, URL: "https://github.com/o/r/issues/99", ProposedBody: syncNewBody,
-	}, issueops.IssueOpsActor{})
+	}, issueops.Actor{})
 	if err == nil || !strings.Contains(err.Error(), "not a provider-native child") {
 		t.Fatalf("child error = %v", err)
 	}

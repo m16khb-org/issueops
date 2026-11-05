@@ -13,7 +13,7 @@ const (
 	mcpTransportStdio = "stdio"
 )
 
-type MCPServiceSetup interface {
+type mcpServiceSetup interface {
 	ReadBearer() (string, error)
 	Prepare(context.Context) (string, error)
 	EnsureRunning(context.Context, string) (mcpservice.Status, error)

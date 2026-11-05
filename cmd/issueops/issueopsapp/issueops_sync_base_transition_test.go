@@ -99,7 +99,7 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 	}
 }
 
-func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsRecord, string) {
+func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.Record, string) {
 	t.Helper()
 	testsupport.IsolateGitConfig(t)
 	stateRoot := t.TempDir()
@@ -114,17 +114,17 @@ func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsReco
 	claimWiringGit(t, source, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "-q", "-m", "test: transition fixture")
 	claimWiringGit(t, source, "worktree", "add", "-q", "-b", branch, worktree, "main")
 	baseHead := strings.TrimSpace(claimWiringGit(t, worktree, "rev-parse", "HEAD"))
-	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: source, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.StartRequest{Repo: source, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueopscontract.IssueOpsPhasePR
+	record.Phase = issueopscontract.PhasePR
 	record.IssueURL = "https://github.com/example/issueops/issues/318"
-	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
+	record.BranchPrepare = &issueopscontract.BranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
-	record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{
+	record.RemoteArtifact = &issueopscontract.RemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/issueops/pull/318",
 		Labels: []string{"bug"}, Assignees: []string{"m16khb"}, TargetBranch: "main", VerifiedAt: "2026-08-04T00:00:00Z",
 	}

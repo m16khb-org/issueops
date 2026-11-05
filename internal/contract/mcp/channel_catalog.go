@@ -1,6 +1,6 @@
 package mcp
 
-// ChannelTools는 세션 간 메시지 채널 도구군이다. CLI channel 명령과 같은
+// ChannelTools 함수는 세션 간 메시지 채널 도구군이다. CLI channel 명령과 같은
 // contract DTO를 공유한다.
 func ChannelTools() []Tool {
 	return []Tool{

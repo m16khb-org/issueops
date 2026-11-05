@@ -14,10 +14,10 @@ func TestPlanHistoryRetentionKeepsOrderAndRequiresConfirmationToPrune(t *testing
 	if !decision.DryRun || decision.Confirm || decision.Warning != "history_retention_candidates:2" {
 		t.Fatalf("unconfirmed prune = %+v", decision)
 	}
-	if err := ValidateHistoryRetention(0, true, false); err == nil {
+	if err := validateHistoryRetention(0, true, false); err == nil {
 		t.Fatal("prune with zero retention limit must fail")
 	}
-	if err := ValidateHistoryRetention(1, false, true); err == nil {
+	if err := validateHistoryRetention(1, false, true); err == nil {
 		t.Fatal("confirmation without prune must fail")
 	}
 }

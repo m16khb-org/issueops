@@ -39,7 +39,7 @@ func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
 				}
 				t.Setenv("PATH", tools)
 			}
-			deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
+			deps := StepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 				return verification.Run(root, label, timeout, stdin, 4096, name, args...)
 			}}
 			var goTest contract.StepResult
@@ -76,7 +76,7 @@ func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
 				steps = append(steps, contract.StepResult{Label: label, OK: true})
 			}
 			steps[2] = step
-			summary := SummarizeSelfVerification(augment.SelfAugmentResult{OK: wantOK, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}, 95)
+			summary := SummarizeSelfVerification(augment.Result{OK: wantOK, Iterations: 1, Runs: []augment.Iteration{{Iteration: 1, Steps: steps}}}, 95)
 			if summary.TerminationEligible != wantOK {
 				t.Fatal(summary)
 			}

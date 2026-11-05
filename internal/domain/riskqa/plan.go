@@ -1,3 +1,5 @@
+// Package riskqa derives the risk-based QA tier and verification commands from
+// the set of changed paths. It is pure policy in the domain layer.
 package riskqa
 
 import (
@@ -9,14 +11,21 @@ import (
 	riskqacontract "issueops/internal/contract/riskqa"
 )
 
+// FullRaceCommand is the full-repository race test command that the elevated
+// tier requires.
 const FullRaceCommand = "go test -race ./... -count=1"
 
-func CoversFullGoTest(plan riskqacontract.RiskQATierPlan) bool {
+// CoversFullGoTest reports whether plan includes FullRaceCommand and its scope
+// carries no error.
+func CoversFullGoTest(plan riskqacontract.TierPlan) bool {
 	return (plan.Scope == nil || plan.Scope.Error == "") && slices.Contains(plan.Commands, FullRaceCommand)
 }
 
-func PlanFromPaths(paths []string) riskqacontract.RiskQATierPlan {
-	plan := riskqacontract.RiskQATierPlan{Tier: "standard", ChangedPaths: riskqacontract.NormalizePaths(paths), Reasons: []string{}, Commands: []string{}}
+// PlanFromPaths picks the QA tier for paths: "standard" without local changes,
+// "static" for Go changes, and "elevated" when Go changes touch policy, MCP,
+// adapter, state, or other harness surfaces. Reasons are sorted.
+func PlanFromPaths(paths []string) riskqacontract.TierPlan {
+	plan := riskqacontract.TierPlan{Tier: "standard", ChangedPaths: riskqacontract.NormalizePaths(paths), Reasons: []string{}, Commands: []string{}}
 	if len(plan.ChangedPaths) == 0 {
 		plan.Reasons = append(plan.Reasons, "working tree has no local changes")
 		return plan

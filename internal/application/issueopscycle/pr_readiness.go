@@ -10,7 +10,8 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func ImplementationReviewMissing(record model.IssueOpsRecord, currentFingerprint string) string {
+// ImplementationReviewMissing 함수는 구현 리뷰 증거가 없거나 현재 지문과 맞지 않으면 누락 키를, 충족되면 빈 문자열을 돌려준다.
+func ImplementationReviewMissing(record model.Record, currentFingerprint string) string {
 	evidence := reviewcontract.ReviewGateEvidence{}
 	if review := record.ImplementationReview; review != nil {
 		evidence = reviewcontract.ReviewGateEvidence{
@@ -20,7 +21,8 @@ func ImplementationReviewMissing(record model.IssueOpsRecord, currentFingerprint
 	return reviewdomain.ImplementationReviewMissing(record.Execution != nil, evidence, currentFingerprint)
 }
 
-func ProjectDocsReviewMissing(record model.IssueOpsRecord, currentFingerprint string) string {
+// ProjectDocsReviewMissing 함수는 프로젝트 문서 리뷰 증거가 없거나 현재 지문과 맞지 않으면 누락 키를, 충족되면 빈 문자열을 돌려준다.
+func ProjectDocsReviewMissing(record model.Record, currentFingerprint string) string {
 	evidence := reviewcontract.ReviewGateEvidence{}
 	if review := record.ProjectDocsReview; review != nil {
 		evidence = reviewcontract.ReviewGateEvidence{Present: true, ReviewedFingerprint: review.ReviewedFingerprint}
@@ -28,8 +30,8 @@ func ProjectDocsReviewMissing(record model.IssueOpsRecord, currentFingerprint st
 	return reviewdomain.ProjectDocsReviewMissing(evidence, currentFingerprint)
 }
 
-func LocalPRReadinessMissing(record model.IssueOpsRecord, observations cycleport.ReadinessObservations) []string {
-	missing := BaseImplementationMissing(record)
+func localPRReadinessMissing(record model.Record, observations cycleport.ReadinessObservations) []string {
+	missing := baseImplementationMissing(record)
 	if strings.TrimSpace(record.WorktreePath) == "" {
 		missing = append(missing, "worktree_path")
 	}
@@ -48,7 +50,7 @@ func LocalPRReadinessMissing(record model.IssueOpsRecord, observations cycleport
 	if docsMissing := ProjectDocsReviewMissing(record, ""); docsMissing != "" {
 		missing = append(missing, docsMissing)
 	}
-	if HasUnresolvedContractFeedback(record) {
+	if hasUnresolvedContractFeedback(record) {
 		missing = append(missing, "contract_feedback_issue_update")
 	}
 	return missing

@@ -14,7 +14,7 @@ func TestAuthorizeRequiresExactLeaseHolderProcessAndWorkspace(t *testing.T) {
 		StartedAt:  "2026-08-11T05:00:00Z",
 		Executable: "/opt/codex",
 	}
-	record := issueopscontract.IssueOpsRecord{
+	record := issueopscontract.Record{
 		Execution: &issueopscontract.Execution{
 			Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/decision"},
 			Lease: issueopscontract.WriteLease{
@@ -29,7 +29,7 @@ func TestAuthorizeRequiresExactLeaseHolderProcessAndWorkspace(t *testing.T) {
 			},
 		},
 	}
-	actor := &issueopscontract.IssueOpsActor{
+	actor := &issueopscontract.Actor{
 		Host:                  "CODEX",
 		SessionID:             "session",
 		AgentID:               "agent",

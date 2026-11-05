@@ -11,8 +11,8 @@ import (
 func addIssueOpsDecisionForTest(
 	stateRoot string,
 	id string,
-	request issueopscontract.IssueOpsDecisionRecordRequest,
-) (issueopscontract.IssueOpsRecord, error) {
+	request issueopscontract.DecisionRecordRequest,
+) (issueopscontract.Record, error) {
 	service := issueopsdecisionapplication.NewService(
 		issueopsdecisionoutbound.Repository{},
 		issueopsdecisionoutbound.SystemClock{},

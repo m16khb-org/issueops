@@ -15,7 +15,7 @@ func TestExportedIssueOpsFacades(t *testing.T) {
 	if err := runIssueOps([]string{"unknown"}); err == nil {
 		t.Fatal("unknown issueops subcommand should fail")
 	}
-	if err := testRemoteVerifier().Verify(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
+	if err := testRemoteVerifier().Verify(issueopscontract.RemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail before provider inspection")
 	}
 
@@ -33,7 +33,7 @@ func TestExportedIssueOpsFacades(t *testing.T) {
 
 func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "195-publication-wrapper"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "195-publication-wrapper"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 
 func TestIssueOpsDecisionAndCleanupCLIBranches(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "123-decision"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.StartRequest{Repo: t.TempDir(), Branch: "123-decision"})
 	if err != nil {
 		t.Fatal(err)
 	}

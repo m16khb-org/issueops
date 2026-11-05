@@ -66,9 +66,9 @@ func TestSelfVerifyProductionWiringPreservesCommittedScopeFailure(t *testing.T) 
 
 func TestSelfVerifySDKScopeMatchesCLIRequest(t *testing.T) {
 	var got []string
-	execute := func(request app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+	execute := func(request app.LoopRequest) (augmentcontract.Result, error) {
 		got = append(got, request.BaseRef)
-		return augmentcontract.SelfAugmentResult{OK: true}, nil
+		return augmentcontract.Result{OK: true}, nil
 	}
 	err := verifycmd.Run([]string{"--base-ref", "HEAD~1", "--llm-eval=false", "--json"}, verifycmd.Deps{Verify: execute, PrintJSON: func(any) error { return nil }})
 	if err != nil {

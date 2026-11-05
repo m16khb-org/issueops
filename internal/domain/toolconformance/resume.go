@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// SelectedFixturePair is a host together with a fixture selected to run against it.
 type SelectedFixturePair struct {
 	Host    string
 	Fixture contract.Fixture
@@ -20,6 +21,9 @@ func errInvalidPreviousEvidence() error {
 	return fmt.Errorf("invalid_previous_episode_evidence")
 }
 
+// ResumeHostReport validates the previous report's entry for host and returns it so a benchmark run can continue from it.
+// It returns nil without error when there is no previous report or no entry for host,
+// and an invalid-previous-evidence error when the entry's version, model, counts, episodes, status, or selection do not fit the current run.
 func ResumeHostReport(previous *contract.BenchmarkReport, host, requestedModel, hostVersion, profile string, fixtures []contract.Fixture, selected []SelectedFixturePair, targetCompleted int) (*contract.HostReport, error) {
 	if previous == nil {
 		return nil, nil
@@ -154,6 +158,8 @@ func previousHostStatusConsistent(matched *contract.HostReport, hasCompleted boo
 	return matched.Status == "unavailable" && matched.Evidence.StatusReason == "live_probe_incomplete"
 }
 
+// ValidatePreviousSelection checks that a previous report has unique, non-empty host names
+// and records only hosts and host-fixture pairs present in selected.
 func ValidatePreviousSelection(previous *contract.BenchmarkReport, selected []SelectedFixturePair) error {
 	if previous == nil {
 		return nil
@@ -185,6 +191,7 @@ func ValidatePreviousSelection(previous *contract.BenchmarkReport, selected []Se
 	return nil
 }
 
+// SelectedFixtureForPair returns the fixture selected for host and fixture ID, and whether such a pair exists.
 func SelectedFixtureForPair(pairs []SelectedFixturePair, host, fixture string) (contract.Fixture, bool) {
 	for _, pair := range pairs {
 		if pair.Host == host && pair.Fixture.ID == fixture {
@@ -194,6 +201,7 @@ func SelectedFixtureForPair(pairs []SelectedFixturePair, host, fixture string) (
 	return contract.Fixture{}, false
 }
 
+// CompletedForFixture counts the completed episodes for fixture.
 func CompletedForFixture(episodes []contract.EpisodeReport, fixture string) int {
 	count := 0
 	for _, episode := range episodes {
@@ -204,6 +212,7 @@ func CompletedForFixture(episodes []contract.EpisodeReport, fixture string) int 
 	return count
 }
 
+// AttemptsForFixture counts every episode recorded for fixture, whatever its status.
 func AttemptsForFixture(episodes []contract.EpisodeReport, fixture string) int {
 	count := 0
 	for _, episode := range episodes {
@@ -214,6 +223,7 @@ func AttemptsForFixture(episodes []contract.EpisodeReport, fixture string) int {
 	return count
 }
 
+// CountCompleted counts the episodes whose status is completed.
 func CountCompleted(episodes []contract.EpisodeReport) int {
 	count := 0
 	for _, episode := range episodes {

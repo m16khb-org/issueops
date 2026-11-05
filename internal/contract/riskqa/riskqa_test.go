@@ -47,7 +47,7 @@ func TestNormalizePathsDoesNotMutateInput(t *testing.T) {
 }
 
 func TestRiskQATierPlanJSON(t *testing.T) {
-	plan := RiskQATierPlan{
+	plan := TierPlan{
 		Tier:         "high",
 		ChangedPaths: []string{"a.go"},
 		Reasons:      []string{"r"},
@@ -72,7 +72,7 @@ func TestRiskQATierPlanJSON(t *testing.T) {
 
 	plan.Scope = &Scope{BaseSHA: "abc", Error: "boom"}
 	raw, _ = json.Marshal(plan)
-	var back RiskQATierPlan
+	var back TierPlan
 	if err := json.Unmarshal(raw, &back); err != nil {
 		t.Fatal(err)
 	}

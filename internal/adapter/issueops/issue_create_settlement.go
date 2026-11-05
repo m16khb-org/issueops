@@ -20,10 +20,10 @@ func issueCreateLockKey(repo, title string) string {
 	return strings.TrimSpace(repo) + "\x00" + strings.TrimSpace(title)
 }
 
-// HoldIssueCreate takes the issue create lifetime lock for repo/title; a held
+// holdIssueCreate takes the issue create lifetime lock for repo/title; a held
 // lock means another create of the same issue is running and the call is
 // refused before the provider is invoked.
-func HoldIssueCreate(ctx context.Context, stateRoot, repo, title string) (context.Context, func(), error) {
+func holdIssueCreate(ctx context.Context, stateRoot, repo, title string) (context.Context, func(), error) {
 	return holdCreateLock(ctx, filepath.Join(stateRoot, issueCreateLockDirectory), issueCreateLockKey(repo, title), "issue create lifetime lock", func() error {
 		return fmt.Errorf("another create of issue %q is still running", title)
 	})
@@ -35,8 +35,8 @@ func HoldIssueCreate(ctx context.Context, stateRoot, repo, title string) (contex
 // with its title is running, and the provider's newest issues (a listing, not
 // the eventually consistent search) carry no issue with its marker. Any
 // observation failure or an indeterminate listing answers false.
-func IssueCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.IssueOpsRecord) (bool, error) {
-	return func(ctx context.Context, record model.IssueOpsRecord) (bool, error) {
+func IssueCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.Record) (bool, error) {
+	return func(ctx context.Context, record model.Record) (bool, error) {
 		if record.IssueCreateIntent == nil {
 			return false, nil
 		}
@@ -46,13 +46,13 @@ func IssueCreateCrashSettlement(stateRoot string, resolve func(string) (port.Iss
 
 // ChildCreateCrashSettlement is the same proof for a pending child create
 // (the child carries the same marker and sealed title).
-func ChildCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.IssueOpsRecord, model.ChildCreateOperation) (bool, error) {
-	return func(ctx context.Context, record model.IssueOpsRecord, op model.ChildCreateOperation) (bool, error) {
-		return settleIssueCreate(ctx, stateRoot, resolve, now, record, op.IssueOpsIssueCreateIntent, "task")
+func ChildCreateCrashSettlement(stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time) func(context.Context, model.Record, model.ChildCreateOperation) (bool, error) {
+	return func(ctx context.Context, record model.Record, op model.ChildCreateOperation) (bool, error) {
+		return settleIssueCreate(ctx, stateRoot, resolve, now, record, op.IssueCreateIntent, "task")
 	}
 }
 
-func settleIssueCreate(ctx context.Context, stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time, record model.IssueOpsRecord, intent model.IssueOpsIssueCreateIntent, issueType string) (bool, error) {
+func settleIssueCreate(ctx context.Context, stateRoot string, resolve func(string) (port.IssueProvider, error), now func() time.Time, record model.Record, intent model.IssueCreateIntent, issueType string) (bool, error) {
 	if intent.Status != model.IssueCreateIntentPending {
 		return false, nil
 	}
@@ -117,30 +117,33 @@ func firstNonEmptyString(values ...string) string {
 
 // ChildCreator is the provider capability that creates a child issue.
 type ChildCreator interface {
-	CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
+	CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
 }
 
 // LockedChildCreator holds the issue-create lifetime lock for a confirmed
 // child create, so a crash settlement can tell a running create from a dead
-// one (the provider call has no context, so an orphaned gh child is covered
-// by the process scan instead of the inherited lock).
+// one. The lock-bearing context goes to the provider call, so every gh child
+// inherits the lock; the process scan still covers an orphan that outlives it.
 type LockedChildCreator struct {
 	Inner     ChildCreator
 	StateRoot string
 }
 
-func (c LockedChildCreator) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+// CreateChild creates the child through Inner. A confirmed create first takes the
+// issue-create lifetime lock and fails, without invoking the provider, when StateRoot is empty.
+func (c LockedChildCreator) CreateChild(ctx context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	if req.Confirm {
 		if c.StateRoot == "" {
 			return port.IssueProviderCreateChildResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("child create needs the state root for its lifetime lock")}
 		}
-		_, release, err := HoldIssueCreate(context.Background(), c.StateRoot, req.Repo, req.Title)
+		held, release, err := holdIssueCreate(ctx, c.StateRoot, req.Repo, req.Title)
 		if err != nil {
 			return port.IssueProviderCreateChildResult{OK: false}, err
 		}
 		defer release()
+		ctx = held
 	}
-	return c.Inner.CreateChild(req)
+	return c.Inner.CreateChild(ctx, req)
 }
 
 // providerReadRow is a reconcile read that carries the marker but writes

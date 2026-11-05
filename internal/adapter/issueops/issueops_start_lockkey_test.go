@@ -68,11 +68,11 @@ func TestStartIssueOpsRelativeThenAbsoluteShareOneRecordAndLock(t *testing.T) {
 	t.Chdir(repo)
 
 	branch := "12-demo"
-	first, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: ".", Branch: branch})
+	first, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: ".", Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	second, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}

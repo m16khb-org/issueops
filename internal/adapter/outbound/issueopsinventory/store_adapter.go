@@ -7,14 +7,19 @@ import (
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
 
+// Repository adapts the cycle record store to the inventory contract, converting
+// the store's scan diagnostics into inventory diagnostics.
 type Repository struct {
 	Store issueopsrecord.Store
 }
 
+// ListIDs returns the ids of all cycle records under stateRoot.
 func (repository Repository) ListIDs(ctx context.Context, stateRoot string) ([]string, error) {
 	return repository.Store.ListIDs(ctx, stateRoot)
 }
 
+// ReadUnchecked reads the cycle record id under stateRoot exactly as the record
+// store returns it.
 func (repository Repository) ReadUnchecked(
 	ctx context.Context,
 	stateRoot string,
@@ -23,6 +28,8 @@ func (repository Repository) ReadUnchecked(
 	return repository.Store.Read(ctx, stateRoot, id)
 }
 
+// Scan reads every cycle record under stateRoot and returns the readable records
+// with a diagnostic for each record it could not use.
 func (repository Repository) Scan(
 	ctx context.Context,
 	stateRoot string,
@@ -38,6 +45,9 @@ func (repository Repository) Scan(
 	return records, diagnostics, nil
 }
 
+// ScanEach streams each readable cycle record under stateRoot to visit instead of
+// collecting them, and returns a diagnostic for each record it could not use. An
+// error from visit or the store stops the scan.
 func (repository Repository) ScanEach(
 	ctx context.Context,
 	stateRoot string,

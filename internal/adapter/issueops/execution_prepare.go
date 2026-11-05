@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func NewExecutionOperationID() (string, error) {
+func newExecutionOperationID() (string, error) {
 	var raw [16]byte
 	if _, err := rand.Read(raw[:]); err != nil {
 		return "", err

@@ -2,6 +2,8 @@ package selfverify
 
 import contract "issueops/internal/contract/selfverify"
 
+// CandidateCatalog returns the built-in self-verification improvement curriculum in priority order.
+// Every entry is currently marked satisfied and carries the evidence that satisfies it.
 func CandidateCatalog() []contract.SelfVerificationCandidate {
 	return []contract.SelfVerificationCandidate{
 		candidate(1, "self-verify-progress-heartbeat", "observability", 81, []string{"self-verify can look hung in redirected output without progress events"}, []string{"self-verify --progress=jsonl", "progress reporter test"}, []string{"--progress=jsonl emits loop and step JSONL events without breaking stdout JSON"}),

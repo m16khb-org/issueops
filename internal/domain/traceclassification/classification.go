@@ -1,7 +1,13 @@
-package classification
+// Package traceclassification is the domain-layer rule set that turns a failing trace step
+// or failure class into a proposed harness knob, an overfit-risk note, and the
+// default verification command. It is pure string classification with no I/O.
+package traceclassification
 
 import "strings"
 
+// ProposedKnobForStep returns the smallest harness guardrail to propose for a
+// failing step, chosen by keywords in the lower-cased step name (contract,
+// redaction, policy, test, build). Unknown steps get a generic recommendation.
 func ProposedKnobForStep(step string) string {
 	step = strings.ToLower(step)
 	switch {
@@ -20,6 +26,9 @@ func ProposedKnobForStep(step string) string {
 	}
 }
 
+// OverfitRiskForClass returns a risk note describing how likely tuning the harness
+// for a failure class is to overfit. Single-failure and intermittent classes are
+// rated high; deterministic and unknown classes are medium.
 func OverfitRiskForClass(class string) string {
 	class = strings.ToLower(class)
 	switch class {
@@ -34,6 +43,9 @@ func OverfitRiskForClass(class string) string {
 	}
 }
 
+// DefaultVerificationCommand returns the shell command that re-verifies a failing
+// step, chosen by keywords in the lower-cased step name. It falls back to the full
+// test suite when no keyword matches.
 func DefaultVerificationCommand(step string) string {
 	step = strings.ToLower(step)
 	switch {

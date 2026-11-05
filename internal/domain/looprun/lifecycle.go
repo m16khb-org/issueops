@@ -1,3 +1,4 @@
+// Package looprun holds the pure domain rules of the verify-until-done loop: validating and redacting start and attempt input, and the active, exhausted, succeeded and stopped state transitions. It performs no I/O.
 package looprun
 
 import (
@@ -14,6 +15,7 @@ const (
 	maxMaxAttempts     = 50
 )
 
+// Start is validated loop start input: a trimmed name, a redacted goal, cleaned verify argv, and a MaxAttempts that is never zero.
 type Start struct {
 	Name        string
 	Goal        string
@@ -21,6 +23,7 @@ type Start struct {
 	MaxAttempts int
 }
 
+// Attempt is a validated attempt with a verdict of pass or fail and redacted, non-empty evidence. Build it with PrepareAttempt.
 type Attempt struct {
 	verdict  string
 	evidence []string
@@ -30,6 +33,7 @@ var secretAssignmentPattern = sync.OnceValue(func() *regexp.Regexp {
 	return regexp.MustCompile(`(?i)\b(token|secret|password|api[_-]?key|access[_-]?key)\s*[:=]\s*["']?([^\s"',}]+)`)
 })
 
+// PrepareStart validates a start request and returns the Start to persist. It requires a name and a goal, redacts secrets in the goal, and defaults MaxAttempts to 5; a negative value or one above 50 is rejected with max_attempts_invalid.
 func PrepareStart(request loopcontract.StartLoopRequest) (Start, error) {
 	name := strings.TrimSpace(request.Name)
 	if name == "" {
@@ -48,6 +52,7 @@ func PrepareStart(request loopcontract.StartLoopRequest) (Start, error) {
 	return Start{Name: name, Goal: goal, VerifyArgv: cleanStrings(request.VerifyArgv), MaxAttempts: maxAttempts}, nil
 }
 
+// New builds a fresh active LoopRun with id and repo, created and updated at the given time, copying VerifyArgv so the run does not alias the request.
 func New(id, repo string, request Start, at string, schemaVersion int) loopcontract.LoopRun {
 	return loopcontract.LoopRun{
 		OK: true, SchemaVersion: schemaVersion, ID: id, Repo: repo, Name: request.Name,
@@ -56,6 +61,7 @@ func New(id, repo string, request Start, at string, schemaVersion int) loopcontr
 	}
 }
 
+// Resume reports whether an existing loop can continue. It returns a loop_terminal error naming the loop id and name unless the loop is still active.
 func Resume(existing loopcontract.LoopRun) error {
 	if existing.Status != "active" {
 		// MCP QA: a bare "loop_terminal" left the agent guessing the loop id
@@ -65,6 +71,7 @@ func Resume(existing loopcontract.LoopRun) error {
 	return nil
 }
 
+// PrepareAttempt validates an attempt request. The verdict must be pass or fail and at least one non-blank evidence line is required; evidence is redacted of secret-looking assignments.
 func PrepareAttempt(request loopcontract.RecordAttemptRequest) (Attempt, error) {
 	verdict := strings.TrimSpace(request.Verdict)
 	if verdict != "pass" && verdict != "fail" {
@@ -87,6 +94,7 @@ var (
 	errEvidenceRequired = fmt.Errorf("evidence_required: pass the output you saw when you ran the verify command")
 )
 
+// ApplyAttempt returns a copy of current with attempt appended. It fails if the loop is not active. A failed attempt that reaches MaxAttempts marks the loop exhausted. The input loop is not modified.
 func ApplyAttempt(current loopcontract.LoopRun, attempt Attempt, at string) (loopcontract.LoopRun, error) {
 	if current.Status != "active" {
 		return loopcontract.LoopRun{}, fmt.Errorf("loop_not_active: loop %s is %s; attempts are recorded only on an active loop (start a new loop under another name)", current.ID, current.Status)
@@ -109,6 +117,7 @@ func ApplyAttempt(current loopcontract.LoopRun, attempt Attempt, at string) (loo
 	return next, nil
 }
 
+// Stop returns a copy of current in a terminal state. A successful stop requires the latest attempt to be a pass and sets succeeded. A non-success stop needs a redacted reason of at least 10 characters and sets stopped. An already succeeded or stopped loop fails with loop_terminal.
 func Stop(current loopcontract.LoopRun, success bool, reason, at string) (loopcontract.LoopRun, error) {
 	if current.Status == "succeeded" || current.Status == "stopped" {
 		return loopcontract.LoopRun{}, fmt.Errorf("loop_terminal")
@@ -131,7 +140,7 @@ func Stop(current loopcontract.LoopRun, success bool, reason, at string) (loopco
 	return next, nil
 }
 
-func Incomplete(loop loopcontract.LoopRun) bool {
+func incomplete(loop loopcontract.LoopRun) bool {
 	switch strings.TrimSpace(loop.Status) {
 	case "active", "exhausted":
 		return true
@@ -140,6 +149,7 @@ func Incomplete(loop loopcontract.LoopRun) bool {
 	}
 }
 
+// Status summarizes a loop run with its attempt count and the verdict of the latest attempt, if any.
 func Status(loop loopcontract.LoopRun) loopcontract.StatusResult {
 	result := loopcontract.StatusResult{OK: true, Loop: loop, AttemptCount: len(loop.Attempts)}
 	if len(loop.Attempts) > 0 {

@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+// RenderProjectDocs returns the full set of generated .issueops documents for
+// root as a map keyed by slash-separated repository-relative path. Every
+// document carries canonical meta frontmatter; DESIGN.md is included only
+// when signals show a client surface.
 func RenderProjectDocs(root string, signals projectdoc.ProjectSignals) map[string]string {
 	out := map[string]string{}
 	// Family roots become short indexes; their previous detail bodies move

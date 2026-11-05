@@ -12,31 +12,31 @@ import (
 )
 
 type artifactStoreForTest struct {
-	records map[string]model.IssueOpsRecord
+	records map[string]model.Record
 }
 
-func newArtifactStoreForTest(record model.IssueOpsRecord) (*artifactStoreForTest, *ArtifactVerificationService) {
-	store := &artifactStoreForTest{records: map[string]model.IssueOpsRecord{record.ID: record}}
+func newArtifactStoreForTest(record model.Record) (*artifactStoreForTest, *ArtifactVerificationService) {
+	store := &artifactStoreForTest{records: map[string]model.Record{record.ID: record}}
 	return store, NewArtifactVerificationService(store, artifactAuthorityForTest{}, nil, nil, time.Now)
 }
 
-func (s *artifactStoreForTest) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
+func (s *artifactStoreForTest) Read(_ context.Context, id string) (model.Record, error) {
 	record, ok := s.records[id]
 	if !ok {
-		return model.IssueOpsRecord{OK: false, ID: id}, os.ErrNotExist
+		return model.Record{OK: false, ID: id}, os.ErrNotExist
 	}
 	record.OK = true
 	return record, nil
 }
 
-func (s *artifactStoreForTest) Update(ctx context.Context, id string, transition RecordTransition) (model.IssueOpsRecord, error) {
+func (s *artifactStoreForTest) Update(ctx context.Context, id string, transition RecordTransition) (model.Record, error) {
 	record, err := s.Read(ctx, id)
 	if err != nil {
 		return record, err
 	}
 	record, err = transition(record)
 	if err != nil {
-		return model.IssueOpsRecord{}, err
+		return model.Record{}, err
 	}
 	record.OK = true
 	s.records[record.ID] = record
@@ -44,16 +44,16 @@ func (s *artifactStoreForTest) Update(ctx context.Context, id string, transition
 }
 
 func TestValidateChecksWithoutPersisting(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-123456789abc",
 		Repo:     t.TempDir(),
 		Branch:   "1-demo",
-		Phase:    model.IssueOpsPhasePR,
+		Phase:    model.PhasePR,
 		IssueURL: "https://github.com/example/repo/issues/1",
 	}
 	fake, store := newArtifactStoreForTest(record)
 
-	got, err := store.Validate(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	got, err := store.Validate(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pull_request",
 		URL:       "https://github.com/example/repo/pull/7",
@@ -72,16 +72,16 @@ func TestValidateChecksWithoutPersisting(t *testing.T) {
 }
 
 func TestValidateRejectsInvalidRecord(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-123456789abc",
 		Repo:     t.TempDir(),
 		Branch:   "1-demo",
-		Phase:    model.IssueOpsPhaseFeedback,
+		Phase:    model.PhaseFeedback,
 		IssueURL: "https://github.com/example/repo/issues/1",
 	}
 	_, store := newArtifactStoreForTest(record)
 
-	got, err := store.Validate(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	got, err := store.Validate(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/7",
@@ -97,40 +97,40 @@ func TestValidateRejectsInvalidRecord(t *testing.T) {
 }
 
 func TestVerifyRemoteArtifactURLMatchesProvider(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-123456789abc",
 		Repo:     t.TempDir(),
 		Branch:   "2-gitlab-mr",
-		Phase:    model.IssueOpsPhasePR,
+		Phase:    model.PhasePR,
 		IssueURL: "https://gitlab.example/group/project/-/issues/2",
 	}
 	fake, store := newArtifactStoreForTest(record)
 
-	if _, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	if _, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/9",
 		Labels:    []string{"issueops"},
 		Assignees: []string{"sample"},
-	}, model.IssueOpsActor{}); err == nil || !strings.Contains(err.Error(), "match linked issue provider") {
+	}, model.Actor{}); err == nil || !strings.Contains(err.Error(), "match linked issue provider") {
 		t.Fatalf("expected provider mismatch error, got %v", err)
 	}
-	if _, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	if _, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "pr",
 		URL:       "https://gitlab.example/group/project/-/merge_requests/4",
 		Labels:    []string{"issueops"},
 		Assignees: []string{"sample"},
-	}, model.IssueOpsActor{}); err == nil || !strings.Contains(err.Error(), "gitlab remote artifact kind must be mr") {
+	}, model.Actor{}); err == nil || !strings.Contains(err.Error(), "gitlab remote artifact kind must be mr") {
 		t.Fatalf("expected gitlab kind error, got %v", err)
 	}
-	got, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	got, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "merge_request",
 		URL:       "https://gitlab.example/group/project/-/merge_requests/4",
 		Labels:    []string{"issueops"},
 		Assignees: []string{"sample"},
-	}, model.IssueOpsActor{})
+	}, model.Actor{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,58 +143,58 @@ func TestVerifyRemoteArtifactURLMatchesProvider(t *testing.T) {
 }
 
 func TestVerifyGitLabRemoteArtifactURLShape(t *testing.T) {
-	record := model.IssueOpsRecord{
+	record := model.Record{
 		ID:       "io-123456789abc",
 		Repo:     t.TempDir(),
 		Branch:   "2-gitlab-mr",
-		Phase:    model.IssueOpsPhasePR,
+		Phase:    model.PhasePR,
 		IssueURL: "https://gitlab.example/group/project/-/issues/2",
 	}
 	_, store := newArtifactStoreForTest(record)
 
-	if _, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	if _, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "mr",
 		URL:       "https://github.com/example/repo/pull/2",
 		Labels:    []string{"bug"},
 		Assignees: []string{"sample"},
-	}, model.IssueOpsActor{}); err == nil || !strings.Contains(err.Error(), "GitLab merge request URL") {
+	}, model.Actor{}); err == nil || !strings.Contains(err.Error(), "GitLab merge request URL") {
 		t.Fatalf("gitlab remote artifact should reject GitHub PR URL, got %v", err)
 	}
-	if _, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	if _, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "mr",
 		URL:       "https://gitlab.example/group/project/-/merge_requests/not-a-number",
 		Labels:    []string{"bug"},
 		Assignees: []string{"100"},
-	}, model.IssueOpsActor{}); err == nil || !strings.Contains(err.Error(), "GitLab merge request URL") {
+	}, model.Actor{}); err == nil || !strings.Contains(err.Error(), "GitLab merge request URL") {
 		t.Fatalf("gitlab remote artifact should reject nonnumeric MR URL, got %v", err)
 	}
-	if _, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	if _, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "mr",
 		URL:       "https://gitlab.example/other/project/-/merge_requests/2",
 		Labels:    []string{"bug"},
 		Assignees: []string{"100"},
-	}, model.IssueOpsActor{}); err == nil || !strings.Contains(err.Error(), "linked issue project") {
+	}, model.Actor{}); err == nil || !strings.Contains(err.Error(), "linked issue project") {
 		t.Fatalf("gitlab remote artifact should reject MR URL from another project, got %v", err)
 	}
-	if _, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	if _, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "mr",
 		URL:       "https://gitlab.example/group/project/-/merge_requests/2",
 		Labels:    []string{"bug"},
 		Assignees: []string{"self"},
-	}, model.IssueOpsActor{}); err == nil || !strings.Contains(err.Error(), "placeholder") {
+	}, model.Actor{}); err == nil || !strings.Contains(err.Error(), "placeholder") {
 		t.Fatalf("gitlab remote artifact should reject placeholder assignee, got %v", err)
 	}
-	got, err := store.Record(context.Background(), record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+	got, err := store.Record(context.Background(), record.ID, model.RemoteArtifactVerificationRequest{
 		Provider:  "gitlab",
 		Kind:      "mr",
 		URL:       "https://gitlab.example/group/project/-/merge_requests/2",
 		Labels:    []string{"bug"},
 		Assignees: []string{"sample"},
-	}, model.IssueOpsActor{})
+	}, model.Actor{})
 	if err != nil {
 		t.Fatalf("gitlab remote artifact should accept GitLab MR URL: %v", err)
 	}
@@ -206,22 +206,22 @@ func TestVerifyGitLabRemoteArtifactURLShape(t *testing.T) {
 func TestVerifyRejectsMalformedLinkedIssue(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
-		record model.IssueOpsRecord
+		record model.Record
 		want   string
 	}{
 		{
 			name: "malformed linked issue project",
-			record: model.IssueOpsRecord{ID: "io-malformed", Phase: model.IssueOpsPhasePR,
+			record: model.Record{ID: "io-malformed", Phase: model.PhasePR,
 				IssueURL: "https://gitlab.example/-/issues/2"},
 			want: "project authority",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, store := newArtifactStoreForTest(tt.record)
-			_, err := store.Record(context.Background(), tt.record.ID, model.IssueOpsRemoteArtifactVerificationRequest{
+			_, err := store.Record(context.Background(), tt.record.ID, model.RemoteArtifactVerificationRequest{
 				Provider: "gitlab", Kind: "mr", URL: "https://gitlab.example/group/project/-/merge_requests/2",
 				Labels: []string{"bug"}, Assignees: []string{"sample"}, TargetBranch: "main",
-			}, model.IssueOpsActor{})
+			}, model.Actor{})
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("Verify error = %v, want %q", err, tt.want)
 			}
@@ -235,7 +235,7 @@ func (s *artifactStoreForTest) WithinTransaction(ctx context.Context, _ string, 
 
 type artifactAuthorityForTest struct{}
 
-func (artifactAuthorityForTest) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+func (artifactAuthorityForTest) Authorize(context.Context, model.Record, model.Actor) error {
 	return nil
 }
 
@@ -253,17 +253,17 @@ func (s *cancellationAwareArtifactStore) WithinTransaction(ctx context.Context, 
 	return s.artifactStoreForTest.WithinTransaction(ctx, id, fn)
 }
 
-func (s *cancellationAwareArtifactStore) Read(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+func (s *cancellationAwareArtifactStore) Read(ctx context.Context, id string) (model.Record, error) {
 	s.reads++
 	return s.artifactStoreForTest.Read(ctx, id)
 }
 
 func TestValidateHonorsCallerCancellation(t *testing.T) {
-	store := &cancellationAwareArtifactStore{artifactStoreForTest: &artifactStoreForTest{records: map[string]model.IssueOpsRecord{"io-1": {ID: "io-1"}}}}
+	store := &cancellationAwareArtifactStore{artifactStoreForTest: &artifactStoreForTest{records: map[string]model.Record{"io-1": {ID: "io-1"}}}}
 	service := NewArtifactVerificationService(store, artifactAuthorityForTest{}, nil, nil, time.Now)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := service.Validate(ctx, "io-1", model.IssueOpsRemoteArtifactVerificationRequest{})
+	_, err := service.Validate(ctx, "io-1", model.RemoteArtifactVerificationRequest{})
 	if !errors.Is(err, context.Canceled) || store.reads != 0 {
 		t.Fatalf("Validate err=%v reads=%d, want context.Canceled before any read", err, store.reads)
 	}
@@ -271,27 +271,27 @@ func TestValidateHonorsCallerCancellation(t *testing.T) {
 
 type verifyFlowAuthority struct{ err error }
 
-func (a verifyFlowAuthority) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+func (a verifyFlowAuthority) Authorize(context.Context, model.Record, model.Actor) error {
 	return a.err
 }
 
-func verifyFlowRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "io-verify", Phase: model.IssueOpsPhasePR, IssueURL: "https://github.com/acme/repo/issues/1"}
+func verifyFlowRecord() model.Record {
+	return model.Record{ID: "io-verify", Phase: model.PhasePR, IssueURL: "https://github.com/acme/repo/issues/1"}
 }
 
-func verifyFlowRequest() model.IssueOpsRemoteArtifactVerificationRequest {
-	return model.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/7", Labels: []string{"issueops"}, Assignees: []string{"octocat"}}
+func verifyFlowRequest() model.RemoteArtifactVerificationRequest {
+	return model.RemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/7", Labels: []string{"issueops"}, Assignees: []string{"octocat"}}
 }
 
 func TestArtifactVerifyChecksLiveStateThenPersistsReceiptWithObservedAncestry(t *testing.T) {
-	store := &artifactStoreForTest{records: map[string]model.IssueOpsRecord{"io-verify": verifyFlowRecord()}}
-	var live []model.IssueOpsRemoteArtifactVerificationRequest
-	var authorized model.IssueOpsActor
-	service := NewArtifactVerificationService(store, authorityRecorder{&authorized}, func(_ context.Context, req model.IssueOpsRemoteArtifactVerificationRequest) error {
+	store := &artifactStoreForTest{records: map[string]model.Record{"io-verify": verifyFlowRecord()}}
+	var live []model.RemoteArtifactVerificationRequest
+	var authorized model.Actor
+	service := NewArtifactVerificationService(store, authorityRecorder{&authorized}, func(_ context.Context, req model.RemoteArtifactVerificationRequest) error {
 		live = append(live, req)
 		return nil
 	}, func() ([]model.NativeProcessReceipt, error) { return []model.NativeProcessReceipt{{PID: 99}}, nil }, func() time.Time { return time.Date(2026, 5, 6, 7, 8, 9, 0, time.UTC) })
-	record, err := service.Verify(context.Background(), "io-verify", verifyFlowRequest(), model.IssueOpsActor{Host: "codex"})
+	record, err := service.Verify(context.Background(), "io-verify", verifyFlowRequest(), model.Actor{Host: "codex"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,9 +306,9 @@ func TestArtifactVerifyChecksLiveStateThenPersistsReceiptWithObservedAncestry(t 
 	}
 }
 
-type authorityRecorder struct{ got *model.IssueOpsActor }
+type authorityRecorder struct{ got *model.Actor }
 
-func (a authorityRecorder) Authorize(_ context.Context, _ model.IssueOpsRecord, actor model.IssueOpsActor) error {
+func (a authorityRecorder) Authorize(_ context.Context, _ model.Record, actor model.Actor) error {
 	*a.got = actor
 	return nil
 }
@@ -317,28 +317,28 @@ func TestArtifactVerifyStopsBeforePersistingWhenAnyStageFails(t *testing.T) {
 	boom := errors.New("boom")
 	for _, tc := range []struct {
 		name      string
-		phase     model.IssueOpsPhase
+		phase     model.Phase
 		liveErr   error
 		observe   error
 		authErr   error
 		wantLive  int
 		wantError string
 	}{
-		{"phase not ready skips live check", model.IssueOpsPhaseFeedback, nil, nil, nil, 0, "before pr phase"},
-		{"live check fails", model.IssueOpsPhasePR, boom, nil, nil, 1, "boom"},
-		{"ancestry observation fails", model.IssueOpsPhasePR, nil, boom, nil, 1, "boom"},
-		{"authority denies", model.IssueOpsPhasePR, nil, nil, boom, 1, "boom"},
+		{"phase not ready skips live check", model.PhaseFeedback, nil, nil, nil, 0, "before pr phase"},
+		{"live check fails", model.PhasePR, boom, nil, nil, 1, "boom"},
+		{"ancestry observation fails", model.PhasePR, nil, boom, nil, 1, "boom"},
+		{"authority denies", model.PhasePR, nil, nil, boom, 1, "boom"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			record := verifyFlowRecord()
 			record.Phase = tc.phase
-			store := &artifactStoreForTest{records: map[string]model.IssueOpsRecord{"io-verify": record}}
+			store := &artifactStoreForTest{records: map[string]model.Record{"io-verify": record}}
 			live := 0
-			service := NewArtifactVerificationService(store, verifyFlowAuthority{tc.authErr}, func(context.Context, model.IssueOpsRemoteArtifactVerificationRequest) error {
+			service := NewArtifactVerificationService(store, verifyFlowAuthority{tc.authErr}, func(context.Context, model.RemoteArtifactVerificationRequest) error {
 				live++
 				return tc.liveErr
 			}, func() ([]model.NativeProcessReceipt, error) { return nil, tc.observe }, time.Now)
-			got, err := service.Verify(context.Background(), "io-verify", verifyFlowRequest(), model.IssueOpsActor{})
+			got, err := service.Verify(context.Background(), "io-verify", verifyFlowRequest(), model.Actor{})
 			if err == nil || !strings.Contains(err.Error(), tc.wantError) || live != tc.wantLive {
 				t.Fatalf("err=%v live=%d", err, live)
 			}

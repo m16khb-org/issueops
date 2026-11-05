@@ -32,18 +32,18 @@ type MergeTarget struct {
 // ResolveMergeTarget admits only a completed cycle: the worktree session owns
 // everything up to `execution complete`, and merging an artifact whose
 // completion is missing would merge unverified commits.
-func ResolveMergeTarget(record model.IssueOpsRecord) (MergeTarget, error) {
+func ResolveMergeTarget(record model.Record) (MergeTarget, error) {
 	return resolveCompletedArtifact(record, "merge-pr")
 }
 
 // ResolveReadyTarget admits the same completed cycle as merge-pr: marking a
 // draft ready asks for review of the sealed completion head.
-func ResolveReadyTarget(record model.IssueOpsRecord) (MergeTarget, error) {
+func ResolveReadyTarget(record model.Record) (MergeTarget, error) {
 	return resolveCompletedArtifact(record, "mark-ready")
 }
 
-func resolveCompletedArtifact(record model.IssueOpsRecord, command string) (MergeTarget, error) {
-	if record.Phase != model.IssueOpsPhaseDone {
+func resolveCompletedArtifact(record model.Record, command string) (MergeTarget, error) {
+	if record.Phase != model.PhaseDone {
 		return MergeTarget{}, fmt.Errorf("%s requires a completed cycle (phase done); current phase is %s", command, record.Phase)
 	}
 	if record.Execution == nil || record.Execution.Completion == nil || strings.TrimSpace(record.Execution.Completion.FinalHead) == "" {

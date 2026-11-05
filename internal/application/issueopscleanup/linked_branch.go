@@ -14,8 +14,10 @@ import (
 	linkedbranch "issueops/internal/domain/issueopslinkedbranch"
 )
 
+// LinkedBranchCleaner deletes orphaned linked branches via preview, then apply
+// with confirm and fingerprint, recording an audit entry for each outcome.
 type LinkedBranchCleaner struct {
-	Records               LockedRecords
+	Records               lockedRecords
 	RemoteRef             func(context.Context, string, string) (string, error)
 	ObserveLinkedBranches func(context.Context, string) (linkedbranch.Observation, error)
 	DeleteLinkedBranch    func(context.Context, string, string) error
@@ -35,7 +37,7 @@ type cleanupLinkedBranchInventory struct {
 	RemoteRefOID    string `json:"remote_ref_oid"`
 }
 
-// Run은 ref-null 고아 linked-branch를 preview → apply+confirm
+// Run 메서드는 ref-null 고아 linked-branch를 preview → apply+confirm
 // +fingerprint로만 정리한다(#306 AC-04·05·06).
 func (s LinkedBranchCleaner) Run(ctx context.Context, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error) {
 	record, err := s.Records.Load(req.ID)
@@ -43,7 +45,7 @@ func (s LinkedBranchCleaner) Run(ctx context.Context, req issueopscontract.Clean
 		return issueopscontract.CleanupLinkedBranchResult{OK: false, ID: req.ID}, err
 	}
 	result := issueopscontract.CleanupLinkedBranchResult{OK: true, ID: record.ID, Preview: !req.Apply}
-	audit := LinkedBranchAuditRecorder{Records: s.Records, Now: s.Now}
+	audit := linkedBranchAuditRecorder{Records: s.Records, Now: s.Now}
 
 	missing := domain.LinkedBranchCleanupGates(record, s.ObserveLinkedBranches != nil, s.DeleteLinkedBranch != nil)
 	if len(missing) > 0 {

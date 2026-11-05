@@ -14,6 +14,10 @@ import (
 	tracecontract "issueops/internal/contract/trace"
 )
 
+// RunTrace dispatches `issueops trace` to its subcommands: analyze, which
+// turns trace input into recurring-failure findings, and handoff-delivery,
+// which records a manual handoff delivery observation. It prints usage when
+// the subcommand is missing and returns flag.ErrHelp for help flags.
 func (command Command) RunTrace(args []string) error {
 	if len(args) == 0 {
 		traceUsage()
@@ -71,8 +75,8 @@ func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 
 // readHandoffDeliveryObservation reads and strictly decodes one bounded
 // observation document from a file path or '-' for stdin.
-func readHandoffDeliveryObservation(input string) (issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	var observation issueopscontract.IssueOpsHandoffDeliveryObservation
+func readHandoffDeliveryObservation(input string) (issueopscontract.HandoffDeliveryObservation, error) {
+	var observation issueopscontract.HandoffDeliveryObservation
 	var reader io.Reader
 	if input == "-" {
 		reader = os.Stdin
@@ -115,7 +119,7 @@ func (command Command) runTraceAnalyze(args []string) error {
 	if *input == "" && positional != "" {
 		*input = positional
 	}
-	result, err := command.Trace.Analyze(tracecontract.TraceAnalyzeRequest{Input: *input, InputFormat: *inputFormat})
+	result, err := command.Trace.Analyze(tracecontract.AnalyzeRequest{Input: *input, InputFormat: *inputFormat})
 	if err != nil {
 		if *jsonOut {
 			return jsonout.PrintResultError(os.Stdout, result, err)

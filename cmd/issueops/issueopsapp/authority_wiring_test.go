@@ -56,7 +56,7 @@ func TestMCPAuthorizeIssuesPreLeaseCapabilityAndGuardRechecksEachSpan(t *testing
 	if err != nil || !receipt.OK {
 		t.Fatalf("authorize receipt=%+v err=%v", receipt, err)
 	}
-	key, token, err := (authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()}).Read(context.Background(), receipt.AuthorityFile)
+	key, token, err := (authorityoutbound.CredentialFiles{StateDir: statestore.Dir()}).Read(context.Background(), receipt.AuthorityFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestMCPAuthorizeIssuesPreLeaseCapabilityAndGuardRechecksEachSpan(t *testing
 		t.Fatal("a revoked capability reached the span callback")
 	}
 
-	_, newToken, err := (authorityoutbound.CredentialFiles{StateDir: statestore.StateDir()}).Read(context.Background(), rotated.AuthorityFile)
+	_, newToken, err := (authorityoutbound.CredentialFiles{StateDir: statestore.Dir()}).Read(context.Background(), rotated.AuthorityFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestMCPAuthorizeRejectsSessionOutsideObservedAncestry(t *testing.T) {
 	if err == nil || receipt.OK || receipt.AuthorityFile != "" || !strings.Contains(err.Error(), "ancestry") {
 		t.Fatalf("authorize outside ancestry receipt=%+v err=%v", receipt, err)
 	}
-	if _, err := os.Stat(statestore.StateDir() + "/mcp-http"); !os.IsNotExist(err) {
+	if _, err := os.Stat(statestore.Dir() + "/mcp-http"); !os.IsNotExist(err) {
 		t.Fatalf("rejected authorize wrote credentials: %v", err)
 	}
 }

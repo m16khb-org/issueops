@@ -17,15 +17,15 @@ func TestServiceListCyclesFiltersAndProjectsInventory(t *testing.T) {
 	now := time.Date(2026, time.August, 11, 3, 4, 5, 0, time.UTC)
 	repository := fakeRepository{
 		ids: []string{"planning", "claimable", "done", "elsewhere", "broken"},
-		records: map[string]issueopscontract.IssueOpsRecord{
+		records: map[string]issueopscontract.Record{
 			"planning": {
 				ID: "planning", Repo: "/repo", Branch: "84-planning",
-				Phase: issueopscontract.IssueOpsPhasePlan,
+				Phase: issueopscontract.PhasePlan,
 			},
 			"claimable": {
 				ID: "claimable", Repo: "/repo", Branch: "84-claimable",
-				Phase: issueopscontract.IssueOpsPhaseImplement,
-				IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{
+				Phase: issueopscontract.PhaseImplement,
+				IssueCreateIntent: &issueopscontract.IssueCreateIntent{
 					Status: issueopscontract.IssueCreateIntentInvokedUnknown,
 				},
 				Execution: &issueopscontract.Execution{
@@ -47,17 +47,17 @@ func TestServiceListCyclesFiltersAndProjectsInventory(t *testing.T) {
 			},
 			"done": {
 				ID: "done", Repo: "/repo", Branch: "84-done",
-				Phase: issueopscontract.IssueOpsPhaseDone,
-				RemoteArtifact: &issueopscontract.IssueOpsRemoteArtifactVerification{
+				Phase: issueopscontract.PhaseDone,
+				RemoteArtifact: &issueopscontract.RemoteArtifactVerification{
 					URL: "https://github.com/acme/repo/pull/1",
 				},
-				CleanupFinishFailure: &issueopscontract.IssueOpsCleanupFinishFailure{
+				CleanupFinishFailure: &issueopscontract.CleanupFinishFailure{
 					Step: "worktree_remove",
 					At:   "2026-08-11T02:02:00Z",
 				},
 			},
 			"elsewhere": {
-				ID: "elsewhere", Repo: "/other", Phase: issueopscontract.IssueOpsPhasePlan,
+				ID: "elsewhere", Repo: "/other", Phase: issueopscontract.PhasePlan,
 			},
 		},
 		readErrors: map[string]error{"broken": errors.New("invalid record")},
@@ -338,15 +338,15 @@ func inventoryFixture(recordCount, uniquePaths int) fakeRepository {
 func inventoryRecords(paths []string) fakeRepository {
 	repository := fakeRepository{
 		ids:     make([]string, len(paths)),
-		records: make(map[string]issueopscontract.IssueOpsRecord, len(paths)),
+		records: make(map[string]issueopscontract.Record, len(paths)),
 	}
 	for index, path := range paths {
 		id := fmt.Sprintf("io-%04d", index)
 		repository.ids[index] = id
-		repository.records[id] = issueopscontract.IssueOpsRecord{
+		repository.records[id] = issueopscontract.Record{
 			ID:    id,
 			Repo:  path,
-			Phase: issueopscontract.IssueOpsPhasePlan,
+			Phase: issueopscontract.PhasePlan,
 		}
 	}
 	return repository
@@ -408,7 +408,7 @@ func (normalizer *benchmarkNormalizer) Canonical(path string) string { return pa
 
 type fakeRepository struct {
 	ids        []string
-	records    map[string]issueopscontract.IssueOpsRecord
+	records    map[string]issueopscontract.Record
 	readErrors map[string]error
 	listError  error
 }

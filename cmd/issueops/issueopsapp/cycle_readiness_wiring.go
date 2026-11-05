@@ -37,7 +37,7 @@ func newCycleReadinessReading(run func(string, ...string) (int, string, string))
 		},
 		ChildMissing: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).PRMissing}
 }
-func newCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {
+func newCyclePhaseService(actor *model.Actor) cycle.PhaseService {
 	store := core.NewReviewMutationStore(actor)
 	return cycle.PhaseService{WriteMaterials: (materialapp.TrackedMaterials{Files: core.MaterialFiles{}}).Write, Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: newCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: newReadinessGit().Head, Fingerprint: newChangeReader().ChangeFingerprint}}
 }

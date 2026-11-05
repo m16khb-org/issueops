@@ -1,11 +1,12 @@
-package remote
+package issueopsremote
 
 import (
 	"fmt"
 	"strings"
 )
 
-func RenderScoreSummary(result IssueOpsRemoteScoringResult) string {
+// RenderScoreSummary renders result as a multi-line Korean summary: the threshold, then the selected and rejected issues and labels with their scores.
+func RenderScoreSummary(result ScoringResult) string {
 	parts := []string{fmt.Sprintf("threshold %.2f", result.Threshold)}
 	if len(result.SelectedRelatedIssues) > 0 {
 		parts = append(parts, "선택 관련 이슈: "+joinScoredItems(result.SelectedRelatedIssues))
@@ -22,7 +23,7 @@ func RenderScoreSummary(result IssueOpsRemoteScoringResult) string {
 	return strings.Join(parts, "\n")
 }
 
-func joinScoredItems(items []IssueOpsRemoteScoredItem) string {
+func joinScoredItems(items []ScoredItem) string {
 	out := make([]string, 0, len(items))
 	for _, item := range items {
 		name := firstNonEmpty(item.Name, item.ID, item.Title, item.URL)

@@ -18,7 +18,7 @@ func TestCleanupAbandonRemoteRetryRequiresUnchangedLocalInventory(t *testing.T) 
 			{"absent", false, false}, {"worktree", true, false}, {"branch", false, true}, {"paired", true, true},
 		} {
 			t.Run(step+"/"+shape.name, func(t *testing.T) {
-				failure := &model.IssueOpsCleanupAbandonFailure{Step: step, Branch: "task", Fingerprint: strings.Repeat("a", 64), RecordSHA: strings.Repeat("b", 64), InventorySHA256: strings.Repeat("c", 64)}
+				failure := &model.CleanupAbandonFailure{Step: step, Branch: "task", Fingerprint: strings.Repeat("a", 64), RecordSHA: strings.Repeat("b", 64), InventorySHA256: strings.Repeat("c", 64)}
 				inventory := model.CleanupAbandonInventory{Branch: "task", WorktreePresent: shape.worktree}
 				if shape.worktree {
 					failure.WorktreeHead = "old"
@@ -28,9 +28,9 @@ func TestCleanupAbandonRemoteRetryRequiresUnchangedLocalInventory(t *testing.T) 
 					failure.BranchOID = "old"
 					inventory.BranchOID = "old"
 				}
-				record := model.IssueOpsRecord{CleanupAbandonFailure: failure}
-				evidence := CleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
-				if !CleanupAbandonFailureInventoryMatches(record, inventory, evidence) {
+				record := model.Record{CleanupAbandonFailure: failure}
+				evidence := cleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
+				if !cleanupAbandonFailureInventoryMatches(record, inventory, evidence) {
 					t.Fatal("unchanged inventory must be retryable")
 				}
 				for _, change := range []struct {
@@ -56,13 +56,13 @@ func TestCleanupAbandonRemoteRetryRequiresUnchangedLocalInventory(t *testing.T) 
 					t.Run(change.name, func(t *testing.T) {
 						next := inventory
 						change.mutate(&next)
-						if CleanupAbandonFailureInventoryMatches(record, next, evidence) {
+						if cleanupAbandonFailureInventoryMatches(record, next, evidence) {
 							t.Fatal("changed local inventory accepted")
 						}
 					})
 				}
-				for _, bad := range []CleanupAbandonFailureEvidence{{SameWorktree: false, SealMatches: true}, {SameWorktree: true, SealMatches: false}} {
-					if CleanupAbandonFailureInventoryMatches(record, inventory, bad) {
+				for _, bad := range []cleanupAbandonFailureEvidence{{SameWorktree: false, SealMatches: true}, {SameWorktree: true, SealMatches: false}} {
+					if cleanupAbandonFailureInventoryMatches(record, inventory, bad) {
 						t.Fatal("invalid receipt evidence accepted")
 					}
 				}
@@ -72,7 +72,7 @@ func TestCleanupAbandonRemoteRetryRequiresUnchangedLocalInventory(t *testing.T) 
 }
 
 func TestCleanupAbandonPreviewKeepsUnknownResourcesBlocked(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-example", Branch: "task", WorktreePath: "/task"}
+	record := model.Record{ID: "io-example", Branch: "task", WorktreePath: "/task"}
 	inventory := CleanupAbandonTargets(record)
 	observed := CleanupAbandonObservation{WorktreeUnobservable: true}
 	_, result := BuildCleanupAbandonPreview(record, model.CleanupAbandonRequest{Reason: "cancel task"}, inventory, observed)
@@ -90,7 +90,7 @@ func TestCleanupAbandonPreviewKeepsUnknownResourcesBlocked(t *testing.T) {
 // An agent saw remote_effects plan remote_branch_delete while
 // remote_branch_deletion said not_planned; the two now agree.
 func TestCleanupAbandonPreviewRemoteBranchDeletionFollowsRemoteEffects(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-example", Branch: "task"}
+	record := model.Record{ID: "io-example", Branch: "task"}
 	inventory := CleanupAbandonTargets(record)
 	for effects, want := range map[string]string{
 		"close_pr,remote_branch_delete":           "planned",
@@ -105,7 +105,7 @@ func TestCleanupAbandonPreviewRemoteBranchDeletionFollowsRemoteEffects(t *testin
 }
 
 func TestCleanupAbandonPreviewPreservesAllRefusalReasons(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-example", Branch: "task", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/1"}}
+	record := model.Record{ID: "io-example", Branch: "task", RemoteArtifact: &model.RemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/1"}}
 	inventory := model.CleanupAbandonInventory{Branch: "task", WorktreePresent: true, WorktreeHead: "first", BranchOID: "second"}
 	facts := CleanupAbandonObservation{
 		WorktreeIdentityConflict: true, WorkspaceMissing: []string{"source_checkout"},

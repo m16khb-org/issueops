@@ -19,24 +19,28 @@ import (
 
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/contract/processidentity"
+	"issueops/internal/port"
 )
 
 const (
-	CodeSupervisorUnsupported = "supervisor_unsupported"
-	CodeSupervisorUnavailable = "supervisor_unavailable"
-	CodeSupervisorFailed      = "supervisor_failed"
-	CodePortInUse             = "port_in_use"
-	CodeIdentityMismatch      = "identity_mismatch"
-	CodeStaleRecord           = "stale_record"
-	CodeNotReady              = "not_ready"
-	CodeNotSupervised         = "not_supervised"
-	CodeBuildMismatch         = "build_mismatch"
-	CodeReadinessTimeout      = "readiness_timeout"
-	CodeStopTimeout           = "stop_timeout"
-	CodeStateUnreadable       = "state_unreadable"
-	CodeCredentialFailed      = "credential_failed"
+	codeSupervisorUnsupported = "supervisor_unsupported"
+	codeSupervisorUnavailable = "supervisor_unavailable"
+	codeSupervisorFailed      = "supervisor_failed"
+	codePortInUse             = "port_in_use"
+	codeIdentityMismatch      = "identity_mismatch"
+	codeStaleRecord           = "stale_record"
+	codeNotReady              = "not_ready"
+	codeNotSupervised         = "not_supervised"
+	codeBuildMismatch         = "build_mismatch"
+	codeReadinessTimeout      = "readiness_timeout"
+	codeStopTimeout           = "stop_timeout"
+	codeStateUnreadable       = "state_unreadable"
+	codeCredentialFailed      = "credential_failed"
 )
 
+// Config holds the host facts and injectable effects of Service: platform, paths,
+// service identity, and the clients and timeouts used to observe and wait for the
+// server. Zero-valued optional fields get defaults in New.
 type Config struct {
 	GOOS     string
 	Home     string
@@ -49,7 +53,7 @@ type Config struct {
 	UnitName string
 	UID      int
 
-	Run          Runner
+	Run          runner
 	LookPath     func(string) (string, error)
 	Inspect      func(int) (processidentity.Identity, error)
 	EnsureBearer func() (string, error)
@@ -69,9 +73,15 @@ type Service struct {
 	supervisor supervisor
 }
 
+var _ port.MCPService = (*Service)(nil)
+
+// New returns a Service for cfg, filling default lock holder lookup, HTTP client,
+// wait function, and timeouts, and selecting the launchd or systemd supervisor by
+// cfg.GOOS. For other platforms the supervisor is unset and operations fail as
+// unsupported.
 func New(cfg Config) *Service {
 	if cfg.LockHolder == nil {
-		cfg.LockHolder = LockHolder
+		cfg.LockHolder = lockHolder
 	}
 	if cfg.Client == nil {
 		cfg.Client = &http.Client{Timeout: 3 * time.Second}
@@ -112,10 +122,10 @@ func (s *Service) fail(status mcpservice.Status, code string, err error) (mcpser
 
 func (s *Service) requireSupervisor() (mcpservice.Status, error) {
 	if s.supervisor == nil {
-		return s.fail(s.result("", 0, ""), CodeSupervisorUnsupported, fmt.Errorf("issueops mcp service has no supported supervisor on %s; run `issueops mcp --http` in the foreground or install with --mcp-transport=stdio", s.cfg.GOOS))
+		return s.fail(s.result("", 0, ""), codeSupervisorUnsupported, fmt.Errorf("issueops mcp service has no supported supervisor on %s; run `issueops mcp --http` in the foreground or install with --mcp-transport=stdio", s.cfg.GOOS))
 	}
 	if _, err := s.cfg.LookPath(s.supervisor.command()); err != nil {
-		return s.fail(s.result("", 0, ""), CodeSupervisorUnavailable, fmt.Errorf("issueops mcp service supervisor %s is unavailable: %w", s.supervisor.command(), err))
+		return s.fail(s.result("", 0, ""), codeSupervisorUnavailable, fmt.Errorf("issueops mcp service supervisor %s is unavailable: %w", s.supervisor.command(), err))
 	}
 	return mcpservice.Status{}, nil
 }
@@ -136,7 +146,7 @@ type observation struct {
 func (s *Service) observe(ctx context.Context) observation {
 	holder, err := s.cfg.LockHolder(s.lockPath())
 	if err != nil {
-		status, err := s.fail(s.result("", 0, ""), CodeStateUnreadable, fmt.Errorf("read mcp http lock: %w", err))
+		status, err := s.fail(s.result("", 0, ""), codeStateUnreadable, fmt.Errorf("read mcp http lock: %w", err))
 		return observation{status: status, err: err}
 	}
 	record, recordErr := readRecord(s.recordPath())
@@ -145,7 +155,7 @@ func (s *Service) observe(ctx context.Context) observation {
 		return s.observeUnheld(record, recordMissing)
 	}
 	mismatch := func(detail string) observation {
-		status, err := s.fail(s.result(mcpservice.StatusConflict, holder, ""), CodeIdentityMismatch, fmt.Errorf("mcp http lock holder %d does not match the published instance: %s", holder, detail))
+		status, err := s.fail(s.result(mcpservice.StatusConflict, holder, ""), codeIdentityMismatch, fmt.Errorf("mcp http lock holder %d does not match the published instance: %s", holder, detail))
 		return observation{status: status, holder: holder, err: err}
 	}
 	if recordErr != nil {
@@ -163,7 +173,7 @@ func (s *Service) observe(ctx context.Context) observation {
 	}
 	pid, buildID, err := s.probe(ctx)
 	if err != nil {
-		status, err := s.fail(s.result(mcpservice.StatusStale, holder, record.BuildID), CodeNotReady, fmt.Errorf("mcp http instance %d holds the lock but did not answer an authenticated MCP request: %w", holder, err))
+		status, err := s.fail(s.result(mcpservice.StatusStale, holder, record.BuildID), codeNotReady, fmt.Errorf("mcp http instance %d holds the lock but did not answer an authenticated MCP request: %w", holder, err))
 		return observation{status: status, holder: holder, err: err}
 	}
 	if pid != holder || buildID != record.BuildID {
@@ -176,11 +186,11 @@ func (s *Service) observe(ctx context.Context) observation {
 // record is stale, an occupied port is a conflict, otherwise it is stopped.
 func (s *Service) observeUnheld(record Record, recordMissing bool) observation {
 	if !recordMissing {
-		status, err := s.fail(s.result(mcpservice.StatusStale, record.PID, record.BuildID), CodeStaleRecord, fmt.Errorf("mcp http instance record names a process that no longer holds the service lock"))
+		status, err := s.fail(s.result(mcpservice.StatusStale, record.PID, record.BuildID), codeStaleRecord, fmt.Errorf("mcp http instance record names a process that no longer holds the service lock"))
 		return observation{status: status, err: err}
 	}
 	if s.portInUse() {
-		status, err := s.fail(s.result(mcpservice.StatusConflict, 0, ""), CodePortInUse, fmt.Errorf("%s is held by a process outside the issueops service lock (conflict)", s.cfg.Address))
+		status, err := s.fail(s.result(mcpservice.StatusConflict, 0, ""), codePortInUse, fmt.Errorf("%s is held by a process outside the issueops service lock (conflict)", s.cfg.Address))
 		return observation{status: status, err: err}
 	}
 	return observation{status: s.result(mcpservice.StatusStopped, 0, "")}
@@ -222,11 +232,11 @@ func (s *Service) probe(ctx context.Context) (int, string, error) {
 	if err := checkInitializeResult(response); err != nil {
 		return 0, "", err
 	}
-	pid, err := strconv.Atoi(response.Header.Get(HeaderPID))
+	pid, err := strconv.Atoi(response.Header.Get(headerPID))
 	if err != nil {
-		return 0, "", fmt.Errorf("initialize response has no %s header", HeaderPID)
+		return 0, "", fmt.Errorf("initialize response has no %s header", headerPID)
 	}
-	return pid, response.Header.Get(HeaderBuildID), nil
+	return pid, response.Header.Get(headerBuildID), nil
 }
 
 func checkInitializeResult(response *http.Response) error {
@@ -263,6 +273,8 @@ func checkInitializeResult(response *http.Response) error {
 	return nil
 }
 
+// Status observes the supervised MCP HTTP service and reports whether it is
+// running, stopped, stale, or in conflict. An unsupported supervisor is an error.
 func (s *Service) Status(ctx context.Context) (mcpservice.Status, error) {
 	if status, err := s.requireSupervisor(); err != nil {
 		return status, err
@@ -284,7 +296,7 @@ func (s *Service) Prepare(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("prepare mcp http credential: %w", err)
 	}
-	logPath := ServiceLogPath(s.cfg.StateDir)
+	logPath := serviceLogPath(s.cfg.StateDir)
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return "", fmt.Errorf("prepare mcp http log: %w", err)
@@ -306,19 +318,23 @@ func (s *Service) Prepare(ctx context.Context) (string, error) {
 	return bearer, nil
 }
 
+// Start loads the service into the supervisor and waits until it is ready and
+// serving the expected binary build. A service already running a different build
+// or an unreadable state is a failure; on a readiness failure the job is
+// unloaded again.
 func (s *Service) Start(ctx context.Context) (mcpservice.Status, error) {
 	if status, err := s.requireSupervisor(); err != nil {
 		return status, err
 	}
-	want, err := BuildID(s.cfg.Binary)
+	want, err := buildID(s.cfg.Binary)
 	if err != nil {
-		return s.fail(s.result("", 0, ""), CodeBuildMismatch, fmt.Errorf("read service binary %s: %w", s.cfg.Binary, err))
+		return s.fail(s.result("", 0, ""), codeBuildMismatch, fmt.Errorf("read service binary %s: %w", s.cfg.Binary, err))
 	}
 	observed := s.observe(ctx)
 	switch observed.status.Status {
 	case mcpservice.StatusRunning:
 		if observed.status.BuildID != want {
-			return s.fail(observed.status, CodeBuildMismatch, fmt.Errorf("mcp http service runs build %s, binary is %s; stop it first", observed.status.BuildID, want))
+			return s.fail(observed.status, codeBuildMismatch, fmt.Errorf("mcp http service runs build %s, binary is %s; stop it first", observed.status.BuildID, want))
 		}
 		return observed.status, nil
 	case mcpservice.StatusConflict:
@@ -328,7 +344,7 @@ func (s *Service) Start(ctx context.Context) (mcpservice.Status, error) {
 			return observed.status, observed.err
 		}
 		if err := s.removeStaleRecord(); err != nil {
-			return s.fail(observed.status, CodeStateUnreadable, err)
+			return s.fail(observed.status, codeStateUnreadable, err)
 		}
 	case mcpservice.StatusStopped:
 	default:
@@ -350,16 +366,18 @@ func (s *Service) awaitRunning(ctx context.Context, want string) (mcpservice.Sta
 	last := s.observe(deadline)
 	for last.status.Status != mcpservice.StatusRunning {
 		if err := s.cfg.Wait(deadline, s.cfg.PollInterval); err != nil {
-			return s.fail(last.status, CodeReadinessTimeout, fmt.Errorf("mcp http service did not become ready within %s: %w", s.cfg.ReadyTimeout, errors.Join(err, last.err)))
+			return s.fail(last.status, codeReadinessTimeout, fmt.Errorf("mcp http service did not become ready within %s: %w", s.cfg.ReadyTimeout, errors.Join(err, last.err)))
 		}
 		last = s.observe(deadline)
 	}
 	if last.status.BuildID != want {
-		return s.fail(last.status, CodeBuildMismatch, fmt.Errorf("mcp http service started build %s, want %s", last.status.BuildID, want))
+		return s.fail(last.status, codeBuildMismatch, fmt.Errorf("mcp http service started build %s, want %s", last.status.BuildID, want))
 	}
 	return last.status, nil
 }
 
+// Stop unloads the supervised job and waits for the instance lock to be released.
+// It refuses to stop a process that the supervisor does not own.
 func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 	if status, err := s.requireSupervisor(); err != nil {
 		return status, err
@@ -370,13 +388,13 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 	}
 	loaded, supervisedPID, err := s.supervisor.supervised(ctx)
 	if err != nil {
-		return s.fail(observed.status, CodeSupervisorFailed, err)
+		return s.fail(observed.status, codeSupervisorFailed, err)
 	}
 	if !loaded || supervisedPID != observed.status.PID {
-		return s.fail(observed.status, CodeNotSupervised, fmt.Errorf("mcp http instance %d is not the process supervised by %s; refusing to stop it", observed.status.PID, s.supervisor.command()))
+		return s.fail(observed.status, codeNotSupervised, fmt.Errorf("mcp http instance %d is not the process supervised by %s; refusing to stop it", observed.status.PID, s.supervisor.command()))
 	}
 	if err := s.supervisor.unload(ctx); err != nil {
-		return s.fail(observed.status, CodeSupervisorFailed, fmt.Errorf("unload mcp service job: %w", err))
+		return s.fail(observed.status, codeSupervisorFailed, fmt.Errorf("unload mcp service job: %w", err))
 	}
 	if status, err := s.awaitLockReleased(ctx, observed.status); err != nil {
 		return status, err
@@ -398,7 +416,7 @@ func (s *Service) stopNotRunning(ctx context.Context, observed observation) (mcp
 			return observed.status, observed.err
 		}
 		if err := s.removeStaleRecord(); err != nil {
-			return s.fail(observed.status, CodeStateUnreadable, err)
+			return s.fail(observed.status, codeStateUnreadable, err)
 		}
 		return s.unloadIdle(ctx, s.result(mcpservice.StatusStopped, 0, ""))
 	default:
@@ -413,13 +431,13 @@ func (s *Service) awaitLockReleased(ctx context.Context, observed mcpservice.Sta
 	for {
 		holder, err := s.cfg.LockHolder(s.lockPath())
 		if err != nil {
-			return s.fail(observed, CodeStateUnreadable, err)
+			return s.fail(observed, codeStateUnreadable, err)
 		}
 		if holder == 0 {
 			return observed, nil
 		}
 		if err := s.cfg.Wait(deadline, s.cfg.PollInterval); err != nil {
-			return s.fail(observed, CodeStopTimeout, fmt.Errorf("mcp http instance %d still holds the service lock: %w", holder, err))
+			return s.fail(observed, codeStopTimeout, fmt.Errorf("mcp http instance %d still holds the service lock: %w", holder, err))
 		}
 	}
 }
@@ -436,21 +454,21 @@ func (s *Service) removeStaleRecord() error {
 func (s *Service) loadFreshJob(ctx context.Context) (mcpservice.Status, error) {
 	stopped := func() mcpservice.Status { return s.result(mcpservice.StatusStopped, 0, "") }
 	if _, err := s.Prepare(ctx); err != nil {
-		code := CodeCredentialFailed
+		code := codeCredentialFailed
 		if errors.Is(err, errUnitPathNotSearched) {
-			code = CodeSupervisorFailed
+			code = codeSupervisorFailed
 		}
 		return s.fail(stopped(), code, err)
 	}
 	if loaded, _, err := s.supervisor.supervised(ctx); err != nil {
-		return s.fail(stopped(), CodeSupervisorFailed, err)
+		return s.fail(stopped(), codeSupervisorFailed, err)
 	} else if loaded {
 		if err := s.supervisor.unload(ctx); err != nil {
-			return s.fail(stopped(), CodeSupervisorFailed, fmt.Errorf("unload idle mcp service job: %w", err))
+			return s.fail(stopped(), codeSupervisorFailed, fmt.Errorf("unload idle mcp service job: %w", err))
 		}
 	}
 	if err := s.supervisor.load(ctx); err != nil {
-		return s.fail(stopped(), CodeSupervisorFailed, fmt.Errorf("load mcp service job: %w", err))
+		return s.fail(stopped(), codeSupervisorFailed, fmt.Errorf("load mcp service job: %w", err))
 	}
 	return mcpservice.Status{}, nil
 }
@@ -458,11 +476,11 @@ func (s *Service) loadFreshJob(ctx context.Context) (mcpservice.Status, error) {
 func (s *Service) unloadIdle(ctx context.Context, status mcpservice.Status) (mcpservice.Status, error) {
 	loaded, _, err := s.supervisor.supervised(ctx)
 	if err != nil {
-		return s.fail(status, CodeSupervisorFailed, err)
+		return s.fail(status, codeSupervisorFailed, err)
 	}
 	if loaded {
 		if err := s.supervisor.unload(ctx); err != nil {
-			return s.fail(status, CodeSupervisorFailed, fmt.Errorf("unload idle mcp service job: %w", err))
+			return s.fail(status, codeSupervisorFailed, fmt.Errorf("unload idle mcp service job: %w", err))
 		}
 	}
 	return status, nil
@@ -472,10 +490,10 @@ func (s *Service) unloadIdle(ctx context.Context, status mcpservice.Status) (mcp
 // older build is stopped (identity-checked) and the target build started.
 func (s *Service) EnsureRunning(ctx context.Context, binary string) (mcpservice.Status, error) {
 	if filepath.Clean(binary) != filepath.Clean(s.cfg.Binary) {
-		return s.fail(s.result("", 0, ""), CodeBuildMismatch, fmt.Errorf("mcp service binary %s differs from install target %s", s.cfg.Binary, binary))
+		return s.fail(s.result("", 0, ""), codeBuildMismatch, fmt.Errorf("mcp service binary %s differs from install target %s", s.cfg.Binary, binary))
 	}
 	status, err := s.Start(ctx)
-	if err == nil || status.ErrorCode != CodeBuildMismatch || status.Status != mcpservice.StatusRunning {
+	if err == nil || status.ErrorCode != codeBuildMismatch || status.Status != mcpservice.StatusRunning {
 		return status, err
 	}
 	if status, err := s.Stop(ctx); err != nil {

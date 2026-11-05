@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+// RenderAgentsWithBlock returns the AGENTS.md content for root with the
+// issueops-managed routing block inserted or refreshed between the start and
+// end markers. The current file is read from root/AGENTS.md (the existing
+// argument is not consulted); a missing file yields the behavioral guidelines
+// followed by the block. Content outside the markers is preserved.
 func RenderAgentsWithBlock(root, existing string) string {
 	bullets := []string{
 		"- Architecture or large design changes: " + projectdoc.ProjectDocsDir + "/ARCHITECTURE.md, " + projectdoc.ProjectDocsDir + "/CONSTITUTION.md",

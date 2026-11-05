@@ -15,7 +15,7 @@ import (
 
 func newProjectLifecycleService() lifecycleapp.Service {
 	return lifecycleapp.Service{SchemaVersion: lifecyclemodel.ProjectLifecycleSchemaVersion, Effects: lifecyclefiles.ProfileFiles{
-		Normalize: newRepoRootResolver("."), StateDir: statestore.StateDir(),
+		Normalize: newRepoRootResolver("."), StateDir: statestore.Dir(),
 		ObserveFingerprint: func(root string) lifecyclecontract.ProjectFingerprint {
 			return fingerprint.ForRoot(root, projectdocs.ReadGitOriginURL)
 		},

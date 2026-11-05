@@ -7,11 +7,15 @@ import (
 )
 
 // PlanPrepGateApplies leaves the missing intent contract as the first readiness error.
-func PlanPrepGateApplies(record model.IssueOpsRecord) bool {
+func PlanPrepGateApplies(record model.Record) bool {
 	return record.Intent != nil && !strings.EqualFold(strings.TrimSpace(record.Intent.IntentClass), "trivial")
 }
 
-func PlanPrepMissing(prep *model.IssueOpsPlanPrep) []string {
+// PlanPrepMissing lists the plan-prep items still not satisfied: prior
+// decisions, related issues, web research, and codebase survey. An item
+// counts when it has usable evidence or a waive reason; a nil prep misses all
+// four.
+func PlanPrepMissing(prep *model.PlanPrep) []string {
 	if prep == nil {
 		return []string{"plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey"}
 	}
@@ -31,7 +35,7 @@ func PlanPrepMissing(prep *model.IssueOpsPlanPrep) []string {
 	return missing
 }
 
-func planPrepItemValid(item model.IssueOpsPlanPrepItem) bool {
+func planPrepItemValid(item model.PlanPrepItem) bool {
 	switch strings.TrimSpace(item.Status) {
 	case "evidence":
 		return hasUsableEvidence(item.Evidence)

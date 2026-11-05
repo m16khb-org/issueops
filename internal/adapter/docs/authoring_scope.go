@@ -13,6 +13,9 @@ type projectDocsFamily struct {
 	ModuleDir string `json:"module_dir"`
 }
 
+// ModuleDirectories returns the module_dir of every family in
+// .issueops/documentation/manifest.json under root. A missing or invalid manifest
+// yields nil.
 func (Observer) ModuleDirectories(root string) []string {
 	data, err := os.ReadFile(filepath.Join(root, ".issueops", "documentation", "manifest.json"))
 	if err != nil {

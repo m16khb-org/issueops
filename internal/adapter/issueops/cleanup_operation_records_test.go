@@ -15,7 +15,7 @@ func TestCleanupRecordsBindOperationAndReplacementAcrossFinalizers(t *testing.T)
 	for _, operation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch} {
 		t.Run(string(operation), func(t *testing.T) {
 			root := t.TempDir()
-			record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-operation", Phase: model.IssueOpsPhaseDone})
+			record, err := writeIssueOps(context.Background(), root, model.Record{SchemaVersion: 1, ID: "io-operation", Phase: model.PhaseDone})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -24,7 +24,7 @@ func TestCleanupRecordsBindOperationAndReplacementAcrossFinalizers(t *testing.T)
 			if err != nil {
 				t.Fatal(err)
 			}
-			attempt := model.IssueOpsCleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+			attempt := model.CleanupAttempt{Operation: operation, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 			armed, err := store.Arm(ctx, before, attempt)
 			if err != nil {
 				t.Fatal(err)

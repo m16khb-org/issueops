@@ -7,7 +7,9 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func ValidateNewCycleRequest(req model.IssueOpsStartRequest) error {
+// ValidateNewCycleRequest rejects a request for a new cycle that names a
+// branch; a new cycle starts branchless and takes its branch later.
+func ValidateNewCycleRequest(req model.StartRequest) error {
 	if req.New && strings.TrimSpace(req.Branch) != "" {
 		return fmt.Errorf("a new issueops cycle requires a branchless start")
 	}
@@ -29,10 +31,13 @@ func ReuseStartRecord(id string, fresh bool, readErr error, missing bool) (bool,
 	return false, nil
 }
 
-func NewCycleRecord(id, repo, branch, now string) model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		OK: true, SchemaVersion: model.IssueOpsSchemaVersion,
-		ID: id, Repo: repo, Branch: branch, Phase: model.IssueOpsPhaseProblem,
-		Feedback: []model.IssueOpsFeedbackItem{}, CreatedAt: now, UpdatedAt: now,
+// NewCycleRecord returns the initial record of a cycle: the problem phase,
+// the current schema version, an empty feedback list, and now as both
+// creation and update time.
+func NewCycleRecord(id, repo, branch, now string) model.Record {
+	return model.Record{
+		OK: true, SchemaVersion: model.SchemaVersion,
+		ID: id, Repo: repo, Branch: branch, Phase: model.PhaseProblem,
+		Feedback: []model.FeedbackItem{}, CreatedAt: now, UpdatedAt: now,
 	}
 }

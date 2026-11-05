@@ -14,12 +14,15 @@ import (
 	port "issueops/internal/port/cmux"
 )
 
+// Service runs cmux handoffs. Its fields inject the cmux client, root
+// environment, clock, audit access, launcher preparation and path/host
+// validation so the handoff can be exercised without real external calls.
 type Service struct {
 	Client                 port.Client
 	Roots                  port.RootEnvironment
 	Now                    func() time.Time
-	ReadAudit              func() ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error)
-	Observe                func(issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error)
+	ReadAudit              func() ([]issueopscontract.HandoffDeliveryObservation, error)
+	Observe                func(issueopscontract.Record, issueopscontract.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error)
 	ArtifactRoot           string
 	SamePath               func(string, string) bool
 	ReadPrompt             func(string, string, string) ([]byte, error)
@@ -37,7 +40,7 @@ type handoffRun struct {
 	ctx         context.Context
 	request     issueopscontract.ExecutionCmuxHandoffRequest
 	fence       *rootFence
-	record      issueopscontract.IssueOpsRecord
+	record      issueopscontract.Record
 	root        string
 	attemptID   string
 	lineageID   string
@@ -45,11 +48,16 @@ type handoffRun struct {
 	result      issueopscontract.ExecutionCmuxHandoffResult
 	preflight   cmuxcontract.PreflightResult
 	preflightMS uint64
-	observation issueopscontract.IssueOpsHandoffDeliveryObservation
+	observation issueopscontract.HandoffDeliveryObservation
 	created     cmuxcontract.CreatedWorkspace
 	prepared    cmuxcontract.PreparedLauncher
 }
 
+// Handoff creates a cmux workspace for the execution named by request and
+// delivers its launcher, running the validation, preflight, staging, creation,
+// preparation, send and receipt phases in order. On failure it returns the
+// result recorded so far (status "rejected" unless a later phase updated it)
+// with the error.
 func (deps Service) Handoff(ctx context.Context, stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest) (issueopscontract.ExecutionCmuxHandoffResult, error) {
 	result := issueopscontract.ExecutionCmuxHandoffResult{ID: request.ID, Generation: request.Generation, Status: "rejected"}
 	if deps.Client == nil || deps.Now == nil || deps.Roots.GitTop == nil || deps.ValidateHostExecutable == nil {
@@ -131,20 +139,20 @@ func (run *handoffRun) stageObservation() error {
 	request := run.request
 	endpoint := run.preflight.Endpoint
 	createdAt := run.nowRFC3339()
-	observation := issueopscontract.IssueOpsHandoffDeliveryObservation{
-		SchemaVersion: issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
+	observation := issueopscontract.HandoffDeliveryObservation{
+		SchemaVersion: issueopscontract.HandoffDeliverySchemaVersion,
 		AttemptID:     run.attemptID, LineageID: run.lineageID, LifecycleID: request.ID,
 		PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
-		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
-			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: run.preflight.Build,
+		Launcher: issueopscontract.HandoffDeliveryLauncher{
+			Name: issueopscontract.HandoffDeliveryLauncherCmux, Version: run.preflight.Build,
 			Path: run.preflight.Executable, EndpointIncarnation: &endpoint,
 		},
-		Target:            issueopscontract.IssueOpsHandoffDeliveryTarget{WindowID: request.WindowID, CWD: run.root},
+		Target:            issueopscontract.HandoffDeliveryTarget{WindowID: request.WindowID, CWD: run.root},
 		ExpectedOwnerHost: request.Host, SourceGeneration: request.Generation,
 		CreatedAt: createdAt, UpdatedAt: createdAt,
-		CallStaged:    issueopsdomain.CmuxObserved(createdAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged),
+		CallStaged:    issueopsdomain.CmuxObserved(createdAt, issueopscontract.HandoffDeliveryEvidenceExternalCallStaged),
 		InputAccepted: issueopsdomain.CmuxNotObserved(), NativeTurnObserved: issueopsdomain.CmuxNotObserved(), OwnerClaimed: issueopsdomain.CmuxNotObserved(), Ambiguous: issueopsdomain.CmuxNotObserved(),
-		Timing: &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: run.preflightMS},
+		Timing: &issueopscontract.HandoffDeliveryTiming{PreflightMS: run.preflightMS},
 	}
 	audited, err := run.deps.Observe(run.record, observation)
 	if err != nil {
@@ -168,7 +176,7 @@ func (run *handoffRun) observe() error {
 // markAmbiguousIfLost flags the observation when a mutation may have been accepted without a response.
 func (run *handoffRun) markAmbiguousIfLost(err error) {
 	if cmuxMutationAmbiguous(err) {
-		run.observation.Ambiguous = issueopsdomain.CmuxObserved(run.observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
+		run.observation.Ambiguous = issueopsdomain.CmuxObserved(run.observation.UpdatedAt, issueopscontract.HandoffDeliveryEvidenceAcceptedResponseLost)
 	}
 }
 
@@ -254,7 +262,7 @@ func (run *handoffRun) sendLauncher() error {
 	if !sendReceipt.Accepted {
 		return run.failWithAudit("failed", run.prepared.Directory, fmt.Errorf("cmux send returned no accepted receipt"))
 	}
-	run.observation.InputAccepted = issueopsdomain.CmuxObserved(run.observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput)
+	run.observation.InputAccepted = issueopsdomain.CmuxObserved(run.observation.UpdatedAt, issueopscontract.HandoffDeliveryEvidenceRawInput)
 	if err := run.observe(); err != nil {
 		run.result = issueopsdomain.CmuxResult(run.request, run.observation, "input_accepted", run.prepared.Directory)
 		return err

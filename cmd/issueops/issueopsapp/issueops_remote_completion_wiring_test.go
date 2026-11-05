@@ -30,12 +30,12 @@ func (p *completionProvider) CloseIssue(_ context.Context, req port.IssueProvide
 
 func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatestRecord(t *testing.T) {
 	root := t.TempDir()
-	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "61-remote-completion"})
+	record, err := startIssueOpsFixture(root, model.StartRequest{Repo: t.TempDir(), Branch: "61-remote-completion"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/61"
-	record.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/62"}
+	record.RemoteArtifact = &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/62"}
 	if _, err := (issueops.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatest
 	}
 	mergeErr := errors.New("merge readback failed")
 	now := time.Date(2026, 9, 28, 1, 0, 0, 0, time.UTC)
-	service := newRemoteCompletionService(root, func(string) (port.IssueProvider, error) { return prov, nil }, func(model.IssueOpsRemoteArtifactVerification) error { return mergeErr }, func() time.Time { return now })
+	service := newRemoteCompletionService(root, func(string) (port.IssueProvider, error) { return prov, nil }, func(model.RemoteArtifactVerification) error { return mergeErr }, func() time.Time { return now })
 	if _, _, _, err := service.Reflect(context.Background(), record.ID, "", completionResultBody, true); !errors.Is(err, mergeErr) || prov.updates != 0 {
 		t.Fatalf("merge refusal: calls=%d err=%v", prov.updates, err)
 	}

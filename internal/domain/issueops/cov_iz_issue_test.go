@@ -7,9 +7,9 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-func covIZPendingIntent(t *testing.T) model.IssueOpsRecord {
+func covIZPendingIntent(t *testing.T) model.Record {
 	t.Helper()
-	pending, err := BeginIssueCreateIntent(model.IssueOpsRecord{}, issueCreateRequestForTest())
+	pending, err := BeginIssueCreateIntent(model.Record{}, issueCreateRequestForTest())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -17,24 +17,24 @@ func covIZPendingIntent(t *testing.T) model.IssueOpsRecord {
 }
 
 func TestBeginIssueCreateIntentRejectsLinkedRecordAndIncompleteRequests(t *testing.T) {
-	linked := model.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/9"}
+	linked := model.Record{IssueURL: "https://github.com/acme/repo/issues/9"}
 	if _, err := BeginIssueCreateIntent(linked, issueCreateRequestForTest()); err == nil || !strings.Contains(err.Error(), linked.IssueURL) {
 		t.Fatalf("linked record accepted: %v", err)
 	}
 	for _, tc := range []struct {
 		field  string
-		mutate func(*model.IssueOpsIssueCreateIntentRequest)
+		mutate func(*model.IssueCreateIntentRequest)
 	}{
-		{"operation_id", func(r *model.IssueOpsIssueCreateIntentRequest) { r.OperationID = " " }},
-		{"provider", func(r *model.IssueOpsIssueCreateIntentRequest) { r.Provider = "" }},
-		{"project_authority", func(r *model.IssueOpsIssueCreateIntentRequest) { r.ProjectAuthority = "\t" }},
-		{"title", func(r *model.IssueOpsIssueCreateIntentRequest) { r.Title = "" }},
-		{"body_sha256", func(r *model.IssueOpsIssueCreateIntentRequest) { r.BodySHA256 = "" }},
-		{"started_at", func(r *model.IssueOpsIssueCreateIntentRequest) { r.StartedAt = " " }},
+		{"operation_id", func(r *model.IssueCreateIntentRequest) { r.OperationID = " " }},
+		{"provider", func(r *model.IssueCreateIntentRequest) { r.Provider = "" }},
+		{"project_authority", func(r *model.IssueCreateIntentRequest) { r.ProjectAuthority = "\t" }},
+		{"title", func(r *model.IssueCreateIntentRequest) { r.Title = "" }},
+		{"body_sha256", func(r *model.IssueCreateIntentRequest) { r.BodySHA256 = "" }},
+		{"started_at", func(r *model.IssueCreateIntentRequest) { r.StartedAt = " " }},
 	} {
 		request := issueCreateRequestForTest()
 		tc.mutate(&request)
-		record, err := BeginIssueCreateIntent(model.IssueOpsRecord{}, request)
+		record, err := BeginIssueCreateIntent(model.Record{}, request)
 		if err == nil || !strings.Contains(err.Error(), tc.field+" is required") {
 			t.Fatalf("%s: err=%v", tc.field, err)
 		}
@@ -44,7 +44,7 @@ func TestBeginIssueCreateIntentRejectsLinkedRecordAndIncompleteRequests(t *testi
 	}
 	short := issueCreateRequestForTest()
 	short.BodySHA256 = strings.Repeat("a", 63)
-	if _, err := BeginIssueCreateIntent(model.IssueOpsRecord{}, short); err == nil || !strings.Contains(err.Error(), "64 hex") {
+	if _, err := BeginIssueCreateIntent(model.Record{}, short); err == nil || !strings.Contains(err.Error(), "64 hex") {
 		t.Fatalf("short digest accepted: %v", err)
 	}
 }
@@ -55,7 +55,7 @@ func TestBeginIssueCreateIntentNormalizesSealedFields(t *testing.T) {
 	request.Title = "  Issue creation  "
 	request.BodySHA256 = " " + strings.Repeat("A", 64) + " "
 	request.Assignees = []string{"alice"}
-	started, err := BeginIssueCreateIntent(model.IssueOpsRecord{}, request)
+	started, err := BeginIssueCreateIntent(model.Record{}, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,17 +74,17 @@ func TestBeginIssueCreateIntentNormalizesSealedFields(t *testing.T) {
 
 func TestBeginIssueCreateIntentRetryClearsFailureAndRequiresIdenticalRequest(t *testing.T) {
 	request := issueCreateRequestForTest()
-	notInvoked, err := RecordIssueCreateOutcome(covIZPendingIntent(t), model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "cli missing", ObservedAt: "t1"}, "")
+	notInvoked, err := RecordIssueCreateOutcome(covIZPendingIntent(t), model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "cli missing", ObservedAt: "t1"}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, mutate := range map[string]func(*model.IssueOpsIssueCreateIntentRequest){
-		"labels":    func(r *model.IssueOpsIssueCreateIntentRequest) { r.Labels = []string{"other"} },
-		"assignees": func(r *model.IssueOpsIssueCreateIntentRequest) { r.Assignees = []string{"bob"} },
-		"authority": func(r *model.IssueOpsIssueCreateIntentRequest) { r.ProjectAuthority = "github.com/other/repo" },
-		"provider":  func(r *model.IssueOpsIssueCreateIntentRequest) { r.Provider = "gitlab" },
-		"digest":    func(r *model.IssueOpsIssueCreateIntentRequest) { r.BodySHA256 = strings.Repeat("b", 64) },
-		"operation": func(r *model.IssueOpsIssueCreateIntentRequest) { r.OperationID = strings.Repeat("1", 32) },
+	for name, mutate := range map[string]func(*model.IssueCreateIntentRequest){
+		"labels":    func(r *model.IssueCreateIntentRequest) { r.Labels = []string{"other"} },
+		"assignees": func(r *model.IssueCreateIntentRequest) { r.Assignees = []string{"bob"} },
+		"authority": func(r *model.IssueCreateIntentRequest) { r.ProjectAuthority = "github.com/other/repo" },
+		"provider":  func(r *model.IssueCreateIntentRequest) { r.Provider = "gitlab" },
+		"digest":    func(r *model.IssueCreateIntentRequest) { r.BodySHA256 = strings.Repeat("b", 64) },
+		"operation": func(r *model.IssueCreateIntentRequest) { r.OperationID = strings.Repeat("1", 32) },
 	} {
 		changed := request
 		mutate(&changed)
@@ -106,32 +106,32 @@ func TestBeginIssueCreateIntentRetryClearsFailureAndRequiresIdenticalRequest(t *
 func TestRecordIssueCreateOutcomeRejectsInvalidObservations(t *testing.T) {
 	pending := covIZPendingIntent(t)
 	authority := pending.IssueCreateIntent.ProjectAuthority
-	if _, err := RecordIssueCreateOutcome(model.IssueOpsRecord{}, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked}, ""); err == nil || !strings.Contains(err.Error(), "no pending") {
+	if _, err := RecordIssueCreateOutcome(model.Record{}, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked}, ""); err == nil || !strings.Contains(err.Error(), "no pending") {
 		t.Fatalf("missing intent: %v", err)
 	}
 	completed := pending
 	done := *pending.IssueCreateIntent
 	done.Status = model.IssueCreateIntentCompleted
 	completed.IssueCreateIntent = &done
-	if _, err := RecordIssueCreateOutcome(completed, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentReceiptFailed, Failure: "x", ObservedAt: "t"}, ""); err == nil || !strings.Contains(err.Error(), "already completed") {
+	if _, err := RecordIssueCreateOutcome(completed, model.IssueCreateOutcome{Status: model.IssueCreateIntentReceiptFailed, Failure: "x", ObservedAt: "t"}, ""); err == nil || !strings.Contains(err.Error(), "already completed") {
 		t.Fatalf("completed intent mutated: %v", err)
 	}
-	observed := model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/acme/repo/issues/3", Failure: "receipt pending", ObservedAt: "t"}
+	observed := model.IssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/acme/repo/issues/3", Failure: "receipt pending", ObservedAt: "t"}
 	for _, wrong := range []string{"", "github.com/other/repo"} {
 		if _, err := RecordIssueCreateOutcome(pending, observed, wrong); err == nil || !strings.Contains(err.Error(), "does not match sealed authority") {
 			t.Fatalf("authority %q accepted: %v", wrong, err)
 		}
 	}
-	if _, err := RecordIssueCreateOutcome(pending, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentInvokedUnknown, ObservedAt: "t"}, ""); err == nil || !strings.Contains(err.Error(), "requires failure") {
+	if _, err := RecordIssueCreateOutcome(pending, model.IssueCreateOutcome{Status: model.IssueCreateIntentInvokedUnknown, ObservedAt: "t"}, ""); err == nil || !strings.Contains(err.Error(), "requires failure") {
 		t.Fatalf("failure-less unknown outcome accepted: %v", err)
 	}
-	if _, err := RecordIssueCreateOutcome(pending, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "x", CanonicalURL: "https://github.com/acme/repo/issues/3", ObservedAt: "t"}, authority); err == nil || !strings.Contains(err.Error(), "must not have canonical_url") {
+	if _, err := RecordIssueCreateOutcome(pending, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "x", CanonicalURL: "https://github.com/acme/repo/issues/3", ObservedAt: "t"}, authority); err == nil || !strings.Contains(err.Error(), "must not have canonical_url") {
 		t.Fatalf("not_invoked with URL accepted: %v", err)
 	}
-	if _, err := RecordIssueCreateOutcome(pending, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "x"}, ""); err == nil || !strings.Contains(err.Error(), "updated_at is required") {
+	if _, err := RecordIssueCreateOutcome(pending, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "x"}, ""); err == nil || !strings.Contains(err.Error(), "updated_at is required") {
 		t.Fatalf("outcome without observation time accepted: %v", err)
 	}
-	if _, err := RecordIssueCreateOutcome(pending, model.IssueOpsIssueCreateOutcome{Status: "bogus", Failure: "x", ObservedAt: "t"}, ""); err == nil {
+	if _, err := RecordIssueCreateOutcome(pending, model.IssueCreateOutcome{Status: "bogus", Failure: "x", ObservedAt: "t"}, ""); err == nil {
 		t.Fatal("unknown status accepted")
 	}
 	if pending.IssueCreateIntent.Status != model.IssueCreateIntentPending || pending.IssueCreateIntent.CanonicalURL != "" {
@@ -141,7 +141,7 @@ func TestRecordIssueCreateOutcomeRejectsInvalidObservations(t *testing.T) {
 
 func TestRecordIssueCreateOutcomeStoresObservedURLWithMatchingAuthority(t *testing.T) {
 	pending := covIZPendingIntent(t)
-	got, err := RecordIssueCreateOutcome(pending, model.IssueOpsIssueCreateOutcome{
+	got, err := RecordIssueCreateOutcome(pending, model.IssueCreateOutcome{
 		Status: model.IssueCreateIntentURLObserved, CanonicalURL: " https://github.com/acme/repo/issues/3 ", Failure: " receipt pending ", ObservedAt: " t9 ",
 	}, pending.IssueCreateIntent.ProjectAuthority)
 	if err != nil {
@@ -160,10 +160,10 @@ func TestCompleteIssueCreateIntentRejectsUnsafeStates(t *testing.T) {
 	const url = "https://github.com/acme/repo/issues/1"
 	pending := covIZPendingIntent(t)
 	authority := pending.IssueCreateIntent.ProjectAuthority
-	if _, err := CompleteIssueCreateIntent(model.IssueOpsRecord{}, url, "t", authority); err == nil || !strings.Contains(err.Error(), "no pending") {
+	if _, err := CompleteIssueCreateIntent(model.Record{}, url, "t", authority); err == nil || !strings.Contains(err.Error(), "no pending") {
 		t.Fatalf("missing intent: %v", err)
 	}
-	notInvoked, err := RecordIssueCreateOutcome(pending, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "x", ObservedAt: "t"}, "")
+	notInvoked, err := RecordIssueCreateOutcome(pending, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "x", ObservedAt: "t"}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestCompleteIssueCreateIntentFromRecoveredStatesClearsFailure(t *testing.T)
 	const url = "https://github.com/acme/repo/issues/1"
 	pending := covIZPendingIntent(t)
 	authority := pending.IssueCreateIntent.ProjectAuthority
-	failed, err := RecordIssueCreateOutcome(pending, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentVerificationFailed, Failure: "marker mismatch", ObservedAt: "t"}, "")
+	failed, err := RecordIssueCreateOutcome(pending, model.IssueCreateOutcome{Status: model.IssueCreateIntentVerificationFailed, Failure: "marker mismatch", ObservedAt: "t"}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,31 +242,31 @@ func TestValidateIssueURLRequiresHTTPURLWithHost(t *testing.T) {
 }
 
 func TestApplyIssueLinkValidatesURLAndAdvancesReadyPlan(t *testing.T) {
-	ready := model.IssueOpsRecord{Phase: model.IssueOpsPhaseGrill, Intent: &model.IssueOpsIntentContract{IntentClass: "trivial", RawRequest: "r", InterpretedIntent: "i", SuccessCriteria: []string{"done"}}}
+	ready := model.Record{Phase: model.PhaseGrill, Intent: &model.IntentContract{IntentClass: "trivial", RawRequest: "r", InterpretedIntent: "i", SuccessCriteria: []string{"done"}}}
 	got, err := ApplyIssueLink(ready, " https://github.com/acme/repo/issues/4 ", "now")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.IssueURL != "https://github.com/acme/repo/issues/4" || got.Phase != model.IssueOpsPhasePlan || got.UpdatedAt != "now" {
+	if got.IssueURL != "https://github.com/acme/repo/issues/4" || got.Phase != model.PhasePlan || got.UpdatedAt != "now" {
 		t.Fatalf("ready link=%+v", got)
 	}
-	if ready.IssueURL != "" || ready.Phase != model.IssueOpsPhaseGrill {
+	if ready.IssueURL != "" || ready.Phase != model.PhaseGrill {
 		t.Fatal("link mutated its input")
 	}
-	notReady, err := ApplyIssueLink(model.IssueOpsRecord{Phase: model.IssueOpsPhaseGrill}, "https://github.com/acme/repo/issues/4", "now")
+	notReady, err := ApplyIssueLink(model.Record{Phase: model.PhaseGrill}, "https://github.com/acme/repo/issues/4", "now")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if notReady.Phase != model.IssueOpsPhaseGrill {
+	if notReady.Phase != model.PhaseGrill {
 		t.Fatalf("phase advanced without intent: %s", notReady.Phase)
 	}
 	later := ready
-	later.Phase = model.IssueOpsPhaseImplement
+	later.Phase = model.PhaseImplement
 	relinked, err := ApplyIssueLink(later, "https://github.com/acme/repo/issues/4", "now")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if relinked.Phase != model.IssueOpsPhaseImplement {
+	if relinked.Phase != model.PhaseImplement {
 		t.Fatalf("link regressed phase to %s", relinked.Phase)
 	}
 	rejected, err := ApplyIssueLink(ready, "ftp://example.com/x", "now")
@@ -298,24 +298,24 @@ func TestValidateRelationURLNamesTheOffendingField(t *testing.T) {
 }
 
 func TestValidateChildLinkParentRequiresLinkedParent(t *testing.T) {
-	if err := ValidateChildLinkParent(model.IssueOpsRecord{IssueURL: "  "}); err == nil {
+	if err := ValidateChildLinkParent(model.Record{IssueURL: "  "}); err == nil {
 		t.Fatal("unlinked parent accepted")
 	}
-	if err := ValidateChildLinkParent(model.IssueOpsRecord{IssueURL: "https://github.com/a/b/issues/1"}); err != nil {
+	if err := ValidateChildLinkParent(model.Record{IssueURL: "https://github.com/a/b/issues/1"}); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestAppendIssueRelationRejectsDuplicatesPerType(t *testing.T) {
 	const url = "https://github.com/acme/repo/issues/1"
-	record := model.IssueOpsRecord{IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: url}, {Type: "blocks", URL: url}}}
-	if _, err := AppendIssueRelation(record, model.IssueOpsIssueLink{Type: "child", URL: url}, "now"); err == nil || !strings.Contains(err.Error(), "child issue already linked") {
+	record := model.Record{IssueLinks: []model.IssueLink{{Type: "child", URL: url}, {Type: "blocks", URL: url}}}
+	if _, err := AppendIssueRelation(record, model.IssueLink{Type: "child", URL: url}, "now"); err == nil || !strings.Contains(err.Error(), "child issue already linked") {
 		t.Fatalf("duplicate child: %v", err)
 	}
-	if _, err := AppendIssueRelation(record, model.IssueOpsIssueLink{Type: "blocks", URL: url}, "now"); err == nil || !strings.Contains(err.Error(), "already linked as blocks") {
+	if _, err := AppendIssueRelation(record, model.IssueLink{Type: "blocks", URL: url}, "now"); err == nil || !strings.Contains(err.Error(), "already linked as blocks") {
 		t.Fatalf("duplicate relation: %v", err)
 	}
-	got, err := AppendIssueRelation(record, model.IssueOpsIssueLink{Type: "depends-on", URL: url}, "now")
+	got, err := AppendIssueRelation(record, model.IssueLink{Type: "depends-on", URL: url}, "now")
 	if err != nil {
 		t.Fatalf("same URL with a different type must be allowed: %v", err)
 	}

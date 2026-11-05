@@ -39,7 +39,7 @@ func TestPublishWritesRecordThatReleaseRemoves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantBuild, err := BuildID(binary)
+	wantBuild, err := buildID(binary)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +278,7 @@ func TestIdentityHandlerStampsOnlyFirstStatusAndExposesUnderlyingWriter(t *testi
 	}), record)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/mcp", nil))
-	if rec.Header().Get(HeaderPID) != "" {
+	if rec.Header().Get(headerPID) != "" {
 		t.Fatalf("a later 200 stamped identity onto a 403: %v", rec.Header())
 	}
 	if inner != http.ResponseWriter(rec) {
@@ -300,7 +300,7 @@ func TestIdentityHandlerStampsOnlySuccessStatuses(t *testing.T) {
 		}), record)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/mcp", nil))
-		pid, build := rec.Header().Get(HeaderPID), rec.Header().Get(HeaderBuildID)
+		pid, build := rec.Header().Get(headerPID), rec.Header().Get(headerBuildID)
 		if want && (pid != "9" || build != "build-9") {
 			t.Fatalf("status %d must carry both identity headers: %v", status, rec.Header())
 		}

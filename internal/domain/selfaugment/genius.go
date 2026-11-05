@@ -2,6 +2,8 @@ package selfaugment
 
 import "strings"
 
+// SelectGeniusFormulas returns the GENIUS_THINK formula names that appear in text, in catalog
+// order. Blank text yields an empty, non-nil slice.
 func SelectGeniusFormulas(text string) []string {
 	if strings.TrimSpace(text) == "" {
 		return []string{}

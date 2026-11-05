@@ -1,4 +1,4 @@
-// Package gates는 unlazy 호환 태스크 게이트 ledger의 순수 파서/직렬화 규칙을
+// Package gates 패키지는 unlazy 호환 태스크 게이트 ledger의 순수 파서/직렬화 규칙을
 // 소유한다. 형식은 unlazy v2의 references/gates.md 계약을 따른다:
 //
 //	# Gates: <scope>
@@ -31,7 +31,7 @@ var (
 	abandonLineRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^ABANDON:[ \t]*(\S+)[ \t]*(.*)$`) })
 )
 
-// Gate는 게이트 하나의 파싱 결과와 파일 내 위치다.
+// Gate 타입은 게이트 하나의 파싱 결과와 파일 내 위치다.
 type Gate struct {
 	ID            string
 	Title         string
@@ -47,13 +47,13 @@ type Gate struct {
 	EvidenceLine int
 }
 
-// Ledger는 게이트 파일 전체의 파싱 결과다.
+// Ledger 타입은 게이트 파일 전체의 파싱 결과다.
 type Ledger struct {
 	Lines []string
 	Gates []Gate
 }
 
-// Parse는 게이트 파일 원문을 라인 배열과 게이트 목록으로 바꾼다.
+// Parse 함수는 게이트 파일 원문을 라인 배열과 게이트 목록으로 바꾼다.
 //
 // unlazy gate-check.mjs의 파싱 규칙을 그대로 따른다:
 //   - `- [ ]`/`- [x]` 라인에서 게이트가 시작한다. ID는 제목의 첫 `token:` 접두어,
@@ -122,17 +122,17 @@ func applyGateAttr(gate *Gate, m []string, i int) {
 	}
 }
 
-// Render는 라인 배열을 다시 파일 원문으로 합친다. Parse와 함께 round-trip하면
+// Render 함수는 라인 배열을 다시 파일 원문으로 합친다. Parse와 함께 round-trip하면
 // 수정하지 않은 라인은 바이트 단위로 보존된다.
 func Render(ledger Ledger) string {
 	return strings.Join(ledger.Lines, "\n")
 }
 
-// MarkPass는 게이트의 체크박스를 [x]로 바꾸고 EVIDENCE 라인에 증거를 기록한다.
+// markPass는 게이트의 체크박스를 [x]로 바꾸고 EVIDENCE 라인에 증거를 기록한다.
 // EVIDENCE 라인이 없던 게이트는 그 게이트의 CHECK/EXPECT 라인 뒤에 삽입한다 — unlazy
 // gate-check.mjs는 이 경우 증거 라인을 만들지 않아 "checked but evidence pending"
 // 상태가 파일에 남지만, 하네스는 checked+evidence 불변식을 파일까지 유지한다.
-func MarkPass(ledger *Ledger, gateIndex int, evidence string) {
+func markPass(ledger *Ledger, gateIndex int, evidence string) {
 	gate := &ledger.Gates[gateIndex]
 	if !gate.Checked {
 		line := ledger.Lines[gate.CheckboxLine]
@@ -158,9 +158,9 @@ func MarkPass(ledger *Ledger, gateIndex int, evidence string) {
 	gate.Evidence = evidence
 }
 
-// AppendAbandon은 파일의 마지막 비어 있지 않은 라인 뒤에 ABANDON 라인을
+// appendAbandon은 파일의 마지막 비어 있지 않은 라인 뒤에 ABANDON 라인을
 // 추가한다. 파일 끝 newline은 보존한다.
-func AppendAbandon(ledger *Ledger, gateID, reason string) {
+func appendAbandon(ledger *Ledger, gateID, reason string) {
 	insertAt := len(ledger.Lines)
 	for insertAt > 0 && strings.TrimSpace(strings.TrimRight(ledger.Lines[insertAt-1], "\r")) == "" {
 		insertAt--

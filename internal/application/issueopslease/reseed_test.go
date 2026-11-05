@@ -706,7 +706,7 @@ func (r *serializedReseedRepository) CommitReseed(_ context.Context, _ ReseedSna
 	return RepositoryResult{Record: next, Execution: *next.Stable.Execution}, nil
 }
 
-func newReseedServiceForTest(fence ReseedFence, repository ReseedRepository, artifacts ReseedArtifacts) *ReseedService {
+func newReseedServiceForTest(fence reseedFence, repository ReseedRepository, artifacts reseedArtifacts) *ReseedService {
 	return NewReseedService(fence, repository, reseedInventoryFunc(func(context.Context, leasecontract.Record, leasedomain.Actor) (string, error) {
 		return "current", nil
 	}), baseSyncInspectorFunc(func(context.Context, basesyncport.Request) (basesyncport.Receipt, error) {
@@ -716,7 +716,7 @@ func newReseedServiceForTest(fence ReseedFence, repository ReseedRepository, art
 	}), reseedPathMatcher{})
 }
 
-func newReseedServiceForTestWithBaseSync(fence ReseedFence, repository ReseedRepository, artifacts ReseedArtifacts, baseSync basesyncport.Inspector) *ReseedService {
+func newReseedServiceForTestWithBaseSync(fence reseedFence, repository ReseedRepository, artifacts reseedArtifacts, baseSync basesyncport.Inspector) *ReseedService {
 	return NewReseedService(fence, repository, reseedInventoryFunc(func(context.Context, leasecontract.Record, leasedomain.Actor) (string, error) {
 		return "current", nil
 	}), baseSync, artifacts, fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)}, leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {

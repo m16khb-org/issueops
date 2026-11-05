@@ -17,10 +17,10 @@ const (
 	finishReplacementPR = "https://github.com/acme/repo/pull/3"
 )
 
-func finishSupersedeRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		ID: "cycle", Repo: "/repo", Phase: model.IssueOpsPhaseDone,
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: finishOriginalPR},
+func finishSupersedeRecord() model.Record {
+	return model.Record{
+		ID: "cycle", Repo: "/repo", Phase: model.PhaseDone,
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: finishOriginalPR},
 	}
 }
 
@@ -30,11 +30,11 @@ func finishSupersedeRequest(candidate string) model.CleanupFinishRequest {
 
 func TestFinishPreviewAcceptsSupersedingArtifactInsteadOfMergeEvidence(t *testing.T) {
 	env := &finishPreviewEnvironment{}
-	previewer := app.FinishPreviewer{Environment: env, ObserveArtifact: func(url string) (domain.ArtifactObservation, error) {
+	previewer := app.FinishPreviewer{Environment: env, ObserveArtifact: func(_ context.Context, url string) (domain.ArtifactObservation, error) {
 		return domain.ArtifactObservation{URL: url, Merged: true, State: "MERGED", Body: "Supersedes #1"}, nil
 	}}
 	record := finishSupersedeRecord()
-	record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "parent"}
+	record.BranchPrepare = &model.BranchPrepare{BaseBranch: "parent"}
 	req := finishSupersedeRequest(" " + finishReplacementPR + " ")
 	req.MergedBaseBranch = "main"
 	inventory, result := previewer.Plan(context.Background(), record, req)
@@ -47,23 +47,23 @@ func TestFinishPreviewAcceptsSupersedingArtifactInsteadOfMergeEvidence(t *testin
 }
 
 func TestFinishPreviewRefusesUnprovableSupersedingArtifact(t *testing.T) {
-	merged := func(body string) func(string) (domain.ArtifactObservation, error) {
-		return func(url string) (domain.ArtifactObservation, error) {
+	merged := func(body string) func(context.Context, string) (domain.ArtifactObservation, error) {
+		return func(_ context.Context, url string) (domain.ArtifactObservation, error) {
 			return domain.ArtifactObservation{URL: url, Merged: true, State: "MERGED", Body: body}, nil
 		}
 	}
 	cases := []struct {
 		name      string
 		candidate string
-		observe   func(string) (domain.ArtifactObservation, error)
+		observe   func(context.Context, string) (domain.ArtifactObservation, error)
 		want      string
 	}{
 		{name: "no candidate", observe: merged("Supersedes #1"), want: "no superseding artifact was provided"},
 		{name: "observation not configured", candidate: finishReplacementPR, want: "provider observation is not configured"},
-		{name: "observation fails", candidate: finishReplacementPR, observe: func(string) (domain.ArtifactObservation, error) {
+		{name: "observation fails", candidate: finishReplacementPR, observe: func(context.Context, string) (domain.ArtifactObservation, error) {
 			return domain.ArtifactObservation{}, errors.New("rate limited")
 		}, want: "could not be observed: rate limited"},
-		{name: "replacement unmerged", candidate: finishReplacementPR, observe: func(url string) (domain.ArtifactObservation, error) {
+		{name: "replacement unmerged", candidate: finishReplacementPR, observe: func(_ context.Context, url string) (domain.ArtifactObservation, error) {
 			return domain.ArtifactObservation{URL: url, State: "OPEN", Body: "Supersedes #1"}, nil
 		}, want: "is not merged"},
 		{name: "replacement silent about original", candidate: finishReplacementPR, observe: merged("drive-by fix"), want: "does not declare that it supersedes"},
@@ -109,7 +109,7 @@ func TestFinishPreviewClassifiesMergedBaseFromOriginRefs(t *testing.T) {
 				return tc.code, tc.out
 			}}
 			record := finishSupersedeRecord()
-			record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "parent"}
+			record.BranchPrepare = &model.BranchPrepare{BaseBranch: "parent"}
 			req := finishSupersedeRequest("")
 			req.Merged, req.MergedBaseBranch = true, "main"
 			_, result := (app.FinishPreviewer{Environment: env}).Plan(context.Background(), record, req)

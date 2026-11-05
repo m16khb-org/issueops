@@ -131,7 +131,7 @@ func validateAgainst(t *testing.T, resolved *jsonschema.Resolved, value any) err
 func TestInspectOutputSchemaModelsInspectInfo(t *testing.T) {
 	resolved := resolvedOutputSchema(t, "harness_inspect")
 	observation := inspectcontract.Observation{Status: "verified", Features: []string{"tools"}}
-	populated := inspectcontract.InspectInfo{
+	populated := inspectcontract.Info{
 		OK: true, Skills: []inspectcontract.SkillInfo{{Name: "s", Path: "/p", HasSkillMD: true}},
 		Docs: []string{"a.md"},
 		Integration: inspectcontract.IntegrationStatus{Hosts: []inspectcontract.HostIntegration{{
@@ -139,7 +139,7 @@ func TestInspectOutputSchemaModelsInspectInfo(t *testing.T) {
 			Discovered: observation, Connected: observation, Protocol: observation,
 		}}},
 	}
-	for name, value := range map[string]any{"zero value (null slices)": inspectcontract.InspectInfo{}, "populated": populated} {
+	for name, value := range map[string]any{"zero value (null slices)": inspectcontract.Info{}, "populated": populated} {
 		if err := validateAgainst(t, resolved, value); err != nil {
 			t.Errorf("%s rejected: %v", name, err)
 		}
@@ -153,12 +153,12 @@ func TestInspectOutputSchemaModelsInspectInfo(t *testing.T) {
 			t.Errorf("%s was accepted", name)
 		}
 	}
-	assertSchemaCoversStruct(t, "harness_inspect", reflect.TypeFor[inspectcontract.InspectInfo]())
+	assertSchemaCoversStruct(t, "harness_inspect", reflect.TypeFor[inspectcontract.Info]())
 }
 
 func mustMergeInspect(t *testing.T, extra map[string]any) map[string]any {
 	t.Helper()
-	raw, _ := json.Marshal(inspectcontract.InspectInfo{})
+	raw, _ := json.Marshal(inspectcontract.Info{})
 	var out map[string]any
 	if err := json.Unmarshal(raw, &out); err != nil {
 		t.Fatal(err)
@@ -169,8 +169,8 @@ func mustMergeInspect(t *testing.T, extra map[string]any) map[string]any {
 
 func TestDocsIndexOutputSchemaModelsDocsIndexResult(t *testing.T) {
 	resolved := resolvedOutputSchema(t, "docs_index")
-	populated := docscontract.DocsIndexResult{OK: true, Docs: []docscontract.DocIndexInfo{{RelPath: "a.md", Title: "A", Headings: []string{"h"}, Bytes: 12}, {RelPath: "b.md"}}}
-	for name, value := range map[string]any{"zero value (null slices)": docscontract.DocsIndexResult{}, "populated": populated} {
+	populated := docscontract.IndexResult{OK: true, Docs: []docscontract.DocIndexInfo{{RelPath: "a.md", Title: "A", Headings: []string{"h"}, Bytes: 12}, {RelPath: "b.md"}}}
+	for name, value := range map[string]any{"zero value (null slices)": docscontract.IndexResult{}, "populated": populated} {
 		if err := validateAgainst(t, resolved, value); err != nil {
 			t.Errorf("%s rejected: %v", name, err)
 		}
@@ -178,7 +178,7 @@ func TestDocsIndexOutputSchemaModelsDocsIndexResult(t *testing.T) {
 	if err := validateAgainst(t, resolved, map[string]any{"ok": true, "docs": "none"}); err == nil {
 		t.Error("malformed docs_index output was accepted")
 	}
-	assertSchemaCoversStruct(t, "docs_index", reflect.TypeFor[docscontract.DocsIndexResult]())
+	assertSchemaCoversStruct(t, "docs_index", reflect.TypeFor[docscontract.IndexResult]())
 }
 
 // assertSchemaCoversStruct walks the DTO and requires the output schema to

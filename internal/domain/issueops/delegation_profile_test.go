@@ -14,18 +14,18 @@ import (
 // 부모 design/compatibility 리뷰는 승인 상태로 복제된다.
 func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 	now := "2026-08-21T12:00:00Z"
-	parent := model.IssueOpsRecord{
-		OK: true, ID: "io-parent", Repo: "/repo", Branch: "6000-parent", Phase: model.IssueOpsPhaseImplement,
+	parent := model.Record{
+		OK: true, ID: "io-parent", Repo: "/repo", Branch: "6000-parent", Phase: model.PhaseImplement,
 		IssueURL: "https://example.com/i/6000",
-		Intent:   &model.IssueOpsIntentContract{RawRequest: "원 요청", InterpretedIntent: "i", SuccessCriteria: []string{"s"}},
-		DomainReview: &model.IssueOpsDomainReview{
+		Intent:   &model.IntentContract{RawRequest: "원 요청", InterpretedIntent: "i", SuccessCriteria: []string{"s"}},
+		DomainReview: &model.DomainReview{
 			ModelFit: "go", Terminology: []string{"term"}, Risks: []string{"risk"}, OpenUncertainties: []string{"u"},
 		},
 		ArchitectureReview:  &reviewcontract.ArchitectureReview{Approved: false, Verification: []string{"v"}},
 		CompatibilityReview: &reviewcontract.CompatibilityReview{Approved: false, Blockers: []string{"b"}},
 	}
-	child := model.IssueOpsRecord{OK: true, ID: "io-child", Repo: "/repo", Branch: "6001-child", Phase: model.IssueOpsPhaseProblem}
-	req := model.IssueOpsChildStartRequest{
+	child := model.Record{OK: true, ID: "io-child", Repo: "/repo", Branch: "6001-child", Phase: model.PhaseProblem}
+	req := model.ChildStartRequest{
 		Branch: "6001-child", Title: "child one", TaskScope: "  scope  ",
 		AcceptanceCriteria: []string{" a1 ", "", "a2"},
 	}
@@ -83,9 +83,9 @@ func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 }
 
 func TestParentRefProjectsChildReference(t *testing.T) {
-	child := model.IssueOpsRecord{ID: "io-child", Branch: "6001-child"}
-	req := model.IssueOpsChildStartRequest{Branch: "6001-child", Title: "  child one  ", ChildIssueURL: " https://example.com/i/6001 "}
-	ref := NewChildReference(child, req, "now")
+	child := model.Record{ID: "io-child", Branch: "6001-child"}
+	req := model.ChildStartRequest{Branch: "6001-child", Title: "  child one  ", ChildIssueURL: " https://example.com/i/6001 "}
+	ref := newChildReference(child, req, "now")
 	if ref.CycleID != "io-child" || ref.Branch != "6001-child" || ref.Title != "child one" ||
 		ref.ChildIssueURL != "https://example.com/i/6001" || ref.CreatedAt != "now" {
 		t.Fatalf("parent ref wrong: %#v", ref)
@@ -93,16 +93,16 @@ func TestParentRefProjectsChildReference(t *testing.T) {
 }
 
 func TestBuildDelegatedProfileMarksParentArchitectureReview(t *testing.T) {
-	parent := model.IssueOpsRecord{
-		OK: true, ID: "io-parent", Repo: "/repo", Branch: "6000-parent", Phase: model.IssueOpsPhaseImplement,
+	parent := model.Record{
+		OK: true, ID: "io-parent", Repo: "/repo", Branch: "6000-parent", Phase: model.PhaseImplement,
 		IssueURL: "https://example.com/i/6000",
 		ArchitectureReview: &reviewcontract.ArchitectureReview{
 			Approved: true, ReviewerContext: "subagent", ReviewedArchitectureDigest: "abc",
 			Verification: []string{"architecture review checked risks"},
 		},
 	}
-	child := model.IssueOpsRecord{OK: true, ID: "io-child", Repo: "/repo", Branch: "6001-child", Phase: model.IssueOpsPhaseProblem}
-	built := BuildDelegatedProfile(parent, child, model.IssueOpsChildStartRequest{Branch: "6001-child", Title: "child", TaskScope: "scope"}, "2026-08-21T12:00:00Z")
+	child := model.Record{OK: true, ID: "io-child", Repo: "/repo", Branch: "6001-child", Phase: model.PhaseProblem}
+	built := BuildDelegatedProfile(parent, child, model.ChildStartRequest{Branch: "6001-child", Title: "child", TaskScope: "scope"}, "2026-08-21T12:00:00Z")
 	review := built.ArchitectureReview
 	if review == nil || !review.Approved || review.ReviewerContext != ParentReviewPattern {
 		t.Fatalf("child copy must be approved and carry the inherited marker: %+v", review)

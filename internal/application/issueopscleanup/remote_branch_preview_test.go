@@ -41,21 +41,21 @@ const (
 	replacementPR = "https://github.com/acme/repo/pull/3"
 )
 
-func mergedHeadFor(oid string) func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
-	return func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+func mergedHeadFor(oid string) func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+	return func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 		return model.CleanupRemoteBranchArtifactHead{HeadRefName: "123-work", HeadRefOID: oid}, nil
 	}
 }
 
-func unmergedArtifact(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
+func unmergedArtifact(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 	return model.CleanupRemoteBranchArtifactHead{}, errors.New("pull request is not merged")
 }
 
-func branchPreviewRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{
-		ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.IssueOpsPhaseDone,
-		BranchPrepare:  &model.IssueOpsBranchPrepare{BaseBranch: "main"},
-		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: originalPR},
+func branchPreviewRecord() model.Record {
+	return model.Record{
+		ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.PhaseDone,
+		BranchPrepare:  &model.BranchPrepare{BaseBranch: "main"},
+		RemoteArtifact: &model.RemoteArtifactVerification{Provider: "github", Kind: "pr", URL: originalPR},
 	}
 }
 
@@ -63,8 +63,8 @@ func newPreviewBranchEnv() *previewBranchEnv {
 	return &previewBranchEnv{origin: "git@github.com:acme/repo.git", remoteOID: "tip"}
 }
 
-func mergedReplacement(body string) func(string) (domain.ArtifactObservation, error) {
-	return func(url string) (domain.ArtifactObservation, error) {
+func mergedReplacement(body string) func(context.Context, string) (domain.ArtifactObservation, error) {
+	return func(_ context.Context, url string) (domain.ArtifactObservation, error) {
 		return domain.ArtifactObservation{URL: url, Provider: "github", Merged: true, State: "MERGED", Body: body}, nil
 	}
 }
@@ -88,15 +88,15 @@ func TestRemoteBranchPreviewerRejectsUnprovableSupersede(t *testing.T) {
 	cases := []struct {
 		name         string
 		supersededBy string
-		observe      func(string) (domain.ArtifactObservation, error)
+		observe      func(context.Context, string) (domain.ArtifactObservation, error)
 		wantErr      string
 	}{
 		{name: "none provided", observe: mergedReplacement("Supersedes #1"), wantErr: "no superseding artifact was provided"},
 		{name: "observation not configured", supersededBy: replacementPR, wantErr: "provider observation is not configured"},
-		{name: "observation fails", supersededBy: replacementPR, observe: func(string) (domain.ArtifactObservation, error) {
+		{name: "observation fails", supersededBy: replacementPR, observe: func(context.Context, string) (domain.ArtifactObservation, error) {
 			return domain.ArtifactObservation{}, errors.New("timeout")
 		}, wantErr: "could not be observed: timeout"},
-		{name: "replacement not merged", supersededBy: replacementPR, observe: func(url string) (domain.ArtifactObservation, error) {
+		{name: "replacement not merged", supersededBy: replacementPR, observe: func(_ context.Context, url string) (domain.ArtifactObservation, error) {
 			return domain.ArtifactObservation{URL: url, State: "OPEN", Body: "Supersedes #1"}, nil
 		}, wantErr: "is not merged"},
 		{name: "replacement does not declare supersede", supersededBy: replacementPR, observe: mergedReplacement("unrelated change"), wantErr: "does not declare that it supersedes"},

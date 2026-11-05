@@ -13,10 +13,10 @@ import (
 func TestRepositoryUpdatesAndDeletesStagedArtifactMap(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
 	id := "io-artifact01"
-	data, err := json.Marshal(issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+	data, err := json.Marshal(issueopscontract.Record{
+		SchemaVersion: issueopscontract.SchemaVersion,
 		ID:            id,
-		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.PhaseProblem,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestRepositoryUpdatesAndDeletesStagedArtifactMap(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		id,
-		func(_ issueopscontract.IssueOpsRecord, staged map[string]string) (map[string]string, error) {
+		func(_ issueopscontract.Record, staged map[string]string) (map[string]string, error) {
 			staged["plan"] = "# Plan\n"
 			return staged, nil
 		},
@@ -49,7 +49,7 @@ func TestRepositoryUpdatesAndDeletesStagedArtifactMap(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		id,
-		func(_ issueopscontract.IssueOpsRecord, staged map[string]string) (map[string]string, error) {
+		func(_ issueopscontract.Record, staged map[string]string) (map[string]string, error) {
 			delete(staged, "plan")
 			return staged, nil
 		},

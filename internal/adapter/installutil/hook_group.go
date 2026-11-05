@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+// ValidateHookConfigForMerge checks that config's hook catalog and each of
+// the knownEvents entries have the expected shape (object of group arrays), so
+// a merge never overwrites a malformed host file. A config without "hooks" is
+// valid.
 func ValidateHookConfigForMerge(config map[string]any, knownEvents []string) error {
 	hooksValue, present := config["hooks"]
 	if !present {
@@ -49,6 +53,8 @@ func HookGroupContainsAgentHarness(group any) bool {
 	return false
 }
 
+// HookGroupContainsCommand reports whether any hook entry in group has a
+// command that starts with commandPrefix.
 func HookGroupContainsCommand(group any, commandPrefix string) bool {
 	m, ok := group.(map[string]any)
 	if !ok {

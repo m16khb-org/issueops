@@ -468,9 +468,9 @@ func TestDefaultFormatKeepsScannerCapAndOmitsUsage(t *testing.T) {
 
 func TestHostLoadRequiresExplicitInputAndNeverFallsBackToState(t *testing.T) {
 	calls := 0
-	source := Source{ReadState: func(string) (statecontract.StateResult, error) {
+	source := Source{ReadState: func(string) (statecontract.Result, error) {
 		calls++
-		return statecontract.StateResult{}, nil
+		return statecontract.Result{}, nil
 	}}
 	for _, format := range []string{tracecontract.InputFormatClaudeJSON, tracecontract.InputFormatCodexExec, tracecontract.InputFormatOmoJSON} {
 		_, _, _, err := source.Load(filepath.Join(t.TempDir(), "missing.jsonl"), format)

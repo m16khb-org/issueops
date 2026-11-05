@@ -17,6 +17,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// DefaultHTTPAddress 상수와 HTTPEndpointPath 상수는 공유 HTTP MCP 서버의 기본 loopback 주소와 요청 경로다.
 const (
 	DefaultHTTPAddress = "127.0.0.1:47831"
 	HTTPEndpointPath   = "/mcp"
@@ -34,6 +35,7 @@ const (
 	httpIdleTimeout = 2 * time.Minute
 )
 
+// HTTPOptions 타입은 공유 HTTP MCP 서버를 띄울 때 받는 주소, bearer 토큰, 접근 로그 설정이다.
 type HTTPOptions struct {
 	// Address is the exact loopback host:port clients must send as Host.
 	Address string

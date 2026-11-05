@@ -48,35 +48,35 @@ func TestRecordIssueOpsProjectDocsReviewValidation(t *testing.T) {
 
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "90-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "90-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.Phase = issueops.PhaseImplement })
 
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{Verdict: "done"}); err == nil {
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{Verdict: "done"}); err == nil {
 		t.Fatal("unknown verdict must be rejected")
 	}
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{Verdict: "no-change"}); err == nil {
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{Verdict: "no-change"}); err == nil {
 		t.Fatal("verdict without evidence must be rejected")
 	}
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "updated", Evidence: []string{"CAUTIONS 확인"},
 	}); err == nil {
 		t.Fatal("updated verdict without a doc path must be rejected")
 	}
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "no-change", Docs: []string{".issueops/CAUTIONS.md"}, Evidence: []string{"확인함"},
 	}); err == nil {
 		t.Fatal("no-change verdict must not carry updated docs")
 	}
 	// 연극 방지: 변경 집합에 없는 문서를 갱신했다고 주장하면 거부한다.
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "updated", Docs: []string{".issueops/ADR.md"}, Evidence: []string{"ADR 갱신"},
 	}); err == nil || !strings.Contains(err.Error(), "change set") {
 		t.Fatalf("doc outside the change set must be rejected: %v", err)
 	}
-	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "updated", Docs: []string{".issueops/CAUTIONS.md"}, Evidence: []string{"재발 함정 기록"},
 	})
 	if err != nil {
@@ -96,11 +96,11 @@ func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "91-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "91-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	_, err = RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "no-change", ReviewedDocs: []string{".issueops/ADR.md"}, Evidence: []string{"문서 영향 없음"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "implement phase") {
@@ -112,11 +112,11 @@ func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 func TestProjectDocsReviewMissingAppliesWhenExecutionExists(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
+	record := issueops.Record{Execution: &issueops.Execution{}}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("execution without review must be gated: %q", got)
 	}
-	record.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{Verdict: "no-change"}
+	record.ProjectDocsReview = &issueops.ProjectDocsReview{Verdict: "no-change"}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "" {
 		t.Fatalf("recorded review must clear the gate: %q", got)
 	}
@@ -133,7 +133,7 @@ func TestProjectDocsReviewMissingAppliesWhenExecutionExists(t *testing.T) {
 func TestPRReadinessSurfacesProjectDocsReview(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
+	record := issueops.Record{Execution: &issueops.Execution{}}
 	if ready := IssueOpsPRReadiness(record); !containsString(ready.Missing, "project_docs_review") {
 		t.Fatalf("PR readiness must surface the project docs gate: %+v", ready.Missing)
 	}
@@ -147,13 +147,13 @@ func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
 	writeRepoFileForTest(t, repo, "AGENTS.md", "# agents\n")
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "92-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "92-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.Phase = issueops.PhaseImplement })
 
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "no-change", Evidence: []string{"대조했으나 없음"},
 	}); err == nil || !strings.Contains(err.Error(), "--reviewed-doc") {
 		t.Fatalf("no-change without reviewed docs must be rejected: %v", err)
@@ -163,13 +163,13 @@ func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.
 		{doc: ".issueops/MISSING.md", want: "does not exist"},
 		{doc: "../outside.md", want: "inside the worktree"},
 	} {
-		if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+		if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 			Verdict: "no-change", ReviewedDocs: []string{tc.doc}, Evidence: []string{"대조"},
 		}); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Fatalf("reviewed doc %q must be rejected with %q: %v", tc.doc, tc.want, err)
 		}
 	}
-	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict:      "no-change",
 		ReviewedDocs: []string{filepath.Join(repo, ".issueops", "ADR.md"), "AGENTS.md"},
 		Evidence:     []string{"ADR과 AGENTS를 대조했으나 남길 결정 없음"},
@@ -189,12 +189,12 @@ func TestRecordIssueOpsProjectDocsReviewUpdatedAcceptsReviewedDocs(t *testing.T)
 
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "93-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.StartRequest{Repo: repo, Branch: "93-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
-	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.Record) { rec.Phase = issueops.PhaseImplement })
+	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.ProjectDocsReviewRequest{
 		Verdict: "updated", Docs: []string{".issueops/CAUTIONS.md"}, ReviewedDocs: []string{".issueops/ADR.md"},
 		Evidence: []string{"재발 함정 기록"},
 	})
@@ -211,11 +211,11 @@ func TestRecordIssueOpsProjectDocsReviewUpdatedAcceptsReviewedDocs(t *testing.T)
 func TestProjectDocsReviewMissingGatesRecordsWithoutExecution(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{}
+	record := issueops.Record{}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("record without execution must still be gated: %q", got)
 	}
-	record.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedFingerprint: "old"}
+	record.ProjectDocsReview = &issueops.ProjectDocsReview{Verdict: "no-change", ReviewedFingerprint: "old"}
 	if got := cycleapp.ProjectDocsReviewMissing(record, "new"); got != "project_docs_review_stale" {
 		t.Fatalf("stale review without execution must be reported: %q", got)
 	}

@@ -23,7 +23,7 @@ func TestProjectAndSelfToolFailuresReportInvalidParamsCode(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			var outcome MCPToolOutcome
+			var outcome mcpToolOutcome
 			if tc.self {
 				outcome = testHandleSelfLoopMCPToolCall(tc.call)
 			} else {
@@ -64,7 +64,7 @@ func TestHTTPAccessLogRecordsToolOutcomePerResultKind(t *testing.T) {
 func TestServeMCPStreamWritesSessionDiagnosticsToProvidedWriter(t *testing.T) {
 	const input = `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"diag","version":"0"}}}` + "\n{bad\n"
 	var diagnostics bytes.Buffer
-	_ = ServeMCPStreamWithDependencies(strings.NewReader(input), io.Discard, &diagnostics, testTransportServices())
+	_ = serveMCPStreamWithDependencies(strings.NewReader(input), io.Discard, &diagnostics, testTransportServices())
 	if !strings.Contains(diagnostics.String(), "server session ended with error") {
 		t.Fatalf("diagnostics = %q, want the session failure", diagnostics.String())
 	}
