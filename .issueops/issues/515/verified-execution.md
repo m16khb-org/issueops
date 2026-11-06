@@ -8,14 +8,14 @@
 
 | 수용 기준 | 이분 판정 방법 | 실제 자료 |
 |---|---|---|
-| T1 고정 원문과 사전 의도 | 10개 번호·원문 해시·선정 순서가 일치하고 rubric 시각이 reader보다 앞선다 | [snapshot](../../../docs/research/2026-09-30-readability/frozen-sample.json), [rubric](../../../docs/research/2026-09-30-readability/pre-reader-rubric.json), G1 |
-| T2 재현 지표 | 별도 프로세스의 계산이 저장 결과와 같다 | [metrics](../../../docs/research/2026-09-30-readability/metrics.json), G2 |
-| T3 독립 reader | 서로 다른 context 10개·도구 0건·정확한 본문 하나·네 답·질문별 판정이 있다 | [readers](../../../docs/research/2026-09-30-readability/readers/), [비교](../../../docs/research/2026-09-30-readability/reader-comparison.json), G3 |
+| T1 고정 원문과 사전 의도 | 10개 번호·원문 해시·선정 순서가 일치하고 rubric 시각이 reader보다 앞선다 | [snapshot](../../research/2026-09-30-readability/frozen-sample.json), [rubric](../../research/2026-09-30-readability/pre-reader-rubric.json), G1 |
+| T2 재현 지표 | 별도 프로세스의 계산이 저장 결과와 같다 | [metrics](../../research/2026-09-30-readability/metrics.json), G2 |
+| T3 독립 reader | 서로 다른 context 10개·도구 0건·정확한 본문 하나·네 답·질문별 판정이 있다 | [readers](../../research/2026-09-30-readability/readers/), [비교](../../research/2026-09-30-readability/reader-comparison.json), G3 |
 | T4 결정 연결 | 권장 유지 ADR과 색인이 연결된다 | [ADR](../../adr/2026-09-30-reader-review-remains-recommended-after-ten-public-bodies.md), G4 |
-| 원격 drift | 실제 API 10건의 최신 body hash를 snapshot과 비교한다 | [remote comparison](../../../docs/research/2026-09-30-readability/remote-comparison.json), G5 |
+| 원격 drift | 실제 API 10건의 최신 body hash를 snapshot과 비교한다 | [remote comparison](../../research/2026-09-30-readability/remote-comparison.json), G5 |
 | 문서 배터리 | 필수 연구 검사·Python discovery·완전 self-verify 단일 run이 모두 성공해야 한다 | [원장](gates.md), G6 |
 
-[연구 보고서](../../../docs/research/2026-09-30-readability/README.md)에 본문별 표와 공개 기준선의 한계가 있다. H2 중앙값 4.5개, 문자 수 중앙값 1,525.5자이며 독자 검토를 권장 절차로 유지한다. Q1–Q3 원래 의도 확인 가능 7/10건 중 불일치 0/7, unknown 3/10이다. #520 Q2는 정보가 없어 답하지 못했다. Q4 지적은 10/10이다. #527 원격 drift는 원래 snapshot 결과와 구분했다.
+[연구 보고서](../../research/2026-09-30-readability/README.md)에 본문별 표와 공개 기준선의 한계가 있다. H2 중앙값 4.5개, 문자 수 중앙값 1,525.5자이며 독자 검토를 권장 절차로 유지한다. Q1–Q3 원래 의도 확인 가능 7/10건 중 불일치 0/7, unknown 3/10이다. #520 Q2는 정보가 없어 답하지 못했다. Q4 지적은 10/10이다. #527 원격 drift는 원래 snapshot 결과와 구분했다.
 
 ## 검증 책임
 

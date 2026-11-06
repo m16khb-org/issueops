@@ -12,7 +12,7 @@ os.environ['GOFLAGS'] = '-p=2'
 os.environ['GOMAXPROCS'] = '4'
 log = pathlib.Path(tempfile.mkdtemp(prefix='issueops-515-battery-'))
 commands = [
-    ['python3', 'docs/research/2026-09-30-readability/verify.py', mode]
+    ['python3', '.issueops/research/2026-09-30-readability/verify.py', mode]
     for mode in ('snapshot', 'metrics', 'evidence', 'decision', 'remote', 'fixtures')
 ]
 commands.append(['python3', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', '*_test.py'])

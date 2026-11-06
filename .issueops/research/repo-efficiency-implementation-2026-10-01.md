@@ -76,7 +76,7 @@ next CLI·SDK·host adapter matrix를 다시 실행했다. 인벤토리는 정�
 Python은 기존 Slack PEP 723 의존성을
 `scripts/python_test_requirements.txt`에 고정했다. CI는 checkout 밖의
 `RUNNER_TEMP`에 Python 3.13 환경을 준비한다. 로컬 준비법은
-[Python 검사 환경](../.issueops/testing/unit-and-contract.md#python-검사-환경)에 있다.
+[Python 검사 환경](../testing/unit-and-contract.md#python-검사-환경)에 있다.
 이는 테스트 환경이며 native installer가 다른 도구나 라이브러리를 설치하지 않는다.
 
 실행 결과는 root 61 tests와 skill 156 tests였다. root의 기존 optional local-file
