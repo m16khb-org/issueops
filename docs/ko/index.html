@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IssueOps 에이전트 하네스: 코딩 에이전트를 위한 팀의 기억</title>
+  <meta name="description" content="IssueOps는 Codex, Claude Code, Omo, omp, opencode에서 함께 쓰는 로컬 Go 에이전트 하네스입니다. 에이전트가 찾은 함정(caution)과 설계 결정(ADR)을 코드와 같은 PR로 저장소에 남기고, 팀원의 에이전트가 다음 작업 전에 읽게 합니다." />
+  <meta name="theme-color" content="#0d0f12" />
+  <link rel="canonical" href="https://m16khb-org.github.io/issueops/ko/" />
+  <link rel="alternate" hreflang="en" href="https://m16khb-org.github.io/issueops/" />
+  <link rel="alternate" hreflang="ko" href="https://m16khb-org.github.io/issueops/ko/" />
+  <link rel="alternate" hreflang="x-default" href="https://m16khb-org.github.io/issueops/" />
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="IssueOps" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta property="og:title" content="IssueOps 에이전트 하네스: 코딩 에이전트를 위한 팀의 기억" />
+  <meta property="og:description" content="caution과 ADR이 코드와 같은 PR로 저장소에 남습니다. Codex, Claude Code, Omo, omp, opencode에서 함께 씁니다." />
+  <meta property="og:url" content="https://m16khb-org.github.io/issueops/ko/" />
+  <meta property="og:image" content="https://m16khb-org.github.io/issueops/assets/issueops-hero-team-memory.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="../assets/style.css" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareSourceCode", "name": "IssueOps", "alternateName": "issueops 에이전트 하네스", "description": "코딩 에이전트가 찾은 caution과 ADR을 코드와 같은 PR로 저장소에 남기는 로컬 Go 에이전트 하네스", "url": "https://m16khb-org.github.io/issueops/ko/", "inLanguage": "ko", "codeRepository": "https://github.com/m16khb-org/issueops", "programmingLanguage": "Go", "license": "https://opensource.org/licenses/MIT", "keywords": "issueops, 에이전트 하네스, 코딩 에이전트, Claude Code, Codex, opencode, MCP, ADR"}</script>
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 건너뛰기</a>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="../assets/mark.svg" width="24" height="24" alt="" /> IssueOps</a>
+      <nav class="nav-links" aria-label="주 메뉴">
+        <a class="hide-sm" href="#record">기록</a>
+        <a class="hide-sm" href="#route">route-docs 체험</a>
+        <a class="hide-sm" href="#quick-start">설치</a>
+        <a href="../" hreflang="en" lang="en">English</a>
+        <a class="btn small" href="https://github.com/m16khb-org/issueops">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div>
+      <span class="kicker"><span class="dot" aria-hidden="true"></span>오픈소스 · MIT · Go</span>
+      <h1 id="hero-title">코딩 에이전트가 배운 것을 <span class="mark-open">코드와 같은 PR</span>에 남기는 <span class="mark-merged">팀의 기억</span></h1>
+      <p class="lede">IssueOps는 로컬 에이전트 하네스입니다. 에이전트가 함정을 만나거나 설계 결정을 내리면 그 내용을 변경과 함께 저장소에 기록합니다. 팀의 다음 에이전트는 관련 작업을 시작하기 전에 그 기록을 읽습니다.</p>
+      <div class="actions">
+        <a class="btn go" href="#route">route-docs 체험하기 ↓</a>
+        <a class="btn" href="#quick-start">설치</a>
+      </div>
+      <ul class="hostline" aria-label="지원 호스트">
+        <li>지원 호스트</li><li class="chip">Codex</li><li class="chip">Claude Code</li><li class="chip">Omo</li><li class="chip">omp</li><li class="chip">opencode</li>
+      </ul>
+    </div>
+    <div class="panel" id="cycle">
+      <div class="panel-head"><span class="grow">issueops next · 이슈 하나, 10단계</span><span class="badge open">open</span></div>
+      <div class="cycle-body">
+        <ol class="stages" role="tablist" aria-label="사이클 단계" aria-orientation="vertical"></ol>
+        <div class="stage-detail" id="stage-panel" role="tabpanel" aria-live="polite"></div>
+      </div>
+      <div class="cycle-foot"><span class="bar" aria-hidden="true"><i></i></span><button type="button"></button></div>
+    </div>
+  </section>
+
+  <main class="main" id="main">
+    <div class="rail" aria-hidden="true"><i></i></div>
+
+    <section class="sec wrap reveal" id="record" data-c="open">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">01 <b>/</b> record</p>
+      <div class="split">
+        <div>
+          <h2>함정과 결정을 파일로 남기고 코드와 함께 리뷰합니다</h2>
+          <p class="sec-lede">caution은 함정과 해결 방법을, ADR은 설계 결정을 기록합니다. 둘 다 <code>.issueops/</code> 아래의 마크다운 파일입니다. 오른쪽은 이 저장소의 실제 기록입니다. 항목을 누르면 그 항목이 담는 내용을 보여 줍니다.</p>
+          <ul class="legend" id="record-legend" aria-label="기록 항목"></ul>
+        </div>
+        <div class="panel" id="record-viewer">
+          <div class="panel-head">
+            <div class="tabs" role="tablist" aria-label="기록 종류">
+              <button class="tab" type="button" role="tab" data-kind="caution" aria-selected="false" tabindex="-1">cautions/</button>
+              <button class="tab" type="button" role="tab" data-kind="adr" aria-selected="false" tabindex="-1">adr/</button>
+            </div>
+            <span class="grow"></span><span class="badge">실제 기록</span>
+          </div>
+          <div class="file" role="tabpanel"></div>
+          <div class="filepath"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="route" data-c="info">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">02 <b>/</b> route</p>
+      <h2>다음 작업에는 맞는 기록을 먼저 건넵니다</h2>
+      <p class="sec-lede">작업을 시작하기 전에 <code>route-docs</code>가 작업 설명과 단어가 두 개 이상 겹치는 과거 기록을 최대 다섯 건 고릅니다. 작업을 입력해서 어떤 기록이 골라지는지 확인해 보세요.</p>
+      <div class="panel play" id="route-play" data-records="../assets/records.json">
+        <div class="play-input">
+          <label for="task">$ route-docs --task</label>
+          <input id="task" type="text" autocomplete="off" spellcheck="false" value="업데이트 뒤 MCP 서비스가 이전 빌드로 남음" />
+        </div>
+        <div class="presets"><span>예시:</span><button type="button">gitlab child issue labels</button><button type="button">worktree lease lock</button><button type="button">hook session start output</button><button type="button">업데이트 뒤 MCP 서비스가 이전 빌드로 남음</button></div>
+        <div class="terms" aria-live="polite"></div>
+        <ol class="results" aria-live="polite" aria-label="고른 기록"></ol>
+        <div class="play-foot"><code>route-docs</code>의 기록 선택 규칙을 브라우저에서 그대로 실행합니다. 대상은 이 저장소의 caution·ADR 기록 <span class="count">172</span>건입니다(2026-11-03 기준). 드물게 쓰이는 단어일수록 점수가 높습니다. 겹치는 단어 하나마다 ln(N/df)를 더합니다.</div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="gates" data-c="review">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">03 <b>/</b> enforce</p>
+      <div class="split">
+        <div>
+          <h2>기억에 맡기지 않고 게이트로 막습니다</h2>
+          <p class="sec-lede">기록은 10단계 사이클 안에서 작성합니다. 문서 반영 판정은 변경 집합에 묶이기 때문에, 오래된 기록을 담은 PR은 발행되지 않습니다. 판정 전에 발행하거나, 판정 뒤에 diff를 바꿔 보세요.</p>
+        </div>
+        <div class="panel" id="gate-sim">
+          <div class="panel-head"><span class="grow">6 → 9단계 · 문서 게이트</span><span class="badge review">동작 예시</span></div>
+          <div class="sim-state">
+            <div><small>변경 집합</small><span data-k="diff"></span></div>
+            <div><small>문서 반영 판정</small><span data-k="verdict"></span></div>
+            <div><small>PR</small><span data-k="pr"></span></div>
+          </div>
+          <div class="sim-actions">
+            <button class="btn small" type="button" data-act="verdict">문서 반영 판정 기록</button>
+            <button class="btn small" type="button" data-act="edit">diff 수정</button>
+            <button class="btn small go" type="button" data-act="publish">PR 발행</button>
+            <button class="btn small" type="button" data-act="reset">처음부터</button>
+          </div>
+          <ol class="sim-log" aria-live="polite" aria-label="게이트 기록"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="hosts" data-c="merged">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">04 <b>/</b> integrate</p>
+      <div class="split">
+        <div>
+          <h2>다섯 호스트가 하나의 코어와 계약을 씁니다</h2>
+          <p class="sec-lede">Codex, Claude Code, Omo native, omp, opencode는 같은 Go 코어, 같은 CLI/MCP 응답 계약, 같은 명령 정책, 같은 <code>skills/</code> 원본을 씁니다. 설치는 홈 디렉터리에만 파일을 쓰고, 저장소는 명시적으로 bootstrap할 때만 바뀝니다.</p>
+        </div>
+        <div class="panel" id="hosts-panel">
+          <div class="host-tabs" role="tablist" aria-label="호스트">
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Codex</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Claude Code</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Omo native</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">omp</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">opencode</button>
+          </div>
+          <div class="flow" aria-hidden="true">
+            <div class="active"><strong class="host">Codex</strong>host</div><span>→</span>
+            <div><strong>issueops</strong>CLI · MCP · policy</div><span>→</span>
+            <div><strong>.issueops/</strong>git</div>
+          </div>
+          <div class="host-panel" role="tabpanel"><dl></dl></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="compare" data-c="muted">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">05 <b>/</b> compare</p>
+      <h2><code>AGENTS.md</code>, 에이전트 메모리와 무엇이 다른가</h2>
+      <p class="sec-lede">IssueOps는 <code>AGENTS.md</code>를 대신하지 않습니다. 모든 세션에 필요한 규칙은 <code>AGENTS.md</code>에 두고, 일부 작업에만 필요한 함정과 결정은 기록으로 남깁니다.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col"></th><th scope="col"><code>AGENTS.md</code> / <code>CLAUDE.md</code></th><th scope="col">에이전트 내장 메모리</th><th scope="col" class="us">IssueOps 기록</th></tr></thead>
+          <tbody><tr><th scope="row">작성자</th><td>사람이 직접 씁니다</td><td>에이전트가 대화에서 씁니다</td><td class="us">에이전트가 쓰고 사람이 PR에서 리뷰합니다</td></tr><tr><th scope="row">저장 위치</th><td>저장소의 파일 하나</td><td>각자의 컴퓨터</td><td class="us">저장소의 <code>.issueops/</code>, 기록마다 파일 하나</td></tr><tr><th scope="row">팀원에게 전달</th><td>git으로 전달됩니다</td><td>전달되지 않습니다</td><td class="us">git으로 전달됩니다</td></tr><tr><th scope="row">에이전트가 읽는 범위</th><td>세션 시작 시 파일 전체</td><td>도구가 고른 내용</td><td class="us">작업과 관련된 기록만</td></tr><tr><th scope="row">작성 시점</th><td>누군가 기억할 때</td><td>도구가 정할 때</td><td class="us">알게 된 즉시, 늦어도 문서 반영 단계에서</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="quick-start" data-c="open">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">06 <b>/</b> install</p>
+      <h2>소스에서 빌드합니다</h2>
+      <p class="sec-lede">Git, Go 1.26.6 이상, 사용할 코딩 호스트 하나 이상이 필요합니다. 아직 공개된 바이너리 릴리스는 없습니다.</p>
+      <div class="panel code">
+        <div class="panel-head"><span class="grow">install.sh</span></div>
+        <button class="btn small copy-btn" type="button">복사</button>
+<pre><span class="c-p">$</span> git clone https://github.com/m16khb-org/issueops.git
+<span class="c-p">$</span> cd issueops
+<span class="c-p">$</span> ./install.sh <span class="c-f">--dry-run --json</span>   <span class="c-c"># 설치 계획을 먼저 확인합니다</span>
+<span class="c-p">$</span> ./install.sh
+<span class="c-p">$</span> ./bin/issueops doctor <span class="c-f">--repo</span> . <span class="c-f">--json</span></pre>
+      </div>
+      <p class="note">설치한 뒤 에이전트에게 이렇게 요청합니다. <em>"issueops로 로그인 오류를 고쳐 줘. 만료된 세션으로 재현하고 테스트를 추가해. draft PR 생성까지 진행해."</em> 자세한 내용은 <a href="https://github.com/m16khb-org/issueops/blob/main/README.md">전체 README</a>에 있습니다.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="merge-line"><span class="m" aria-hidden="true"></span>main에 머지됨 · 기록이 코드와 함께 들어갑니다</div>
+      <div class="foot">
+        <div>
+          <a class="brand" href="./"><img src="../assets/mark.svg" width="24" height="24" alt="" /> IssueOps</a>
+          <p>코딩 에이전트를 위한 팀의 기억. MIT 라이선스.</p>
+        </div>
+        <div>
+          <h3>project</h3>
+          <ul>
+            <li><a href="https://github.com/m16khb-org/issueops">GitHub</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/issues">Issues</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/releases">Releases</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>docs</h3>
+          <ul>
+            <li><a href="https://github.com/m16khb-org/issueops/blob/main/README.en.md">README (English)</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/blob/main/README.md">README (한국어)</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/tree/main/.issueops">.issueops/</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="legal"><span>© IssueOps 기여자. MIT 라이선스.</span><a href="../" hreflang="en" lang="en">English</a></div>
+    </div>
+  </footer>
+
+  <script type="application/json" id="site-data">{"stages":[{"n":1,"short":"이슈 확정·생성","name":"이슈 확정·생성","skills":["issueops-create-issue"],"out":"요구사항·완료 기준을 담은 이슈를 만듭니다."},{"n":2,"short":"브랜치 준비","name":"브랜치 준비","skills":["issueops-prepare"],"out":"base SHA를 고정하고 이슈에 연결된 브랜치를 준비합니다."},{"n":3,"short":"계획·검토","name":"아키텍처·계획·검토·인계","skills":["issueops-plan"],"out":"독립 리뷰로 아키텍처를 승인받고, 관련 caution·ADR을 반영해 검토한 계획과 실행 worktree·세션을 준비합니다.","gate":"link-plan은 적용되는 결정과 주의사항 섹션이 없는 계획을 거부합니다.","term":"stage 3/10 plan.review  cycle io-xxxx  phase plan\nmissing: devils_advocate_review\nnext: issueops devils-advocate review --id io-xxxx ..."},{"n":4,"short":"구현","name":"구현","skills":["issueops-implement"],"out":"테스트로 확인하며 구현합니다."},{"n":5,"short":"AI slop 정리","name":"AI slop 정리","skills":["issueops-slop-clean"],"out":"불필요한 변경을 제거하고 diff를 봉인합니다."},{"n":6,"short":"문서 반영","name":"문서 반영","skills":["issueops-docs"],"out":"현재 구현과 일치하도록 운영 문서를 고치고, 이번 작업에서 나온 caution·ADR을 기록합니다.","gate":"project-docs-review record가 문서 반영 판정을 변경 집합의 fingerprint에 묶습니다."},{"n":7,"short":"검증","name":"검증","skills":["issueops-verify"],"out":"실행 증거, 독립 리뷰, 발행 준비를 확인합니다."},{"n":8,"short":"커밋·푸시","name":"커밋·푸시","skills":["atomic-commit-push"],"out":"검증한 변경을 커밋하고 원격 브랜치에 올립니다."},{"n":9,"short":"PR/MR 발행","name":"PR/MR 발행·완료","skills":["issueops-create-pr","issueops-complete"],"out":"Draft PR/MR을 만들고 완료 증거를 남깁니다.","gate":"현재 변경 집합에 대한 문서 반영 판정이 없으면 PR을 발행할 수 없습니다."},{"n":10,"short":"머지·정리","name":"머지·정리","skills":["issueops-merge","issueops-cleanup"],"out":"PR/MR을 머지하고 연결 이슈, worktree, 브랜치를 정리합니다."}],"ui":{"stage":"단계","play":"재생","pause":"일시 정지","terms":"작업 단어:","needTwo":"단어를 두 개 이상 입력하세요. route-docs는 겹치는 단어가 두 개 이상 있어야 기록을 고릅니다.","noMatch":"이 작업과 단어가 두 개 이상 겹치는 기록이 없습니다.","score":"점수","loadFail":"기록을 불러오지 못했습니다.","copy":"복사","copied":"복사함"},"samples":{"caution":{"title":"GitLab WorkItem 직속 labels/assignees selection이 create-child를 막았고 가짜 glab 스텁이 그 오류를 감췄다","path":".issueops/cautions/2026-08-28-gitlab-workitem-labels-assignees-selection-create-child-glab.md","fields":[["Source","Claude Code session 2026-08-28 — systematic-debugging + TDD on issueops remote create-child failure"],["Summary","GitLab WorkItem은 labels/assignees를 widgets(WorkItemWidgetLabels/WorkItemWidgetAssignees)로만 노출하는데 provider의 workItemCreate 반환 selection과 childVerify 쿼리가 둘을 직속 필드로 select해 `issueops remote create-child`가 GraphQL validation에서 거절됐고, 가짜 glab 스텁이 잘못된 응답 모양을 그대로 되돌려줘 테스트는 계속 초록불이었다."],["Context","사용자가 사내 GitLab 19.2.4-ee에서 `issueops remote create-child`를 실행하자 `glab graphql failed: Field 'labels' doesn't exist on type 'WorkItem'` / `Field 'assignees' doesn't exist on type 'WorkItem'`로 실패했고, 스킬이 허용하는 escape hatch로 GraphQL workItemCreate + workItemUpdate를 직접 호출해 자식을 만든 뒤 link-child로 등록했다. 라이브 인트로스펙션 결과 WorkItem 필드 목록에는 labels/assigne…"],["Resolution","internal/adapter/provider/gitlab/provider.go의 gitlabChildVerifyQuery와 buildGitLabWorkItemCreateQuery 반환 selection을 `widgets { type ... on WorkItemWidgetLabels { labels { nodes { title } } } ... on WorkItemWidgetAssignees { assignees { nodes { username } } } }`로 교체하고, gitlabWorkItem에서 Labels/Assignees 직속 필드를 제거해 Widgets로 옮긴 뒤 gitlabWorkIte…"],["Evidence","glab api graphql --hostname gitlab.example.com 인트로스펙션 → WorkItem 필드에 labels/assignees 없음; WorkItemWidgetLabels: allowsScopedLabels, labels, type / WorkItemWidgetAssignees: allowsMultipleAssignees, assignees, canInviteMembers, type; labels→LabelConnection→Label.title, assignees→UserCoreConnection→UserCore.username · glab api version --host…"]]},"adr":{"title":"Issue and PR bodies are human documents; implementation materials stay in .issueops/issues/<n>/","path":".issueops/adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md","fields":[["Source","IssueOps #513, design `docs/superpowers/specs/2026-09-24-readable-issue-pr-design.md`"],["Summary","Issue and PR bodies follow a summary-first contract of 4-5 required sections owned by `internal/domain/artifacttemplate`, and every `issueops remote` publish and sync command runs a readability check that refuses critical findings on `--confirm`. Hashes, commit SHAs, plan and spec texts, label scores, and cleanup audits leave the bodies:…"],["Context","Published bodies mixed three audiences: the team, the next agent session, and audit data. PRs were forced into 13 sections, every issue carried a label-score section, the completion region took 44-95% of sampled issue bodies with SHA-256 manifests and plan and spec full texts, and cleanup re-rendered that region to append an audit line wi…"],["Decision","`artifacttemplate` owns the body contract (required and optional sections per kind, summary-first, placeholder rules, legacy `--field` aliases). `internal/domain/artifactreadability` is a pure check that restates the structural findings and adds Korean ratio, SHA-256 outside code, and nine warnings. · `create-issue`, `create-child`, `crea…"],["Alternatives","Keep the check in the skill script — rejected: it is skippable, which is the failure this decision fixes. · Make harness terms critical — rejected: issueops issues discuss those terms and would be refused falsely. · Store the progress report or the template kind in the record — rejected: the record decoder rejects unknown fields, so older…"],["Evidence","internal/domain/artifacttemplate/template.go, template_test.go, repo_templates_test.go · internal/domain/artifactreadability/readability.go, readability_test.go · cmd/issueops/issueopscli/remotecmd/remote_child_pr.go, remote_readability.go, remote_readability_test.go · internal/adapter/issueops/issueops_remote_body_sync.go, issueops_compl…"]]}},"fieldHelp":{"Source":"기록이 나온 곳입니다. 이슈 번호나 세션을 적고, route-docs가 이 항목도 비교합니다.","Summary":"무엇이 깨졌는지 또는 무엇을 결정했는지 한 단락으로 씁니다. route-docs가 이 항목을 비교합니다.","Context":"관찰한 내용과 원인입니다.","Resolution":"어떻게 고쳤는지 적어서 다음 에이전트가 같은 작업을 반복하지 않게 합니다.","Decision":"결정 내용을 항목별로 적습니다.","Alternatives":"기각한 대안과 이유를 적어서 같은 대안이 다시 나오지 않게 합니다.","Evidence":"기록을 뒷받침하는 파일, 명령, 테스트 실행 결과입니다."},"gate":{"verdict":{"none":"없음","fresh":"유효","stale":"만료"},"diffLabel":"변경 집합","prNone":"발행 전","prPublished":"Draft PR 발행됨","log":{"start":"10단계 중 6단계입니다. 변경 집합은 봉인됐고 문서 반영 판정은 아직 없습니다.","verdict":"문서 반영 판정을 기록하고 변경 집합 #{n}에 묶었습니다.","edit":"diff가 바뀌어 변경 집합이 #{n}이 됐습니다.","stale":"판정 뒤에 diff가 바뀌었습니다. 판정이 만료되고 사이클은 6단계로 돌아갑니다.","published":"문서 반영 판정이 현재 변경 집합과 일치합니다. Draft PR을 발행했습니다.","refusedNone":"발행 거부: 이 변경 집합에는 문서 반영 판정이 없습니다.","refusedStale":"발행 거부: 문서 반영 판정이 이전 변경 집합에 묶여 있습니다."}},"hosts":[{"name":"Codex","rows":[["스킬","~/.codex/skills/"],["MCP","MCP 설정"],["Hook","SessionStart·SubagentStart"]]},{"name":"Claude Code","rows":[["스킬","~/.claude/skills/"],["MCP","user-scope MCP"],["Hook","SessionStart·SubagentStart"]]},{"name":"Omo native","rows":[["스킬","~/.omo/agent/skills/"],["MCP","~/.omo/mcp.json"],["확장","lifecycle extension"]]},{"name":"omp","rows":[["스킬","~/.omp/agent/skills/"],["MCP","~/.omp/agent/mcp.json"],["확장","~/.omp/agent/extensions/issueops.js"]]},{"name":"opencode","rows":[["스킬","~/.config/opencode/skills/"],["MCP","~/.config/opencode/opencode.json의 mcp.servers.issueops"],["플러그인","~/.config/opencode/plugins/issueops.js (XDG_CONFIG_HOME을 따릅니다)"],["참고","lease는 opencode --standalone 세션만 가질 수 있습니다."]]}],"sharedRows":[["MCP 서비스","http://127.0.0.1:47831/mcp 하나를 모든 호스트가 함께 씁니다 (macOS LaunchAgent 또는 Linux systemd user 서비스)"],["실행 상태","~/.local/state/issueops/ 아래 SQLite 저장소"]]}</script>
+  <script src="../assets/app.js" defer></script>
+</body>
+</html>

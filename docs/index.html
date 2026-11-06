@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IssueOps agent harness: team memory for coding agents</title>
+  <meta name="description" content="IssueOps is a local Go agent harness for Codex, Claude Code, Omo, omp, and opencode. Agents record pitfalls (cautions) and design decisions (ADRs) in the repository, in the same PR as the code, and teammates' agents read them before related work." />
+  <meta name="theme-color" content="#0d0f12" />
+  <link rel="canonical" href="https://m16khb-org.github.io/issueops/" />
+  <link rel="alternate" hreflang="en" href="https://m16khb-org.github.io/issueops/" />
+  <link rel="alternate" hreflang="ko" href="https://m16khb-org.github.io/issueops/ko/" />
+  <link rel="alternate" hreflang="x-default" href="https://m16khb-org.github.io/issueops/" />
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="IssueOps" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="IssueOps agent harness: team memory for coding agents" />
+  <meta property="og:description" content="Cautions and ADRs ship in the same PR as the code. Works with Codex, Claude Code, Omo, omp, and opencode." />
+  <meta property="og:url" content="https://m16khb-org.github.io/issueops/" />
+  <meta property="og:image" content="https://m16khb-org.github.io/issueops/assets/issueops-hero-team-memory.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="assets/style.css" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareSourceCode", "name": "IssueOps", "alternateName": "issueops agent harness", "description": "Local Go agent harness that keeps coding agents' cautions and ADRs in the repository, in the same PR as the code.", "url": "https://m16khb-org.github.io/issueops/", "codeRepository": "https://github.com/m16khb-org/issueops", "programmingLanguage": "Go", "license": "https://opensource.org/licenses/MIT", "keywords": "issueops, agent harness, coding agents, Claude Code, Codex, opencode, MCP, ADR"}</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/mark.svg" width="24" height="24" alt="" /> IssueOps</a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="hide-sm" href="#record">Record</a>
+        <a class="hide-sm" href="#route">Try route-docs</a>
+        <a class="hide-sm" href="#quick-start">Install</a>
+        <a href="ko/" hreflang="ko" lang="ko">한국어</a>
+        <a class="btn small" href="https://github.com/m16khb-org/issueops">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div>
+      <span class="kicker"><span class="dot" aria-hidden="true"></span>open source · MIT · Go</span>
+      <h1 id="hero-title">Team memory for coding agents, shipped in <span class="mark-open">the same PR</span> as the <span class="mark-merged">code</span>.</h1>
+      <p class="lede">IssueOps is a local agent harness. When an agent hits a pitfall or makes a design decision, it writes a record into the repository with the change. The next agent on your team reads it before related work.</p>
+      <div class="actions">
+        <a class="btn go" href="#route">Try route-docs ↓</a>
+        <a class="btn" href="#quick-start">Install</a>
+      </div>
+      <ul class="hostline" aria-label="Supported hosts">
+        <li>Works with</li><li class="chip">Codex</li><li class="chip">Claude Code</li><li class="chip">Omo</li><li class="chip">omp</li><li class="chip">opencode</li>
+      </ul>
+    </div>
+    <div class="panel" id="cycle">
+      <div class="panel-head"><span class="grow">issueops next · one issue, ten stages</span><span class="badge open">open</span></div>
+      <div class="cycle-body">
+        <ol class="stages" role="tablist" aria-label="Cycle stages" aria-orientation="vertical"></ol>
+        <div class="stage-detail" id="stage-panel" role="tabpanel" aria-live="polite"></div>
+      </div>
+      <div class="cycle-foot"><span class="bar" aria-hidden="true"><i></i></span><button type="button"></button></div>
+    </div>
+  </section>
+
+  <main class="main" id="main">
+    <div class="rail" aria-hidden="true"><i></i></div>
+
+    <section class="sec wrap reveal" id="record" data-c="open">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">01 <b>/</b> record</p>
+      <div class="split">
+        <div>
+          <h2>Pitfalls and decisions become files, reviewed with the code</h2>
+          <p class="sec-lede">A caution records a pitfall and its fix. An ADR records a design decision. Both are plain Markdown under <code>.issueops/</code>. These are real records from this repository; pick a field to see what it carries.</p>
+          <ul class="legend" id="record-legend" aria-label="Record fields"></ul>
+        </div>
+        <div class="panel" id="record-viewer">
+          <div class="panel-head">
+            <div class="tabs" role="tablist" aria-label="Record kind">
+              <button class="tab" type="button" role="tab" data-kind="adr" aria-selected="false" tabindex="-1">adr/</button>
+              <button class="tab" type="button" role="tab" data-kind="caution" aria-selected="false" tabindex="-1">cautions/</button>
+            </div>
+            <span class="grow"></span><span class="badge">real record</span>
+          </div>
+          <div class="file" role="tabpanel"></div>
+          <div class="filepath"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="route" data-c="info">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">02 <b>/</b> route</p>
+      <h2>The next task gets the right records first</h2>
+      <p class="sec-lede">Before work starts, <code>route-docs</code> picks up to five past records that share at least two terms with the task. Type a task and watch it choose.</p>
+      <div class="panel play" id="route-play" data-records="assets/records.json">
+        <div class="play-input">
+          <label for="task">$ route-docs --task</label>
+          <input id="task" type="text" autocomplete="off" spellcheck="false" value="gitlab child issue labels" />
+        </div>
+        <div class="presets"><span>try:</span><button type="button">gitlab child issue labels</button><button type="button">worktree lease lock</button><button type="button">hook session start output</button><button type="button">업데이트 뒤 MCP 서비스가 이전 빌드로 남음</button></div>
+        <div class="terms" aria-live="polite"></div>
+        <ol class="results" aria-live="polite" aria-label="Matched records"></ol>
+        <div class="play-foot">Runs the <code>route-docs</code> record-matching rule in your browser over the <span class="count">172</span> caution and ADR records in this repository (snapshot 2026-11-03). Rare shared terms weigh more: each adds ln(N/df).</div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="gates" data-c="review">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">03 <b>/</b> enforce</p>
+      <div class="split">
+        <div>
+          <h2>Gates, not good intentions</h2>
+          <p class="sec-lede">Records are written inside a ten-stage cycle. The docs verdict is bound to the change set, so a PR cannot ship knowledge that is out of date. Try to publish before recording the verdict, or change the diff after it.</p>
+        </div>
+        <div class="panel" id="gate-sim">
+          <div class="panel-head"><span class="grow">stage 6 → 9 · docs gate</span><span class="badge review">illustration</span></div>
+          <div class="sim-state">
+            <div><small>change set</small><span data-k="diff"></span></div>
+            <div><small>docs verdict</small><span data-k="verdict"></span></div>
+            <div><small>pull request</small><span data-k="pr"></span></div>
+          </div>
+          <div class="sim-actions">
+            <button class="btn small" type="button" data-act="verdict">Record docs verdict</button>
+            <button class="btn small" type="button" data-act="edit">Edit the diff</button>
+            <button class="btn small go" type="button" data-act="publish">Publish PR</button>
+            <button class="btn small" type="button" data-act="reset">Reset</button>
+          </div>
+          <ol class="sim-log" aria-live="polite" aria-label="Gate log"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="hosts" data-c="merged">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">04 <b>/</b> integrate</p>
+      <div class="split">
+        <div>
+          <h2>Five hosts, one core, one contract</h2>
+          <p class="sec-lede">Codex, Claude Code, Omo native, omp, and opencode share one Go core, one CLI/MCP response contract, one command policy, and one <code>skills/</code> tree. Install writes only to your home directory; a repository changes only on explicit bootstrap.</p>
+        </div>
+        <div class="panel" id="hosts-panel">
+          <div class="host-tabs" role="tablist" aria-label="Host">
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Codex</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Claude Code</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Omo native</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">omp</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">opencode</button>
+          </div>
+          <div class="flow" aria-hidden="true">
+            <div class="active"><strong class="host">Codex</strong>host</div><span>→</span>
+            <div><strong>issueops</strong>CLI · MCP · policy</div><span>→</span>
+            <div><strong>.issueops/</strong>git</div>
+          </div>
+          <div class="host-panel" role="tabpanel"><dl></dl></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="compare" data-c="muted">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">05 <b>/</b> compare</p>
+      <h2>How this differs from <code>AGENTS.md</code> and agent memory</h2>
+      <p class="sec-lede">IssueOps does not replace <code>AGENTS.md</code>. Rules every session needs stay there; pitfalls and decisions that matter only for some tasks become records.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col"></th><th scope="col"><code>AGENTS.md</code> / <code>CLAUDE.md</code></th><th scope="col">Built-in agent memory</th><th scope="col" class="us">IssueOps records</th></tr></thead>
+          <tbody><tr><th scope="row">Who writes it</th><td>A person, by hand</td><td>The agent, from your conversations</td><td class="us">The agent, reviewed by people in the PR</td></tr><tr><th scope="row">Where it lives</th><td>One file in the repository</td><td>Each person's machine</td><td class="us"><code>.issueops/</code>, one file per record</td></tr><tr><th scope="row">Reaches teammates</th><td>Through git</td><td>No</td><td class="us">Through git</td></tr><tr><th scope="row">What the agent reads</th><td>The whole file at session start</td><td>Whatever the tool picks</td><td class="us">Only records related to the task</td></tr><tr><th scope="row">When it gets written</th><td>When someone remembers</td><td>When the tool decides</td><td class="us">As soon as it is learned, at the latest at the docs stage</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="sec wrap reveal" id="quick-start" data-c="open">
+      <span class="sec-node" aria-hidden="true"></span>
+      <p class="eyebrow">06 <b>/</b> install</p>
+      <h2>Build from source</h2>
+      <p class="sec-lede">You need Git, Go 1.26.6 or later, and at least one supported host. There is no public binary release yet.</p>
+      <div class="panel code">
+        <div class="panel-head"><span class="grow">install.sh</span></div>
+        <button class="btn small copy-btn" type="button">Copy</button>
+<pre><span class="c-p">$</span> git clone https://github.com/m16khb-org/issueops.git
+<span class="c-p">$</span> cd issueops
+<span class="c-p">$</span> ./install.sh <span class="c-f">--dry-run --json</span>   <span class="c-c"># review the plan first</span>
+<span class="c-p">$</span> ./install.sh
+<span class="c-p">$</span> ./bin/issueops doctor <span class="c-f">--repo</span> . <span class="c-f">--json</span></pre>
+      </div>
+      <p class="note">Then ask your agent: <em>"Use issueops to fix the login error. Reproduce it with an expired session and add a test. Go as far as opening a draft PR."</em> Skills and issue/PR templates are currently Korean. See the <a href="https://github.com/m16khb-org/issueops/blob/main/README.en.md">full README</a>.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="merge-line"><span class="m" aria-hidden="true"></span>merged into main · the record ships with the code</div>
+      <div class="foot">
+        <div>
+          <a class="brand" href="./"><img src="assets/mark.svg" width="24" height="24" alt="" /> IssueOps</a>
+          <p>Team memory for coding agents. MIT licensed.</p>
+        </div>
+        <div>
+          <h3>project</h3>
+          <ul>
+            <li><a href="https://github.com/m16khb-org/issueops">GitHub</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/issues">Issues</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/releases">Releases</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>docs</h3>
+          <ul>
+            <li><a href="https://github.com/m16khb-org/issueops/blob/main/README.en.md">README (English)</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/blob/main/README.md">README (한국어)</a></li>
+            <li><a href="https://github.com/m16khb-org/issueops/tree/main/.issueops">.issueops/</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="legal"><span>© IssueOps contributors. MIT License.</span><a href="ko/" hreflang="ko" lang="ko">한국어</a></div>
+    </div>
+  </footer>
+
+  <script type="application/json" id="site-data">{"stages":[{"n":1,"short":"Create the issue","name":"Confirm and create the issue","skills":["issueops-create-issue"],"out":"Settles the contract through research and blocking questions, then creates the issue."},{"n":2,"short":"Prepare the branch","name":"Prepare the branch","skills":["issueops-prepare"],"out":"Seals the base SHA and links the branch to the issue."},{"n":3,"short":"Plan and review","name":"Read docs, approve the architecture, plan, review, hand off","skills":["issueops-plan"],"out":"Reads the operating docs and related caution and ADR records, gets the architecture document approved by an independent review, writes the plan on top of it, passes review, and picks the execution session automatically.","gate":"link-plan refuses a plan without its applied decisions and cautions section.","term":"stage 3/10 plan.review  cycle io-xxxx  phase plan\nmissing: devils_advocate_review\nnext: issueops devils-advocate review --id io-xxxx ..."},{"n":4,"short":"Implement","name":"Implement","skills":["issueops-implement"],"out":"Implements with TDD in the canonical worktree."},{"n":5,"short":"Clean AI slop","name":"Clean AI slop","skills":["issueops-slop-clean"],"out":"Removes residue and seals the change set."},{"n":6,"short":"Reflect into docs","name":"Reflect into project docs","skills":["issueops-docs"],"out":"Records decisions and pitfalls in the operating docs and reseals.","gate":"project-docs-review record binds the docs verdict to the change-set fingerprint."},{"n":7,"short":"Verify","name":"Verify","skills":["issueops-verify"],"out":"Re-runs verification, review, and readiness without touching files."},{"n":8,"short":"Commit and push","name":"Commit and push","skills":["atomic-commit-push"],"out":"Commits and pushes the sealed change."},{"n":9,"short":"Publish the PR/MR","name":"Publish the PR/MR and complete","skills":["issueops-create-pr","issueops-complete"],"out":"Creates the draft and seals the completion evidence.","gate":"The PR cannot be published until the docs verdict for the current change set is recorded."},{"n":10,"short":"Merge and clean up","name":"Merge and clean up","skills":["issueops-merge","issueops-cleanup"],"out":"Merges the PR/MR, reflects the result into the issue, closes it, and reclaims the worktree and branch."}],"ui":{"stage":"stage","play":"Play","pause":"Pause","terms":"task terms:","needTwo":"Type at least two words. route-docs needs two shared terms.","noMatch":"No record shares two terms with this task.","score":"score","loadFail":"Could not load the records.","copy":"Copy","copied":"Copied"},"samples":{"adr":{"title":"Issue and PR bodies are human documents; implementation materials stay in .issueops/issues/<n>/","path":".issueops/adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md","fields":[["Source","IssueOps #513, design `docs/superpowers/specs/2026-09-24-readable-issue-pr-design.md`"],["Summary","Issue and PR bodies follow a summary-first contract of 4-5 required sections owned by `internal/domain/artifacttemplate`, and every `issueops remote` publish and sync command runs a readability check that refuses critical findings on `--confirm`. Hashes, commit SHAs, plan and spec texts, label scores, and cleanup audits leave the bodies:…"],["Context","Published bodies mixed three audiences: the team, the next agent session, and audit data. PRs were forced into 13 sections, every issue carried a label-score section, the completion region took 44-95% of sampled issue bodies with SHA-256 manifests and plan and spec full texts, and cleanup re-rendered that region to append an audit line wi…"],["Decision","`artifacttemplate` owns the body contract (required and optional sections per kind, summary-first, placeholder rules, legacy `--field` aliases). `internal/domain/artifactreadability` is a pure check that restates the structural findings and adds Korean ratio, SHA-256 outside code, and nine warnings. · `create-issue`, `create-child`, `crea…"],["Alternatives","Keep the check in the skill script — rejected: it is skippable, which is the failure this decision fixes. · Make harness terms critical — rejected: issueops issues discuss those terms and would be refused falsely. · Store the progress report or the template kind in the record — rejected: the record decoder rejects unknown fields, so older…"],["Evidence","internal/domain/artifacttemplate/template.go, template_test.go, repo_templates_test.go · internal/domain/artifactreadability/readability.go, readability_test.go · cmd/issueops/issueopscli/remotecmd/remote_child_pr.go, remote_readability.go, remote_readability_test.go · internal/adapter/issueops/issueops_remote_body_sync.go, issueops_compl…"]]},"caution":{"title":"GitLab WorkItem 직속 labels/assignees selection이 create-child를 막았고 가짜 glab 스텁이 그 오류를 감췄다","path":".issueops/cautions/2026-08-28-gitlab-workitem-labels-assignees-selection-create-child-glab.md","fields":[["Source","Claude Code session 2026-08-28 — systematic-debugging + TDD on issueops remote create-child failure"],["Summary","GitLab WorkItem은 labels/assignees를 widgets(WorkItemWidgetLabels/WorkItemWidgetAssignees)로만 노출하는데 provider의 workItemCreate 반환 selection과 childVerify 쿼리가 둘을 직속 필드로 select해 `issueops remote create-child`가 GraphQL validation에서 거절됐고, 가짜 glab 스텁이 잘못된 응답 모양을 그대로 되돌려줘 테스트는 계속 초록불이었다."],["Context","사용자가 사내 GitLab 19.2.4-ee에서 `issueops remote create-child`를 실행하자 `glab graphql failed: Field 'labels' doesn't exist on type 'WorkItem'` / `Field 'assignees' doesn't exist on type 'WorkItem'`로 실패했고, 스킬이 허용하는 escape hatch로 GraphQL workItemCreate + workItemUpdate를 직접 호출해 자식을 만든 뒤 link-child로 등록했다. 라이브 인트로스펙션 결과 WorkItem 필드 목록에는 labels/assigne…"],["Resolution","internal/adapter/provider/gitlab/provider.go의 gitlabChildVerifyQuery와 buildGitLabWorkItemCreateQuery 반환 selection을 `widgets { type ... on WorkItemWidgetLabels { labels { nodes { title } } } ... on WorkItemWidgetAssignees { assignees { nodes { username } } } }`로 교체하고, gitlabWorkItem에서 Labels/Assignees 직속 필드를 제거해 Widgets로 옮긴 뒤 gitlabWorkIte…"],["Evidence","glab api graphql --hostname gitlab.example.com 인트로스펙션 → WorkItem 필드에 labels/assignees 없음; WorkItemWidgetLabels: allowsScopedLabels, labels, type / WorkItemWidgetAssignees: allowsMultipleAssignees, assignees, canInviteMembers, type; labels→LabelConnection→Label.title, assignees→UserCoreConnection→UserCore.username · glab api version --host…"]]}},"fieldHelp":{"Source":"Where it came from: the issue or the session. route-docs matches on it.","Summary":"One paragraph on what broke or what was decided. route-docs matches on it.","Context":"What was observed and why it happened.","Resolution":"How it was fixed, so the next agent does not redo the work.","Decision":"The decision itself, item by item.","Alternatives":"Rejected options and why, so they are not proposed again.","Evidence":"Files, commands, and test runs that back the record."},"gate":{"verdict":{"none":"not recorded","fresh":"fresh","stale":"stale"},"diffLabel":"change set","prNone":"not published","prPublished":"draft PR published","log":{"start":"Stage 6 of 10. The change set is sealed and has no docs verdict yet.","verdict":"Docs verdict recorded and bound to change set #{n}.","edit":"The diff changed. The change set is now #{n}.","stale":"The diff changed after the verdict. The verdict is stale and the cycle returns to stage 6.","published":"The docs verdict matches the current change set. Draft PR published.","refusedNone":"Publish refused: this change set has no docs verdict.","refusedStale":"Publish refused: the docs verdict belongs to an older change set."}},"hosts":[{"name":"Codex","rows":[["Skills","~/.codex/skills/"],["MCP","MCP config"],["Hooks","SessionStart and SubagentStart"]]},{"name":"Claude Code","rows":[["Skills","~/.claude/skills/"],["MCP","user-scope MCP"],["Hooks","SessionStart and SubagentStart"]]},{"name":"Omo native","rows":[["Skills","~/.omo/agent/skills/"],["MCP","~/.omo/mcp.json"],["Extension","lifecycle extension"]]},{"name":"omp","rows":[["Skills","~/.omp/agent/skills/"],["MCP","~/.omp/agent/mcp.json"],["Extension","~/.omp/agent/extensions/issueops.js"]]},{"name":"opencode","rows":[["Skills","~/.config/opencode/skills/"],["MCP","mcp.servers.issueops in ~/.config/opencode/opencode.json"],["Plugin","~/.config/opencode/plugins/issueops.js (follows XDG_CONFIG_HOME)"],["Note","Only an opencode --standalone session can hold a lease."]]}],"sharedRows":[["MCP service","http://127.0.0.1:47831/mcp, shared by every host (macOS LaunchAgent or Linux systemd user service)"],["State","SQLite store under ~/.local/state/issueops/"]]}</script>
+  <script src="assets/app.js" defer></script>
+</body>
+</html>
