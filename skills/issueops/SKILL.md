@@ -166,7 +166,8 @@ reconcile하며 중복 생성하지 않는다. CLI가 provider 명령을 직접 
 `remote-issue.md`(provider 계층), `evidence-contract.md`(domain/API/live/completion),
 `execution.md`(lease/claim/recovery/publication), `session-choice.md`(세션 인계),
 `orchestration.md`(child), `cleanup-state.md`(머지 후 정리),
-`review-feedback.md`(thread; 봇은 `review-agent-feedback`, 사람 리뷰는 `pr-review`).
+`review-feedback.md`(thread; 봇은 `review-agent-feedback`, 사람 리뷰는 `pr-review`),
+`board.md`(사이클 보드: `list --json` → HTML).
 
 ## Stop conditions
 
