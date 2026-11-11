@@ -115,8 +115,9 @@ const (
 
 // CycleOutcome 타입은 cleanup finish·abandon이 record를 지우는 같은
 // 트랜잭션에서 남기는 지표 요약이다. record 원문이 아니라 review-metrics가
-// 파생하는 수치와 판정만 담으므로, record가 사라진 뒤에도 하네스 단계별 효과를
-// 사이클을 가로질러 비교할 수 있다.
+// 파생하는 수치와 판정, 그리고 자유 문자열 없이 길이가 제한된 이벤트 목록인
+// 타임라인만 담으므로, record가 사라진 뒤에도 하네스 단계별 효과를 사이클을
+// 가로질러 비교할 수 있다.
 type CycleOutcome struct {
 	SchemaVersion int                `json:"schema_version"`
 	ID            string             `json:"id"`
@@ -124,6 +125,9 @@ type CycleOutcome struct {
 	Outcome       string             `json:"outcome"`
 	RetainedAt    string             `json:"retained_at"`
 	Metrics       ReviewMetricsCycle `json:"metrics"`
+	// Timeline is the record's dated events at retention time. Rows written
+	// before timelines existed have none; readers treat nil as "not retained".
+	Timeline *CycleTimeline `json:"timeline,omitempty"`
 }
 
 // ReviewMetricsAggregate 타입은 여러 사이클을 가로지르는 요약이다. 평균

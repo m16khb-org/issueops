@@ -10,6 +10,7 @@ import (
 	"time"
 
 	model "issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -215,6 +216,25 @@ func TestAbandonExecutorApplyOrdersEffectsDrainsBeforeDelete(t *testing.T) {
 	}
 	if got := f.records.outcome; got.Outcome != model.CycleOutcomeAbandoned || got.ID != req.ID || got.RetainedAt != "2026-09-29T00:00:01Z" {
 		t.Fatalf("retained outcome = %+v", got)
+	}
+}
+
+// abandon이 record를 지울 때 남기는 outcome은 지워지는 record의 타임라인을 싣는다.
+func TestAbandonExecutorRetainsTimeline(t *testing.T) {
+	f := abandonExecutorFixture()
+	f.records.snapshot.Record.RegressEvents = []model.RegressEvent{{Reason: "stop", FromPhase: model.PhasePlan, At: "2026-09-28T00:00:00Z"}}
+	fixture := f.records.snapshot.Record
+	req := f.applyRequest(t)
+	result, err := f.executor.Run(context.Background(), req)
+	if err != nil || !result.RecordDeleted {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	timeline := f.records.outcome.Timeline
+	if timeline == nil || timeline.EventsTotal == 0 {
+		t.Fatalf("retained outcome carries no timeline: %+v", f.records.outcome)
+	}
+	if want := domain.BuildCycleTimeline(fixture); !reflect.DeepEqual(*timeline, want) {
+		t.Fatalf("timeline = %+v, want %+v", *timeline, want)
 	}
 }
 

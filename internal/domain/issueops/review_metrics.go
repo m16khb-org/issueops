@@ -44,6 +44,7 @@ func ReviewMetricsForRecord(record issueopscontract.Record) (issueopscontract.Re
 func CycleOutcomeForRecord(record issueopscontract.Record, outcome, retainedAt string) issueopscontract.CycleOutcome {
 	metrics, _ := ReviewMetricsForRecord(record)
 	metrics.Outcome = outcome
+	timeline := BuildCycleTimeline(record)
 	return issueopscontract.CycleOutcome{
 		SchemaVersion: issueopscontract.CycleOutcomeSchemaVersion,
 		ID:            record.ID,
@@ -51,6 +52,7 @@ func CycleOutcomeForRecord(record issueopscontract.Record, outcome, retainedAt s
 		Outcome:       outcome,
 		RetainedAt:    retainedAt,
 		Metrics:       metrics,
+		Timeline:      &timeline,
 	}
 }
 

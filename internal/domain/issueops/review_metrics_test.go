@@ -1,8 +1,11 @@
 package issueops
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -126,5 +129,111 @@ func TestAggregateReviewMetricsOnEmptyInputIsZero(t *testing.T) {
 	got := AggregateReviewMetrics(nil)
 	if got.Cycles != 0 || got.MeanRounds != 0 || got.ReviseRatio != 0 || got.StopRatio != 0 {
 		t.Fatalf("empty aggregate must be zero, got %+v", got)
+	}
+}
+
+// 보존되는 outcome은 record가 지워지기 전의 타임라인을 그대로 싣는다.
+func TestCycleOutcomeCarriesTimeline(t *testing.T) {
+	record := issueopscontract.Record{
+		ID:            "io-timeline",
+		Repo:          "/repo",
+		Phase:         issueopscontract.PhaseDone,
+		CreatedAt:     "2026-09-08T00:00:00Z",
+		RegressEvents: []issueopscontract.RegressEvent{{Reason: "stop", FromPhase: issueopscontract.PhasePlan, At: "2026-09-08T00:05:00Z"}},
+	}
+
+	outcome := CycleOutcomeForRecord(record, issueopscontract.CycleOutcomeFinished, "2026-09-08T01:00:00Z")
+
+	if outcome.SchemaVersion != 1 {
+		t.Fatalf("schema version = %d, want 1 (timeline is additive)", outcome.SchemaVersion)
+	}
+	if outcome.Timeline == nil {
+		t.Fatal("outcome carries no timeline")
+	}
+	if want := BuildCycleTimeline(record); !reflect.DeepEqual(*outcome.Timeline, want) {
+		t.Fatalf("timeline = %+v, want %+v", *outcome.Timeline, want)
+	}
+	if outcome.Timeline.EventsTotal == 0 {
+		t.Fatalf("timeline has no events: %+v", *outcome.Timeline)
+	}
+}
+
+// 타임라인이 가장 큰 모양이어도 보존 row는 정해진 크기 안에 머문다.
+func TestCycleOutcomeRowStaysBounded(t *testing.T) {
+	long := strings.Repeat("s", 200)
+	record := issueopscontract.Record{ID: "io-bounded", Repo: "/repo", CreatedAt: "2026-09-08T00:00:00Z"}
+	base := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+	for i := 0; i < 500; i++ {
+		at := base.Add(time.Duration(i) * time.Second).Format(time.RFC3339)
+		// A child cycle pair carries both subject and ref, the widest shape that
+		// survives timelineText. The widest characters (the ones JSON escapes) are
+		// covered by TestCycleOutcomeRowStaysBoundedWithEscapedText.
+		record.ChildCycles = append(record.ChildCycles, issueopscontract.ChildCycleRef{
+			CycleID: long, CreatedAt: at, ValidationVerdict: long, ValidatedAt: at,
+		})
+	}
+
+	outcome := CycleOutcomeForRecord(record, issueopscontract.CycleOutcomeAbandoned, "2026-09-08T01:00:00Z")
+
+	data, err := json.Marshal(outcome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) > 65536 {
+		t.Fatalf("outcome row is %d bytes, want <= 65536", len(data))
+	}
+	if outcome.Timeline == nil || outcome.Timeline.EventsShown != issueopscontract.MaxTimelineEvents {
+		t.Fatalf("timeline = %+v, want %d events shown", outcome.Timeline, issueopscontract.MaxTimelineEvents)
+	}
+	if outcome.Timeline.EventsTotal < 1000 {
+		t.Fatalf("total = %d, want the full 1000+ dated events counted", outcome.Timeline.EventsTotal)
+	}
+}
+
+// JSON이 여러 배로 escape하는 문자는 타임라인에서 "?"가 되므로, 그런 skill 이름
+// 200건이어도 보존 row는 정해진 크기 안에 머문다.
+func TestCycleOutcomeRowStaysBoundedWithEscapedText(t *testing.T) {
+	hostile := strings.Repeat("<", 64)
+	record := issueopscontract.Record{ID: "io-escaped", Repo: "/repo", CreatedAt: "2026-09-08T00:00:00Z"}
+	base := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+	for i := 0; i < issueopscontract.MaxTimelineEvents; i++ {
+		record.RoutingTrace = append(record.RoutingTrace, issueopscontract.SkillRoutingEntry{
+			Phase: hostile, Skill: hostile, At: base.Add(time.Hour + time.Duration(i)*time.Second).Format(time.RFC3339),
+		})
+	}
+	for i := 0; i < 50; i++ {
+		at := base.Add(time.Duration(i) * time.Second).Format(time.RFC3339)
+		record.ChildCycles = append(record.ChildCycles, issueopscontract.ChildCycleRef{
+			CycleID: "io-child", CreatedAt: at, ValidationVerdict: "accepted", ValidatedAt: at,
+		})
+		record.Decisions = append(record.Decisions, issueopscontract.Decision{Kind: "scope", CreatedAt: at})
+	}
+
+	outcome := CycleOutcomeForRecord(record, issueopscontract.CycleOutcomeFinished, "2026-09-08T02:00:00Z")
+
+	data, err := json.Marshal(outcome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) > 65536 {
+		t.Fatalf("outcome row is %d bytes, want <= 65536", len(data))
+	}
+	if strings.Contains(string(data), `\u003c`) {
+		t.Fatalf("row still carries escaped characters: %s", data)
+	}
+	var skills int
+	for _, event := range outcome.Timeline.Events {
+		if event.Kind != issueopscontract.TimelineKindSkillRouted {
+			continue
+		}
+		skills++
+		if event.Subject != "?" || event.Phase != "?" {
+			t.Fatalf("skill subject = %q, phase = %q, want %q for both", event.Subject, event.Phase, "?")
+		}
+	}
+	// The skill entries are the newest events, so all 200 fill the cap and
+	// the older child and decision events are only counted.
+	if skills != issueopscontract.MaxTimelineEvents || outcome.Timeline.EventsTotal != 351 {
+		t.Fatalf("skill events kept = %d, total = %d, want 200 and 351", skills, outcome.Timeline.EventsTotal)
 	}
 }
