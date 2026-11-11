@@ -13,3 +13,6 @@ issueops list --json | python3 skills/issueops/scripts/render_board.py --out <�
 - 정렬은 `idle_days` 내림차순(값이 없으면 뒤), 같으면 `id` 오름차순이다.
 - 입력이 깨졌거나 `ok`가 true가 아니면 stderr 한 줄과 종료 코드 1이고 파일을 만들지 않는다.
 - Python 표준 라이브러리만 쓴다. JS, 외부 URL, 상주 서버가 없다. `https` 링크만 `<a>`가 된다.
+- 타임라인: `issueops view --id ID --view timeline --json | python skills/issueops/scripts/render_board.py --out "$(mktemp -d)/timeline.html"`
+- 그래프: `issueops view --id ID --view graph --json | python skills/issueops/scripts/render_board.py --out "$(mktemp -d)/graph.html"`
+- graph는 `next` 판정을 쓰므로 그 사이클의 저장소에서(또는 `--cwd`로 그 저장소를 지정해) 실행한다.

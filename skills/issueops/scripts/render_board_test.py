@@ -227,5 +227,132 @@ class ScriptTest(unittest.TestCase):
         self.assertEqual(re.findall(r"#[0-9a-fA-F]{3,8}\b", source[end:]), [])
 
 
+GOLDEN = Path(__file__).resolve().parents[3] / "cmd/issueops/testdata/response_contracts.golden.json"
+UNSAFE_URLS = ("javascript:alert(1)", "JAVASCRIPT:alert(1)", " javascript:alert(1)", "data:text/html,x", "http://example.com/x", "https://", "//example.com/x", "https://github.com@evil.example/x", "https://a:b@evil.example/", "https://@/x", "https://:443")
+HREF_VALUE = re.compile(r'href="[^"]*"')
+
+
+def golden(key: str) -> dict:
+    return json.loads(GOLDEN.read_text(encoding="utf-8"))["cli"][key]
+
+
+def timeline_doc(**timeline) -> dict:
+    base = {"events_total": 0, "events_shown": 0, "undated": 0, "limits": [], "events": []}
+    base.update(timeline)
+    return {"ok": True, "view": "timeline", "id": "io-aaa", "source": "record", "generated_at": "2026-11-11T12:16:04Z", "timeline": base}
+
+
+def graph_doc(nodes=(), edges=(), **graph) -> dict:
+    base = {"phase": "plan", "judged_by": {"stage": "plan", "stale_keys": [], "unmapped_stale_keys": []}, "limits": [], "nodes": list(nodes), "edges": list(edges), "children_total": 0, "children_shown": 0}
+    base.update(graph)
+    return {"ok": True, "view": "graph", "id": "io-aaa", "generated_at": "2026-11-11T12:16:04Z", "graph": base}
+
+
+def render_view(data: dict) -> str:
+    return render_board.VIEWS[data["view"]](data)
+
+
+class ViewRenderTest(unittest.TestCase):
+    def test_view_timeline_from_golden(self) -> None:
+        data = golden("issueops_view_timeline")
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "timeline.html"
+            result = run_script(json.dumps(data).encode(), out)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            page = out.read_text(encoding="utf-8")
+        self.assertIn("표시 9 / 전체 9, 시각 없음 0", page)
+        self.assertEqual(len(rows_of(page)), len(data["timeline"]["events"]))
+        self.assertIn("phase_ledger_first_entry_last_completion", page)
+
+    def test_view_graph_from_golden(self) -> None:
+        data = golden("issueops_view_graph")
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "graph.html"
+            result = run_script(json.dumps(data).encode(), out)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            page = out.read_text(encoding="utf-8")
+        self.assertEqual(page.count("<table"), 2)
+        for needle in ("stage_unjudgeable", "architecture_doc", "next_reports_first_blocking_gate_only", "prepare"):
+            self.assertIn(needle, page)
+        self.assertEqual([row[0] for row in rows_of(page) if row][:len(data["graph"]["nodes"])], [n["id"] for n in data["graph"]["nodes"]])
+
+    def test_view_no_external_references(self) -> None:
+        pages = [render_view(golden("issueops_view_timeline")), render_view(golden("issueops_view_graph"))]
+        pages.append(render_board.render_board(doc(entry(issue_url="https://github.com/acme/repo/issues/21"))))
+        for page in pages:
+            bare = HREF_VALUE.sub('href=""', page)
+            for needle in ("http://", "https://", "<script", "<link", "<svg", "src=", "@import", "url("):
+                self.assertEqual(bare.count(needle), 0, needle)
+
+    def test_view_escapes_strings(self) -> None:
+        for bad in ("<img onerror=x>", 'x" onmouseover="a'):
+            timeline = render_view(timeline_doc(events_total=1, events_shown=1, events=[{"at": bad, "kind": bad, "phase": bad, "subject": bad, "ref": bad, "verdict": bad}]))
+            node = {"id": bad, "kind": bad, "present": True, "at": bad, "verdict": bad, "url": bad}
+            graph = render_view(graph_doc([node, {"id": f"child:{bad}", "kind": "child", "present": True, "verdict": bad, "url": bad}], [{"from": bad, "to": bad, "binding": bad, "gate": bad, "state": bad}], limits=[bad]))
+            for page in (timeline, graph):
+                self.assertEqual(page.count("<img"), 0)
+                self.assertEqual(page.count('" onmouseover="'), 0)
+
+    def test_view_unsafe_urls_never_become_links(self) -> None:
+        for url in UNSAFE_URLS:
+            with self.subTest(url=url):
+                nodes = [{"id": "plan", "kind": "plan", "present": True, "url": url}, {"id": "child:c1", "kind": "child", "present": True, "url": url}]
+                self.assertEqual(render_view(graph_doc(nodes)).count("<a "), 0)
+
+    def test_view_every_href_is_https(self) -> None:
+        url = "https://github.com/acme/repo/issues/21"
+        nodes = [{"id": "plan", "kind": "plan", "present": True, "url": url}, {"id": "child:c1", "kind": "child", "present": True, "url": url}]
+        pages = [render_view(golden("issueops_view_graph")), render_view(graph_doc(nodes))]
+        for page in pages:
+            for href in re.findall(r'href="([^"]*)"', page):
+                self.assertTrue(href.startswith("https://"), href)
+        self.assertEqual(pages[1].count("<a "), 3)  # plan and child in the node table, child in the tree
+
+    def test_view_edge_states_have_colors(self) -> None:
+        for state in ("stale", "not_reported", "unknown"):
+            self.assertIn(state, render_board.COLORS["state"])
+            page = render_view(graph_doc(edges=[{"from": "a", "to": "b", "binding": "digest", "gate": "g", "state": state}]))
+            self.assertIn(f'class="pill state-{state}"', page)
+
+    def test_view_empty_timeline(self) -> None:
+        page = render_view(timeline_doc())
+        self.assertIn("이벤트 없음", page)
+        self.assertNotIn("<table", page)
+
+    def test_view_retained_without_timeline(self) -> None:
+        data = timeline_doc(limits=["retained_without_timeline"])
+        data.update(source="retained", outcome="merged", retained_at="2026-11-01T00:00:00Z")
+        page = render_view(data)
+        for needle in ("타임라인이 생기기 전에 보존된 기록", "retained_without_timeline", "merged", "2026-11-01T00:00:00Z"):
+            self.assertIn(needle, page)
+
+    def test_view_counts_pair(self) -> None:
+        page = render_view(timeline_doc(events_total=205, events_shown=200, undated=3))
+        self.assertIn("표시 200 / 전체 205, 시각 없음 3", page)
+
+    def test_view_children_counts(self) -> None:
+        page = render_view(graph_doc(children_total=55, children_shown=50))
+        self.assertIn("자식 표시 50 / 전체 55", page)
+
+    def test_view_unknown_view_exits_one(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out.html"
+            for payload in (b'{"ok": true, "view": "bogus"}', b'{"ok": true, "view": ["graph"]}', b'{"ok": true, "view": null}'):
+                with self.subTest(payload=payload):
+                    result = run_script(payload, out)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertFalse(out.exists())
+
+    def test_view_bad_input_exits_one(self) -> None:
+        bad_ok = dict(timeline_doc(), ok=False)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out.html"
+            for payload in (b"{", json.dumps(bad_ok).encode(), json.dumps(dict(graph_doc(), ok=False)).encode()):
+                with self.subTest(payload=payload):
+                    result = run_script(payload, out)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertFalse(out.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
