@@ -44,7 +44,8 @@ issueops next --json
 
 - `issueops-plan`이 워크트리를 준비한 뒤 실행 세션을 고른다. 선택 순서(Herdr 확인 → 현재 세션 또는
   수동 두 번째 터미널, 비대화형 실행은 현재 세션)와 인계 절차는 [session-choice.md](references/session-choice.md)와
-  [handoff-observation.md](references/handoff-observation.md)가 본문 계약이다. 인계할 때 그 둘을 읽고 따른다.
+  [handoff-observation.md](references/handoff-observation.md)가 본문 계약이다. 워크트리 준비 뒤 세션을 고르기 전에
+  Herdr 여부와 관계없이 그 둘을 읽고 따른다. Herdr 판별은 그 문서의 env 규칙(`HC_TERMINAL_ID`, `HERDR_ENV`)만 쓴다.
 - 자동 분기는 실행 위치만 정한다. 원래 요청의 승인 범위·종료점을 그대로 유지하고, 현재 세션 진행·새 세션·
   보류를 명시한 최신 사용자 지시가 자동 분기보다 우선한다. 단계 스킬과 함께 쓰는 하위 스킬도 이 범위를
   따르며 일반적인 "계속할까요" 절차를 확인 지점으로 만들지 않는다([세부](references/session-boundary.md)).

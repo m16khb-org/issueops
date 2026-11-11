@@ -164,8 +164,12 @@ workspace root, branch, 계획을 확인한 뒤
 비대화형 실행(`claude -p`, `codex exec`, `omp -p`, `opencode run`)은 Herdr가 있어도 인계하지 않고
 현재 세션에서 구현으로 이어간다. 판별은 whoami `ancestry[0].pid`의 실행 인자(`ps -o args= -p <pid>`)로 한다.
 
-[session-choice.md](../issueops/references/session-choice.md)에 따라 준비 세션이 Herdr 세션이면
-Herdr 사용 가능 여부를 확인하고, 사용 가능하면 그 문서의 release·새 세션 인계 절차(인계 자료, writer 정리,
+`--confirm` 뒤에는 Herdr 세션인지와 관계없이 [session-choice.md](../issueops/references/session-choice.md)를
+먼저 읽는다. Herdr 세션 판별은 그 문서의 env 규칙만 쓴다. Herdr 앱은 `HC_TERMINAL_ID`·`HC_TERMINAL_SOCKET`,
+Herdr 터미널은 `HERDR_ENV=1`·`HERDR_SOCKET_PATH`다. 다른 변수 이름으로 판별하지 않는다. 실행 방식은 direct 하나뿐이고
+세션 배치와 무관하므로, direct라는 이유나 Orca 상태로 `current`를 정하지 않는다. 판별 결과와 관찰값을 그 문서의
+"세션 인계 선택" 결정으로 기록한 뒤에 구현이나 인계로 간다.
+준비 세션이 Herdr 세션이면 사용 가능 여부를 확인하고, 사용 가능하면 그 문서의 release·새 세션 인계 절차(인계 자료, writer 정리,
 `replace --preview` → `--reseed` → `claim --claim-current-token`)를 따른다. Herdr를 쓸 수 없으면 lease를 유지하고
 현재 세션에서 구현으로 이어가거나, 사용자가 직접 연 두 번째 터미널에서 같은 체인으로 수동 인계한다.
 worktree는 재생성하지 않고 진행 방식을 묻지 않는다. 명시적인 보류·범위 제한은 우선한다.

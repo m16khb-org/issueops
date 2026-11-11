@@ -12,4 +12,5 @@
 | revise 판정을 `--waive`로 닫는다 | 지적이 반영되지 않은 채 구현으로 간다 | 계획을 고치고 다시 검토한다 |
 | 판정 뒤 계획을 고치고 재검토를 생략한다 | stale 판정으로 인계가 막히거나, 검토되지 않은 계획이 구현된다 | 다시 검토해 새 판정을 기록한다 |
 | staged plan 없이 인계한다 | prepare가 워크트리에 materialize할 계획이 없다 | `artifact stage`를 먼저 한다 |
+| `session-choice.md`를 읽지 않고 추측한 env(`HERDR_SESSION` 등)나 "Orca가 꺼져 있어 direct"로 `current`를 정한다 | Herdr 앱 세션도 빈 값으로 판정되어 space 없이 현재 세션에서 구현한다 | `--confirm` 뒤 그 문서를 읽고 `HC_TERMINAL_ID`·`HERDR_ENV`로 판별해 결정 기록을 남긴다 |
 | 새 세션에 인계했는데 이 세션이 계속 구현한다 | 두 세션이 같은 워크트리를 쓴다 | Herdr 인계 전달을 확인하면 여기서 멈춘다 |

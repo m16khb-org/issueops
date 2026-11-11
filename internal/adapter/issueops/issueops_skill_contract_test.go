@@ -220,6 +220,38 @@ func TestIssueOpsAutomaticSessionSelectionOrderAndTakeoverChain(t *testing.T) {
 	}
 }
 
+// plan 스킬의 인계 절은 session-choice.md를 Herdr 판별 결과에 걸지 않고 항상 읽게 하며,
+// 판별에 쓰는 env 이름을 본문에 고정한다. 문서를 건너뛴 세션이 지어낸 env로 Herdr 앱
+// 세션을 current로 판정한 회귀를 막는다.
+func TestIssueOpsPlanHandoffReadsSessionChoiceBeforeJudgingHerdr(t *testing.T) {
+	t.Parallel()
+
+	normalize := func(text string) string { return strings.Join(strings.Fields(text), " ") }
+	plan := normalize(readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md"))
+	for _, want := range []string{
+		"`--confirm` 뒤에는 Herdr 세션인지와 관계없이 [session-choice.md](../issueops/references/session-choice.md)를 먼저 읽는다",
+		"Herdr 앱은 `HC_TERMINAL_ID`·`HC_TERMINAL_SOCKET`",
+		"Herdr 터미널은 `HERDR_ENV=1`·`HERDR_SOCKET_PATH`",
+		"direct라는 이유나 Orca 상태로 `current`를 정하지 않는다",
+	} {
+		if !strings.Contains(plan, want) {
+			t.Fatalf("issueops-plan handoff must pin %q", want)
+		}
+	}
+
+	router := normalize(readIssueOpsContractFile(t, "skills", "issueops", "SKILL.md"))
+	if !strings.Contains(router, "Herdr 여부와 관계없이 그 둘을 읽고 따른다") {
+		t.Fatal("issueops router must read session-choice.md regardless of the Herdr judgment")
+	}
+
+	sessionChoice := normalize(readSessionChoiceContract(t))
+	for _, env := range []string{"HC_TERMINAL_ID", "HC_TERMINAL_SOCKET", "HERDR_ENV=1", "HERDR_SOCKET_PATH"} {
+		if !strings.Contains(sessionChoice, env) {
+			t.Fatalf("session-choice must define the Herdr env %q that the plan skill names", env)
+		}
+	}
+}
+
 func TestIssueOpsHandoffLaunchesEveryNativeHostWithPermissionBypass(t *testing.T) {
 	t.Parallel()
 
