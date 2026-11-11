@@ -22,7 +22,9 @@ def run(repo: Path, args: list[str]) -> tuple[int, str, str]:
     proc = subprocess.run(
         ["git", *args],
         cwd=repo,
-        text=True,
+        # git emits UTF-8; decode it explicitly so a non-UTF-8 locale (Windows cp949) cannot fail on non-ASCII subjects.
+        encoding="utf-8",
+        errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -99,6 +101,8 @@ def commit_style_hints(repo: Path, limit: int = 10) -> dict[str, Any]:
 
 
 def main() -> int:
+    # The JSON keeps non-ASCII text (ensure_ascii=False), so write UTF-8 even when the console encoding is cp949.
+    sys.stdout.reconfigure(encoding="utf-8")
     repo_arg = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
     repo_arg = repo_arg.expanduser().resolve()
 
