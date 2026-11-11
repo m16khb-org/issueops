@@ -1007,7 +1007,7 @@ def phase_find(a: dict, runner: OmoRunner) -> dict:
             finders.append({**result["parsed"], "unit": unit["id"], "lenses": unit["lenses"]})
 
     if not units:
-        print("[driver] 0 finder units — nothing to inspect (empty units list)", flush=True)
+        print("[driver] 0 finder units - nothing to inspect (empty units list)", flush=True)
         return finish_find_stage(a, [], [], usage_all, [])
     print(f"[driver] {len(units)} finder units (first alone to warm the provider cache, rest ×{a['workers']['finder']})", flush=True)
     first = units[0]

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -93,15 +94,53 @@ var gitBashPath = sync.OnceValues(func() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Git for Windows ships git.exe in cmd\ or bin\ and bash.exe in bin\.
-	root := filepath.Dir(filepath.Dir(git))
-	for _, candidate := range []string{filepath.Join(root, "bin", "bash.exe"), filepath.Join(root, "usr", "bin", "bash.exe")} {
-		if info, err := os.Stat(candidate); err == nil && info.Mode().IsRegular() {
+	var programDirs []string
+	for _, name := range []string{"ProgramW6432", "ProgramFiles"} {
+		if dir := os.Getenv(name); dir != "" {
+			programDirs = append(programDirs, dir)
+		}
+	}
+	return findGitBash(git, func(path string) bool {
+		info, err := os.Stat(path)
+		return err == nil && info.Mode().IsRegular()
+	}, programDirs)
+})
+
+// findGitBash locates Git for Windows bash.exe from the git executable path.
+// git.exe sits in Git\cmd or Git\bin (root two levels up) or in a subsystem
+// directory such as Git\ucrt64\bin (root Git\ucrt64, one more level up). The
+// order prefers the bash of the same Git install over a stray one higher up:
+// the root's bin and usr\bin; for a subsystem root (ucrt64, mingw64, ...) its
+// parent, which is the install root; the standard Git\bin in programDirs; and
+// last the second and third roots' bin and usr\bin. It never looks above the
+// third root, so from Git\cmd a stray C:\bin\bash.exe loses to a standard
+// install.
+func findGitBash(git string, exists func(string) bool, programDirs []string) (string, error) {
+	subsystems := []string{"ucrt64", "mingw64", "mingw32", "clang64", "clang32", "clangarm64"}
+	inRoot := func(root string) []string {
+		return []string{filepath.Join(root, "bin", "bash.exe"), filepath.Join(root, "usr", "bin", "bash.exe")}
+	}
+	roots := []string{filepath.Dir(filepath.Dir(git))}
+	for range 2 {
+		roots = append(roots, filepath.Dir(roots[len(roots)-1]))
+	}
+	candidates := inRoot(roots[0])
+	if slices.ContainsFunc(subsystems, func(name string) bool { return strings.EqualFold(filepath.Base(roots[0]), name) }) {
+		candidates = append(candidates, inRoot(roots[1])...)
+	}
+	for _, dir := range programDirs {
+		candidates = append(candidates, filepath.Join(dir, "Git", "bin", "bash.exe"))
+	}
+	for _, root := range roots[1:] {
+		candidates = append(candidates, inRoot(root)...)
+	}
+	for _, candidate := range candidates {
+		if exists(candidate) {
 			return candidate, nil
 		}
 	}
 	return "", errors.New("Git for Windows bash.exe not found next to " + git)
-})
+}
 
 func gitBash(t testing.TB) string {
 	t.Helper()

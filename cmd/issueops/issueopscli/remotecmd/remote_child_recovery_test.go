@@ -222,7 +222,7 @@ func assertChildCLICount(t *testing.T, repo string, count int) {
 const childCLIFake = `import json,sys,os,re,pathlib
 a=sys.argv[1:]
 p=pathlib.Path('children.json')
-rows=json.loads(p.read_text()) if p.exists() else []
+rows=json.loads(p.read_text(encoding='utf-8')) if p.exists() else []
 parent=os.environ['CHILD_PARENT']
 hierarchy_parent=os.environ.get('CHILD_HIERARCHY_PARENT',parent)
 def output(v):
@@ -234,7 +234,7 @@ def field(key):
 def item(row):
  return dict(id='gid://gitlab/WorkItem/'+row['iid'],iid=row['iid'],webUrl=row['url'],title=row['title'],description=row['body'],workItemType=dict(name='Task'),widgets=[dict(type='HIERARCHY',hasParent=row['attached'],parent=dict(id='gid://gitlab/WorkItem/1234',webUrl=hierarchy_parent) if row['attached'] else None),dict(type='LABELS',labels=dict(nodes=[dict(title='bug')])),dict(type='ASSIGNEES',assignees=dict(nodes=[dict(username='octocat')]))])
 def save():
- p.write_text(json.dumps(rows))
+ p.write_text(json.dumps(rows),encoding='utf-8')
 def create(title,body,preferred):
  iid=str(34+len(rows))
  row=dict(iid=iid,url=parent.rsplit('/',1)[0]+'/'+iid,title=title,body=body,attached=preferred)

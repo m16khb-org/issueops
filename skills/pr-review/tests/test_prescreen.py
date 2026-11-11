@@ -135,7 +135,7 @@ class TestLevels(unittest.TestCase):
         a name with it. When it did, --incremental on a moved head overwrote the level plan and
         workflow_args.json / summary.md died on the next key read."""
         import ast
-        tree = ast.parse((SCRIPTS / "mr_context.py").read_text())
+        tree = ast.parse((SCRIPTS / "mr_context.py").read_text(encoding="utf-8"))
         main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
         binds = [t.id for n in ast.walk(main) if isinstance(n, ast.Assign)
                  for t in n.targets if isinstance(t, ast.Name) and t.id == "level_plan"]

@@ -18,7 +18,10 @@ import (
 )
 
 // systemToolPath is the PATH value that keeps only the system tools a fixture
-// needs reachable: git on every OS, plus the POSIX tool directories on Unix.
+// needs reachable: git on every OS, plus the POSIX tool directories on Unix. On
+// Windows it also adds the directory of sh when that differs from git's, since
+// a git under Git for Windows' ucrt64/bin has no sh beside it and runs
+// git-upload-pack through one.
 func systemToolPath(t *testing.T) string {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -26,7 +29,11 @@ func systemToolPath(t *testing.T) string {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return filepath.Dir(git)
+		path := filepath.Dir(git)
+		if sh, err := exec.LookPath("sh"); err == nil && filepath.Dir(sh) != path {
+			path += string(os.PathListSeparator) + filepath.Dir(sh)
+		}
+		return path
 	}
 	return "/usr/bin" + string(os.PathListSeparator) + "/bin"
 }
