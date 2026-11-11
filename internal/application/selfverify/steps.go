@@ -1,6 +1,7 @@
 package selfverify
 
 import (
+	"strings"
 	"time"
 
 	contract "issueops/internal/contract/selfverify"
@@ -34,6 +35,11 @@ if os.name == "nt":
     sys.exit(subprocess.call([sys.executable] + sys.argv[1:]))
 os.execv(sys.executable, [sys.executable] + sys.argv[1:])
 `
+
+// pythonStubDiagnosis explains a python3 that started and exited before printing the runtime line,
+// the way the Windows Microsoft Store alias does.
+const pythonStubDiagnosis = "python3 exited before the runtime check ran; on Windows the Microsoft Store alias exits 49 - " +
+	"put a Python 3.10+ interpreter first on PATH as python3 (see .issueops/testing/unit-and-contract.md#python-검사-환경)"
 
 const selfVerifyGoTestTimeout = 10 * time.Minute
 
@@ -77,7 +83,13 @@ func PlannedSteps(root string, tempBin string, seed int64, goTestStep *contract.
 		// 값싸고 결정적이므로 긴 go test보다 앞에 두어 fail-fast 모드에서 먼저 드러낸다.
 		{Label: "gofmt", Run: func() contract.StepResult { return deps.ValidateGoFormat(root) }},
 		{Label: "Python script tests", Run: func() contract.StepResult {
-			return deps.RunCommandStep(root, "Python script tests", 5*time.Minute, "", "python3", "-c", pythonRuntimeDiscovery, "scripts/python_suite_runner.py")
+			step := deps.RunCommandStep(root, "Python script tests", 5*time.Minute, "", "python3", "-c", pythonRuntimeDiscovery, "scripts/python_suite_runner.py")
+			// A started process that failed with no stdout never reached the runtime line. Not-found
+			// and timeout errors do not start with "exit status " and stay as they are.
+			if !step.OK && step.StdoutBytes == 0 && !step.StdoutTruncated && strings.HasPrefix(step.Error, "exit status ") {
+				step.Error += "; " + pythonStubDiagnosis
+			}
+			return step
 		}},
 		{Label: "Go test match guard", Run: func() contract.StepResult {
 			return deps.RunCommandStep(root, "Go test match guard", 30*time.Second, "", "bash", "scripts/verify-go-test-match-test.sh")
