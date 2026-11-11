@@ -3,6 +3,7 @@ package issueops
 import (
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strings"
 
 	publicationcontract "issueops/internal/contract/issueopspublication"
@@ -27,24 +28,44 @@ const (
 	maxIssueCreateValueBytes     = 256
 )
 
+// Provider subcommands an IssueCreateIntent.FailureCommand may name, and the
+// HTTP status range FailureHTTPStatus may hold besides 0. The allowed commands
+// only grow: removing a value makes existing records that hold it unreadable.
+const (
+	FailureCommandGHIssueCreate   = "gh issue create"
+	FailureCommandGlabIssueCreate = "glab issue create"
+	FailureCommandGlabGraphQL     = "glab api graphql"
+
+	MinFailureHTTPStatus = 400
+	MaxFailureHTTPStatus = 599
+)
+
+// issueCreateFailureCommands lists every allowed FailureCommand.
+var issueCreateFailureCommands = []string{FailureCommandGHIssueCreate, FailureCommandGlabIssueCreate, FailureCommandGlabGraphQL}
+
 // IssueCreateIntent is the sealed record of one remote issue create. The marker
 // and body digest let a later run find the created issue and adopt it instead
-// of creating a duplicate; Status tracks how far the create got.
+// of creating a duplicate; Status tracks how far the create got. When a create
+// fails after the provider ran, Failure is the redacted message, FailureCommand
+// the provider subcommand that failed and FailureHTTPStatus the HTTP status the
+// diagnostic reported; the last two are empty or 0 when unknown.
 type IssueCreateIntent struct {
-	OperationID      string   `json:"operation_id"`
-	Marker           string   `json:"marker"`
-	Provider         string   `json:"provider"`
-	ProjectAuthority string   `json:"project_authority"`
-	Title            string   `json:"title"`
-	BodySHA256       string   `json:"body_sha256"`
-	Labels           []string `json:"labels,omitempty"`
-	Assignees        []string `json:"assignees,omitempty"`
-	Status           string   `json:"status"`
-	Attempt          int      `json:"attempt"`
-	CanonicalURL     string   `json:"canonical_url,omitempty"`
-	Failure          string   `json:"failure,omitempty"`
-	StartedAt        string   `json:"started_at"`
-	UpdatedAt        string   `json:"updated_at"`
+	OperationID       string   `json:"operation_id"`
+	Marker            string   `json:"marker"`
+	Provider          string   `json:"provider"`
+	ProjectAuthority  string   `json:"project_authority"`
+	Title             string   `json:"title"`
+	BodySHA256        string   `json:"body_sha256"`
+	Labels            []string `json:"labels,omitempty"`
+	Assignees         []string `json:"assignees,omitempty"`
+	Status            string   `json:"status"`
+	Attempt           int      `json:"attempt"`
+	CanonicalURL      string   `json:"canonical_url,omitempty"`
+	Failure           string   `json:"failure,omitempty"`
+	FailureCommand    string   `json:"failure_command,omitempty"`
+	FailureHTTPStatus int      `json:"failure_http_status,omitempty"`
+	StartedAt         string   `json:"started_at"`
+	UpdatedAt         string   `json:"updated_at"`
 }
 
 // IssueCreateIntentRequest carries the fields a caller supplies to seal an
@@ -62,12 +83,15 @@ type IssueCreateIntentRequest struct {
 
 // IssueCreateOutcome is the observed result of the provider call that updates an
 // IssueCreateIntent: the new Status, the canonical URL if one was seen, and a
-// Failure message otherwise.
+// Failure message otherwise, with the failed provider subcommand
+// (FailureCommand) and HTTP status (FailureHTTPStatus) when they are known.
 type IssueCreateOutcome struct {
-	Status       string
-	CanonicalURL string
-	Failure      string
-	ObservedAt   string
+	Status            string
+	CanonicalURL      string
+	Failure           string
+	FailureCommand    string
+	FailureHTTPStatus int
+	ObservedAt        string
 }
 
 // IssueCreateReconcileResult reports what reconciling a pending issue create
@@ -106,6 +130,12 @@ func ValidateIssueCreateIntent(intent IssueCreateIntent) error {
 	}
 	if err := validateIssueCreateValues("assignees", intent.Assignees); err != nil {
 		return err
+	}
+	if intent.FailureCommand != "" && !slices.Contains(issueCreateFailureCommands, intent.FailureCommand) {
+		return fmt.Errorf("issue create intent failure_command is not a known provider command")
+	}
+	if intent.FailureHTTPStatus != 0 && (intent.FailureHTTPStatus < MinFailureHTTPStatus || intent.FailureHTTPStatus > MaxFailureHTTPStatus) {
+		return fmt.Errorf("issue create intent failure_http_status must be 0 or within 400-599")
 	}
 	return validateIssueCreateMarkerAttemptStatus(intent)
 }

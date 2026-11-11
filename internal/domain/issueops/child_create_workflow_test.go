@@ -176,14 +176,14 @@ func TestChildOperationLifecycleBeginRecordComplete(t *testing.T) {
 		t.Fatalf("second concurrent op = %v", err)
 	}
 
-	if _, err := RecordChildOutcome(record, "missing", model.IssueCreateIntentCompleted, "", "", "t1"); err == nil || err.Error() != "child operation not found" {
+	if _, err := RecordChildOutcome(record, "missing", model.IssueCreateOutcome{Status: model.IssueCreateIntentCompleted, ObservedAt: "t1"}); err == nil || err.Error() != "child operation not found" {
 		t.Fatalf("missing op = %v", err)
 	}
 	for name, url := range map[string]string{
 		"other project": "https://github.com/Org/Other/issues/2",
 		"parent url":    childParentURL,
 	} {
-		if _, err := RecordChildOutcome(record, opA, model.IssueCreateIntentURLObserved, url, "", "t1"); err == nil {
+		if _, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: url, ObservedAt: "t1"}); err == nil {
 			t.Errorf("%s accepted as child URL", name)
 		}
 	}
@@ -317,4 +317,72 @@ func TestValidateChildOperationAuthorityTracksParentAndExecutionBinding(t *testi
 // dig는 테스트용 요청 digest(유효한 sha256 hex)를 만든다.
 func dig(seed string) string {
 	return ChildRequestDigest("github", childParentURL, seed, "", nil, nil)
+}
+
+func TestChildOutcomeCarriesFailureCause(t *testing.T) {
+	record := model.Record{IssueURL: childParentURL}
+	op := sealedChild(t, record, opA, dig("c1"))
+	record.ChildCreateOperations = []model.ChildCreateOperation{op}
+
+	unknown, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{
+		Status: model.IssueCreateIntentInvokedUnknown, Failure: "graphql failed", FailureCommand: "glab api graphql",
+		FailureHTTPStatus: 403, ObservedAt: "t9",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := FindChildOperation(unknown, opA, "")
+	if got.Status != model.IssueCreateIntentInvokedUnknown || got.Failure != "graphql failed" || got.FailureCommand != "glab api graphql" || got.FailureHTTPStatus != 403 || got.UpdatedAt != "t9" {
+		t.Fatalf("invoked_unknown cause = %+v", got)
+	}
+
+	completed, err := CompleteChildOperation(unknown, opA, "https://github.com/Org/Repo/issues/2", "t10")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done, _ := FindChildOperation(completed, opA, "")
+	if done.Status != model.IssueCreateIntentCompleted || done.Failure != "" || done.FailureCommand != "" || done.FailureHTTPStatus != 0 {
+		t.Fatalf("completed kept cause = %+v", done)
+	}
+
+	for _, row := range []struct {
+		name, command string
+		status        int
+		wantCommand   string
+		wantStatus    int
+	}{
+		{"unknown command and status", "curl", 302, "", 0},
+		{"status above range", "gh issue create", 600, "gh issue create", 0},
+	} {
+		recorded, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{
+			Status: model.IssueCreateIntentInvokedUnknown, Failure: "x", FailureCommand: row.command,
+			FailureHTTPStatus: row.status, ObservedAt: "t9",
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", row.name, err)
+		}
+		got, _ := FindChildOperation(recorded, opA, "")
+		if got.Failure != "x" || got.FailureCommand != row.wantCommand || got.FailureHTTPStatus != row.wantStatus {
+			t.Fatalf("%s: cause = %+v", row.name, got)
+		}
+	}
+
+	notInvoked, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{
+		Status: model.IssueCreateIntentNotInvoked, Failure: "not started", FailureCommand: "glab api graphql",
+		FailureHTTPStatus: 403, ObservedAt: "t2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prior, _ := FindChildOperation(notInvoked, opA, "")
+	if prior.FailureCommand != "glab api graphql" || prior.FailureHTTPStatus != 403 {
+		t.Fatalf("not_invoked cause = %+v", prior)
+	}
+	_, retry, started, err := BeginChildOperation(notInvoked, prior, opA)
+	if err != nil || !started {
+		t.Fatalf("retry: %v %v", started, err)
+	}
+	if retry.Failure != "" || retry.FailureCommand != "" || retry.FailureHTTPStatus != 0 {
+		t.Fatalf("retry kept cause = %q %q %d", retry.Failure, retry.FailureCommand, retry.FailureHTTPStatus)
+	}
 }

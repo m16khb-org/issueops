@@ -30,7 +30,7 @@ func BeginIssueCreateIntent(record model.Record, request model.IssueCreateIntent
 		}
 		intent.Status = model.IssueCreateIntentPending
 		intent.Attempt++
-		intent.Failure = ""
+		intent.Failure, intent.FailureCommand, intent.FailureHTTPStatus = "", "", 0
 		intent.UpdatedAt = request.StartedAt
 		record.IssueCreateIntent = &intent
 		return record, nil
@@ -64,6 +64,7 @@ func RecordIssueCreateOutcome(record model.Record, outcome model.IssueCreateOutc
 	next.Status = outcome.Status
 	next.CanonicalURL = strings.TrimSpace(outcome.CanonicalURL)
 	next.Failure = strings.TrimSpace(outcome.Failure)
+	next.FailureCommand, next.FailureHTTPStatus = failureCause(outcome.FailureCommand, outcome.FailureHTTPStatus)
 	next.UpdatedAt = strings.TrimSpace(outcome.ObservedAt)
 	if next.CanonicalURL != "" && (projectAuthority == "" || projectAuthority != next.ProjectAuthority) {
 		return record, fmt.Errorf("observed issue project authority %q does not match sealed authority %q", projectAuthority, next.ProjectAuthority)
@@ -105,7 +106,7 @@ func CompleteIssueCreateIntent(record model.Record, issueURL, completedAt, proje
 	next := *record.IssueCreateIntent
 	next.Status = model.IssueCreateIntentCompleted
 	next.CanonicalURL = canonicalURL
-	next.Failure = ""
+	next.Failure, next.FailureCommand, next.FailureHTTPStatus = "", "", 0
 	next.UpdatedAt = strings.TrimSpace(completedAt)
 	record.IssueURL = canonicalURL
 	record.IssueCreateIntent = &next
@@ -113,6 +114,23 @@ func CompleteIssueCreateIntent(record model.Record, issueURL, completedAt, proje
 		record.Phase = model.PhasePlan
 	}
 	return record, nil
+}
+
+// failureCause returns the failure command and HTTP status that are safe to
+// record: a command outside the allowed provider subcommands becomes "" and a
+// status outside the HTTP error range becomes 0, so an unexpected value never
+// makes the whole outcome write fail and lose its Failure message.
+func failureCause(command string, status int) (string, int) {
+	command = strings.TrimSpace(command)
+	switch command {
+	case model.FailureCommandGHIssueCreate, model.FailureCommandGlabIssueCreate, model.FailureCommandGlabGraphQL:
+	default:
+		command = ""
+	}
+	if status < model.MinFailureHTTPStatus || status > model.MaxFailureHTTPStatus {
+		status = 0
+	}
+	return command, status
 }
 
 func validateIssueCreateIntentRequest(request model.IssueCreateIntentRequest) error {

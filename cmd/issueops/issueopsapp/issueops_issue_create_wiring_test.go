@@ -2,16 +2,23 @@ package issueopsapp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"issueops/cmd/issueops/issueopscli"
 	"issueops/internal/adapter/issueops"
 	application "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 type issueCreateProvider struct {
@@ -143,6 +150,103 @@ func TestIssueCreateCompositionPersistsBeforeInvocationAndBlocksAmbiguousRetry(t
 	}
 	if _, err := service.Create(context.Background(), cmd); err == nil || !strings.Contains(err.Error(), "reconcile before retry") || calls != 3 {
 		t.Fatalf("ambiguous retry: calls=%d err=%v", calls, err)
+	}
+}
+
+// runCLIForError runs one production CLI command that is expected to fail and
+// returns its stdout and error; captureStdoutForContract fails the test on a
+// command error, so a failed provider call needs its own capture.
+func runCLIForError(t *testing.T, deps issueopscli.Dependencies, args ...string) (string, error) {
+	t.Helper()
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan []byte, 1)
+	go func() {
+		out, _ := io.ReadAll(r)
+		done <- out
+	}()
+	os.Stdout = w
+	runErr := issueopscli.RunIssueOpsWithDependencies(args, deps)
+	closeErr := w.Close()
+	os.Stdout = oldStdout
+	out := <-done
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	return string(out), runErr
+}
+
+// statusFieldForCause reads one top-level record field through `status --field`
+// and returns its raw JSON value. The output shape is
+// {"ok":..,"id":..,"phase":..,"<field>":<value>}.
+func statusFieldForCause(t *testing.T, deps issueopscli.Dependencies, id, field string) json.RawMessage {
+	t.Helper()
+	raw := captureStdoutForContract(t, func() error {
+		return issueopscli.RunIssueOpsWithDependencies([]string{"status", "--id", id, "--field", field, "--json"}, deps)
+	})
+	var projection map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &projection); err != nil {
+		t.Fatalf("status output is not JSON: %v\n%s", err, raw)
+	}
+	value, ok := projection[field]
+	if !ok {
+		t.Fatalf("status output has no %q: %s", field, raw)
+	}
+	return value
+}
+
+// assertFailureCause checks the machine-readable failure cause of an
+// invoked_unknown intent or child operation.
+func assertFailureCause(t *testing.T, raw json.RawMessage) {
+	t.Helper()
+	var got map[string]any
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("decode %s: %v", raw, err)
+	}
+	if got["status"] != "invoked_unknown" || got["failure_command"] != "gh issue create" || got["failure_http_status"] != float64(404) {
+		t.Fatalf("failure cause: %s", raw)
+	}
+	if failure, _ := got["failure"].(string); failure == "" {
+		t.Fatalf("failure text is empty: %s", raw)
+	}
+}
+
+// TestIssueCreateCLIRecordsFailureCause runs the production CLI against a fake
+// gh whose issue create fails with HTTP 404 and checks that status reports the
+// failing command and HTTP status next to the failure text.
+func TestIssueCreateCLIRecordsFailureCause(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	repo := makeGitRepoForContract(t)
+	runGitForContract(t, repo, "remote", "add", "origin", "https://github.com/acme/repo.git")
+	record, err := startIssueOpsFixture(issueOpsStateRoot(), model.StartRequest{Repo: repo, Branch: "52-issue-cause"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin, unexpected := t.TempDir(), filepath.Join(t.TempDir(), "unexpected-gh-call")
+	script := fmt.Sprintf(`#!/bin/sh
+if [ "$1 $2" = "issue create" ]; then
+ printf 'HTTP 404: Not Found\n' >&2;exit 1
+fi
+printf '%%s\n' "$*" >>%q
+printf 'unexpected gh call: %%s\n' "$*" >&2
+exit 97
+`, filepath.ToSlash(unexpected))
+	testsupport.WriteFakeCommand(t, bin, "gh", script)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+gitOnlyPath(t))
+	deps := issueOpsCLIDependencies()
+
+	out, err := runCLIForError(t, deps, "remote", "create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", readableWiringIssueBody, "--template", "implementation_task", "--label", "bug", "--assignee", "owner", "--confirm", "--json")
+	if err == nil {
+		t.Fatalf("create-issue succeeded against a failing gh: %s", out)
+	}
+	assertFailureCause(t, statusFieldForCause(t, deps, record.ID, "issue_create_intent"))
+	if data, readErr := os.ReadFile(unexpected); readErr == nil {
+		t.Fatalf("fake gh saw unexpected calls:\n%s", data)
+	} else if !errors.Is(readErr, os.ErrNotExist) {
+		t.Fatal(readErr)
 	}
 }
 

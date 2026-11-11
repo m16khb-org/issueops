@@ -1006,3 +1006,103 @@ func TestGitLabCreateChildPreviewAcceptsWorkItemsParentURL(t *testing.T) {
 		t.Fatalf("preview must carry the parent identity parsed from the alias: %+v", res)
 	}
 }
+
+// assertGitLabCreateCause checks the machine-readable failure cause that a
+// provider create error carries next to its free-form message.
+func assertGitLabCreateCause(t *testing.T, err error, invoked bool, command string, httpStatus int) {
+	t.Helper()
+	typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
+	if !ok {
+		t.Fatalf("error %T %v is not *port.IssueProviderCreateError", err, err)
+	}
+	if typed.Invoked != invoked || typed.Command != command || typed.HTTPStatus != httpStatus {
+		t.Fatalf("cause = {Invoked:%v Command:%q HTTPStatus:%d}, want {Invoked:%v Command:%q HTTPStatus:%d}: %v", typed.Invoked, typed.Command, typed.HTTPStatus, invoked, command, httpStatus, err)
+	}
+}
+
+func TestGitLabIssueCreateFailureCause(t *testing.T) {
+	req := func(repo string) port.IssueProviderCreateIssueRequest {
+		return port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "gitlab.com/acme/repo", Title: "t", Confirm: true}
+	}
+	t.Run("started and failed with an HTTP status", func(t *testing.T) {
+		repo := installGlab(t, `if [ "$1 $2" = "issue create" ]; then
+  echo "ERROR 404 Not Found" >&2
+  exit 1
+fi
+echo "unexpected glab call: $*" >&2
+exit 97
+`)
+		_, err := NewProvider().CreateIssue(t.Context(), req(repo))
+		assertGitLabCreateCause(t, err, true, "glab issue create", 404)
+	})
+	t.Run("exit 0 without a canonical URL", func(t *testing.T) {
+		repo := installGlab(t, `if [ "$1 $2" = "issue create" ]; then exit 0; fi
+echo "unexpected glab call: $*" >&2
+exit 97
+`)
+		_, err := NewProvider().CreateIssue(t.Context(), req(repo))
+		assertGitLabCreateCause(t, err, true, "glab issue create", 0)
+	})
+	t.Run("failed to start", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		_, err := NewProvider().CreateIssue(t.Context(), req(t.TempDir()))
+		assertGitLabCreateCause(t, err, false, "", 0)
+	})
+}
+
+// installChildCreateCauseGlab serves the Task type, label and assignee lookups
+// of a child create and answers workItemCreate with createBranch, a shell
+// snippet. afterLookups, a shell snippet, runs after the assignee lookup
+// answers. Anything else fails closed with exit 97.
+func installChildCreateCauseGlab(t *testing.T, afterLookups, createBranch string) string {
+	t.Helper()
+	responses := childFlowResponses()
+	var script strings.Builder
+	script.WriteString("case \"$*\" in\n")
+	for _, name := range []string{"taskType", "labelLookup", "userLookup"} {
+		after := ""
+		if name == "userLookup" {
+			after = afterLookups
+		}
+		script.WriteString("  *" + name + "*)\n    printf '%s' '" + responses[name] + "'\n" + after + "\n    exit 0 ;;\n")
+	}
+	script.WriteString("  *workItemCreate*)\n    " + createBranch + " ;;\n")
+	script.WriteString("esac\necho \"unexpected glab call: $*\" >&2\nexit 97\n")
+	return installGlab(t, script.String())
+}
+
+func TestGitLabChildCreateFailureCause(t *testing.T) {
+	req := func(repo string) port.IssueProviderCreateChildRequest {
+		return port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child", Labels: []string{"bug"}, Assignees: []string{"sample"}, Confirm: true}
+	}
+	t.Run("started and failed with an HTTP status", func(t *testing.T) {
+		repo := installChildCreateCauseGlab(t, "", `echo "HTTP 403: Forbidden" >&2; exit 1`)
+		_, err := NewProvider().CreateChild(t.Context(), req(repo))
+		assertGitLabCreateCause(t, err, true, "glab api graphql", 403)
+	})
+	t.Run("GraphQL envelope error carries no command or status", func(t *testing.T) {
+		repo := installChildCreateCauseGlab(t, "", `printf '%s' '{"errors":[{"message":"x"}]}'; exit 0`)
+		_, err := NewProvider().CreateChild(t.Context(), req(repo))
+		if err == nil {
+			t.Fatal("expected an envelope error")
+		}
+		if typed, ok := errors.AsType[*port.IssueProviderCreateError](err); ok && (typed.Command != "" || typed.HTTPStatus != 0) {
+			t.Fatalf("envelope error must carry no cause, got {Command:%q HTTPStatus:%d}: %v", typed.Command, typed.HTTPStatus, err)
+		}
+	})
+	t.Run("lookup fails to start", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		_, err := NewProvider().CreateChild(t.Context(), req(t.TempDir()))
+		assertGitLabCreateCause(t, err, false, "", 0)
+	})
+	t.Run("create fails to start", func(t *testing.T) {
+		// The fake answers the last lookup, then makes itself unstartable while
+		// its file stays on PATH, so only the workItemCreate call fails at Start.
+		repo := installChildCreateCauseGlab(t, `case "$0" in
+    *.sh) fake="${0%.sh}"; mv "$fake.exe" "$fake.exe.off"; printf 'not an executable' > "$fake.exe" ;;
+    *) printf '#!/missing-issueops-test-interpreter\n' > "$0" ;;
+    esac`, "exit 97")
+		_, err := NewProvider().CreateChild(t.Context(), req(repo))
+		assertGitLabCreateCause(t, err, false, "", 0)
+	})
+}

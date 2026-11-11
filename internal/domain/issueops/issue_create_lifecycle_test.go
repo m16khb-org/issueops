@@ -84,3 +84,68 @@ func TestIssueCreateCompletionBindsAuthorityAndAdvancesReadyPlan(t *testing.T) {
 		}
 	}
 }
+
+func TestIssueCreateOutcomeCarriesFailureCause(t *testing.T) {
+	request := issueCreateRequestForTest()
+	started, err := BeginIssueCreateIntent(model.Record{}, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown, err := RecordIssueCreateOutcome(started, model.IssueCreateOutcome{
+		Status: model.IssueCreateIntentInvokedUnknown, Failure: "x", FailureCommand: "gh issue create",
+		FailureHTTPStatus: 404, ObservedAt: "2026-09-28T00:01:00Z",
+	}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := unknown.IssueCreateIntent; got.Failure != "x" || got.FailureCommand != "gh issue create" || got.FailureHTTPStatus != 404 {
+		t.Fatalf("invoked_unknown cause = %q %q %d", got.Failure, got.FailureCommand, got.FailureHTTPStatus)
+	}
+
+	completed, err := CompleteIssueCreateIntent(unknown, "https://github.com/acme/repo/issues/1", "2026-09-28T00:03:00Z", request.ProjectAuthority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := completed.IssueCreateIntent; got.Status != model.IssueCreateIntentCompleted || got.Failure != "" || got.FailureCommand != "" || got.FailureHTTPStatus != 0 {
+		t.Fatalf("completed kept cause = %q %q %d", got.Failure, got.FailureCommand, got.FailureHTTPStatus)
+	}
+
+	for _, row := range []struct {
+		name, command string
+		status        int
+		wantCommand   string
+		wantStatus    int
+	}{
+		{"unknown command and status", "curl", 302, "", 0},
+		{"status above range", "gh issue create", 600, "gh issue create", 0},
+	} {
+		recorded, err := RecordIssueCreateOutcome(started, model.IssueCreateOutcome{
+			Status: model.IssueCreateIntentInvokedUnknown, Failure: "x", FailureCommand: row.command,
+			FailureHTTPStatus: row.status, ObservedAt: "2026-09-28T00:01:00Z",
+		}, "")
+		if err != nil {
+			t.Fatalf("%s: %v", row.name, err)
+		}
+		if got := recorded.IssueCreateIntent; got.Failure != "x" || got.FailureCommand != row.wantCommand || got.FailureHTTPStatus != row.wantStatus {
+			t.Fatalf("%s: cause = %q %q %d", row.name, got.Failure, got.FailureCommand, got.FailureHTTPStatus)
+		}
+	}
+
+	notInvoked, err := RecordIssueCreateOutcome(started, model.IssueCreateOutcome{
+		Status: model.IssueCreateIntentNotInvoked, Failure: "not started", FailureCommand: "gh issue create",
+		FailureHTTPStatus: 403, ObservedAt: "2026-09-28T00:01:00Z",
+	}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := notInvoked.IssueCreateIntent; got.FailureCommand != "gh issue create" || got.FailureHTTPStatus != 403 {
+		t.Fatalf("not_invoked cause = %q %d", got.FailureCommand, got.FailureHTTPStatus)
+	}
+	retried, err := BeginIssueCreateIntent(notInvoked, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := retried.IssueCreateIntent; got.Failure != "" || got.FailureCommand != "" || got.FailureHTTPStatus != 0 {
+		t.Fatalf("retry kept cause = %q %q %d", got.Failure, got.FailureCommand, got.FailureHTTPStatus)
+	}
+}

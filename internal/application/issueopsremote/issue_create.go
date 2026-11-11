@@ -182,22 +182,27 @@ func (s *IssueCreator) beginConfirmedIntent(record model.Record, providerName, t
 
 func (s *IssueCreator) recordCreateFailure(id, url string, err error) error {
 	createErr, typed := errors.AsType[*port.IssueProviderCreateError](err)
-	notInvoked := typed && !createErr.Invoked
-	return s.recordFailure(id, domain.ClassifyIssueCreateFailure(notInvoked, url), url, err)
+	outcome := model.IssueCreateOutcome{Status: domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked, url), CanonicalURL: url}
+	if typed {
+		outcome.FailureCommand, outcome.FailureHTTPStatus = createErr.Command, createErr.HTTPStatus
+	}
+	return s.recordFailure(id, outcome, err)
 }
 
 func (s *IssueCreator) verifyAndCompleteIntent(ctx context.Context, id, providerName, url string, labels, assignees []string) error {
 	if err := s.verify(ctx, model.RemoteArtifactVerificationRequest{Provider: providerName, Kind: "issue", URL: url, Labels: labels, Assignees: assignees}); err != nil {
-		return s.recordFailure(id, model.IssueCreateIntentVerificationFailed, url, err)
+		return s.recordFailure(id, model.IssueCreateOutcome{Status: model.IssueCreateIntentVerificationFailed, CanonicalURL: url}, err)
 	}
 	if _, err := s.intents.Complete(context.Background(), id, url, s.timestamp()); err != nil {
-		return s.recordFailure(id, model.IssueCreateIntentReceiptFailed, url, err)
+		return s.recordFailure(id, model.IssueCreateOutcome{Status: model.IssueCreateIntentReceiptFailed, CanonicalURL: url}, err)
 	}
 	return nil
 }
 
-func (s *IssueCreator) recordFailure(id, status, url string, cause error) error {
-	_, err := s.intents.Outcome(context.Background(), id, model.IssueCreateOutcome{Status: status, CanonicalURL: url, Failure: issueopsremote.IssueCreateFailure(cause), ObservedAt: s.timestamp()})
+// recordFailure는 outcome에 cause의 redaction된 실패 문자열과 관측 시각을 채워 기록하고, 기록 오류가 있으면 cause와 합친다.
+func (s *IssueCreator) recordFailure(id string, outcome model.IssueCreateOutcome, cause error) error {
+	outcome.Failure, outcome.ObservedAt = issueopsremote.IssueCreateFailure(cause), s.timestamp()
+	_, err := s.intents.Outcome(context.Background(), id, outcome)
 	if err != nil {
 		return errors.Join(cause, err)
 	}

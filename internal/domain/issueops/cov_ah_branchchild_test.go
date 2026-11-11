@@ -365,7 +365,7 @@ func TestCovBranchChildBeginOperationRejections(t *testing.T) {
 
 func TestCovBranchChildRecordOutcomeRejections(t *testing.T) {
 	record := model.Record{IssueURL: childParentURL}
-	if _, err := RecordChildOutcome(record, opA, model.IssueCreateIntentCompleted, "", "", "t"); err == nil || err.Error() != "child operation not found" {
+	if _, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentCompleted, ObservedAt: "t"}); err == nil || err.Error() != "child operation not found" {
 		t.Fatalf("missing = %v", err)
 	}
 	if _, err := CompleteChildOperation(record, opA, "https://github.com/Org/Repo/issues/3", "t"); err == nil || err.Error() != "child operation not found" {
@@ -373,26 +373,26 @@ func TestCovBranchChildRecordOutcomeRejections(t *testing.T) {
 	}
 	op := sealedChild(t, record, opA, dig("a"))
 	record.ChildCreateOperations = []model.ChildCreateOperation{op}
-	if _, err := RecordChildOutcome(record, opA, model.IssueCreateIntentPending, "", "", "t"); err == nil || !strings.Contains(err.Error(), "illegal issue create intent transition") {
+	if _, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentPending, ObservedAt: "t"}); err == nil || !strings.Contains(err.Error(), "illegal issue create intent transition") {
 		t.Fatalf("illegal transition = %v", err)
 	}
-	if _, err := RecordChildOutcome(record, opA, model.IssueCreateIntentCompleted, "https://github.com/Other/Repo/issues/3", "", "t"); err == nil || err.Error() != "child operation project mismatch" {
+	if _, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentCompleted, CanonicalURL: "https://github.com/Other/Repo/issues/3", ObservedAt: "t"}); err == nil || err.Error() != "child operation project mismatch" {
 		t.Fatalf("project mismatch = %v", err)
 	}
-	if _, err := RecordChildOutcome(record, opA, model.IssueCreateIntentCompleted, childParentURL, "", "t"); err == nil || err.Error() != "child operation canonical URL changed" {
+	if _, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentCompleted, CanonicalURL: childParentURL, ObservedAt: "t"}); err == nil || err.Error() != "child operation canonical URL changed" {
 		t.Fatalf("parent URL as child = %v", err)
 	}
-	observed, err := RecordChildOutcome(record, opA, model.IssueCreateIntentURLObserved, "https://github.com/Org/Repo/issues/3", "", "t1")
+	observed, err := RecordChildOutcome(record, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentURLObserved, CanonicalURL: "https://github.com/Org/Repo/issues/3", ObservedAt: "t1"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := RecordChildOutcome(observed, opA, model.IssueCreateIntentCompleted, "https://github.com/Org/Repo/issues/4", "", "t2"); err == nil || err.Error() != "child operation canonical URL changed" {
+	if _, err := RecordChildOutcome(observed, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentCompleted, CanonicalURL: "https://github.com/Org/Repo/issues/4", ObservedAt: "t2"}); err == nil || err.Error() != "child operation canonical URL changed" {
 		t.Fatalf("canonical swap = %v", err)
 	}
 	// 권한이 바뀐 parent에서는 결과 기록 자체를 거부한다.
 	moved := observed
 	moved.IssueURL = "https://github.com/Org/Repo/issues/9"
-	if _, err := RecordChildOutcome(moved, opA, model.IssueCreateIntentCompleted, "", "", "t"); err == nil || err.Error() != "child operation parent/project changed" {
+	if _, err := RecordChildOutcome(moved, opA, model.IssueCreateOutcome{Status: model.IssueCreateIntentCompleted, ObservedAt: "t"}); err == nil || err.Error() != "child operation parent/project changed" {
 		t.Fatalf("moved parent = %v", err)
 	}
 }

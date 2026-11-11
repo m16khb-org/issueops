@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/provider/providerutil"
+	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -51,7 +52,7 @@ func (Provider) CreateChild(ctx context.Context, req port.IssueProviderCreateChi
 	if usedParentFlag {
 		createArgs = append(createArgs, "--parent", parentNumber)
 	}
-	child, err := runGhJSONContext(ctx, createArgs, req.Repo, "issue")
+	child, err := runGhJSONContext(ctx, createArgs, req.Repo, model.FailureCommandGHIssueCreate)
 	if err != nil {
 		return port.IssueProviderCreateChildResult{Provider: "github", ChildURL: strings.TrimSpace(child.URL)}, err
 	}

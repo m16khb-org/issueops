@@ -20,7 +20,9 @@ import (
 	"time"
 
 	"issueops/internal/adapter/provider/providerutil"
+	model "issueops/internal/contract/issueops"
 	issuebody "issueops/internal/domain/issueops"
+	"issueops/internal/domain/remoteparse"
 	"issueops/internal/port"
 )
 
@@ -90,7 +92,7 @@ func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIss
 			Preview: providerutil.DryRunPreview("gh", args...),
 		}, nil
 	}
-	result, err := runGhJSONContext(ctx, args, req.Repo, "issue")
+	result, err := runGhJSONContext(ctx, args, req.Repo, model.FailureCommandGHIssueCreate)
 	if err != nil {
 		return port.IssueProviderCreateIssueResult{
 			OK:     false,
@@ -453,7 +455,7 @@ type ghResult struct {
 	URL string `json:"url"`
 }
 
-func runGhJSONContext(ctx context.Context, args []string, repo string, kind string) (ghResult, error) {
+func runGhJSONContext(ctx context.Context, args []string, repo, command string) (ghResult, error) {
 	out, invoked, err := providerutil.RunBoundedMutationContext(ctx, repo, "gh", args...)
 	result := parseGhOutput(string(out))
 	if err == nil {
@@ -466,11 +468,12 @@ func runGhJSONContext(ctx context.Context, args []string, repo string, kind stri
 		}
 		return ghResult{}, &port.IssueProviderCreateError{Invoked: false, Err: cause}
 	}
+	httpStatus := remoteparse.ProviderHTTPStatus(err.Error())
 	diagnostic := strings.TrimPrefix(policy.BoundedDiagnostic(err.Error(), 384), "command failed after start: ")
 	if createdArtifactNumber(result.URL) != "" {
-		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("gh %s create failed: %s; outcome unknown with a canonical URL returned separately; do not retry", kind, diagnostic)}
+		return result, &port.IssueProviderCreateError{Invoked: true, Command: command, HTTPStatus: httpStatus, Err: fmt.Errorf("%s failed: %s; outcome unknown with a canonical URL returned separately; do not retry", command, diagnostic)}
 	}
-	return ghResult{}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("gh %s create failed: %s; outcome unknown; do not retry", kind, diagnostic)}
+	return ghResult{}, &port.IssueProviderCreateError{Invoked: true, Command: command, HTTPStatus: httpStatus, Err: fmt.Errorf("%s failed: %s; outcome unknown; do not retry", command, diagnostic)}
 }
 
 // parseGhOutput extracts the created artifact's URL from gh output. No create

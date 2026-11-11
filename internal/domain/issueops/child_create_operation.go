@@ -110,7 +110,7 @@ func BeginChildOperation(record model.Record, request model.ChildCreateOperation
 		startedAt := request.UpdatedAt
 		request = op
 		request.Status = model.IssueCreateIntentPending
-		request.Failure = ""
+		request.Failure, request.FailureCommand, request.FailureHTTPStatus = "", "", 0
 		request.Attempt++
 		if startedAt != "" {
 			request.StartedAt, request.UpdatedAt = startedAt, startedAt
@@ -125,11 +125,15 @@ func BeginChildOperation(record model.Record, request model.ChildCreateOperation
 	return record, request, true, nil
 }
 
-// RecordChildOutcome moves operation id to status after validating its
-// authority and the transition. A non-empty url must belong to the same
-// project as the operation, must differ from the parent, and must not change
-// a canonical URL already recorded.
-func RecordChildOutcome(record model.Record, id, status, url, failure, now string) (model.Record, error) {
+// RecordChildOutcome moves operation id to outcome.Status after validating its
+// authority and the transition, and records the outcome's failure, failure
+// command and failure HTTP status; a command or status outside the allowed
+// range is recorded as empty or 0 instead of failing the write. A non-empty
+// outcome.CanonicalURL must belong to the same project as the operation, must
+// differ from the parent, and must not change a canonical URL already
+// recorded. outcome.ObservedAt becomes the operation's UpdatedAt.
+func RecordChildOutcome(record model.Record, id string, outcome model.IssueCreateOutcome) (model.Record, error) {
+	status, url := outcome.Status, outcome.CanonicalURL
 	op, ok := FindChildOperation(record, id, "")
 	if !ok {
 		return record, fmt.Errorf("child operation not found")
@@ -150,7 +154,8 @@ func RecordChildOutcome(record model.Record, id, status, url, failure, now strin
 		}
 		op.CanonicalURL = url
 	}
-	op.Status, op.Failure, op.UpdatedAt = status, failure, now
+	op.Status, op.Failure, op.UpdatedAt = status, outcome.Failure, outcome.ObservedAt
+	op.FailureCommand, op.FailureHTTPStatus = failureCause(outcome.FailureCommand, outcome.FailureHTTPStatus)
 	return putChildOperation(record, op), nil
 }
 
@@ -158,7 +163,7 @@ func RecordChildOutcome(record model.Record, id, status, url, failure, now strin
 // url and links the child to the parent record unless a child link with that
 // URL already exists.
 func CompleteChildOperation(record model.Record, id, url, now string) (model.Record, error) {
-	updated, err := RecordChildOutcome(record, id, model.IssueCreateIntentCompleted, url, "", now)
+	updated, err := RecordChildOutcome(record, id, model.IssueCreateOutcome{Status: model.IssueCreateIntentCompleted, CanonicalURL: url, ObservedAt: now})
 	if err != nil {
 		return record, err
 	}

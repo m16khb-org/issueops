@@ -10,10 +10,14 @@ import (
 
 // IssueProviderCreateError wraps a failed provider create. Invoked reports whether the provider
 // command actually ran, so callers can tell a failure that left nothing behind from one that may
-// have created the artifact.
+// have created the artifact. Command is the literal provider subcommand that failed
+// ("gh issue create", "glab issue create" or "glab api graphql") and HTTPStatus is the HTTP
+// status the provider diagnostic reported with certainty; each is empty or 0 when unknown.
 type IssueProviderCreateError struct {
-	Invoked bool
-	Err     error
+	Invoked    bool
+	Err        error
+	Command    string
+	HTTPStatus int
 }
 
 // IssueProviderIssueCreateCandidate is an existing issue that may be the result of an earlier,

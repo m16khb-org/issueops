@@ -171,7 +171,7 @@ func (s ChildCreator) beginConfirmedCreate(ctx context.Context, cmd ChildCreateC
 	body := strings.TrimSpace(plan.body) + "\n\n" + operation.Marker
 	if fmt.Sprintf("%x", sha256.Sum256([]byte(body))) != operation.BodySHA256 {
 		err = fmt.Errorf("selected child operation body digest mismatch")
-		return operation, "", false, errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentNotInvoked, "", issueopsremote.IssueCreateFailure(err), actor))
+		return operation, "", false, errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: issueopsremote.IssueCreateFailure(err)}, actor))
 	}
 	return operation, body, true, nil
 }
@@ -199,16 +199,20 @@ func (s ChildCreator) sealChildOperation(record model.Record, cmd ChildCreateCom
 // recordCreateChildFailure는 provider 생성 실패를 durable 저장소에 기록하고 두 오류를 합친다.
 func (s ChildCreator) recordCreateChildFailure(ctx context.Context, record model.Record, operation model.ChildCreateOperation, actor model.Actor, childURL string, err error) error {
 	createErr, typed := errors.AsType[*port.IssueProviderCreateError](err)
-	return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && childURL == "", childURL), childURL, issueopsremote.IssueCreateFailure(err), actor))
+	outcome := model.IssueCreateOutcome{Status: domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && childURL == "", childURL), CanonicalURL: childURL, Failure: issueopsremote.IssueCreateFailure(err)}
+	if typed {
+		outcome.FailureCommand, outcome.FailureHTTPStatus = createErr.Command, createErr.HTTPStatus
+	}
+	return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, outcome, actor))
 }
 
 // finalizeCreatedChild는 생성된 자식의 계층을 검증하고 완료 영수증을 기록한다. 실패는 outcome으로 남긴다.
 func (s ChildCreator) finalizeCreatedChild(ctx context.Context, record model.Record, operation model.ChildCreateOperation, actor model.Actor, childURL string, hierarchyVerified bool) error {
 	if err := domain.ValidateCreatedChild(hierarchyVerified, childURL); err != nil {
-		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentVerificationFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
+		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateOutcome{Status: model.IssueCreateIntentVerificationFailed, CanonicalURL: childURL, Failure: issueopsremote.IssueCreateFailure(err)}, actor))
 	}
 	if err := s.Intents.Complete(context.WithoutCancel(ctx), record, operation, childURL, actor, false); err != nil {
-		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentReceiptFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
+		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateOutcome{Status: model.IssueCreateIntentReceiptFailed, CanonicalURL: childURL, Failure: issueopsremote.IssueCreateFailure(err)}, actor))
 	}
 	return nil
 }

@@ -613,7 +613,7 @@ func TestParseGhOutput(t *testing.T) {
 
 func TestRunGhJSONReportsMissingCLI(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	_, err := runGhJSONContext(t.Context(), []string{"issue", "create"}, "", "issue")
+	_, err := runGhJSONContext(t.Context(), []string{"issue", "create"}, "", "gh issue create")
 	if err == nil || !strings.Contains(err.Error(), "gh CLI is not installed") {
 		t.Fatalf("error=%v, want missing gh CLI", err)
 	}
@@ -629,7 +629,7 @@ printf 'https://github.com/o/r/issues/12\n'
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := runGhJSONContext(t.Context(), []string{"issue", "create", "--title", "Fix"}, repo, "issue")
+	got, err := runGhJSONContext(t.Context(), []string{"issue", "create", "--title", "Fix"}, repo, "gh issue create")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -653,7 +653,7 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	_, err := runGhJSONContext(t.Context(), []string{"pr", "create"}, "", "pr")
+	_, err := runGhJSONContext(t.Context(), []string{"pr", "create"}, "", "gh pr create")
 	if err == nil || !strings.Contains(err.Error(), "gh pr create failed: provider rejected request") {
 		t.Fatalf("error=%v, want stderr failure", err)
 	}
@@ -732,4 +732,82 @@ exit 2
 func writeFakeGh(t *testing.T, binDir, script string) {
 	t.Helper()
 	testsupport.WriteFakeCommand(t, binDir, "gh", script)
+}
+
+// assertGitHubCreateCause checks the machine-readable failure cause that a
+// provider create error carries next to its free-form message.
+func assertGitHubCreateCause(t *testing.T, err error, invoked bool, command string, httpStatus int) {
+	t.Helper()
+	typed, ok := errors.AsType[*port.IssueProviderCreateError](err)
+	if !ok {
+		t.Fatalf("error %T %v is not *port.IssueProviderCreateError", err, err)
+	}
+	if typed.Invoked != invoked || typed.Command != command || typed.HTTPStatus != httpStatus {
+		t.Fatalf("cause = {Invoked:%v Command:%q HTTPStatus:%d}, want {Invoked:%v Command:%q HTTPStatus:%d}: %v", typed.Invoked, typed.Command, typed.HTTPStatus, invoked, command, httpStatus, err)
+	}
+}
+
+func TestGitHubIssueCreateFailureCause(t *testing.T) {
+	req := func(repo string) port.IssueProviderCreateIssueRequest {
+		return port.IssueProviderCreateIssueRequest{Repo: repo, ProjectKey: "github.com/acme/repo", Title: "t", Confirm: true}
+	}
+	t.Run("started and failed with an HTTP status", func(t *testing.T) {
+		repo := fakeGhRepo(t, `#!/bin/sh
+if [ "$1 $2" = "issue create" ]; then
+  echo "HTTP 404: Not Found" >&2
+  exit 1
+fi
+echo "unexpected gh call: $*" >&2
+exit 97
+`)
+		_, err := NewProvider().CreateIssue(t.Context(), req(repo))
+		assertGitHubCreateCause(t, err, true, "gh issue create", 404)
+	})
+	t.Run("failed to start", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		_, err := NewProvider().CreateIssue(t.Context(), req(t.TempDir()))
+		assertGitHubCreateCause(t, err, false, "", 0)
+	})
+}
+
+func TestGitHubChildCreateFailureCause(t *testing.T) {
+	req := func(repo string) port.IssueProviderCreateChildRequest {
+		return port.IssueProviderCreateChildRequest{Repo: repo, ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Confirm: true}
+	}
+	t.Run("started and failed with an HTTP status", func(t *testing.T) {
+		repo := fakeGhRepo(t, `#!/bin/sh
+if [ "$1 $2 $3" = "issue create --help" ]; then echo "  --title string"; echo "  --parent string"; exit 0; fi
+if [ "$1 $2" = "issue create" ]; then
+  echo "HTTP 404: Not Found" >&2
+  exit 1
+fi
+echo "unexpected gh call: $*" >&2
+exit 97
+`)
+		_, err := NewProvider().CreateChild(t.Context(), req(repo))
+		assertGitHubCreateCause(t, err, true, "gh issue create", 404)
+	})
+	t.Run("help probe fails to start", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		_, err := NewProvider().CreateChild(t.Context(), req(t.TempDir()))
+		assertGitHubCreateCause(t, err, false, "", 0)
+	})
+	t.Run("create fails to start", func(t *testing.T) {
+		// The fake answers the help probe, then makes itself unstartable while
+		// its file stays on PATH, so only the create call fails at Start.
+		repo := fakeGhRepo(t, `#!/bin/sh
+if [ "$1 $2 $3" = "issue create --help" ]; then
+  echo "  --title string"; echo "  --parent string"
+  case "$0" in
+  *.sh) fake="${0%.sh}"; mv "$fake.exe" "$fake.exe.off"; printf 'not an executable' > "$fake.exe" ;;
+  *) printf '#!/missing-issueops-test-interpreter\n' > "$0" ;;
+  esac
+  exit 0
+fi
+echo "unexpected gh call: $*" >&2
+exit 97
+`)
+		_, err := NewProvider().CreateChild(t.Context(), req(repo))
+		assertGitHubCreateCause(t, err, false, "", 0)
+	})
 }

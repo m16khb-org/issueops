@@ -36,9 +36,10 @@ func (s *ChildCreateIntents) Begin(ctx context.Context, id string, op model.Chil
 	})
 	return selected, invoke, err
 }
-func (s *ChildCreateIntents) outcome(ctx context.Context, id, operation, status, url, failure string, actor model.Actor) error {
+func (s *ChildCreateIntents) outcome(ctx context.Context, id, operation string, outcome model.IssueCreateOutcome, actor model.Actor) error {
 	_, err := s.update(ctx, id, actor, func(record model.Record) (model.Record, error) {
-		return domain.RecordChildOutcome(record, operation, status, url, failure, s.timestamp())
+		outcome.ObservedAt = s.timestamp()
+		return domain.RecordChildOutcome(record, operation, outcome)
 	})
 	return err
 }
@@ -89,7 +90,7 @@ func (s *ChildCreateIntents) releaseCrashed(ctx context.Context, observed model.
 		if err != nil {
 			return record, err
 		}
-		return domain.RecordChildOutcome(rebound, op.OperationID, model.IssueCreateIntentNotInvoked, "", childCrashReleased, s.timestamp())
+		return domain.RecordChildOutcome(rebound, op.OperationID, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: childCrashReleased, ObservedAt: s.timestamp()})
 	})
 	return err
 }
@@ -110,7 +111,7 @@ func (s *ChildCreateIntents) recoveryFailure(ctx context.Context, observed model
 		if err != nil {
 			return record, err
 		}
-		return domain.RecordChildOutcome(updated, op.OperationID, status, url, failure, s.timestamp())
+		return domain.RecordChildOutcome(updated, op.OperationID, model.IssueCreateOutcome{Status: status, CanonicalURL: url, Failure: failure, ObservedAt: s.timestamp()})
 	})
 	return err
 }

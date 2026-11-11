@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/provider/providerutil"
+	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/remoteparse"
 	"issueops/internal/port"
 )
@@ -433,7 +434,7 @@ func runGlabJSONContext(ctx context.Context, args []string, repo string) (port.I
 	result := port.IssueProviderCreateIssueResult{OK: err == nil, URL: url, Number: number}
 	if err == nil {
 		if strings.TrimSpace(url) == "" {
-			return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: errors.New("glab issue creation returned no canonical URL; do not retry")}
+			return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Command: model.FailureCommandGlabIssueCreate, Err: errors.New("glab issue creation returned no canonical URL; do not retry")}
 		}
 		return result, nil
 	}
@@ -444,11 +445,12 @@ func runGlabJSONContext(ctx context.Context, args []string, repo string) (port.I
 		}
 		return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: cause}
 	}
+	httpStatus := remoteparse.ProviderHTTPStatus(err.Error())
 	diagnostic := strings.TrimPrefix(policy.BoundedDiagnostic(err.Error(), 384), "command failed after start: ")
 	if strings.TrimSpace(url) != "" {
-		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab issue create failed: %s; outcome unknown with a canonical URL returned separately; do not retry", diagnostic)}
+		return result, &port.IssueProviderCreateError{Invoked: true, Command: model.FailureCommandGlabIssueCreate, HTTPStatus: httpStatus, Err: fmt.Errorf("glab issue create failed: %s; outcome unknown with a canonical URL returned separately; do not retry", diagnostic)}
 	}
-	return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab issue create failed: %s; outcome unknown; do not retry", diagnostic)}
+	return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Command: model.FailureCommandGlabIssueCreate, HTTPStatus: httpStatus, Err: fmt.Errorf("glab issue create failed: %s; outcome unknown; do not retry", diagnostic)}
 }
 
 func runGlabMRJSON(ctx context.Context, args []string, repo string) (executionissue.IssueProviderCreatePullRequestResult, error) {
@@ -608,7 +610,12 @@ func runGlabGraphQLContext[T any](ctx context.Context, repo, hostname, query str
 	out, invoked, err := providerutil.RunBoundedMutationWithOutputLimitContext(ctx, repo, "glab", gitLabCommandOutputLimit, args...)
 	if err != nil {
 		_ = json.Unmarshal(out, &zero)
-		return zero, &port.IssueProviderCreateError{Invoked: invoked, Err: fmt.Errorf("glab graphql failed: %w", err)}
+		createErr := &port.IssueProviderCreateError{Invoked: invoked, Err: fmt.Errorf("glab graphql failed: %w", err)}
+		if invoked {
+			createErr.Command = model.FailureCommandGlabGraphQL
+			createErr.HTTPStatus = remoteparse.ProviderHTTPStatus(err.Error())
+		}
+		return zero, createErr
 	}
 	var envelope struct {
 		Errors []struct {

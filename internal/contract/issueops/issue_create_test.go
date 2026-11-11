@@ -123,3 +123,45 @@ func TestValidateIssueCreateIntentAcceptsEveryStatus(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateIssueCreateIntentFailureCause(t *testing.T) {
+	const id = "0123456789abcdef0123456789abcdef"
+	tests := []struct {
+		name    string
+		command string
+		status  int
+		wantErr bool
+	}{
+		{"unknown command", "curl", 0, true},
+		{"status below 400", "", 399, true},
+		{"status above 599", "", 600, true},
+		{"zero status", "", 0, false},
+		{"status 404", "", 404, false},
+		{"gh issue create", "gh issue create", 0, false},
+		{"glab issue create", "glab issue create", 0, false},
+		{"glab api graphql", "glab api graphql", 0, false},
+		{"command with status", "gh issue create", 403, false},
+	}
+	for _, test := range tests {
+		t.Run("intent/"+test.name, func(t *testing.T) {
+			intent := IssueCreateIntent{
+				OperationID: id, Marker: "<!-- issueops:issue-create:" + id + " -->",
+				Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "t",
+				BodySHA256: strings.Repeat("a", 64), Status: IssueCreateIntentInvokedUnknown, Attempt: 1,
+				Failure: "boom", FailureCommand: test.command, FailureHTTPStatus: test.status,
+				StartedAt: "2026-08-14T00:00:00Z", UpdatedAt: "2026-08-14T00:01:00Z",
+			}
+			if err := ValidateIssueCreateIntent(intent); (err != nil) != test.wantErr {
+				t.Fatalf("ValidateIssueCreateIntent() error = %v, wantErr %v", err, test.wantErr)
+			}
+		})
+		t.Run("child/"+test.name, func(t *testing.T) {
+			op := validChildCreateOperation(id)
+			op.Status = IssueCreateIntentInvokedUnknown
+			op.Failure, op.FailureCommand, op.FailureHTTPStatus = "boom", test.command, test.status
+			if err := ValidateChildCreateOperations([]ChildCreateOperation{op}); (err != nil) != test.wantErr {
+				t.Fatalf("ValidateChildCreateOperations() error = %v, wantErr %v", err, test.wantErr)
+			}
+		})
+	}
+}
