@@ -479,6 +479,56 @@ func TestServiceListCyclesObservesClockOnceAfterScan(t *testing.T) {
 	}
 }
 
+// idle_days는 GeneratedAt을 만든 같은 clock 값으로 entry마다 채워진다.
+func TestServiceListCyclesFillsIdleDaysFromGeneratedAtClock(t *testing.T) {
+	now := time.Date(2026, time.November, 12, 3, 0, 0, 500_000_000, time.UTC)
+	repository := fakeRepository{
+		ids: []string{"stale", "fresh", "subsecond", "untimed"},
+		records: map[string]issueopscontract.Record{
+			"stale": {
+				ID: "stale", Repo: "/repo", Phase: issueopscontract.PhaseImplement,
+				UpdatedAt: now.AddDate(0, 0, -3).Format(time.RFC3339),
+			},
+			"fresh": {
+				ID: "fresh", Repo: "/repo", Phase: issueopscontract.PhaseImplement,
+				UpdatedAt: now.Add(-time.Hour).Format(time.RFC3339),
+			},
+			// GeneratedAt prints whole seconds; a record written within the
+			// same second must still read as 0 idle days, not as the future.
+			"subsecond": {
+				ID: "subsecond", Repo: "/repo", Phase: issueopscontract.PhaseImplement,
+				UpdatedAt: now.Add(-100 * time.Millisecond).Format(time.RFC3339Nano),
+			},
+			"untimed": {ID: "untimed", Repo: "/repo", Phase: issueopscontract.PhasePlan},
+		},
+	}
+	service := NewService(repository, fixedClock{now: now}, cleanPath{})
+
+	result, err := service.ListCycles(context.Background(), "/state", "")
+	if err != nil {
+		t.Fatalf("list cycles: %v", err)
+	}
+	entries := make(map[string]issueopsinventorycontract.ListEntry, len(result.Entries))
+	for _, entry := range result.Entries {
+		entries[entry.ID] = entry
+	}
+	if got := entries["stale"].IdleDays; got == nil || *got != 3 {
+		t.Fatalf("stale idle days = %v, want 3", got)
+	}
+	if got := entries["stale"].LastRecordAt; got != "2026-11-09T03:00:00Z" {
+		t.Fatalf("stale last record at = %q", got)
+	}
+	if got := entries["fresh"].IdleDays; got == nil || *got != 0 {
+		t.Fatalf("fresh idle days = %v, want 0", got)
+	}
+	if got := entries["subsecond"].IdleDays; got == nil || *got != 0 {
+		t.Fatalf("subsecond idle days = %v, want 0", got)
+	}
+	if got := entries["untimed"].IdleDays; got != nil {
+		t.Fatalf("untimed idle days = %d, want nil", *got)
+	}
+}
+
 type cleanPath struct{}
 
 func (cleanPath) Normalize(path string) string {

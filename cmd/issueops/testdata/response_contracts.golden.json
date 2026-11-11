@@ -1720,6 +1720,25 @@
       "updated_at": "$TIMESTAMP",
       "worktree_path": "$ISSUEOPS_WORKTREE"
     },
+    "issueops_list": {
+      "diagnostics": [],
+      "entries": [
+        {
+          "branch": "1-contract-branch",
+          "id": "$ISSUEOPS_ID",
+          "idle_days": 0,
+          "last_record_at": "$TIMESTAMP",
+          "phase": "problem",
+          "repo": "$WORKSPACE",
+          "updated_at": "$TIMESTAMP"
+        }
+      ],
+      "generated_at": "$TIMESTAMP",
+      "ok": true,
+      "read_errors": 0,
+      "scanned_records": 1,
+      "unreadable_ids": []
+    },
     "issueops_mark_issue_updated": {
       "branch": "1-contract-branch",
       "id": "$ISSUEOPS_ID",

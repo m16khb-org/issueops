@@ -51,9 +51,17 @@ func (service *Service) ListCycles(
 	if err != nil {
 		return issueopsinventorycontract.ListResult{OK: false}, err
 	}
+	// The clock is read once, after the scan; idle_days reuses that same
+	// instant. It is not truncated to the second GeneratedAt prints, which
+	// would put a record written moments ago in the future.
+	now := service.clock.Now().UTC()
+	generatedAt := now.Format(time.RFC3339)
+	for index := range entries {
+		entries[index].IdleDays = issueopsinventorydomain.IdleDays(entries[index].LastRecordAt, now)
+	}
 	result := issueopsinventorycontract.ListResult{
 		OK:             true,
-		GeneratedAt:    service.clock.Now().UTC().Format(time.RFC3339),
+		GeneratedAt:    generatedAt,
 		ScannedRecords: scannedRecords + len(diagnostics),
 		ReadErrors:     len(diagnostics),
 		UnreadableIDs:  []string{},

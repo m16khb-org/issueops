@@ -43,6 +43,8 @@ type ListEntry struct {
 	IssueURL              string                 `json:"issue_url,omitempty"`
 	RemoteArtifactURL     string                 `json:"remote_artifact_url,omitempty"`
 	UpdatedAt             string                 `json:"updated_at,omitempty"`
+	LastRecordAt          string                 `json:"last_record_at,omitempty"`
+	IdleDays              *int                   `json:"idle_days,omitempty"`
 	PendingKind           string                 `json:"pending_kind,omitempty"`
 	PendingSince          string                 `json:"pending_since,omitempty"`
 	FailureCode           string                 `json:"failure_code,omitempty"`

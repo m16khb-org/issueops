@@ -325,6 +325,41 @@ func TestListRendersFlagsForEveryAttention(t *testing.T) {
 	}
 }
 
+func TestListRendersIdleFlag(t *testing.T) {
+	three, zero := 3, 0
+	tests := []struct {
+		name     string
+		idleDays *int
+		want     string
+	}{
+		{"three days", &three, "- a 1-a phase=plan lease=active [idle:3d]"},
+		{"zero days", &zero, "- a 1-a phase=plan lease=active"},
+		{"unknown", nil, "- a 1-a phase=plan lease=active"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cli := stubRuntimeCommand(Deps{
+				ListIssueOpsCycles: func(_, _ string) (issueopsinventorycontract.ListResult, error) {
+					return issueopsinventorycontract.ListResult{
+						GeneratedAt: "T0",
+						Entries: []issueopsinventorycontract.ListEntry{
+							{ID: "a", Branch: "1-a", Phase: "plan", LeaseStatus: "active", IdleDays: test.idleDays},
+						},
+					}, nil
+				},
+			})
+			out, err := runStub(t, cli, func(c command) error { return c.runIssueOpsList(nil) })
+			if err != nil {
+				t.Fatal(err)
+			}
+			lines := strings.Split(strings.TrimSpace(out), "\n")
+			if len(lines) != 2 || lines[1] != test.want {
+				t.Fatalf("entry line = %q, want %q\n%s", lines[len(lines)-1], test.want, out)
+			}
+		})
+	}
+}
+
 func TestPhaseRejectsDoneAndReportsTrackedMaterials(t *testing.T) {
 	var materials issueopscontract.TrackedMaterials
 	var fail error

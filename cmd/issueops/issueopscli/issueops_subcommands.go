@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"issueops/cmd/issueops/cliflag"
 	"os"
+	"strconv"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -675,6 +676,9 @@ func issueOpsListFlags(entry issueopsinventorycontract.ListEntry) string {
 	}
 	if entry.IssueCreateStatus != "" {
 		flags += " [issue-create:" + entry.IssueCreateStatus + "]"
+	}
+	if entry.IdleDays != nil && *entry.IdleDays >= 1 {
+		flags += " [idle:" + strconv.Itoa(*entry.IdleDays) + "d]"
 	}
 	return flags
 }

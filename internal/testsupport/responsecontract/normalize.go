@@ -258,7 +258,7 @@ func NormalizeMCPTextJSON(value any, replacements map[string]string) any {
 
 func isDynamicTimeKey(key string) bool {
 	switch key {
-	case "updated_at", "generated_at", "cutoff", "started_at", "finished_at":
+	case "updated_at", "last_record_at", "generated_at", "cutoff", "started_at", "finished_at":
 		return true
 	default:
 		return false

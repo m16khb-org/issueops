@@ -78,6 +78,11 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 		t.Fatalf("issueops start missing id: %#v", issueopsStartRaw)
 	}
 	replacements[issueopsID] = "$ISSUEOPS_ID"
+	// list runs while the started cycle is the only record, so the entry carries
+	// the record's own timestamps (last_record_at, idle_days) deterministically.
+	cliSnapshot["issueops_list"] = runCLIJSONContract(t, replacements, func() error {
+		return runIssueOps([]string{"list", "--json"})
+	})
 	cliSnapshot["issueops_record_intent"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"intent", "record", "--id", issueopsID, "--raw-request", "Refactor IssueOps intent flow", "--interpreted-intent", "Persist main-agent judgment before planning", "--success-criteria", "intent is recorded", "--constraint", "keep contract deterministic", "--ambiguity", "none", "--non-goal", "do not continue from hook recommendation alone", "--json"})
 	})
