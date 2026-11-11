@@ -25,17 +25,24 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
+// capability narrows a resolved provider to one optional port capability, or
+// reports that the named provider lacks it.
+func capability[T any](name string, resolved port.IssueProvider, ability string) (T, error) {
+	capable, ok := resolved.(T)
+	if !ok {
+		var zero T
+		return zero, fmt.Errorf("provider %q cannot %s", name, ability)
+	}
+	return capable, nil
+}
+
 // ResolveMilestoneSetter returns the milestone capability of the named provider.
 func ResolveMilestoneSetter(name string) (port.IssueProviderMilestoneSetter, error) {
 	resolved, err := Resolve(name)
 	if err != nil {
 		return nil, err
 	}
-	setter, ok := resolved.(port.IssueProviderMilestoneSetter)
-	if !ok {
-		return nil, fmt.Errorf("provider %q cannot set milestones", name)
-	}
-	return setter, nil
+	return capability[port.IssueProviderMilestoneSetter](name, resolved, "set milestones")
 }
 
 // ResolveAssigner returns the assignee capability of the named provider.
@@ -44,11 +51,7 @@ func ResolveAssigner(name string) (port.IssueProviderAssigner, error) {
 	if err != nil {
 		return nil, err
 	}
-	assigner, ok := resolved.(port.IssueProviderAssigner)
-	if !ok {
-		return nil, fmt.Errorf("provider %q cannot add assignees", name)
-	}
-	return assigner, nil
+	return capability[port.IssueProviderAssigner](name, resolved, "add assignees")
 }
 
 // ResolveRetitler returns the title capability of the named provider.
@@ -57,11 +60,7 @@ func ResolveRetitler(name string) (port.IssueProviderRetitler, error) {
 	if err != nil {
 		return nil, err
 	}
-	retitler, ok := resolved.(port.IssueProviderRetitler)
-	if !ok {
-		return nil, fmt.Errorf("provider %q cannot change titles", name)
-	}
-	return retitler, nil
+	return capability[port.IssueProviderRetitler](name, resolved, "change titles")
 }
 
 // ResolveLabeler returns the label capability of the named provider.
@@ -70,11 +69,7 @@ func ResolveLabeler(name string) (port.IssueProviderLabeler, error) {
 	if err != nil {
 		return nil, err
 	}
-	labeler, ok := resolved.(port.IssueProviderLabeler)
-	if !ok {
-		return nil, fmt.Errorf("provider %q cannot add labels", name)
-	}
-	return labeler, nil
+	return capability[port.IssueProviderLabeler](name, resolved, "add labels")
 }
 
 // ResolveCommenter returns the comment capability of the named provider.
@@ -83,11 +78,7 @@ func ResolveCommenter(name string) (port.IssueProviderCommenter, error) {
 	if err != nil {
 		return nil, err
 	}
-	commenter, ok := resolved.(port.IssueProviderCommenter)
-	if !ok {
-		return nil, fmt.Errorf("provider %q cannot post comments", name)
-	}
-	return commenter, nil
+	return capability[port.IssueProviderCommenter](name, resolved, "post comments")
 }
 
 // ResolvePullRequestMerger returns the merge capability of the named provider.
@@ -96,9 +87,5 @@ func ResolvePullRequestMerger(name string) (port.IssueProviderPullRequestMerger,
 	if err != nil {
 		return nil, err
 	}
-	merger, ok := resolved.(port.IssueProviderPullRequestMerger)
-	if !ok {
-		return nil, fmt.Errorf("provider %q cannot merge pull requests", name)
-	}
-	return merger, nil
+	return capability[port.IssueProviderPullRequestMerger](name, resolved, "merge pull requests")
 }
