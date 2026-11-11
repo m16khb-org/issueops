@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -80,7 +81,7 @@ func Chmod(path string, mode fs.FileMode) error {
 	if err != nil {
 		return &os.PathError{Op: "chmod", Path: path, Err: err}
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	if mode&0o077 != 0 {
 		// An empty unprotected DACL leaves only the parent's inheritable ACEs.
 		// SetEntriesInAcl returns no ACL for zero entries, so build the 8-byte
@@ -123,8 +124,8 @@ func MkdirAll(path string, perm fs.FileMode) error {
 	if perm&0o077 != 0 {
 		return nil
 	}
-	for i := len(missing) - 1; i >= 0; i-- {
-		if err := Chmod(missing[i], perm); err != nil {
+	for _, dir := range slices.Backward(missing) {
+		if err := Chmod(dir, perm); err != nil {
 			return err
 		}
 	}
@@ -187,7 +188,7 @@ func PathIdentity(path string, _ fs.FileInfo) (Identity, bool) {
 	if err != nil {
 		return Identity{}, false
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	return handleIdentity(handle)
 }
 
@@ -225,7 +226,7 @@ func ownerOnly(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	sd, err := windows.GetSecurityInfo(handle, windows.SE_FILE_OBJECT,
 		windows.OWNER_SECURITY_INFORMATION|windows.DACL_SECURITY_INFORMATION)
 	if err != nil {
@@ -248,7 +249,7 @@ func ownerOnlyDescriptor(sd *windows.SECURITY_DESCRIPTOR) (bool, error) {
 		// A NULL DACL grants everyone full access.
 		return false, err
 	}
-	for i := uint32(0); i < uint32(dacl.AceCount); i++ {
+	for i := range uint32(dacl.AceCount) {
 		var ace *windows.ACCESS_ALLOWED_ACE
 		if err := windows.GetAce(dacl, i, &ace); err != nil {
 			return false, err
@@ -273,12 +274,7 @@ type principalSet struct {
 }
 
 func (p principalSet) trusted(sid *windows.SID) bool {
-	for _, candidate := range p.trustee {
-		if sid.Equals(candidate) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(p.trustee, sid.Equals)
 }
 
 var trustedPrincipals = sync.OnceValues(func() (principalSet, error) {
@@ -346,10 +342,5 @@ func isExecutableName(path string) bool {
 	if list == "" {
 		list = ".com;.exe;.bat;.cmd"
 	}
-	for _, candidate := range filepath.SplitList(strings.ToLower(list)) {
-		if candidate == ext {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(filepath.SplitList(strings.ToLower(list)), ext)
 }

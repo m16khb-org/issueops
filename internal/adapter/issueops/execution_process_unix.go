@@ -17,6 +17,12 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
+// psUTC makes ps render lstart in UTC, parsed back with time.UTC. Rendering in
+// the caller's zone and parsing with Go's time.Local broke on a POSIX TZ such
+// as KST-9: libc applied it, Go fell back to UTC, and the receipt moved by
+// nine hours, so another session saw a live holder as a different process.
+const psUTC = "TZ=UTC0"
+
 // processTableArguments returns one `ps -o args=` row per process.
 func processTableArguments(ctx context.Context) (string, error) {
 	cmd := exec.CommandContext(ctx, "ps", "-axww", "-o", "args=")
@@ -169,5 +175,5 @@ func inspectWorkspaceProcessesWithin(root string, excluded map[int]bool, timeout
 		probeExcluded[cmd.Process.Pid] = true
 		excluded = probeExcluded
 	}
-	return parseWorkspaceProcesses(stdout.String(), root, excluded)
+	return parseWorkspaceProcessesWithPathPredicate(stdout.String(), root, excluded, pathWithinResolved)
 }

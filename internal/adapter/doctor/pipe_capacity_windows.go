@@ -12,8 +12,8 @@ func MeasurePipeCapacity() (int, error) {
 	if err := windows.CreatePipe(&read, &write, nil, 0); err != nil {
 		return 0, err
 	}
-	defer windows.CloseHandle(read)
-	defer windows.CloseHandle(write)
+	defer func() { _ = windows.CloseHandle(read) }()
+	defer func() { _ = windows.CloseHandle(write) }()
 	mode := uint32(windows.PIPE_NOWAIT)
 	if err := windows.SetNamedPipeHandleState(write, &mode, nil, nil); err != nil {
 		return 0, err

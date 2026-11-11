@@ -3,6 +3,7 @@
 package cmux
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -220,4 +221,14 @@ func samePromptIdentity(left, right unix.Stat_t) bool {
 
 func samePromptStat(left, right unix.Stat_t) bool {
 	return samePromptIdentity(left, right) && left.Mode == right.Mode && left.Size == right.Size && left.Uid == right.Uid && left.Gid == right.Gid
+}
+
+func validatePromptBytes(value []byte, expectedDigest string) error {
+	if bytes.IndexByte(value, 0) >= 0 {
+		return fmt.Errorf("cmux prompt must not contain NUL bytes")
+	}
+	if digest(value) != expectedDigest {
+		return fmt.Errorf("cmux prompt digest mismatch")
+	}
+	return nil
 }

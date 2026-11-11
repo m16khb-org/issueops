@@ -5,6 +5,7 @@ package osprocess
 import (
 	"errors"
 	"os"
+	"slices"
 	"time"
 	"unsafe"
 
@@ -25,8 +26,8 @@ func KillTree(pid int) error {
 		return err
 	}
 	var errs []error
-	for i := len(tree) - 1; i >= 0; i-- {
-		if err := terminateProcess(tree[i]); err != nil && !errors.Is(err, os.ErrProcessDone) {
+	for _, child := range slices.Backward(tree) {
+		if err := terminateProcess(child); err != nil && !errors.Is(err, os.ErrProcessDone) {
 			errs = append(errs, err)
 		}
 	}
@@ -49,7 +50,7 @@ func Alive(pid int) bool {
 		// Access denied still proves the process exists.
 		return errors.Is(err, windows.ERROR_ACCESS_DENIED)
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	return running(handle)
 }
 
@@ -77,7 +78,7 @@ func terminateProcess(pid uint32) error {
 	if err != nil {
 		return os.NewSyscallError("OpenProcess", err)
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	if !running(handle) {
 		return os.ErrProcessDone
 	}
@@ -93,7 +94,7 @@ func descendants(root uint32) ([]uint32, error) {
 	if err != nil {
 		return nil, os.NewSyscallError("CreateToolhelp32Snapshot", err)
 	}
-	defer windows.CloseHandle(snapshot)
+	defer func() { _ = windows.CloseHandle(snapshot) }()
 	children := map[uint32][]uint32{}
 	entry := windows.ProcessEntry32{Size: uint32(unsafe.Sizeof(windows.ProcessEntry32{}))}
 	for err = windows.Process32First(snapshot, &entry); err == nil; err = windows.Process32Next(snapshot, &entry) {
@@ -128,7 +129,7 @@ func startTime(pid uint32) (int64, bool) {
 	if err != nil {
 		return 0, false
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	var creation, exit, kernel, user windows.Filetime
 	if err := windows.GetProcessTimes(handle, &creation, &exit, &kernel, &user); err != nil {
 		return 0, false
@@ -153,7 +154,7 @@ func Snapshot() ([]Entry, error) {
 	if err != nil {
 		return nil, os.NewSyscallError("CreateToolhelp32Snapshot", err)
 	}
-	defer windows.CloseHandle(snapshot)
+	defer func() { _ = windows.CloseHandle(snapshot) }()
 	var entries []Entry
 	entry := windows.ProcessEntry32{Size: uint32(unsafe.Sizeof(windows.ProcessEntry32{}))}
 	for err = windows.Process32First(snapshot, &entry); err == nil; err = windows.Process32Next(snapshot, &entry) {
@@ -176,7 +177,7 @@ func Identity(pid int) (time.Time, string, error) {
 	if err != nil {
 		return time.Time{}, "", os.NewSyscallError("OpenProcess", err)
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	var creation, exit, kernel, user windows.Filetime
 	if err := windows.GetProcessTimes(handle, &creation, &exit, &kernel, &user); err != nil {
 		return time.Time{}, "", os.NewSyscallError("GetProcessTimes", err)
@@ -208,7 +209,7 @@ func readParameter(pid int, field func(*windows.RTL_USER_PROCESS_PARAMETERS) win
 	if err != nil {
 		return "", os.NewSyscallError("OpenProcess", err)
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	var basic windows.PROCESS_BASIC_INFORMATION
 	if err := windows.NtQueryInformationProcess(handle, windows.ProcessBasicInformation,
 		unsafe.Pointer(&basic), uint32(unsafe.Sizeof(basic)), nil); err != nil {

@@ -87,7 +87,7 @@ func TestParseWorkspaceProcessesPreservesResolvedBoundaries(t *testing.T) {
 		{PID: 31, Command: "second", FD: "3", Access: "u", Path: inside},
 	}
 
-	got, err := parseWorkspaceProcesses(output, alias, nil)
+	got, err := parseWorkspaceProcessesWithPathPredicate(output, alias, nil, pathWithinResolved)
 
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("processes=%+v want=%+v error=%v", got, want, err)
@@ -110,7 +110,7 @@ func TestParseWorkspaceProcessesDoesNotReusePreviousContainment(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := "p42\nfcwd\nn" + link + "\n"
-	first, err := parseWorkspaceProcesses(output, root, nil)
+	first, err := parseWorkspaceProcessesWithPathPredicate(output, root, nil, pathWithinResolved)
 	if err != nil || len(first) != 1 {
 		t.Fatalf("first processes=%+v error=%v", first, err)
 	}
@@ -121,7 +121,7 @@ func TestParseWorkspaceProcessesDoesNotReusePreviousContainment(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	second, err := parseWorkspaceProcesses(output, root, nil)
+	second, err := parseWorkspaceProcessesWithPathPredicate(output, root, nil, pathWithinResolved)
 
 	if err != nil || len(second) != 0 {
 		t.Fatalf("second processes=%+v error=%v", second, err)
@@ -136,7 +136,7 @@ func TestParseWorkspaceProcessesRejectsMalformedInput(t *testing.T) {
 		"long row":    "n" + strings.Repeat("x", 70*1024),
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := parseWorkspaceProcesses(output, t.TempDir(), nil)
+			_, err := parseWorkspaceProcessesWithPathPredicate(output, t.TempDir(), nil, pathWithinResolved)
 			if err == nil {
 				t.Fatal("expected parser error")
 			}

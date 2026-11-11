@@ -112,12 +112,6 @@ func nativeProcessAncestryFromSnapshot(snapshot map[int]nativeProcessSnapshotEnt
 	return nil, fmt.Errorf("native process ancestry exceeds %d entries", maxNativeProcessAncestry)
 }
 
-// psUTC makes ps render lstart in UTC, parsed back with time.UTC. Rendering in
-// the caller's zone and parsing with Go's time.Local broke on a POSIX TZ such
-// as KST-9: libc applied it, Go fell back to UTC, and the receipt moved by
-// nine hours, so another session saw a live holder as a different process.
-const psUTC = "TZ=UTC0"
-
 func parseNativeProcessStart(value string) (time.Time, error) {
 	value = strings.TrimSpace(value)
 	for _, layout := range []string{"Mon Jan _2 15:04:05 2006", "Mon Jan 2 15:04:05 2006"} {
@@ -179,7 +173,7 @@ func inspectNativeProcessReceiptFromSnapshot(
 // inspectWorkspaceProcesses는 워크트리를 점유한 프로세스를 관측한다. lsof에
 // "+D root"를 주면 트리 전체를 재귀 stat하므로 node_modules 같은 대형 워크트리에서는
 // probe 자체가 타임아웃한다(실측 6~8초). 경로 판정은 어차피
-// parseWorkspaceProcesses의 pathWithinResolved가 수행하므로, 전체 open file
+// parseWorkspaceProcessesWithPathPredicate에 넘긴 pathWithinResolved가 수행하므로, 전체 open file
 // 목록을 받아 Go에서 걸러 같은 결과를 훨씬 싸게 얻는다.
 func inspectWorkspaceProcesses(root string, excluded map[int]bool) ([]workspaceProcess, error) {
 	return inspectWorkspaceProcessesWithin(root, excluded, nativeProcessProbeTimeout)
@@ -226,10 +220,6 @@ func processHasAncestorInSnapshot(
 		}
 	}
 	return false
-}
-
-func parseWorkspaceProcesses(output, root string, excluded map[int]bool) ([]workspaceProcess, error) {
-	return parseWorkspaceProcessesWithPathPredicate(output, root, excluded, pathWithinResolved)
 }
 
 func parseWorkspaceProcessesWithPathPredicate(output, root string, excluded map[int]bool, pathWithin func(string, string) bool) ([]workspaceProcess, error) {

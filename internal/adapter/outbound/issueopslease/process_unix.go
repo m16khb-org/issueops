@@ -16,6 +16,8 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
+const processProbeTimeout = 3 * time.Second
+
 func observeReceipt(ctx context.Context, pid int) (leasedomain.ProcessReceipt, error) {
 	if pid <= 0 {
 		return leasedomain.ProcessReceipt{}, fmt.Errorf("native process pid must be positive")
