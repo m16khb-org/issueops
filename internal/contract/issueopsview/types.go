@@ -1,6 +1,7 @@
 // Package issueopsview 패키지는 `issueops view`가 돌려주는 cycle 조망의 DTO를
-// 소유한다. 지금은 timeline 조망 하나이며, live record나 cleanup이 남긴 보존
-// 요약 중 어느 쪽에서 읽었는지를 결과에 남긴다. contract 계층 패키지다.
+// 소유한다. 조망은 timeline(시간순 이벤트)과 graph(증거 노드와 연결) 두 가지이며,
+// live record나 cleanup이 남긴 보존 요약 중 어느 쪽에서 읽었는지를 결과에
+// 남긴다. contract 계층 패키지다.
 package issueopsview
 
 import (
@@ -130,7 +131,8 @@ type JudgedBy struct {
 	UnmappedStaleKeys []string `json:"unmapped_stale_keys"`
 }
 
-// GraphNode 타입은 증거 노드 한 개다. Present가 false이면 아직 없는 증거다.
+// GraphNode 타입은 증거 노드 한 개다. Present가 false이면 아직 없는 증거다. At은
+// UTC time.RFC3339Nano이고, 기록된 시각을 해석할 수 없으면 비어 있다.
 type GraphNode struct {
 	ID      string `json:"id"`
 	Kind    string `json:"kind"`

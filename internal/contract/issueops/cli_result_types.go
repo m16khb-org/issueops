@@ -159,7 +159,8 @@ type ReviewMetricsResult struct {
 
 // ReviewMetricsRetention 타입은 cleanup이 남긴 보존 행의 outcome별 수와 가장
 // 늦은 보존 시각이다. 같은 ID의 live record가 있는 행도 센다. LastRetainedAt은
-// time.RFC3339Nano로 해석되는 RetainedAt 중 가장 늦은 값의 원문이다.
+// time.RFC3339Nano로 해석되는 RetainedAt 중 가장 늦은 시점을 UTC
+// time.RFC3339Nano로 정규화한 값이다. 해석되지 않는 RetainedAt은 후보에서 빠진다.
 // 디코딩에 실패한 보존 행은 수에 들어가지 않고 read_errors로만 나간다.
 // `issueops prune`으로 지운 사이클은 보존 행이 없어 세지 못한다.
 type ReviewMetricsRetention struct {

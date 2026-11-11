@@ -106,7 +106,7 @@ func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIss
 	number := createdArtifactNumber(result.URL)
 	if number == "" {
 		return port.IssueProviderCreateIssueResult{OK: false, URL: result.URL},
-			&port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("created issue URL %q has no canonical number; needs reconciliation; not retried", result.URL)}
+			&port.IssueProviderCreateError{Invoked: true, Command: model.FailureCommandGHIssueCreate, Err: fmt.Errorf("created issue URL %q has no canonical number; needs reconciliation; not retried", result.URL)}
 	}
 	return port.IssueProviderCreateIssueResult{
 		OK:     true,

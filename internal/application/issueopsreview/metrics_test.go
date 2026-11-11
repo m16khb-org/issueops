@@ -169,6 +169,10 @@ func TestMetricsReaderReportsRetention(t *testing.T) {
 			row("a", contract.CycleOutcomeFinished, "2026-11-01T18:00:00+09:00"),
 			row("b", contract.CycleOutcomeAbandoned, "2026-11-01T10:00:00Z"),
 		}, want: contract.ReviewMetricsRetention{Finished: 1, Abandoned: 1, LastRetainedAt: "2026-11-01T10:00:00Z"}, cycles: 3},
+		{name: "an offset last is reported in utc", rows: []contract.CycleOutcome{
+			row("a", contract.CycleOutcomeFinished, "2026-11-01T09:00:00.5+09:00"),
+			row("b", contract.CycleOutcomeAbandoned, "2026-10-31T23:00:00Z"),
+		}, want: contract.ReviewMetricsRetention{Finished: 1, Abandoned: 1, LastRetainedAt: "2026-11-01T00:00:00.5Z"}, cycles: 3},
 		{name: "unparseable time counts but is not a last candidate", rows: []contract.CycleOutcome{
 			row("a", contract.CycleOutcomeFinished, "not-a-time"),
 			row("b", contract.CycleOutcomeAbandoned, "2026-11-01T10:00:00Z"),

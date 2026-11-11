@@ -566,3 +566,25 @@ func TestEvidenceGraph(t *testing.T) {
 		}
 	})
 }
+
+// TestEvidenceGraphNodeAtIsUTC pins the node time format to the timeline's: UTC
+// time.RFC3339Nano, and empty when the recorded value does not parse.
+func TestEvidenceGraphNodeAtIsUTC(t *testing.T) {
+	for _, row := range []struct{ name, raw, want string }{
+		{"utc kept", "2026-09-01T00:00:00Z", "2026-09-01T00:00:00Z"},
+		{"offset to utc", "2026-09-01T09:00:00.5+09:00", "2026-09-01T00:00:00.5Z"},
+		{"unparseable empty", "yesterday", ""},
+	} {
+		t.Run(row.name, func(t *testing.T) {
+			record := fullGraphRecord()
+			record.Intent.RecordedAt = row.raw
+			record.AISlopCleanAt = row.raw
+			graph := EvidenceGraph(record, Judgment{Stage: "verify"})
+			for _, node := range graph.Nodes {
+				if (node.ID == "intent" || node.ID == "ai_slop_clean") && node.At != row.want {
+					t.Fatalf("node %s at = %q, want %q", node.ID, node.At, row.want)
+				}
+			}
+		})
+	}
+}

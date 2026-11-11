@@ -112,9 +112,9 @@ func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live 
 			continue
 		}
 		// 시각은 문자열이 아니라 시점으로 비교한다(오프셋이 달라도 맞다). 해석 실패
-		// 행은 수에는 들어가고 last 후보에서만 빠진다.
+		// 행은 수에는 들어가고 last 후보에서만 빠진다. 출력은 UTC RFC3339Nano다.
 		if at, err := time.Parse(time.RFC3339Nano, outcome.RetainedAt); err == nil && (retention.LastRetainedAt == "" || at.After(last)) {
-			last, retention.LastRetainedAt = at, outcome.RetainedAt
+			last, retention.LastRetainedAt = at, at.UTC().Format(time.RFC3339Nano)
 		}
 	}
 	result.Retention = retention

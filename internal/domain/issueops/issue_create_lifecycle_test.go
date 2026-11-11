@@ -149,3 +149,29 @@ func TestIssueCreateOutcomeCarriesFailureCause(t *testing.T) {
 		t.Fatalf("retry kept cause = %q %q %d", got.Failure, got.FailureCommand, got.FailureHTTPStatus)
 	}
 }
+
+// TestFailureCauseKeepsEveryAllowedCommand walks the contract's allowed list, so
+// a command added there is both accepted by validation and kept by failureCause.
+func TestFailureCauseKeepsEveryAllowedCommand(t *testing.T) {
+	const id = "0123456789abcdef0123456789abcdef"
+	if len(model.IssueCreateFailureCommands) == 0 {
+		t.Fatal("IssueCreateFailureCommands is empty")
+	}
+	for _, command := range model.IssueCreateFailureCommands {
+		t.Run(command, func(t *testing.T) {
+			intent := model.IssueCreateIntent{
+				OperationID: id, Marker: "<!-- issueops:issue-create:" + id + " -->",
+				Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "t",
+				BodySHA256: strings.Repeat("a", 64), Status: model.IssueCreateIntentInvokedUnknown, Attempt: 1,
+				Failure: "boom", FailureCommand: command, FailureHTTPStatus: 404,
+				StartedAt: "2026-08-14T00:00:00Z", UpdatedAt: "2026-08-14T00:01:00Z",
+			}
+			if err := model.ValidateIssueCreateIntent(intent); err != nil {
+				t.Fatalf("ValidateIssueCreateIntent(%q) = %v", command, err)
+			}
+			if got, status := failureCause(command, 404); got != command || status != 404 {
+				t.Fatalf("failureCause(%q, 404) = %q, %d", command, got, status)
+			}
+		})
+	}
+}

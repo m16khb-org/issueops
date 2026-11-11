@@ -40,8 +40,10 @@ const (
 	MaxFailureHTTPStatus = 599
 )
 
-// issueCreateFailureCommands lists every allowed FailureCommand.
-var issueCreateFailureCommands = []string{FailureCommandGHIssueCreate, FailureCommandGlabIssueCreate, FailureCommandGlabGraphQL}
+// IssueCreateFailureCommands lists every allowed FailureCommand. Validation and
+// the domain that records a provider failure both read this one list, so a value
+// added here is accepted on write and kept on record. Callers must not modify it.
+var IssueCreateFailureCommands = []string{FailureCommandGHIssueCreate, FailureCommandGlabIssueCreate, FailureCommandGlabGraphQL}
 
 // IssueCreateIntent is the sealed record of one remote issue create. The marker
 // and body digest let a later run find the created issue and adopt it instead
@@ -131,7 +133,7 @@ func ValidateIssueCreateIntent(intent IssueCreateIntent) error {
 	if err := validateIssueCreateValues("assignees", intent.Assignees); err != nil {
 		return err
 	}
-	if intent.FailureCommand != "" && !slices.Contains(issueCreateFailureCommands, intent.FailureCommand) {
+	if intent.FailureCommand != "" && !slices.Contains(IssueCreateFailureCommands, intent.FailureCommand) {
 		return fmt.Errorf("issue create intent failure_command is not a known provider command")
 	}
 	if intent.FailureHTTPStatus != 0 && (intent.FailureHTTPStatus < MinFailureHTTPStatus || intent.FailureHTTPStatus > MaxFailureHTTPStatus) {

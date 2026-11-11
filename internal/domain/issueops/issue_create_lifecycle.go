@@ -122,9 +122,7 @@ func CompleteIssueCreateIntent(record model.Record, issueURL, completedAt, proje
 // makes the whole outcome write fail and lose its Failure message.
 func failureCause(command string, status int) (string, int) {
 	command = strings.TrimSpace(command)
-	switch command {
-	case model.FailureCommandGHIssueCreate, model.FailureCommandGlabIssueCreate, model.FailureCommandGlabGraphQL:
-	default:
+	if !slices.Contains(model.IssueCreateFailureCommands, command) {
 		command = ""
 	}
 	if status < model.MinFailureHTTPStatus || status > model.MaxFailureHTTPStatus {

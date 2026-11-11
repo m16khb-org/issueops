@@ -41,8 +41,8 @@ func ListCycleOutcomes(stateRoot string) ([]model.CycleOutcome, []string, error)
 	outcomes := make([]model.CycleOutcome, 0, len(rows))
 	var unreadable []string
 	for _, row := range rows {
-		var outcome model.CycleOutcome
-		if err := json.Unmarshal(row.Data, &outcome); err != nil || outcome.SchemaVersion != model.CycleOutcomeSchemaVersion || outcome.ID != row.ID {
+		outcome, err := decodeCycleOutcome(row.ID, row.Data)
+		if err != nil {
 			unreadable = append(unreadable, row.ID)
 			continue
 		}
@@ -66,15 +66,25 @@ func ReadCycleOutcome(stateRoot, id string) (model.CycleOutcome, bool, error) {
 	if !ok {
 		return model.CycleOutcome{}, false, nil
 	}
-	var outcome model.CycleOutcome
-	if err := json.Unmarshal(data, &outcome); err != nil {
-		return model.CycleOutcome{}, false, fmt.Errorf("decode cycle outcome %s: %w", id, err)
-	}
-	if outcome.SchemaVersion != model.CycleOutcomeSchemaVersion {
-		return model.CycleOutcome{}, false, fmt.Errorf("cycle outcome %s has schema %d, want %d", id, outcome.SchemaVersion, model.CycleOutcomeSchemaVersion)
-	}
-	if outcome.ID != id {
-		return model.CycleOutcome{}, false, fmt.Errorf("cycle outcome row %s holds outcome for %q", id, outcome.ID)
+	outcome, err := decodeCycleOutcome(id, data)
+	if err != nil {
+		return model.CycleOutcome{}, false, err
 	}
 	return outcome, true, nil
+}
+
+// decodeCycleOutcome decodes the retained row stored under id and rejects a row
+// that fails to decode, carries another schema, or names another cycle.
+func decodeCycleOutcome(id string, data []byte) (model.CycleOutcome, error) {
+	var outcome model.CycleOutcome
+	if err := json.Unmarshal(data, &outcome); err != nil {
+		return model.CycleOutcome{}, fmt.Errorf("decode cycle outcome %s: %w", id, err)
+	}
+	if outcome.SchemaVersion != model.CycleOutcomeSchemaVersion {
+		return model.CycleOutcome{}, fmt.Errorf("cycle outcome %s has schema %d, want %d", id, outcome.SchemaVersion, model.CycleOutcomeSchemaVersion)
+	}
+	if outcome.ID != id {
+		return model.CycleOutcome{}, fmt.Errorf("cycle outcome row %s holds outcome for %q", id, outcome.ID)
+	}
+	return outcome, nil
 }

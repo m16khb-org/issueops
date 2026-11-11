@@ -3,6 +3,7 @@ package issueopsview
 import (
 	"slices"
 	"strings"
+	"time"
 
 	issueopsviewcontract "issueops/internal/contract/issueopsview"
 )
@@ -244,5 +245,19 @@ func graphNodes(record issueopsviewcontract.Record) []issueopsviewcontract.Graph
 	if completion.Present {
 		completion.At = record.Execution.Completion.CompletedAt
 	}
-	return append(nodes, pull, completion, node("parent", record.Delegation != nil))
+	nodes = append(nodes, pull, completion, node("parent", record.Delegation != nil))
+	for i := range nodes {
+		nodes[i].At = graphNodeAt(nodes[i].At)
+	}
+	return nodes
+}
+
+// graphNodeAt formats raw as UTC time.RFC3339Nano, the form the timeline and
+// the inventory use, or returns "" when raw is empty or does not parse.
+func graphNodeAt(raw string) string {
+	at, err := time.Parse(time.RFC3339Nano, raw)
+	if err != nil {
+		return ""
+	}
+	return at.UTC().Format(time.RFC3339Nano)
 }

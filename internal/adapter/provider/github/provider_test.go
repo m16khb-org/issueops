@@ -763,6 +763,18 @@ exit 97
 		_, err := NewProvider().CreateIssue(t.Context(), req(repo))
 		assertGitHubCreateCause(t, err, true, "gh issue create", 404)
 	})
+	t.Run("exited zero without a canonical issue URL", func(t *testing.T) {
+		repo := fakeGhRepo(t, `#!/bin/sh
+if [ "$1 $2" = "issue create" ]; then
+  echo "created"
+  exit 0
+fi
+echo "unexpected gh call: $*" >&2
+exit 97
+`)
+		_, err := NewProvider().CreateIssue(t.Context(), req(repo))
+		assertGitHubCreateCause(t, err, true, "gh issue create", 0)
+	})
 	t.Run("failed to start", func(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
 		_, err := NewProvider().CreateIssue(t.Context(), req(t.TempDir()))

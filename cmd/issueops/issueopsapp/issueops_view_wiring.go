@@ -27,9 +27,10 @@ func issueOpsViewHandler(next func(string, string, string) (issueopsviewcontract
 		Next: func(ctx context.Context, stateRoot, cwd, id string) (issueopsviewcontract.NextResult, error) {
 			return next(stateRoot, cwd, id)
 		},
+		// 존재만 본다: worktreeState가 존재로 치는 조건(빈 root가 아니고
+		// show-toplevel이 값을 낸다)과 같고, branch와 HEAD는 읽지 않는다.
 		WorktreePresent: func(ctx context.Context, root string) bool {
-			present, _, _ := newNextGitObservation(preflightadapter.GitCmd).worktreeState(root)
-			return present
+			return newNextGitObservation(preflightadapter.GitCmd).repository(root)
 		},
 		Now: time.Now,
 	}))
