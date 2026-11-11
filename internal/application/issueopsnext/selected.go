@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
@@ -17,6 +18,7 @@ func (service *Service) nextSelected(
 	result issueopsnextcontract.Result,
 	actorHost, actorSession string,
 	fromEnv bool,
+	now time.Time,
 ) (issueopsnextcontract.Result, error) {
 	ports := service.ports
 	if ports.ReadSelected == nil || ports.SourceRoot == nil {
@@ -49,6 +51,7 @@ func (service *Service) nextSelected(
 		}
 	}
 	decided := applyDecision(result, issueopsnextdomain.Classify(input))
+	decided = applyIdleWarning(decided, record, now)
 	return service.applyReviewTier(decided, record, actorHost), nil
 }
 

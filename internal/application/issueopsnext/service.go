@@ -39,9 +39,10 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	if ports.SourceRoot != nil {
 		sourceRoot = ports.SourceRoot(cwd)
 	}
+	now := ports.Now().UTC()
 	result := issueopsnextcontract.Result{
 		OK:          true,
-		GeneratedAt: ports.Now().UTC().Format(time.RFC3339),
+		GeneratedAt: now.Format(time.RFC3339),
 		CWD:         cwd,
 		CWDRole:     cwdRole(ports, cwd, sourceRoot),
 		SourceRoot:  sourceRoot,
@@ -60,7 +61,7 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	}
 
 	if selectedID := requestedCycleID(ports, id); selectedID != "" {
-		return service.nextSelected(ctx, stateRoot, sourceRoot, selectedID, result, actorHost, actorSession, strings.TrimSpace(id) == "")
+		return service.nextSelected(ctx, stateRoot, sourceRoot, selectedID, result, actorHost, actorSession, strings.TrimSpace(id) == "", now)
 	}
 	listing, err := ports.ListCycles(ctx, stateRoot, sourceRoot)
 	if err != nil {
@@ -85,7 +86,16 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	}
 	result.Selected = recordEntry(record)
 	decided := applyDecision(result, issueopsnextdomain.Classify(service.buildInput(ctx, stateRoot, sourceRoot, record, listing.Entries, actorHost, actorSession)))
+	decided = applyIdleWarning(decided, record, now)
 	return service.applyReviewTier(decided, record, actorHost), nil
+}
+
+// applyIdleWarning appends the stall warning of the selected record, if any.
+func applyIdleWarning(result issueopsnextcontract.Result, record issueopscontract.Record, now time.Time) issueopsnextcontract.Result {
+	if warning := issueopsnextdomain.IdleWarning(record, now); warning != "" {
+		result.Warnings = append(result.Warnings, warning)
+	}
+	return result
 }
 
 // dependenciesMissing reports whether a port Next cannot run without is unset.
