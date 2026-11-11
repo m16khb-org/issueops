@@ -385,10 +385,11 @@ func selectCycle(
 		return &active[0], nil
 	default:
 		// Probe: 300 active cycles made next 21 KB of candidates. Keep the
-		// most recently updated ones; the caller names the rest.
+		// most recently active ones (LastRecordAt, else UpdatedAt); the caller
+		// names the rest.
 		if len(active) > maxCandidates {
 			slices.SortStableFunc(active, func(a, b issueopsinventorycontract.ListEntry) int {
-				return strings.Compare(b.UpdatedAt, a.UpdatedAt)
+				return candidateInstant(b).Compare(candidateInstant(a))
 			})
 			active = active[:maxCandidates]
 		}
@@ -398,6 +399,18 @@ func selectCycle(
 		}
 		return nil, candidates
 	}
+}
+
+// candidateInstant returns the time that ranks an entry's recency: LastRecordAt,
+// else UpdatedAt, else the zero time. RFC3339Nano text does not sort as time
+// (trimmed trailing zeros, differing offsets), so the values are parsed.
+func candidateInstant(entry issueopsinventorycontract.ListEntry) time.Time {
+	for _, value := range []string{entry.LastRecordAt, entry.UpdatedAt} {
+		if parsed, err := time.Parse(time.RFC3339Nano, value); err == nil {
+			return parsed
+		}
+	}
+	return time.Time{}
 }
 
 // maxCandidates bounds next's ambiguous candidates and its done-cycle list.
