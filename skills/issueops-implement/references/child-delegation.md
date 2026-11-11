@@ -22,10 +22,16 @@ issueops child status --parent "$ISSUEOPS_ID" \
 - accept 전 rubric: 위임한 scope·expected worktree 준수, acceptance별 증거,
   선언한 검증 명령의 실행 결과, 무관한 diff·secret·stale scaffold 없음. 하나라도
   모호하면 accept하지 않는다.
+- child 보고의 상태는 `completed`·`exhausted`·`blocked` 중 하나다. 이 상태는 verdict가 아니다.
+  `exhausted`나 `blocked`인 보고와, 변경도 증거도 없는 보고는 accept하지 않는다. 고칠 수 있으면
+  reject하고, 범위를 없앨 때만 drop한다. `inferred`로만 표시된 부정 결과는 parent가 한 번 다시 확인한다.
+- 서로 의존하는 child는 앞 child를 accept한 뒤에 다음 child를 보낸다. 서로 독립인 child만 동시에
+  보내고, 동시 개수는 호스트의 native concurrency가 정한다.
 - parent는 child record를 대신 수정하지 않는다. prompt에는 parent/child ID·generation·
   branch·canonical path·허용 scope·수락 기준·검증·중단 규칙을 넣고, child가 pwd·Git root·
   branch·HEAD·native process receipt·whoami를 확인한 뒤 쓰게 한다.
-  출력은 변경 파일 요약, 검증 명령/결과, blocker/scope drift다. 새 migration·remote write·
+  출력은 보고 상태, 변경 파일 요약, 검증 명령/결과(부정 결과에는 `observed`·`inferred` 표시),
+  blocker/scope drift와 범위 밖 단서다. 새 migration·remote write·
   미계획 검증·parent 결정도 scope drift다. parent는 증거를 직접 검증한 뒤 accept/reject/drop을
   기록한다. 고칠 수 있는 미완료는 reject, 범위를 제거하거나 대체할 때만 사유를 적고 drop한다.
   Omo durable child는 canonical worktree에 cwd가 결속된 native team을 사용한다.

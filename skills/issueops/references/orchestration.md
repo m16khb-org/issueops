@@ -72,9 +72,10 @@ Rules:
 - Do not mutate the parent record directly. The parent accepts, rejects, or drops your result.
 
 Output:
+- Report status, exactly one of: `completed` (every acceptance criterion was run and passed; a verification command that could not run, reported with the reason, still allows `completed`), `exhausted` (stopped at a time, tool-call, or context limit; say how far the work got), `blocked` (an error, a wrong premise, or scope drift under the Scope-Drift Stop Rule stopped the work; give the evidence). This is your report, not the verdict; the parent records the verdict.
 - Summary of changed files.
-- Evidence commands and results.
-- Any blockers or scope drift.
+- Evidence commands and results. Mark every negative result ("not found", "cannot be done") as `observed` (checked directly) or `inferred` (reasoned, not checked).
+- Any blockers or scope drift. List out-of-scope leads without acting on them.
 ```
 
 ### Scope-Drift Stop Rule
@@ -90,6 +91,9 @@ Accept a child only when all items are true:
 - The child ran the stated verification commands, or explicitly reported why a command could not run.
 - The diff contains no unrelated refactor, generated drift, secrets, or stale scaffold.
 - The parent can integrate the result without guessing what changed.
+- The child report status is `completed`. A report with no change and no evidence is not `completed`.
+
+Do not accept a child whose report status is `exhausted` or `blocked`. Before relying on a negative result that is only `inferred`, re-check it once.
 
 Reject a child when the result is fixable but incomplete, out of date, weakly verified, or missing required evidence. Drop a child only when the parent intentionally removes that work from the contract or replaces it with another path, and record the reason.
 
