@@ -100,8 +100,8 @@ verified-execution report의 `## 문서 → 구현 대조` 절에
 ADR은 append-only다. 기존 항목을 고치지 않고, 뒤집는 결정이면 그것을 새 항목으로
 적는다.
 
-하네스 저장소에서 `.issueops/*.md`를 고쳤으면 응답 계약 골든이 드리프트한다.
-같은 단계에서 재생성한다.
+하네스 저장소에서 `.issueops` 문서 본문만 고치면 응답 계약 골든은 바뀌지 않는다.
+골든이 고정한 필수 문서(AGENTS.md, 루트 문서 등 12개)를 지우거나 옮겼으면 같은 단계에서 재생성한다.
 
 ```bash
 go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -update -count=1

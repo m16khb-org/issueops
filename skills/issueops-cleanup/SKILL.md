@@ -40,8 +40,8 @@ recording belongs to this stage. `quality inspect` is not a semantic skill runne
 3. Require `done`, a released execution lease, and provider-verified merged PR/MR.
    `execution complete` owns done/release; this skill never records completion.
 4. Linked child tasks must already have verified close evidence.
-5. Dirty worktree, branch mismatch, unreadable provider state
-   or pending external intent blocks cleanup. Occupants do NOT block: preview
+5. Dirty worktree, branch mismatch or unreadable provider state blocks
+   cleanup; pending external intent blocks only abandon. Occupants do NOT block: preview
    lists `workspace_processes` (pid, command, start time, descendant/collateral
    counts); typed apply stops them. An omitted `workspace_processes` means none.
    Requester occupancy still blocks: `requester_occupies_worktree` includes
@@ -97,7 +97,8 @@ git -C "$REPO_ROOT" rev-parse --verify "refs/heads/$BRANCH"
 Require a clean status, a symbolic branch exactly equal to `$BRANCH`, and a
 worktree HEAD OID exactly equal to the local branch OID. If the provider exposes
 the merged artifact head OID, require it to equal the local branch OID too.
-A detached, repurposed, mismatched, or advanced worktree blocks cleanup.
+Stop on a detached, repurposed, mismatched, or advanced worktree: the harness
+checks the branch name, not the HEAD OID.
 
 Before confirmation, status `missing` may contain only `completion_reflected`
 and `issue_closed`. Its other gates (`pr_phase`, `remote_artifact_*`,

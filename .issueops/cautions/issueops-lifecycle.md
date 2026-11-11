@@ -19,7 +19,7 @@ IssueOps 이슈 브랜치를 `git worktree add -b`로 바로 만들면 GitHub/Gi
 - 이슈 기반 worktree를 만들기 전에 provider-linked branch를 먼저 생성한다.
 - IssueOps branch는 GitLab Development 섹션에 자동 연결되도록 issue/task number와 hyphen으로 시작한다. 예: `2386-remove-dmm-ranking-ranktype`, `2387-fix-grpc-ai-dmm-tag-replication-lag`.
 - `feature/`, `hotfix/` 같은 branch prefix를 이슈 번호 앞에 붙이면 GitLab native branch linking이 동작하지 않는다.
-- GitHub는 linked development branch 생성을 위해 `gh issue develop` 또는 노출된 GitHub MCP linked-branch tool을 사용한다.
+- GitHub는 봉인한 base SHA가 있으면 `gh api graphql`의 `createLinkedBranch`(`oid`=봉인 SHA)로 linked development branch를 만든다. SHA가 없을 때만 `gh issue develop`으로 떨어지고, 그때는 base가 갈릴 수 있다.
 - IssueOps branch prepare contract는 MCP 먼저, provider API/CLI fallback, 둘 다 실패하면 중단 순서다.
 
 ## 15. IssueOps worktree edits are the agent's own discipline
@@ -35,7 +35,7 @@ IssueOps worktree isolation cannot rely on the model remembering `pwd` or shell 
 - Tool-root drift: IssueOps may run implementation in a sibling worktree while a host session and some MCP servers remain rooted at the original source checkout. In a sampled `service-api` repository, verified 2026-06-05, Claude `.mcp.json` was gitignored and its `codegraph` server had `--path /Users/sample/workspace/service-api`, while Codex global `codegraph` was `codegraph serve --mcp` without `--path`. Do not solve this by asking the user to restart Claude Code in the worktree; preserve the current session and enforce per-call evidence instead.
 - External code-intelligence tools are the user's own installs; the harness no longer prepares their indexes or validates their `projectPath`. When using one in a worktree session, root every call at the expected worktree yourself.
 - In IssueOps worktrees, prefer native absolute-path file tools, `git -C "$ISSUEOPS_EXPECTED_WORKTREE"`, `rg` rooted at the expected worktree, and worktree-local tests for correctness. Do not let a CodeGraph/Serena-first project rule override direct worktree evidence. Treat filesystem/Serena MCP tools as blocked or advisory unless their root is proven to be the expected worktree in the current session.
-- A merged recordless orphan is not permission to bypass the direct `git worktree remove` guard. Use `issueops cleanup orphan` preview and its exact fingerprinted `--apply --confirm` path only; it fails closed for any record or lifecycle/lease, never creates a lifecycle, and never deletes the remote branch.
+- A merged recordless orphan is not permission to run `git worktree remove` directly; no hook blocks it since 2026-08-27. Use `issueops cleanup orphan` preview and its exact fingerprinted `--apply --confirm` path only; it fails closed for any record or lifecycle/lease, never creates a lifecycle, and never deletes the remote branch.
 
 ## 16. IssueOps decision replies must have numbered choices
 

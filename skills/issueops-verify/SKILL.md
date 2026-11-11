@@ -188,7 +188,7 @@ issueops pr-readiness --id "$ISSUEOPS_ID" --strict --json
 ```
 
 strict readiness의 `missing`이 `worktree_clean`, `upstream`, `upstream_fetch`,
-`upstream_synced`의 부분집합이면 남은 일은 커밋과 푸시뿐이다. 그 밖의 키가 남으면
+`upstream_synced`의 부분집합이면 남은 일은 8단계 커밋·푸시다(fetch 실패·behind는 그 경고를 따른다). 그 밖의 키가 남으면
 `next`가 가리키는 단계로 돌아간다. 특히 `gates_incomplete:*`와 `*_stale`은 앞 단계로
 되돌아가라는 뜻이다.
 

@@ -91,7 +91,8 @@ branch and base_head`로 실패한다.
 create-pr이 막힌다.
 
 원인: fingerprint는 `git diff base..HEAD`와 `git status --porcelain`이 가리키는 모든
-경로의 내용 해시다. gates.md, verified-execution report, 운영 문서, untracked 파일이 전부 들어간다.
+경로의 내용 해시다. gates.md, 운영 문서, untracked 파일이 전부 들어간다.
+`.issueops/issues/<n>/verified-execution-report.md`만 빠진다.
 
 규칙: 파일을 바꾸는 작업은 4·5단계에서 끝낸다. 6단계가 운영 문서를 고쳤으면 그
 단계가 `ai-slop-clean record`로 재봉인한 뒤 판정을 기록한다. 7단계 검증은 파일을

@@ -81,7 +81,7 @@ blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면 드
 
 ## 기록 순서
 
-아래 기록 순서를 지킨다. 항목이 비면 grill 진입이 거부된다.
+아래 기록 순서를 지킨다. intent가 비면 grill 진입이, domain-review·분할 결정·plan-prep이 비면 plan 진입이 거부된다.
 
 ```bash
 issueops start --repo "$SOURCE_ROOT" --json      # ISSUEOPS_ID를 받는다

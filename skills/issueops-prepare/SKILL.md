@@ -37,8 +37,8 @@ issueops next --id "$ISSUEOPS_ID" --json
   자리를 비우려고 지우지 않는다.
 - source checkout은 시작할 때 상태 그대로 끝까지 둔다. 브랜치도 바뀌지 않는다. 사용자의 미커밋
   변경이 있으면 stash·commit·삭제하지 않고 그대로 두며, 작업은 worktree에서만 한다.
-- force 연산, 기본 브랜치 변경, `gh issue develop`을 쓰지 않는다. `gh issue develop`은
-  링크 시점의 base branch HEAD를 쓰므로 봉인한 SHA와 갈라진다.
+- force 연산, 기본 브랜치 변경, `gh issue develop`을 쓰지 않는다. 그 명령은 링크 시점의
+  base branch HEAD를 써 봉인한 SHA와 갈라진다(`steps`는 `--base-sha`가 빌 때만 그것을 준다).
 
 ## base branch 결정
 
@@ -93,8 +93,7 @@ GitHub 경로도 같은 이름 규칙을 요구한다.
 **provider 링크**(외부 write, 승인된 준비 범위 안): `branch prepare` 응답의 `steps`가 봉인한
 SHA에서 링크 브랜치를 만드는 명령을 값이 채워진 형태로 순서대로 준다(GitHub: 이슈 node ID 조회 →
 `createLinkedBranch`, GitLab: `<iid>-` 접두 브랜치 생성). 그 명령을 그대로 실행하고, 앞 단계 출력의
-값(node ID)은 다음 명령에 직접 옮겨 적는다. `$(...)` 명령 치환으로 합치지 않는다. 치환이 든 명령은
-lifecycle guard가 정적으로 분류하지 못해 거부한다.
+값(node ID)은 다음 명령에 직접 옮겨 적는다. `$(...)` 명령 치환으로 합치지 않는다.
 
 `--link-verified`는 provider가 링크를 돌려준 것을 본 뒤에만 붙인다. `await-link`는 봉인된
 브랜치를 읽으므로 먼저 `--link-verified` 없이 봉인하고, 링크를 읽어 `linked: true`일 때만
