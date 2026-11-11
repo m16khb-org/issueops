@@ -13,6 +13,7 @@ import (
 	issueopsretentioncontract "issueops/internal/contract/issueopsretention"
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 	issueopsstatuscontract "issueops/internal/contract/issueopsstatus"
+	issueopsviewcontract "issueops/internal/contract/issueopsview"
 )
 
 // Deps 타입은 IssueOps 하위 명령이 쓰는 상태 저장소 연산을 함수 필드로 모은다.
@@ -33,6 +34,7 @@ type Deps struct {
 	LinkIssueOpsWorktreeWithActor               func(stateRoot, id, worktreePath string, actor issueopscontract.Actor) (issueopscontract.Record, error)
 	ListIssueOpsCycles                          func(stateRoot, repo string) (issueopsinventorycontract.ListResult, error)
 	IssueOpsReviewMetrics                       func(stateRoot, id, repo string) (issueopscontract.ReviewMetricsResult, error)
+	IssueOpsView                                func(stateRoot, cwd, id, view string) (issueopsviewcontract.Result, error)
 	ObserveNativeProcessAncestry                func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
 	PrepareIssueOpsBranchWithActor              func(stateRoot, id string, req issueopscontract.BranchPrepareRequest, actor issueopscontract.Actor) (issueopscontract.Record, error)
 	RetargetIssueOpsBranchWithActor             func(stateRoot, id string, req issueopscontract.BranchRetargetRequest, actor issueopscontract.Actor) (issueopscontract.Record, error)

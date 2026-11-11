@@ -2,7 +2,9 @@ package issueops
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	model "issueops/internal/contract/issueops"
@@ -47,4 +49,32 @@ func ListCycleOutcomes(stateRoot string) ([]model.CycleOutcome, []string, error)
 		outcomes = append(outcomes, outcome)
 	}
 	return outcomes, unreadable, nil
+}
+
+// ReadCycleOutcome reads the retained outcome of one deleted cycle without
+// creating, repairing, or migrating the state store. A missing store and a
+// missing row both answer (zero, false, nil); a row that fails to decode, carries
+// another schema, or names another cycle is an error, not a guess.
+func ReadCycleOutcome(stateRoot, id string) (model.CycleOutcome, bool, error) {
+	data, ok, err := sqlstore.GetExisting(stateRoot, cycleOutcomeBucket, id)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return model.CycleOutcome{}, false, nil
+		}
+		return model.CycleOutcome{}, false, err
+	}
+	if !ok {
+		return model.CycleOutcome{}, false, nil
+	}
+	var outcome model.CycleOutcome
+	if err := json.Unmarshal(data, &outcome); err != nil {
+		return model.CycleOutcome{}, false, fmt.Errorf("decode cycle outcome %s: %w", id, err)
+	}
+	if outcome.SchemaVersion != model.CycleOutcomeSchemaVersion {
+		return model.CycleOutcome{}, false, fmt.Errorf("cycle outcome %s has schema %d, want %d", id, outcome.SchemaVersion, model.CycleOutcomeSchemaVersion)
+	}
+	if outcome.ID != id {
+		return model.CycleOutcome{}, false, fmt.Errorf("cycle outcome row %s holds outcome for %q", id, outcome.ID)
+	}
+	return outcome, true, nil
 }

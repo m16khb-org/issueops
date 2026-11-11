@@ -19,6 +19,7 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops status --id ID [--field NAME]... [--json]
   issueops list [--repo PATH] [--json]
   issueops review-metrics (--id ID | --repo PATH) [--json]
+  issueops view --id ID --view timeline|graph [--cwd PATH] [--json]
   issueops next [--id ID] [--cwd PATH] [--json]
   issueops intent record --id ID --raw-request TEXT --interpreted-intent TEXT --success-criteria TEXT [--constraint TEXT] [--ambiguity TEXT] [--non-goal TEXT] [--intent-class CLASS] RECORD_ACTOR_FLAGS [--json]
   issueops plan-prep record --id ID [--decisions-evidence TEXT | --decisions-waive REASON] [--related-score-ref TEXT | --related-waive REASON] [--web-research-evidence TEXT | --web-research-waive REASON] [--codebase-survey-evidence TEXT | --codebase-survey-waive REASON] RECORD_ACTOR_FLAGS [--json]
@@ -151,5 +152,6 @@ func LifecycleCommands() []Command {
 		{Name: "schema-evidence", Description: "IssueOps schema-evidence"},
 		{Name: "start", Description: "IssueOps start"},
 		{Name: "status", Description: "IssueOps status"},
+		{Name: "view", Description: "IssueOps view"},
 	}
 }

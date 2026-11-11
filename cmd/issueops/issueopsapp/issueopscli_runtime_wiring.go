@@ -24,6 +24,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.Deps {
 	artifacts := issueOpsArtifactHandlers(observer)
 	decisions := issueOpsDecisionHandlers(observer)
 	routing := issueOpsRoutingHandlers(observer)
+	next := issueOpsNextHandler(artifacts.Staged, observer)
 	return issueopscli.Deps{
 		AcceptIssueOpsChildWithActor: func(root, parentID, childID string, evidence []string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error) {
 			return newChildValidator(root).Accept(context.Background(), parentID, childID, evidence, &actor)
@@ -36,7 +37,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.Deps {
 			return newChildStatusService(root).Status(context.Background(), id, repair, &actor)
 		},
 		IssueOpsPRReadiness: readiness.PR,
-		IssueOpsNext:        issueOpsNextHandler(artifacts.Staged, observer),
+		IssueOpsNext:        next,
 		IssueOpsStateRoot:   func() string { return stateRoot },
 		IssueOpsStatus:      issueOpsStatusHandler(observer),
 		LinkIssueOpsChildWithActor: func(root, id, childURL, title string, actor issueopscontract.Actor) (issueopscontract.Record, error) {
@@ -61,6 +62,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.Deps {
 				ListOutcomes: issueOpsCycleOutcomeLister,
 			}).Read(stateRoot, id, repo)
 		},
+		IssueOpsView:                 issueOpsViewHandler(next),
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		PrepareIssueOpsBranchWithActor: func(root, id string, req issueopscontract.BranchPrepareRequest, actor issueopscontract.Actor) (issueopscontract.Record, error) {
 			return newBranchPreparer(root).Prepare(context.Background(), id, req, &actor)

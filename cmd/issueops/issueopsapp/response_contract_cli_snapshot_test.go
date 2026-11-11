@@ -1,11 +1,14 @@
 package issueopsapp
 
 import (
+	"cmp"
 	"encoding/json"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -36,6 +39,47 @@ func systemToolPath(t *testing.T) string {
 		return path
 	}
 	return "/usr/bin" + string(os.PathListSeparator) + "/bin"
+}
+
+// viewTimelineContractProjection returns value with timeline.events sorted by
+// (kind, phase, subject, ref, round). Normalizing every instant to $TIMESTAMP
+// removes the key the timeline sorts by, so without this the golden would depend
+// on which events happened to share a normalized instant.
+func viewTimelineContractProjection(value any) any {
+	obj, ok := value.(map[string]any)
+	if !ok {
+		return value
+	}
+	timeline, ok := obj["timeline"].(map[string]any)
+	if !ok {
+		return value
+	}
+	events, ok := timeline["events"].([]any)
+	if !ok {
+		return value
+	}
+	field := func(event any, key string) string {
+		text, _ := event.(map[string]any)[key].(string)
+		return text
+	}
+	round := func(event any) float64 {
+		number, _ := event.(map[string]any)["round"].(float64)
+		return number
+	}
+	sorted := slices.Clone(events)
+	slices.SortStableFunc(sorted, func(a, b any) int {
+		for _, key := range []string{"kind", "phase", "subject", "ref"} {
+			if c := strings.Compare(field(a, key), field(b, key)); c != 0 {
+				return c
+			}
+		}
+		return cmp.Compare(round(a), round(b))
+	})
+	projectedTimeline := maps.Clone(timeline)
+	projectedTimeline["events"] = sorted
+	projected := maps.Clone(obj)
+	projected["timeline"] = projectedTimeline
+	return projected
 }
 
 func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]string, stateDir, workspaceDir, gitRepoDir string) map[string]any {
@@ -215,6 +259,20 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 	})
 	cliSnapshot["issueops_feedback_resolve"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"feedback", "resolve", "--id", issueopsID, "--index", "0", "--resolution", "valid-defect", "--json"})
+	})
+	// view reads the live record. The timeline's instants are normalized to
+	// $TIMESTAMP, so the projection fixes the event order instead of leaving it
+	// to the wall clock.
+	t.Setenv("CLAUDE_CODE_SESSION_ID", "")
+	t.Setenv("CODEX_THREAD_ID", "")
+	cliSnapshot["issueops_view_timeline"] = viewTimelineContractProjection(runCLIJSONContract(t, replacements, func() error {
+		return runIssueOps([]string{"view", "--id", issueopsID, "--view", "timeline", "--json"})
+	}))
+	// The graph view calls `next` for the same cycle from its repository. This
+	// fixture is still at the prepare stage, which next returns before any
+	// evidence gate, so the golden pins the shape with stage_unjudgeable.
+	cliSnapshot["issueops_view_graph"] = runCLIJSONContract(t, replacements, func() error {
+		return runIssueOps([]string{"view", "--id", issueopsID, "--view", "graph", "--cwd", workspaceDir, "--json"})
 	})
 	// create-issue resolves the project authority from origin, preview included.
 	runGitForContract(t, workspaceDir, "init", "-q", "-b", "main")

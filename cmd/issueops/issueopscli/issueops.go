@@ -30,6 +30,7 @@ func (cli command) issueOpsSubcommands(deps Dependencies) map[string]func([]stri
 		"status":                cli.runIssueOpsStatus,
 		"list":                  cli.runIssueOpsList,
 		"review-metrics":        cli.runIssueOpsReviewMetrics,
+		"view":                  cli.runIssueOpsView,
 		"next":                  cli.runIssueOpsNext,
 		"intent":                cli.runIssueOpsIntent,
 		"plan-prep":             cli.runIssueOpsPlanPrep,

@@ -358,6 +358,10 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		values:   []string{"--id", "--repo"},
 		booleans: []string{"--json"},
 	},
+	"view": {
+		values:   []string{"--id", "--view", "--cwd"},
+		booleans: []string{"--json"},
+	},
 	"project-docs-review record": {
 		values:     []string{"--id", "--verdict", "--doc", "--reviewed-doc", "--evidence", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--doc", "--reviewed-doc", "--evidence"},

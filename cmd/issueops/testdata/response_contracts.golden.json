@@ -427,9 +427,13 @@
         {
           "description": "IssueOps status",
           "name": "status"
+        },
+        {
+          "description": "IssueOps view",
+          "name": "view"
         }
       ],
-      "hash": "4da9580eb4669be4e91018dc0bb81cab44dce995f582ec8530c7104cc1193a28",
+      "hash": "e4cc8e6939cf7ebe8d1386e1f8ae40613745d9e7bde12be8c37b1bb83f347966",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -2156,6 +2160,169 @@
       "schema_version": 1,
       "updated_at": "$TIMESTAMP",
       "worktree_path": "$ISSUEOPS_WORKTREE"
+    },
+    "issueops_view_graph": {
+      "generated_at": "$TIMESTAMP",
+      "graph": {
+        "children_shown": 0,
+        "children_total": 0,
+        "edges": [
+          {
+            "from": "intent",
+            "to": "architecture_doc"
+          }
+        ],
+        "judged_by": {
+          "stage": "prepare",
+          "stale_keys": [],
+          "unmapped_stale_keys": []
+        },
+        "limits": [
+          "next_reports_first_blocking_gate_only",
+          "document_nodes_from_review_records"
+        ],
+        "nodes": [
+          {
+            "id": "cycle",
+            "kind": "cycle",
+            "present": true
+          },
+          {
+            "at": "$TIMESTAMP",
+            "id": "intent",
+            "kind": "intent",
+            "present": true
+          },
+          {
+            "id": "architecture_doc",
+            "kind": "architecture_doc",
+            "present": true
+          },
+          {
+            "id": "architecture_review",
+            "kind": "architecture_review",
+            "present": false
+          },
+          {
+            "id": "plan",
+            "kind": "plan",
+            "present": true
+          },
+          {
+            "id": "plan_review",
+            "kind": "plan_review",
+            "present": false
+          },
+          {
+            "id": "change_set",
+            "kind": "change_set",
+            "present": false
+          },
+          {
+            "id": "implementation_review",
+            "kind": "implementation_review",
+            "present": false
+          },
+          {
+            "id": "ai_slop_clean",
+            "kind": "ai_slop_clean",
+            "present": false
+          },
+          {
+            "id": "project_docs_review",
+            "kind": "project_docs_review",
+            "present": false
+          },
+          {
+            "id": "schema_evidence",
+            "kind": "schema_evidence",
+            "present": false
+          },
+          {
+            "id": "pull_request",
+            "kind": "pull_request",
+            "present": false
+          },
+          {
+            "id": "completion",
+            "kind": "completion",
+            "present": false
+          },
+          {
+            "id": "parent",
+            "kind": "parent",
+            "present": false
+          }
+        ],
+        "phase": "plan",
+        "unknown_reason": "stage_unjudgeable"
+      },
+      "id": "$ISSUEOPS_ID",
+      "ok": true,
+      "source": "record",
+      "view": "graph"
+    },
+    "issueops_view_timeline": {
+      "generated_at": "$TIMESTAMP",
+      "id": "$ISSUEOPS_ID",
+      "ok": true,
+      "source": "record",
+      "timeline": {
+        "events": [
+          {
+            "at": "$TIMESTAMP",
+            "kind": "cycle_started"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "decision",
+            "subject": "architecture"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "decision",
+            "subject": "scope"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "intent_recorded"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "phase_completed",
+            "phase": "grill"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "phase_entered",
+            "phase": "grill"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "phase_entered",
+            "phase": "plan"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "regressed",
+            "phase": "plan"
+          },
+          {
+            "at": "$TIMESTAMP",
+            "kind": "review",
+            "round": 1,
+            "subject": "architecture",
+            "verdict": "not_approved"
+          }
+        ],
+        "events_shown": 9,
+        "events_total": 9,
+        "limits": [
+          "phase_ledger_first_entry_last_completion"
+        ],
+        "undated": 0
+      },
+      "view": "timeline"
     },
     "policy_audit": {
       "audit_log_id": "$AUDIT_ID",
@@ -4859,9 +5026,13 @@
               {
                 "description": "IssueOps status",
                 "name": "status"
+              },
+              {
+                "description": "IssueOps view",
+                "name": "view"
               }
             ],
-            "hash": "4da9580eb4669be4e91018dc0bb81cab44dce995f582ec8530c7104cc1193a28",
+            "hash": "e4cc8e6939cf7ebe8d1386e1f8ae40613745d9e7bde12be8c37b1bb83f347966",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",

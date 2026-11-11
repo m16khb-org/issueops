@@ -17,6 +17,7 @@ import (
 	issueopsretentioninbound "issueops/internal/adapter/inbound/issueopsretention"
 	issueopsroutinginbound "issueops/internal/adapter/inbound/issueopsrouting"
 	issueopsstatusinbound "issueops/internal/adapter/inbound/issueopsstatus"
+	issueopsviewinbound "issueops/internal/adapter/inbound/issueopsview"
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopsartifactoutbound "issueops/internal/adapter/outbound/issueopsartifact"
 	issueopsauthorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
@@ -31,7 +32,9 @@ import (
 	issueopsretentionapplication "issueops/internal/application/issueopsretention"
 	issueopsroutingapplication "issueops/internal/application/issueopsrouting"
 	issueopsstatusapplication "issueops/internal/application/issueopsstatus"
+	issueopsviewapplication "issueops/internal/application/issueopsview"
 	agentmodelcontract "issueops/internal/contract/agentmodel"
+	issueopsviewcontract "issueops/internal/contract/issueopsview"
 	"issueops/internal/domain/agentmodel"
 	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
 
@@ -103,13 +106,14 @@ func wireIssueOpsRuntimeForTests() {
 		Env:        os.Getenv,
 		Now:        time.Now,
 	})
+	nextHandler := issueopsnextinbound.NewNextHandler(next)
 	testIssueOpsRuntime = Deps{
 		AcceptIssueOpsChildWithActor:  acceptChildWithActorForTest,
 		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
 		DropIssueOpsChildWithActor:    dropChildWithActorForTest,
 		IssueOpsChildStatusWithActor:  childStatusWithActorForTest,
 		IssueOpsPRReadiness:           testCycleReadiness().PR,
-		IssueOpsNext:                  issueopsnextinbound.NewNextHandler(next),
+		IssueOpsNext:                  nextHandler,
 		IssueOpsStateRoot:             issueOpsStateRootForTest,
 		IssueOpsStatus:                issueopsstatusinbound.NewStatusHandler(status),
 		LinkIssueOpsChildWithActor:    LinkIssueOpsChildWithActorForTest,
@@ -133,6 +137,22 @@ func wireIssueOpsRuntimeForTests() {
 				},
 			}).Read(stateRoot, id, repo)
 		},
+		IssueOpsView: issueopsviewinbound.NewViewHandler(issueopsviewapplication.NewService(issueopsviewapplication.Ports{
+			ReadRecord: func(ctx context.Context, stateRoot, id string) (issueopsviewcontract.Record, error) {
+				return issueopscore.ReadIssueOpsExisting(stateRoot, id)
+			},
+			RetainedOutcome: func(ctx context.Context, stateRoot, id string) (issueopsviewcontract.CycleOutcome, bool, error) {
+				return issueopscore.ReadCycleOutcome(stateRoot, id)
+			},
+			Next: func(ctx context.Context, stateRoot, cwd, id string) (issueopsviewcontract.NextResult, error) {
+				return nextHandler(stateRoot, cwd, id)
+			},
+			Now: time.Now,
+			WorktreePresent: func(ctx context.Context, root string) bool {
+				info, err := os.Stat(root)
+				return err == nil && info.IsDir()
+			},
+		})),
 		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
 		PrepareIssueOpsBranchWithActor:             prepareBranchWithActorForTest,
 		PruneIssueOps:                              issueopsretentioninbound.NewPruneHandler(retention),
