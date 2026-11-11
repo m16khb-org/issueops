@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -65,6 +66,67 @@ class CIWorkflowTests(unittest.TestCase):
             for _, body in run_blocks(job):
                 self.assertNotIn("golangci-lint", body)
                 self.assertNotIn("shellcheck", body)
+
+    def test_lint_local_cross_step_disables_cgo(self):
+        lines = [line.strip() for line in (ROOT / "scripts/lint-local.sh").read_text().splitlines()]
+        self.assertEqual(lines.count("GOOS=linux CGO_ENABLED=0 golangci-lint run ./... || status=1"), 1)
+        self.assertEqual([line for line in lines if re.match(r"GOOS=linux\b", line) and "CGO_ENABLED=0" not in line], [])
+
+    def test_lint_local_runs_windows_variant_off_windows(self):
+        lines = [line.strip() for line in (ROOT / "scripts/lint-local.sh").read_text().splitlines()]
+        command = "GOOS=windows CGO_ENABLED=0 golangci-lint run ./... || status=1"
+        self.assertEqual(lines.count(command), 1)
+        self.assertEqual([line for line in lines if re.match(r"GOOS=windows", line) and "CGO_ENABLED=0" not in line], [])
+        # The windows run sits inside a branch taken only when the host GOOS is not windows.
+        index = lines.index(command)
+        guard = max(i for i in range(index) if lines[i].startswith("if "))
+        self.assertEqual(lines[guard], 'if [ "$(go env GOOS)" != "windows" ]; then')
+        self.assertNotIn("fi", lines[guard + 1:index])
+        self.assertEqual(lines[index + 1], "fi")
+
+    def test_lint_local_fails_when_the_linter_fails(self):
+        if os.name == "nt":
+            # Next to git first (Git\cmd\git.exe or Git\ucrt64\bin\git.exe, up to three
+            # roots), then the standard install directories.
+            candidates = []
+            git = shutil.which("git")
+            if git:
+                root = Path(git).resolve().parent.parent
+                for _ in range(3):
+                    candidates.append(root / "bin" / "bash.exe")
+                    root = root.parent
+            candidates += [Path(base) / "Git/bin/bash.exe"
+                           for base in (os.environ.get("ProgramW6432"), os.environ.get("ProgramFiles")) if base]
+            bash = next((path for path in candidates if path.is_file()), None)
+            if bash is None:
+                self.skipTest("Git for Windows bash.exe not found")
+        else:
+            bash = Path("/bin/bash")
+            self.assertTrue(bash.is_file(), bash)
+        self.assertNotEqual(bash.parent.name.lower(), "system32", "WSL launcher bash cannot run this script")
+        version = subprocess.run([str(bash), "--noprofile", "--norc", str(ROOT / "scripts/lint-local.sh"), "--print-version"],
+                                 cwd=ROOT, capture_output=True, text=True, timeout=60, check=True).stdout.strip().removeprefix("v")
+        with tempfile.TemporaryDirectory() as directory:
+            fake_bin = Path(directory) / "fake-bin"
+            fake_bin.mkdir()
+            fake = fake_bin / "golangci-lint"
+            fake.write_bytes("\n".join([
+                "#!/usr/bin/env bash",
+                'if [ "${1:-}" = version ]; then',
+                f"  echo 'golangci-lint has version {version} built with go1.26.6'",
+                "  exit 0",
+                "fi",
+                "echo '0 issues.'",
+                "exit 1",
+                "",
+            ]).encode())
+            fake.chmod(0o755)
+            env = dict(os.environ, PATH=str(fake_bin) + os.pathsep + os.environ["PATH"])
+            env.pop("ISSUEOPS_ROOT", None)
+            result = subprocess.run([str(bash), "--noprofile", "--norc", str(ROOT / "scripts/lint-local.sh")],
+                                    cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("0 issues.", result.stdout)
 
     def test_verification_ownership(self):
         blocks = run_blocks()

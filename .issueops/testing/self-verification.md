@@ -70,7 +70,7 @@ grep -R "Conventional Commit\|Lore:" -n AGENTS.md .issueops/COMMIT_POLICY.md ski
 - `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`이 self-verify가 실제로 수행한 test/build/golden/docs/inspect 증거를 소유한다. 현재 step 목록은 `gofmt`, `Python script tests`, `go test ./... -count=1`, contract golden의 full-test 포함 관계, `go build -o <temp>/issueops ./cmd/issueops`, `doctor --static-only --json`, `inspect smoke`, `docs index smoke`를 포함한다.
 - 최종 battery에서 self-verify JSON이 같은 revision·환경·입력에서 통과했고 그 step 결과가 완전하면 전체 `go test ./... -count=1`을 별도 책임으로 다시 실행하지 않는다. `go build -o bin/issueops ./cmd/issueops`, `./bin/issueops docs --json`, `./bin/issueops inspect --json`과 전체 Go 테스트에 포함된 contract golden도 별도로 반복하지 않는다.
 - `go vet ./...`와 `go test -race ./... -count=1`은 Go 변경 기본 검증의 별도 구성원이다. self-verify의 `risk QA tier`가 그 명령을 실제 실행한 step을 같은 bundle에 담았을 때만 포함 관계로 인정한다. 실제 step 증거에 필요한 명령이 없으면 누락된 명령을 같은 battery에서 별도 실행한다.
-- 최종 battery 명령은 `gofmt -l $(git ls-files '*.go')`, `go vet ./...`, `scripts/lint-local.sh`(CI와 같은 golangci-lint 버전을 확인하고 `GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')" golangci-lint run ./...`와 비Linux 호스트의 `GOOS=linux` 변형을 실행한다), `go test -race ./... -count=1`, `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json` 중 이번 변경 범위가 요구하는 모든 항목을 포함한다. golangci-lint는 CI가 실행하는 게이트라서 Go 변경이면 로컬 battery에도 넣는다(`unit-and-contract.md`의 로컬 린터 명령과 같다). self-verify가 소유한 test/build/docs/inspect 증거를 재사용할 때도 vet/race 결과는 `unit-and-contract.md`의 Go 변경 기준을 따른다.
+- 최종 battery 명령은 `git ls-files -z '*.go' | xargs -0 gofmt -l`, `go vet ./...`, `scripts/lint-local.sh`(CI와 같은 golangci-lint 버전을 확인하고 `GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')" golangci-lint run ./...`와 비Linux 호스트의 `GOOS=linux CGO_ENABLED=0` 변형, 비Windows 호스트의 `GOOS=windows CGO_ENABLED=0` 변형을 실행한다), `go test -race ./... -count=1`, `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json` 중 이번 변경 범위가 요구하는 모든 항목을 포함한다. golangci-lint는 CI가 실행하는 게이트라서 Go 변경이면 로컬 battery에도 넣는다(`unit-and-contract.md`의 로컬 린터 명령과 같다). self-verify가 소유한 test/build/docs/inspect 증거를 재사용할 때도 vet/race 결과는 `unit-and-contract.md`의 Go 변경 기준을 따른다.
 
 IssueOps benchmark fixtures must stay repo-agnostic. They score portable workflow evidence rather than one target repository's domain facts: domain invariants vs exact/equivalent mechanisms, API-doc gate evidence, live runtime evidence matrices, review-feedback accountability, and completion hygiene. A deterministic benchmark passes only when `average_score == 100`, `minimum_score == 100`, and `critical_failure_count == 0`.
 
@@ -139,7 +139,11 @@ python3 scripts/python_suite_runner.py
 최소 runtime은 Python 3.10이다. publish helper의 union annotation은 Python 3.9에서
 import 오류를 낸다. 버전은 stdout에 표시하고, 3.10 미만이면 stderr 진단과 함께 discovery
 전에 실패한다. 실행 파일이 없으면 기존 command runner의 executable-not-found 오류로
-단계가 실패한다. timeout은 버전 확인과 discovery를 합쳐 5분이며 출력 budget을 유지한다.
+단계가 실패한다. 프로세스가 시작해 비정상 종료했지만 stdout이 비어 있고
+잘리지 않았으면(Windows의 Microsoft Store 별칭 python3가 exit 49로 끝나는 경우)
+Python 3.10+를 PATH 앞에 두라는 진단을 기존 오류 뒤에 붙이고,
+executable-not-found와 timeout 오류는 그대로 둔다. timeout은 버전 확인과 discovery를 합쳐 5분이며
+출력 budget을 유지한다.
 runner는 root suite를 한 번 실행하고 스킬마다 CWD/import가 격리된 process를 사용한다.
 파일별 수집 수와 전체 suite 수를 출력한다. 기존 optional root skip 의미는 보존하지만
 스킬의 import 실패·빈 테스트 파일·실패·skip으로 통과시키지 않는다.

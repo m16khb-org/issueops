@@ -162,7 +162,7 @@ python3 scripts/validate-skill.py skills/atomic-commit-push
 ./scripts/install-native.sh
 ./bin/issueops bootstrap --dry-run
 ./scripts/install-native.sh --dry-run --json
-gofmt -l $(git ls-files '*.go')
+git ls-files -z '*.go' | xargs -0 gofmt -l
 go vet ./...
 ./scripts/lint-local.sh
 go test ./... -count=1
@@ -192,7 +192,7 @@ Go 코드 변경의 표준 검증 예시(실제 self-verify step 증거가 없�
 
 ```bash
 go mod tidy
-gofmt -l $(git ls-files '*.go')
+git ls-files -z '*.go' | xargs -0 gofmt -l
 go vet ./...
 go test ./... -count=1
 go test -race ./... -count=1

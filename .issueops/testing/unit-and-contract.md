@@ -13,7 +13,7 @@ IssueOps execution vertical contract lives in
 Go 코드를 추가하면 다음 기본 검증을 실행한다. 최종 검증 battery에서 self-verify가 실제로 실행했거나 명시적으로 재사용한 항목은 중복 실행하지 않는다. `risk QA tier`는 선택한 `base_ref`의 tree부터 관측 HEAD tree까지의 tracked diff와 staged·unstaged·untracked 경로를 합쳐 기존 분류기로 판정한다. 기준을 생략한 standalone 호출은 working-tree 범위를 유지한다. IssueOps 사이클은 exact record의 `branch_prepare.base_sha`를 전달한다. 잘못된 기준이나 Git 관측 실패는 성공 또는 full-suite coverage로 처리하지 않는다. 검증 범위에 Go 변경이 있는데 risk tier가 `go vet ./...` 또는 `go test -race ./... -count=1`를 실제 실행하지 않았으면 누락된 명령은 별도 실행한다.
 
 ```bash
-gofmt -l $(git ls-files '*.go')
+git ls-files -z '*.go' | xargs -0 gofmt -l
 go test ./... -count=1
 go test -race ./... -count=1
 go vet ./...
@@ -50,9 +50,11 @@ quickfix(QF))는 버그를 잡지 않고 코드만 흔들어서 켜지 않는다
 해당 줄에 사유를 붙인 `//nolint:<linter> // <사유>`로 남긴다. 나머지 제외 preset과 전체 issue
 출력 설정은 유지한다. 로컬 린터는 CI와 같은 `scripts/lint-local.sh`로 실행한다. 이 스크립트가
 버전(v2.12.2)을 고정하고 `go.mod`의 toolchain(`GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')"`)으로
-`golangci-lint run ./...`을 실행한다. CI runner가 Linux이므로 Linux가 아닌 머신에서는 `GOOS=linux`
-변형도 함께 실행한다(플랫폼 build tag 분기에서만 unused가 되는 심볼을 찾는다). 린터는 해당 Go 버전
-이상으로 빌드해야 하며, 더 최신인 로컬 Go의 표준 라이브러리를 구버전 analyzer에 넘기지 않는다.
+`golangci-lint run ./...`을 실행한다. CI runner가 Linux이므로 Linux가 아닌 머신에서는 `GOOS=linux
+CGO_ENABLED=0` 변형도 함께 실행하고(플랫폼 build tag 분기에서만 unused가 되는 심볼을 찾는다),
+Windows가 아닌 머신에서는 `GOOS=windows CGO_ENABLED=0` 변형도 함께 실행한다(`*_windows.go` 파일의
+발견은 CI에서 이 변형으로만 보인다). 이 저장소는 `C`를 import하지 않으므로 교차 변형은 cgo를 끈다.
+린터는 해당 Go 버전 이상으로 빌드해야 하며, 더 최신인 로컬 Go의 표준 라이브러리를 구버전 analyzer에 넘기지 않는다.
 이 도구는 install/update/self-verify
 readiness 경로에는 필요하지 않고, CI와 개발자 게이트에서만 사용한다.
 

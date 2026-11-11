@@ -13,9 +13,11 @@ usage() {
 Usage: scripts/lint-local.sh [--print-version]
 
 Run the CI golangci-lint gate locally: `golangci-lint run ./...` built with the
-Go toolchain selected from go.mod. Off Linux it also runs the GOOS=linux
-variant, so platform-specific findings (for example syscall.Stat_t field
-types) surface before CI does.
+Go toolchain selected from go.mod. Off Linux it also runs the
+GOOS=linux CGO_ENABLED=0 variant, so platform-specific findings (for example
+syscall.Stat_t field types) surface before CI does. Off Windows it also runs the
+GOOS=windows CGO_ENABLED=0 variant, so findings in *_windows.go files surface
+on the Linux CI runner and on macOS.
 
 golangci-lint is a developer and CI gate only. This script never installs it;
 install the pinned version with the official path:
@@ -72,8 +74,21 @@ echo "==> golangci-lint run ./... (GOOS=$(go env GOOS))"
 golangci-lint run ./... || status=1
 
 if [ "$(go env GOOS)" != "linux" ]; then
+  # The cross run only type-checks linux sources. When CGO_ENABLED=1 is set
+  # explicitly in the environment, the linux-only cgo files of the standard
+  # library (net, os/user) cannot be preprocessed for another GOOS and
+  # typecheck fails. This repository imports no "C", so the cross run disables
+  # cgo.
   echo "==> golangci-lint run ./... (GOOS=linux)"
-  GOOS=linux golangci-lint run ./... || status=1
+  GOOS=linux CGO_ENABLED=0 golangci-lint run ./... || status=1
+fi
+
+if [ "$(go env GOOS)" != "windows" ]; then
+  # CI lints on Linux, so *_windows.go files are never analyzed there without
+  # this run. A Windows host already analyzes them in the first step. cgo stays
+  # disabled for the same reason as the linux cross run above.
+  echo "==> golangci-lint run ./... (GOOS=windows)"
+  GOOS=windows CGO_ENABLED=0 golangci-lint run ./... || status=1
 fi
 
 exit "$status"
