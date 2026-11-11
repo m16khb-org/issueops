@@ -163,7 +163,7 @@ func TestCycleOutcomeRowStaysBounded(t *testing.T) {
 	long := strings.Repeat("s", 200)
 	record := issueopscontract.Record{ID: "io-bounded", Repo: "/repo", CreatedAt: "2026-09-08T00:00:00Z"}
 	base := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		at := base.Add(time.Duration(i) * time.Second).Format(time.RFC3339)
 		// A child cycle pair carries both subject and ref, the widest shape that
 		// survives timelineText. The widest characters (the ones JSON escapes) are
@@ -196,12 +196,12 @@ func TestCycleOutcomeRowStaysBoundedWithEscapedText(t *testing.T) {
 	hostile := strings.Repeat("<", 64)
 	record := issueopscontract.Record{ID: "io-escaped", Repo: "/repo", CreatedAt: "2026-09-08T00:00:00Z"}
 	base := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
-	for i := 0; i < issueopscontract.MaxTimelineEvents; i++ {
+	for i := range issueopscontract.MaxTimelineEvents {
 		record.RoutingTrace = append(record.RoutingTrace, issueopscontract.SkillRoutingEntry{
 			Phase: hostile, Skill: hostile, At: base.Add(time.Hour + time.Duration(i)*time.Second).Format(time.RFC3339),
 		})
 	}
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		at := base.Add(time.Duration(i) * time.Second).Format(time.RFC3339)
 		record.ChildCycles = append(record.ChildCycles, issueopscontract.ChildCycleRef{
 			CycleID: "io-child", CreatedAt: at, ValidationVerdict: "accepted", ValidatedAt: at,

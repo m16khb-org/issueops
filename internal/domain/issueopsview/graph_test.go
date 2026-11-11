@@ -466,7 +466,7 @@ func TestEvidenceGraph(t *testing.T) {
 
 	t.Run("children beyond the cap are counted but not drawn", func(t *testing.T) {
 		record := issueopsviewcontract.Record{}
-		for i := 0; i < 55; i++ {
+		for i := range 55 {
 			record.ChildCycles = append(record.ChildCycles, issueopscontract.ChildCycleRef{CycleID: fmt.Sprintf("io-c%02d", i)})
 		}
 		graph := EvidenceGraph(record, Judgment{})

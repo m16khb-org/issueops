@@ -317,7 +317,7 @@ func timelineLimits(events []datedTimelineEvent) []string {
 // MaxTimelineTextBytes; the allowed set is ASCII, so the cut never splits a
 // character.
 func timelineText(s string) string {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		c := s[i]
 		switch {
 		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
