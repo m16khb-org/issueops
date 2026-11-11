@@ -132,7 +132,7 @@ func (execRunner) Run(ctx context.Context, request commandRequest) (CommandOutpu
 		cmd.Stdout = projection
 	}
 	if err := cmd.Start(); err != nil {
-		return CommandOutput{}, fmt.Errorf("command_failed")
+		return CommandOutput{}, errCommandFailed
 	}
 	waited := make(chan error, 1)
 	go func() { waited <- cmd.Wait() }()
@@ -176,22 +176,22 @@ func awaitCommand(runCtx context.Context, cmd *exec.Cmd, waited <-chan error) (e
 	case err := <-waited:
 		return err, nil
 	case <-time.After(processTerminationHardLimit):
-		return nil, fmt.Errorf("command_termination_failed")
+		return nil, errCommandTerminationFailed
 	}
 }
 
 func commandOutcomeError(runCtx context.Context, out CommandOutput, waitErr error) error {
 	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
-		return fmt.Errorf("command_timeout")
+		return errCommandTimeout
 	}
 	if runCtx.Err() != nil {
-		return fmt.Errorf("command_cancelled")
+		return errCommandCancelled
 	}
 	if waitErr != nil {
-		return fmt.Errorf("command_failed")
+		return errCommandFailed
 	}
 	if out.StdoutTruncated || out.StderrTruncated {
-		return fmt.Errorf("command_output_truncated")
+		return errCommandOutputTruncated
 	}
 	return nil
 }
@@ -323,16 +323,16 @@ func readEpisodeCapture(resultPath string) (episodeCapture, error) {
 	data, err := readBoundedEvidenceFile(resultPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return episodeCapture{}, fmt.Errorf("probe_result_missing")
+			return episodeCapture{}, errProbeResultMissing
 		}
 		if errors.Is(err, errEvidenceFileTooLarge) {
-			return episodeCapture{}, fmt.Errorf("probe_result_too_large")
+			return episodeCapture{}, errProbeResultTooLarge
 		}
-		return episodeCapture{}, fmt.Errorf("probe_result_read_failed")
+		return episodeCapture{}, errProbeResultReadFailed
 	}
 	var capture episodeCapture
 	if err := decodeStrictJSON(data, &capture); err != nil {
-		return episodeCapture{}, fmt.Errorf("probe_result_invalid")
+		return episodeCapture{}, errProbeResultInvalid
 	}
 	return capture, nil
 }
@@ -341,16 +341,16 @@ func validateEpisodeCapture(capture episodeCapture, request port.HostProbeReques
 	want := sha256.Sum256([]byte(request.RunToken))
 	wantToken := hex.EncodeToString(want[:])
 	if capture.RunTokenSHA256 != wantToken {
-		return fmt.Errorf("stale_run_token")
+		return errStaleRunToken
 	}
 	if capture.FixtureID != request.FixtureID || capture.SchemaSHA256 != request.SchemaSHA256 {
-		return fmt.Errorf("probe_result_identity_mismatch")
+		return errProbeResultIdentityMismatch
 	}
 	if capture.CallCount != 1 || capture.CanonicalArguments == nil || !validSHA256(capture.RawSHA256) || !validSHA256(capture.RunTokenSHA256) {
-		return fmt.Errorf("probe_result_invalid")
+		return errProbeResultInvalid
 	}
 	if _, err := toolconformancecontract.ParseClassification(string(capture.Classification)); err != nil {
-		return fmt.Errorf("probe_result_invalid")
+		return errProbeResultInvalid
 	}
 	return nil
 }
@@ -364,7 +364,7 @@ func applyMultipleCallMarker(resultPath string, capture *episodeCapture) error {
 			RunTokenSHA256 string `json:"run_token_sha256"`
 		}
 		if decodeStrictJSON(multipleData, &marker) != nil || marker.RunTokenSHA256 != capture.RunTokenSHA256 || marker.CallCount <= capture.CallCount {
-			return fmt.Errorf("multiple_call_marker_invalid")
+			return errMultipleCallMarkerInvalid
 		}
 		capture.CallCount = marker.CallCount
 		capture.Classification = toolconformancecontract.Classification(toolconformancecontract.MultipleCalls)
@@ -373,9 +373,9 @@ func applyMultipleCallMarker(resultPath string, capture *episodeCapture) error {
 		capture.Diagnostics = []toolconformancecontract.Diagnostic{}
 	} else if !errors.Is(markerErr, fs.ErrNotExist) {
 		if errors.Is(markerErr, errEvidenceFileTooLarge) {
-			return fmt.Errorf("multiple_call_marker_too_large")
+			return errMultipleCallMarkerTooLarge
 		}
-		return fmt.Errorf("multiple_call_marker_read_failed")
+		return errMultipleCallMarkerReadFailed
 	}
 	return nil
 }
@@ -551,28 +551,27 @@ func jsonString(value string) string {
 }
 
 func normalizedProcessFailure(err error, defaultCode string) (string, string) {
-	switch err.Error() {
-	case "command_timeout", "command_cancelled":
-		return "harness_environment", err.Error()
-	case "command_output_truncated":
-		return "transport", "command_output_truncated"
-	default:
-		return "harness_environment", defaultCode
+	if code, ok := matchedFailureCode(err, errCommandTimeout, errCommandCancelled); ok {
+		return "harness_environment", code
 	}
+	if errors.Is(err, errCommandOutputTruncated) {
+		return "transport", errCommandOutputTruncated.Error()
+	}
+	return "harness_environment", defaultCode
 }
 
 func normalizedCaptureFailure(err error) (string, string) {
-	switch err.Error() {
-	case "stale_run_token":
-		return "harness_environment", "stale_run_token"
-	case "probe_result_missing":
+	switch {
+	case errors.Is(err, errStaleRunToken):
+		return "harness_environment", errStaleRunToken.Error()
+	case errors.Is(err, errProbeResultMissing):
 		return "unknown", "no_call"
-	case "probe_result_read_failed", "probe_result_invalid", "probe_result_too_large", "probe_result_identity_mismatch",
-		"multiple_call_marker_invalid", "multiple_call_marker_too_large", "multiple_call_marker_read_failed":
-		return "transport", err.Error()
-	default:
-		return "transport", "probe_result_decode_failed"
 	}
+	if code, ok := matchedFailureCode(err, errProbeResultReadFailed, errProbeResultInvalid, errProbeResultTooLarge, errProbeResultIdentityMismatch,
+		errMultipleCallMarkerInvalid, errMultipleCallMarkerTooLarge, errMultipleCallMarkerReadFailed); ok {
+		return "transport", code
+	}
+	return "transport", "probe_result_decode_failed"
 }
 func isolatedHostEnv(deps Dependencies, additionalNames ...string) []string {
 	allowed := map[string]bool{}

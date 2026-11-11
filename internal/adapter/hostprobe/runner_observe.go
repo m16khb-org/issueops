@@ -40,7 +40,7 @@ type semanticToolContent struct {
 
 func observeHostStream(data []byte) (hostStreamObservation, error) {
 	if len(data) == 0 || len(data) > maxOutputBytes {
-		return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
+		return hostStreamObservation{}, errHostStreamInvalid
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
@@ -54,7 +54,7 @@ func observeHostStream(data []byte) (hostStreamObservation, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
+			return hostStreamObservation{}, errHostStreamInvalid
 		}
 		events++
 		if err := observeHostEvent(event, claudeProbeCalls, &observation, &results); err != nil {
@@ -62,12 +62,12 @@ func observeHostStream(data []byte) (hostStreamObservation, error) {
 		}
 	}
 	if events == 0 {
-		return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
+		return hostStreamObservation{}, errHostStreamInvalid
 	}
 	if len(results) > 0 {
 		digest, err := semanticResponseDigest(results)
 		if err != nil {
-			return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
+			return hostStreamObservation{}, errHostStreamInvalid
 		}
 		observation.ResponseSHA256 = digest
 	}
@@ -114,10 +114,10 @@ func observeCodexItem(event map[string]any, observation *hostStreamObservation) 
 	case "reasoning", "agent_message", "todo_list":
 	case "error":
 		if item["message"] != "`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation." {
-			return fmt.Errorf("host_stream_invalid")
+			return errHostStreamInvalid
 		}
 	case "":
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	default:
 		observation.AmbientToolCount++
 	}
@@ -135,10 +135,10 @@ func observeClaudeToolUses(event map[string]any, claudeCalls map[string]bool, ob
 		name, _ := block["name"].(string)
 		id, _ := block["id"].(string)
 		if id == "" || name == "" {
-			return fmt.Errorf("host_stream_invalid")
+			return errHostStreamInvalid
 		}
 		if _, exists := claudeCalls[id]; exists {
-			return fmt.Errorf("host_stream_invalid")
+			return errHostStreamInvalid
 		}
 		claudeCalls[id] = strings.Contains(name, "issueops_probe")
 		observation.AmbientToolCount++

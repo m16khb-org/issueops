@@ -509,7 +509,7 @@ func opencodeReportedError(stdout []byte) string {
 func observeOpencodeStream(data []byte, targetTool string) (omoStreamObservation, error) {
 	var observation omoStreamObservation
 	if len(data) == 0 || len(data) > maxOutputBytes {
-		return observation, fmt.Errorf("host_stream_invalid")
+		return observation, errHostStreamInvalid
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	var results []any
@@ -528,30 +528,30 @@ func observeOpencodeStream(data []byte, targetTool string) (omoStreamObservation
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return observation, fmt.Errorf("host_stream_invalid")
+			return observation, errHostStreamInvalid
 		}
 		if event.Type != "tool_use" {
 			continue
 		}
 		observation.AmbientToolCount++
 		if event.Part.Tool != targetTool {
-			return observation, fmt.Errorf("host_stream_non_target_call")
+			return observation, errHostStreamNonTargetCall
 		}
 		observation.MCPCallCount++
 		if event.Part.State.Status != "completed" {
-			return observation, fmt.Errorf("host_stream_tool_error")
+			return observation, errHostStreamToolError
 		}
 		results = append(results, map[string]any{"content": event.Part.State.Output})
 	}
 	if observation.AmbientToolCount == 0 {
-		return observation, fmt.Errorf("host_stream_no_call")
+		return observation, errHostStreamNoCall
 	}
 	if observation.MCPCallCount != 1 {
-		return observation, fmt.Errorf("host_stream_multiple_calls")
+		return observation, errHostStreamMultipleCalls
 	}
 	digest, err := semanticResponseDigest(results)
 	if err != nil {
-		return observation, fmt.Errorf("host_stream_invalid")
+		return observation, errHostStreamInvalid
 	}
 	observation.ResponseSHA256 = digest
 	return observation, nil

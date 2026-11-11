@@ -392,7 +392,7 @@ type omoStreamState struct {
 
 func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, error) {
 	if len(data) == 0 || len(data) > maxOutputBytes {
-		return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
+		return omoStreamObservation{}, errHostStreamInvalid
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
@@ -407,7 +407,7 @@ func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, err
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return state.observation, fmt.Errorf("host_stream_invalid")
+			return state.observation, errHostStreamInvalid
 		}
 		if err := state.consume(event); err != nil {
 			return state.observation, err
@@ -449,11 +449,11 @@ func (s *omoStreamState) observeToolStart(event map[string]any) error {
 	toolName, _ := event["toolName"].(string)
 	id, _ := event["toolCallId"].(string)
 	if id == "" || toolName == "" {
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	}
 	s.observation.AmbientToolCount++
 	if _, exists := s.executions[id]; exists {
-		return fmt.Errorf("host_stream_multiple_calls")
+		return errHostStreamMultipleCalls
 	}
 	s.executions[id] = &omoToolExecution{name: toolName}
 	if toolName == s.targetTool {
@@ -467,18 +467,18 @@ func (s *omoStreamState) observeToolEnd(event map[string]any) error {
 	id, _ := event["toolCallId"].(string)
 	execution := s.executions[id]
 	if id == "" || toolName == "" || execution == nil || execution.name != toolName || execution.ended {
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	}
 	execution.ended = true
 	if isError, ok := event["isError"].(bool); !ok || isError {
 		if toolName == s.targetTool {
-			return fmt.Errorf("host_stream_tool_error")
+			return errHostStreamToolError
 		}
-		return fmt.Errorf("host_stream_non_target_call")
+		return errHostStreamNonTargetCall
 	}
 	result, ok := event["result"]
 	if !ok || result == nil {
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	}
 	if toolName == s.targetTool {
 		s.results = append(s.results, result)
@@ -490,29 +490,29 @@ func (s *omoStreamState) observeToolEnd(event map[string]any) error {
 // records the target response digest on success.
 func (s *omoStreamState) finish() error {
 	if s.events == 0 || s.sessions != 1 {
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	}
 	if len(s.executions) == 0 {
-		return fmt.Errorf("host_stream_no_call")
+		return errHostStreamNoCall
 	}
 	if !s.allExecutionsEnded() {
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	}
 	if s.observation.AmbientToolCount != 1 {
-		return fmt.Errorf("host_stream_multiple_calls")
+		return errHostStreamMultipleCalls
 	}
 	if !s.allExecutionsTarget() {
-		return fmt.Errorf("host_stream_non_target_call")
+		return errHostStreamNonTargetCall
 	}
 	if s.observation.MCPCallCount != 1 || len(s.results) != 1 {
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	}
 	if s.observation.Model == "" {
-		return fmt.Errorf("host_stream_model_missing")
+		return errHostStreamModelMissing
 	}
 	digest, err := semanticResponseDigest(s.results)
 	if err != nil {
-		return fmt.Errorf("host_stream_invalid")
+		return errHostStreamInvalid
 	}
 	s.observation.MCPCallCount = 1
 	s.observation.ResponseSHA256 = digest
@@ -538,14 +538,13 @@ func (s *omoStreamState) allExecutionsTarget() bool {
 }
 
 func omoStreamFailure(err error) (string, string) {
-	switch err.Error() {
-	case "host_stream_no_call":
+	if errors.Is(err, errHostStreamNoCall) {
 		return "unknown", "no_call"
-	case "host_stream_invalid", "host_stream_multiple_calls", "host_stream_non_target_call", "host_stream_tool_error", "host_stream_model_missing":
-		return "transport", err.Error()
-	default:
-		return "transport", "host_stream_invalid"
 	}
+	if code, ok := matchedFailureCode(err, errHostStreamInvalid, errHostStreamMultipleCalls, errHostStreamNonTargetCall, errHostStreamToolError, errHostStreamModelMissing); ok {
+		return "transport", code
+	}
+	return "transport", "host_stream_invalid"
 }
 
 var _ port.HostProbeRunner = OmoRunner{}

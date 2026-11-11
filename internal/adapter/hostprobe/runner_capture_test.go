@@ -50,22 +50,22 @@ func TestDecodeEpisodeCaptureRejectionsMapToNormalizedFailures(t *testing.T) {
 	cases := []struct {
 		name      string
 		data      []byte // nil: no file
-		wantErr   string
+		wantErr   error
 		wantCause string
 		wantCode  string
 	}{
-		{"missing file", nil, "probe_result_missing", "unknown", "no_call"},
-		{"stale token", captureJSON(t, request, func(m map[string]any) { m["run_token_sha256"] = strings.Repeat("c", 64) }), "stale_run_token", "harness_environment", "stale_run_token"},
-		{"fixture mismatch", captureJSON(t, request, func(m map[string]any) { m["fixture_id"] = "other" }), "probe_result_identity_mismatch", "transport", "probe_result_identity_mismatch"},
-		{"schema mismatch", captureJSON(t, request, func(m map[string]any) { m["schema_sha256"] = strings.Repeat("d", 64) }), "probe_result_identity_mismatch", "transport", "probe_result_identity_mismatch"},
-		{"zero calls", captureJSON(t, request, func(m map[string]any) { m["call_count"] = 0 }), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"null arguments", captureJSON(t, request, func(m map[string]any) { m["canonical_arguments"] = nil }), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"short raw digest", captureJSON(t, request, func(m map[string]any) { m["raw_sha256"] = "abcd" }), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"non hex raw digest", captureJSON(t, request, func(m map[string]any) { m["raw_sha256"] = strings.Repeat("z", 64) }), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"unknown classification", captureJSON(t, request, func(m map[string]any) { m["classification"] = "looks_fine" }), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"unknown field", captureJSON(t, request, func(m map[string]any) { m["extra"] = 1 }), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"trailing json", append(captureJSON(t, request, nil), []byte(` {}`)...), "probe_result_invalid", "transport", "probe_result_invalid"},
-		{"oversize", []byte(strings.Repeat(" ", maxOutputBytes+1)), "probe_result_too_large", "transport", "probe_result_too_large"},
+		{"missing file", nil, errProbeResultMissing, "unknown", "no_call"},
+		{"stale token", captureJSON(t, request, func(m map[string]any) { m["run_token_sha256"] = strings.Repeat("c", 64) }), errStaleRunToken, "harness_environment", "stale_run_token"},
+		{"fixture mismatch", captureJSON(t, request, func(m map[string]any) { m["fixture_id"] = "other" }), errProbeResultIdentityMismatch, "transport", "probe_result_identity_mismatch"},
+		{"schema mismatch", captureJSON(t, request, func(m map[string]any) { m["schema_sha256"] = strings.Repeat("d", 64) }), errProbeResultIdentityMismatch, "transport", "probe_result_identity_mismatch"},
+		{"zero calls", captureJSON(t, request, func(m map[string]any) { m["call_count"] = 0 }), errProbeResultInvalid, "transport", "probe_result_invalid"},
+		{"null arguments", captureJSON(t, request, func(m map[string]any) { m["canonical_arguments"] = nil }), errProbeResultInvalid, "transport", "probe_result_invalid"},
+		{"short raw digest", captureJSON(t, request, func(m map[string]any) { m["raw_sha256"] = "abcd" }), errProbeResultInvalid, "transport", "probe_result_invalid"},
+		{"non hex raw digest", captureJSON(t, request, func(m map[string]any) { m["raw_sha256"] = strings.Repeat("z", 64) }), errProbeResultInvalid, "transport", "probe_result_invalid"},
+		{"unknown classification", captureJSON(t, request, func(m map[string]any) { m["classification"] = "looks_fine" }), errProbeResultInvalid, "transport", "probe_result_invalid"},
+		{"unknown field", captureJSON(t, request, func(m map[string]any) { m["extra"] = 1 }), errProbeResultInvalid, "transport", "probe_result_invalid"},
+		{"trailing json", append(captureJSON(t, request, nil), []byte(` {}`)...), errProbeResultInvalid, "transport", "probe_result_invalid"},
+		{"oversize", []byte(strings.Repeat(" ", maxOutputBytes+1)), errProbeResultTooLarge, "transport", "probe_result_too_large"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -76,8 +76,8 @@ func TestDecodeEpisodeCaptureRejectionsMapToNormalizedFailures(t *testing.T) {
 				}
 			}
 			_, err := decodeEpisodeCapture(path, request)
-			if err == nil || err.Error() != tc.wantErr {
-				t.Fatalf("err = %v, want %q", err, tc.wantErr)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("err = %v, want %v", err, tc.wantErr)
 			}
 			cause, code := normalizedCaptureFailure(err)
 			if cause != tc.wantCause || code != tc.wantCode {
@@ -90,7 +90,7 @@ func TestDecodeEpisodeCaptureRejectionsMapToNormalizedFailures(t *testing.T) {
 func TestDecodeEpisodeCaptureUnreadableResultIsReadFailure(t *testing.T) {
 	dir := t.TempDir() // a directory in place of the result file cannot be read
 	_, err := decodeEpisodeCapture(dir, captureRequest())
-	if err == nil || err.Error() != "probe_result_read_failed" {
+	if !errors.Is(err, errProbeResultReadFailed) {
 		t.Fatalf("err = %v", err)
 	}
 	if cause, code := normalizedCaptureFailure(err); cause != "transport" || code != "probe_result_read_failed" {
@@ -156,7 +156,7 @@ func TestMultipleCallMarkerOverridesCaptureOutcome(t *testing.T) {
 	for name, marker := range rejected {
 		t.Run(name, func(t *testing.T) {
 			_, err := decodeEpisodeCapture(write(t, marker), request)
-			if err == nil || err.Error() != "multiple_call_marker_invalid" {
+			if !errors.Is(err, errMultipleCallMarkerInvalid) {
 				t.Fatalf("err = %v", err)
 			}
 			if cause, code := normalizedCaptureFailure(err); cause != "transport" || code != "multiple_call_marker_invalid" {
@@ -166,7 +166,7 @@ func TestMultipleCallMarkerOverridesCaptureOutcome(t *testing.T) {
 	}
 	t.Run("oversize marker", func(t *testing.T) {
 		_, err := decodeEpisodeCapture(write(t, strings.Repeat(" ", maxOutputBytes+1)), request)
-		if err == nil || err.Error() != "multiple_call_marker_too_large" {
+		if !errors.Is(err, errMultipleCallMarkerTooLarge) {
 			t.Fatalf("err = %v", err)
 		}
 	})
@@ -176,23 +176,26 @@ func TestMultipleCallMarkerOverridesCaptureOutcome(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err := decodeEpisodeCapture(path, request)
-		if err == nil || err.Error() != "multiple_call_marker_read_failed" {
+		if !errors.Is(err, errMultipleCallMarkerReadFailed) {
 			t.Fatalf("err = %v", err)
 		}
 	})
 }
 
 func TestNormalizedProcessFailure(t *testing.T) {
-	cases := []struct{ in, cause, code string }{
-		{"command_timeout", "harness_environment", "command_timeout"},
-		{"command_cancelled", "harness_environment", "command_cancelled"},
-		{"command_output_truncated", "transport", "command_output_truncated"},
-		{"command_failed", "harness_environment", "dflt"},
+	cases := []struct {
+		in          error
+		cause, code string
+	}{
+		{errCommandTimeout, "harness_environment", "command_timeout"},
+		{errCommandCancelled, "harness_environment", "command_cancelled"},
+		{errCommandOutputTruncated, "transport", "command_output_truncated"},
+		{errCommandFailed, "harness_environment", "dflt"},
 	}
 	for _, tc := range cases {
-		cause, code := normalizedProcessFailure(errors.New(tc.in), "dflt")
+		cause, code := normalizedProcessFailure(tc.in, "dflt")
 		if cause != tc.cause || code != tc.code {
-			t.Errorf("%s -> %q/%q, want %q/%q", tc.in, cause, code, tc.cause, tc.code)
+			t.Errorf("%v -> %q/%q, want %q/%q", tc.in, cause, code, tc.cause, tc.code)
 		}
 	}
 }
@@ -209,18 +212,18 @@ func TestCommandOutcomeErrorPrecedence(t *testing.T) {
 		ctx     context.Context
 		out     CommandOutput
 		waitErr error
-		want    string
+		want    error
 	}{
-		{"deadline beats wait error", timedOut, CommandOutput{}, errors.New("x"), "command_timeout"},
-		{"cancel beats wait error", cancelled, CommandOutput{}, errors.New("x"), "command_cancelled"},
-		{"wait error beats truncation", live, truncated, errors.New("x"), "command_failed"},
-		{"stdout truncation", live, truncated, nil, "command_output_truncated"},
-		{"stderr truncation", live, CommandOutput{StderrTruncated: true}, nil, "command_output_truncated"},
+		{"deadline beats wait error", timedOut, CommandOutput{}, errors.New("x"), errCommandTimeout},
+		{"cancel beats wait error", cancelled, CommandOutput{}, errors.New("x"), errCommandCancelled},
+		{"wait error beats truncation", live, truncated, errors.New("x"), errCommandFailed},
+		{"stdout truncation", live, truncated, nil, errCommandOutputTruncated},
+		{"stderr truncation", live, CommandOutput{StderrTruncated: true}, nil, errCommandOutputTruncated},
 	}
 	for _, tc := range cases {
 		err := commandOutcomeError(tc.ctx, tc.out, tc.waitErr)
-		if err == nil || err.Error() != tc.want {
-			t.Errorf("%s: err = %v, want %s", tc.name, err, tc.want)
+		if !errors.Is(err, tc.want) {
+			t.Errorf("%s: err = %v, want %v", tc.name, err, tc.want)
 		}
 	}
 	if err := commandOutcomeError(live, CommandOutput{}, nil); err != nil {
@@ -233,18 +236,18 @@ func TestExecRunnerReportsStartExitAndCancellationFailures(t *testing.T) {
 	if _, err := (execRunner{}).Run(ctx, commandRequest{}); err == nil || err.Error() != "empty_argv" {
 		t.Fatalf("empty argv err = %v", err)
 	}
-	if _, err := (execRunner{}).Run(ctx, commandRequest{Argv: []string{filepath.Join(t.TempDir(), "nope")}}); err == nil || err.Error() != "command_failed" {
+	if _, err := (execRunner{}).Run(ctx, commandRequest{Argv: []string{filepath.Join(t.TempDir(), "nope")}}); !errors.Is(err, errCommandFailed) {
 		t.Fatalf("start failure err = %v", err)
 	}
 	exitThree := testsupport.WriteFakeCommand(t, t.TempDir(), "exit-three", "#!/bin/sh\necho hi\nexit 3\n")
 	out, err := (execRunner{}).Run(ctx, commandRequest{Argv: []string{exitThree}, Env: []string{}})
-	if err == nil || err.Error() != "command_failed" || out.ExitCode != 3 || strings.TrimSpace(string(out.Stdout)) != "hi" {
+	if !errors.Is(err, errCommandFailed) || out.ExitCode != 3 || strings.TrimSpace(string(out.Stdout)) != "hi" {
 		t.Fatalf("exit failure: out=%+v err=%v", out, err)
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
 	sleeper := testsupport.WriteFakeCommand(t, t.TempDir(), "sleeper", "#!/bin/sh\nsleep 30\n")
-	if _, err := (execRunner{}).Run(cancelled, commandRequest{Argv: []string{sleeper}}); err == nil || err.Error() != "command_cancelled" {
+	if _, err := (execRunner{}).Run(cancelled, commandRequest{Argv: []string{sleeper}}); !errors.Is(err, errCommandCancelled) {
 		t.Fatalf("cancel err = %v", err)
 	}
 }
@@ -360,7 +363,7 @@ func TestPreflightClassifiesMissingAndFailingExecutables(t *testing.T) {
 	}
 	failing := normalizeDependencies(Dependencies{
 		LookPath: func(string) (string, error) { return "/x/codex", nil },
-		Process:  fakeRunner{err: errors.New("command_failed")},
+		Process:  fakeRunner{err: errCommandFailed},
 	})
 	got = preflight(t.Context(), failing, "codex", "codex", request, nil)
 	if !got.Installed || got.Ready || got.Code != "version_probe_failed" || got.Cause != "harness_environment" {

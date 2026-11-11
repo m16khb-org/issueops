@@ -328,9 +328,9 @@ func TestOmpRunnerRunFailsClosedOnStreamAndProcessFailures(t *testing.T) {
 		{name: "missing observed model", output: CommandOutput{Stdout: []byte(`{"type":"session","version":3,"id":"s"}` + "\n" + targetStart + targetEnd)}, wantCause: "transport", wantCode: "host_stream_model_missing"},
 		{name: "multiple calls", output: CommandOutput{Stdout: append(ompSuccessfulStream(ompTestTarget), []byte(strings.ReplaceAll(targetStart+targetEnd, "call-1", "call-2"))...)}, wantCause: "transport", wantCode: "host_stream_multiple_calls"},
 		{name: "blocked by context guard", output: CommandOutput{Stdout: []byte(strings.Replace(string(ompSuccessfulStream(ompTestTarget)), `"isError":false`, `"isError":true`, 1))}, wantCause: "transport", wantCode: "host_stream_tool_error"},
-		{name: "unavailable probe server", output: CommandOutput{ExitCode: 1}, processErr: errors.New("command_failed"), wantCause: "harness_environment", wantCode: "host_process_failed", wantExit: 1},
-		{name: "timeout", output: CommandOutput{ExitCode: -1}, processErr: errors.New("command_timeout"), wantCause: "harness_environment", wantCode: "command_timeout", wantExit: -1},
-		{name: "cancelled", output: CommandOutput{ExitCode: -1}, processErr: errors.New("command_cancelled"), wantCause: "harness_environment", wantCode: "command_cancelled", wantExit: -1},
+		{name: "unavailable probe server", output: CommandOutput{ExitCode: 1}, processErr: errCommandFailed, wantCause: "harness_environment", wantCode: "host_process_failed", wantExit: 1},
+		{name: "timeout", output: CommandOutput{ExitCode: -1}, processErr: errCommandTimeout, wantCause: "harness_environment", wantCode: "command_timeout", wantExit: -1},
+		{name: "cancelled", output: CommandOutput{ExitCode: -1}, processErr: errCommandCancelled, wantCause: "harness_environment", wantCode: "command_cancelled", wantExit: -1},
 	}
 
 	for _, test := range tests {

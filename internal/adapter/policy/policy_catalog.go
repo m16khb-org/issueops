@@ -7,11 +7,17 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	policyapp "issueops/internal/application/policy"
 	policycontract "issueops/internal/contract/policy"
 	policydomain "issueops/internal/domain/policy"
+)
+
+// Warning codes for a policy override file that cannot be loaded; the codes
+// are the text of the sentinels.
+var (
+	errPolicyOverrideReadFailed  = errors.New("policy_override_read_failed")
+	errPolicyOverrideParseFailed = errors.New("policy_override_parse_failed")
 )
 
 // OverrideLoader reads the optional per-repository command policy overrides from .issueops/policy.json.
@@ -33,22 +39,21 @@ func readPolicyOverrides(repoRoot string) (*policycontract.Overrides, error) {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("policy_override_read_failed: %w", err)
+		return nil, fmt.Errorf("%w: %w", errPolicyOverrideReadFailed, err)
 	}
 	var overrides policycontract.Overrides
 	if err := json.Unmarshal(data, &overrides); err != nil {
-		return nil, fmt.Errorf("policy_override_parse_failed: %w", err)
+		return nil, fmt.Errorf("%w: %w", errPolicyOverrideParseFailed, err)
 	}
 	return &overrides, nil
 }
 
 func policyOverrideWarning(err error) string {
-	msg := err.Error()
-	if strings.HasPrefix(msg, "policy_override_parse_failed:") {
-		return "policy_override_parse_failed"
-	}
-	if strings.HasPrefix(msg, "policy_override_read_failed:") {
-		return "policy_override_read_failed"
+	switch {
+	case errors.Is(err, errPolicyOverrideParseFailed):
+		return errPolicyOverrideParseFailed.Error()
+	case errors.Is(err, errPolicyOverrideReadFailed):
+		return errPolicyOverrideReadFailed.Error()
 	}
 	return "policy_override_failed"
 }

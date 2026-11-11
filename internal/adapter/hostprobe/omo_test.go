@@ -346,9 +346,10 @@ func TestOmoRunnerRunFailsClosedOnStreamAndProcessFailures(t *testing.T) {
 		{name: "missing observed model", output: CommandOutput{Stdout: omoStreamWithoutModel(omoProbeRequest())}, wantCause: "transport", wantCode: "host_stream_model_missing"},
 		{name: "multiple calls", output: CommandOutput{Stdout: omoMultipleCallStream(omoProbeRequest())}, wantCause: "transport", wantCode: "host_stream_multiple_calls"},
 		{name: "tool error", output: CommandOutput{Stdout: omoToolErrorStream(omoProbeRequest())}, wantCause: "transport", wantCode: "host_stream_tool_error"},
-		{name: "nonzero cli", output: CommandOutput{ExitCode: 7}, processErr: errors.New("command_failed"), wantCause: "harness_environment", wantCode: "host_process_failed", wantExit: 7},
-		{name: "timeout", output: CommandOutput{ExitCode: -1}, processErr: errors.New("command_timeout"), wantCause: "harness_environment", wantCode: "command_timeout", wantExit: -1},
-		{name: "cancelled", output: CommandOutput{ExitCode: -1}, processErr: errors.New("command_cancelled"), wantCause: "harness_environment", wantCode: "command_cancelled", wantExit: -1},
+		{name: "non target call only", output: CommandOutput{Stdout: omoNonTargetStream()}, wantCause: "transport", wantCode: "host_stream_non_target_call"},
+		{name: "nonzero cli", output: CommandOutput{ExitCode: 7}, processErr: errCommandFailed, wantCause: "harness_environment", wantCode: "host_process_failed", wantExit: 7},
+		{name: "timeout", output: CommandOutput{ExitCode: -1}, processErr: errCommandTimeout, wantCause: "harness_environment", wantCode: "command_timeout", wantExit: -1},
+		{name: "cancelled", output: CommandOutput{ExitCode: -1}, processErr: errCommandCancelled, wantCause: "harness_environment", wantCode: "command_cancelled", wantExit: -1},
 	}
 
 	for _, test := range tests {
@@ -542,6 +543,15 @@ func omoToolErrorStream(request port.HostProbeRequest) []byte {
 	target := "mcp_issueops_probe_" + request.ProbeTool
 	return []byte(`{"type":"tool_execution_start","toolCallId":"call-1","toolName":"` + target + `","args":{}}` + "\n" +
 		`{"type":"tool_execution_end","toolCallId":"call-1","toolName":"` + target + `","result":{"content":[]},"isError":true}` + "\n")
+}
+
+func omoNonTargetStream() []byte {
+	return []byte(strings.Join([]string{
+		`{"type":"session","id":"session-1"}`,
+		`{"type":"message_start","message":{"role":"assistant","provider":"google","model":"gemini-2.5-pro","content":[]}}`,
+		`{"type":"tool_execution_start","toolCallId":"call-1","toolName":"read_file","args":{}}`,
+		`{"type":"tool_execution_end","toolCallId":"call-1","toolName":"read_file","result":{"content":[]},"isError":false}`,
+	}, "\n") + "\n")
 }
 
 func omoStreamWithoutModel(request port.HostProbeRequest) []byte {

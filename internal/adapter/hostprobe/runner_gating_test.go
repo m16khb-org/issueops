@@ -196,19 +196,22 @@ func TestResolveOmoAuthRejectsRelativeLocationsAndLooseFiles(t *testing.T) {
 }
 
 func TestOmoStreamFailureMapsKnownCodes(t *testing.T) {
-	cases := map[string][2]string{
-		"host_stream_no_call":         {"unknown", "no_call"},
-		"host_stream_invalid":         {"transport", "host_stream_invalid"},
-		"host_stream_multiple_calls":  {"transport", "host_stream_multiple_calls"},
-		"host_stream_non_target_call": {"transport", "host_stream_non_target_call"},
-		"host_stream_tool_error":      {"transport", "host_stream_tool_error"},
-		"host_stream_model_missing":   {"transport", "host_stream_model_missing"},
-		"unexpected parser explosion": {"transport", "host_stream_invalid"},
+	cases := []struct {
+		in          error
+		cause, code string
+	}{
+		{errHostStreamNoCall, "unknown", "no_call"},
+		{errHostStreamInvalid, "transport", "host_stream_invalid"},
+		{errHostStreamMultipleCalls, "transport", "host_stream_multiple_calls"},
+		{errHostStreamNonTargetCall, "transport", "host_stream_non_target_call"},
+		{errHostStreamToolError, "transport", "host_stream_tool_error"},
+		{errHostStreamModelMissing, "transport", "host_stream_model_missing"},
+		{errors.New("unexpected parser explosion"), "transport", "host_stream_invalid"},
 	}
-	for in, want := range cases {
-		cause, code := omoStreamFailure(errors.New(in))
-		if cause != want[0] || code != want[1] {
-			t.Errorf("%s -> %q/%q, want %v", in, cause, code, want)
+	for _, tc := range cases {
+		cause, code := omoStreamFailure(tc.in)
+		if cause != tc.cause || code != tc.code {
+			t.Errorf("%v -> %q/%q, want %q/%q", tc.in, cause, code, tc.cause, tc.code)
 		}
 	}
 }

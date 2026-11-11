@@ -203,7 +203,7 @@ func TestOpencodeRunnerWarmsMCPBeforeRun(t *testing.T) {
 			return slices.Equal(e, []string{"serve", "info", "mcp", "stop"})
 		}},
 		{name: "probe disabled", mcpBody: `{"data":[{"name":"issueops_probe","status":{"status":"disabled"}}]}`, wantCode: "probe_mcp_unavailable", wantEvents: noRunOneStop},
-		{name: "run fails", runErr: errors.New("command_timeout"), wantCode: "command_timeout", wantEvents: func(e []string) bool {
+		{name: "run fails", runErr: errCommandTimeout, wantCode: "command_timeout", wantEvents: func(e []string) bool {
 			return slices.Equal(e[len(e)-2:], []string{"run", "stop"}) && countEvent(e, "stop") == 1
 		}},
 	} {
@@ -319,16 +319,16 @@ func TestOpencodeRunnerProjectsRunJSONToolUse(t *testing.T) {
 	}
 	for name, tc := range map[string]struct {
 		lines []string
-		want  string
+		want  error
 	}{
-		"guard blocked": {[]string{opencodeToolUse(opencodeTestTarget, "error", "")}, "host_stream_tool_error"},
-		"other tool":    {[]string{opencodeToolUse("shell", "completed", "x")}, "host_stream_non_target_call"},
-		"no tool call":  {[]string{`{"type":"text","part":{"text":"no"}}`}, "host_stream_no_call"},
-		"called twice":  {[]string{opencodeToolUse(opencodeTestTarget, "completed", "a"), opencodeToolUse(opencodeTestTarget, "completed", "b")}, "host_stream_multiple_calls"},
-		"not json":      {[]string{"not json"}, "host_stream_invalid"},
+		"guard blocked": {[]string{opencodeToolUse(opencodeTestTarget, "error", "")}, errHostStreamToolError},
+		"other tool":    {[]string{opencodeToolUse("shell", "completed", "x")}, errHostStreamNonTargetCall},
+		"no tool call":  {[]string{`{"type":"text","part":{"text":"no"}}`}, errHostStreamNoCall},
+		"called twice":  {[]string{opencodeToolUse(opencodeTestTarget, "completed", "a"), opencodeToolUse(opencodeTestTarget, "completed", "b")}, errHostStreamMultipleCalls},
+		"not json":      {[]string{"not json"}, errHostStreamInvalid},
 	} {
-		if _, err := observeOpencodeStream([]byte(strings.Join(tc.lines, "\n")), opencodeTestTarget); err == nil || err.Error() != tc.want {
-			t.Fatalf("%s: err = %v, want %s", name, err, tc.want)
+		if _, err := observeOpencodeStream([]byte(strings.Join(tc.lines, "\n")), opencodeTestTarget); !errors.Is(err, tc.want) {
+			t.Fatalf("%s: err = %v, want %v", name, err, tc.want)
 		}
 	}
 }
@@ -336,14 +336,35 @@ func TestOpencodeRunnerProjectsRunJSONToolUse(t *testing.T) {
 func TestOpencodeRunnerReportsRunErrorEvent(t *testing.T) {
 	freeTier := `{"type":"error","sessionID":"ses_1","error":{"type":"provider.auth","message":"OpenCode's free tier can only be used from within OpenCode.","status":403}}` + "\n"
 	result := opencodeEpisodeFinish("opencode", opencodeProbeRequest(), time.Unix(0, 0), normalizeDependencies(Dependencies{}), "/missing/result.json", opencodeTestTarget,
-		CommandOutput{Stdout: []byte(freeTier), ExitCode: 1}, errors.New("command_failed"))
+		CommandOutput{Stdout: []byte(freeTier), ExitCode: 1}, errCommandFailed)
 	if result.Completed || result.Cause != "harness_environment" || result.Code != "provider_auth_failed" || result.ExitCode != 1 {
 		t.Fatalf("result = %+v", result)
 	}
 	other := opencodeEpisodeFinish("opencode", opencodeProbeRequest(), time.Unix(0, 0), normalizeDependencies(Dependencies{}), "/missing/result.json", opencodeTestTarget,
-		CommandOutput{Stdout: []byte(`{"type":"error","error":{"type":"unknown"}}` + "\n"), ExitCode: 1}, errors.New("command_failed"))
+		CommandOutput{Stdout: []byte(`{"type":"error","error":{"type":"unknown"}}` + "\n"), ExitCode: 1}, errCommandFailed)
 	if other.Code != "host_reported_error" {
 		t.Fatalf("other error = %+v", other)
+	}
+}
+
+func TestOpencodeRunnerReportsStreamFailureCauseAndCode(t *testing.T) {
+	cases := []struct {
+		name      string
+		stdout    string
+		wantCause string
+		wantCode  string
+	}{
+		{"non target call only", opencodeToolUse("shell", "completed", "x") + "\n", "transport", "host_stream_non_target_call"},
+		{"no tool call", `{"type":"text","part":{"text":"no"}}` + "\n", "unknown", "no_call"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := opencodeEpisodeFinish("opencode", opencodeProbeRequest(), time.Unix(0, 0), normalizeDependencies(Dependencies{}), "/missing/result.json", opencodeTestTarget,
+				CommandOutput{Stdout: []byte(tc.stdout)}, nil)
+			if result.Completed || result.Cause != tc.wantCause || result.Code != tc.wantCode {
+				t.Fatalf("result = %+v, want %s/%s", result, tc.wantCause, tc.wantCode)
+			}
+		})
 	}
 }
 

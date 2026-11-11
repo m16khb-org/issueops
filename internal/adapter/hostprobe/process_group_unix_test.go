@@ -43,7 +43,7 @@ func TestExecRunnerTimeoutKillsAndReapsUnixDescendant(t *testing.T) {
 		Cwd: root, Argv: []string{"/bin/sh", "-c", script, "sh", pidPath},
 		Env: []string{"PATH=/usr/bin:/bin"}, Timeout: 100 * time.Millisecond,
 	})
-	if err == nil || err.Error() != "command_timeout" {
+	if !errors.Is(err, errCommandTimeout) {
 		t.Fatalf("err = %v", err)
 	}
 	body, err := os.ReadFile(pidPath)
@@ -76,7 +76,7 @@ func TestExecRunnerBoundsWaitWhenGroupTerminationDoesNotStopProcess(t *testing.T
 	_, err := (execRunner{}).Run(context.Background(), commandRequest{
 		Argv: []string{"/bin/sleep", "3"}, Timeout: 50 * time.Millisecond,
 	})
-	if err == nil || err.Error() != "command_timeout" {
+	if !errors.Is(err, errCommandTimeout) {
 		t.Fatalf("err = %v", err)
 	}
 	if elapsed := time.Since(started); elapsed >= time.Second {
