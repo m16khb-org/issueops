@@ -505,7 +505,7 @@ Five boundaries hold:
 | Install and update | `install`, `update`, `bootstrap`, `version` | Refresh the binary, skills, hooks, and MCP wiring; check the version |
 | Diagnostics | `inspect`, `system-status`, `doctor`, `docs` | Inspect install, state, and project docs |
 | Safety and quality | `policy`, `guard`, `quality`, `verify-work`, `trace`, `contract`, `api-doc`, `preflight` | Execution policy, change quality, evidence and public contract, pre-commit repository checks |
-| Workflow | `start`, `next`, `status`, `execution`, `loop`, `gates`, `channel` | Durable IssueOps cycle (its lifecycle commands sit at the top level), completion gate ledgers, cross-session message channels |
+| Workflow | `start`, `next`, `status`, `view`, `execution`, `loop`, `gates`, `channel` | Durable IssueOps cycle (its lifecycle commands sit at the top level), completion gate ledgers, cross-session message channels |
 | Docs and hooks | `project`, `hook` | Project doc creation, routing, and refresh; the `SessionStart` and `SubagentStart` context hook entry points |
 | State and runtime | `state`, `mcp`, `worker` | User state, MCP server, limited local jobs |
 | Models | `model` | Per-role model and effort settings: show, set, unset, resolve |
