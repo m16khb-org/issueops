@@ -147,4 +147,19 @@ type ReviewMetricsResult struct {
 	Aggregate   ReviewMetricsAggregate `json:"aggregate"`
 	Warnings    []string               `json:"warnings,omitempty"`
 	GeneratedAt string                 `json:"generated_at"`
+	// Retention은 `--repo` 조회에서만 채워진다. cleanup finish·abandon이 이
+	// repo에 남긴 보존 행의 수와 가장 늦은 보존 시각이다. 0이어도 객체가 있으면
+	// "보존 경로를 읽었으나 행이 없다"이고, nil이면 이 조회가 보존 행을 읽지 않았다.
+	Retention *ReviewMetricsRetention `json:"retention,omitempty"`
+}
+
+// ReviewMetricsRetention 타입은 cleanup이 남긴 보존 행의 outcome별 수와 가장
+// 늦은 보존 시각이다. 같은 ID의 live record가 있는 행도 센다. LastRetainedAt은
+// time.RFC3339Nano로 해석되는 RetainedAt 중 가장 늦은 값의 원문이다.
+// 디코딩에 실패한 보존 행은 수에 들어가지 않고 read_errors로만 나간다.
+// `issueops prune`으로 지운 사이클은 보존 행이 없어 세지 못한다.
+type ReviewMetricsRetention struct {
+	Finished       int    `json:"finished"`
+	Abandoned      int    `json:"abandoned"`
+	LastRetainedAt string `json:"last_retained_at,omitempty"`
 }

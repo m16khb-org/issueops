@@ -83,6 +83,11 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 	cliSnapshot["issueops_list"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"list", "--json"})
 	})
+	// review-metrics reads the same started cycle and no retained rows yet, so the
+	// snapshot pins the retention signal of a repository whose cleanup never ran.
+	cliSnapshot["issueops_review_metrics"] = runCLIJSONContract(t, replacements, func() error {
+		return runIssueOps([]string{"review-metrics", "--repo", workspaceDir, "--json"})
+	})
 	cliSnapshot["issueops_record_intent"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"intent", "record", "--id", issueopsID, "--raw-request", "Refactor IssueOps intent flow", "--interpreted-intent", "Persist main-agent judgment before planning", "--success-criteria", "intent is recorded", "--constraint", "keep contract deterministic", "--ambiguity", "none", "--non-goal", "do not continue from hook recommendation alone", "--json"})
 	})

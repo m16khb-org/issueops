@@ -598,6 +598,13 @@ func (cli command) runIssueOpsReviewMetrics(args []string) error {
 	for _, cycle := range result.Cycles {
 		fmt.Printf("  %s  phase=%s  rounds=%d  regress=%d\n", cycle.ID, cycle.Phase, cycle.DevilsAdvocateRounds, cycle.RegressCount)
 	}
+	if retention := result.Retention; retention != nil {
+		last := retention.LastRetainedAt
+		if last == "" {
+			last = "-"
+		}
+		fmt.Printf("retention: finished %d, abandoned %d, last %s\n", retention.Finished, retention.Abandoned, last)
+	}
 	for _, warning := range result.Warnings {
 		fmt.Printf("  warning: %s\n", warning)
 	}

@@ -591,6 +591,56 @@ func TestReviewMetricsTextAndErrors(t *testing.T) {
 	}
 }
 
+func TestReviewMetricsRetentionText(t *testing.T) {
+	cases := []struct {
+		name      string
+		retention *issueopscontract.ReviewMetricsRetention
+		want      string
+	}{
+		{"with last", &issueopscontract.ReviewMetricsRetention{Finished: 0, Abandoned: 1, LastRetainedAt: "2026-11-01T10:00:00Z"}, "retention: finished 0, abandoned 1, last 2026-11-01T10:00:00Z"},
+		{"without last", &issueopscontract.ReviewMetricsRetention{}, "retention: finished 0, abandoned 0, last -"},
+		{"nil", nil, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cli := stubRuntimeCommand(Deps{
+				IssueOpsReviewMetrics: func(_, _, _ string) (issueopscontract.ReviewMetricsResult, error) {
+					return issueopscontract.ReviewMetricsResult{
+						Cycles:    []issueopscontract.ReviewMetricsCycle{{ID: "c1", Phase: "pr"}},
+						Warnings:  []string{"one cycle unreadable"},
+						Retention: tc.retention,
+					}, nil
+				},
+			})
+			out, err := runStub(t, cli, func(c command) error { return c.runIssueOpsReviewMetrics([]string{"--repo", "/r"}) })
+			if err != nil {
+				t.Fatal(err)
+			}
+			lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+			var got []string
+			for _, line := range lines {
+				if strings.HasPrefix(line, "retention:") {
+					got = append(got, line)
+				}
+			}
+			if tc.want == "" {
+				if len(got) != 0 {
+					t.Fatalf("nil retention must print no retention line:\n%s", out)
+				}
+				return
+			}
+			if len(got) != 1 || got[0] != tc.want {
+				t.Fatalf("retention lines=%q want exactly %q:\n%s", got, tc.want, out)
+			}
+			// The line sits after the cycles line and the cycle list, before warnings.
+			iCycles, iList, iRetention, iWarning := strings.Index(out, "cycles:"), strings.Index(out, "  c1  "), strings.Index(out, "retention:"), strings.Index(out, "  warning:")
+			if !(iCycles < iList && iList < iRetention && iRetention < iWarning) {
+				t.Fatalf("retention line out of place:\n%s", out)
+			}
+		})
+	}
+}
+
 func TestChildStatusListAndValidationOutput(t *testing.T) {
 	var gotRepair bool
 	var fail error

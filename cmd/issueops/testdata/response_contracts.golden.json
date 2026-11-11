@@ -1892,6 +1892,29 @@
       "updated_at": "$TIMESTAMP",
       "worktree_path": "$ISSUEOPS_WORKTREE"
     },
+    "issueops_review_metrics": {
+      "aggregate": {
+        "cycles": 1,
+        "mean_rounds": 0,
+        "reviewed_cycles": 0,
+        "revise_ratio": 0,
+        "stop_ratio": 0
+      },
+      "cycles": [
+        {
+          "devils_advocate_rounds": 0,
+          "id": "$ISSUEOPS_ID",
+          "phase": "problem",
+          "regress_count": 0
+        }
+      ],
+      "generated_at": "$TIMESTAMP",
+      "ok": true,
+      "retention": {
+        "abandoned": 0,
+        "finished": 0
+      }
+    },
     "issueops_set_phase": {
       "branch": "1-contract-branch",
       "id": "$ISSUEOPS_ID",

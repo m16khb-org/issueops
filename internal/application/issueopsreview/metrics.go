@@ -83,7 +83,8 @@ func (reader MetricsReader) listRepoCycleIDs(stateRoot, repo string, result *iss
 }
 
 // appendRetainedOutcomes adds the outcomes cleanup retained for repo, skipping
-// any cycle that still has a live record.
+// any cycle that still has a live record, and reports every retained row
+// (live or not) as result.Retention.
 func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live map[string]bool, result *issueops.ReviewMetricsResult) error {
 	outcomes, unreadable, err := reader.ListOutcomes(stateRoot, repo)
 	if err != nil {
@@ -93,12 +94,30 @@ func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live 
 		result.ReadErrors++
 		result.Warnings = append(result.Warnings, fmt.Sprintf("%s: unreadable retained outcome, excluded from the aggregate", cycleID))
 	}
+	retention := &issueops.ReviewMetricsRetention{}
+	var last time.Time
 	for _, outcome := range outcomes {
 		// 같은 ID의 live record가 있으면 그것이 최신 관측이다.
 		if !live[outcome.ID] {
 			result.Cycles = append(result.Cycles, outcome.Metrics)
 		}
+		// retention은 보존 경로가 실행됐는지 보이는 신호라 live 여부와 무관하게 센다.
+		// 알 수 없는 outcome 값의 행은 수에도 last 후보에도 넣지 않는다.
+		switch outcome.Outcome {
+		case issueops.CycleOutcomeFinished:
+			retention.Finished++
+		case issueops.CycleOutcomeAbandoned:
+			retention.Abandoned++
+		default:
+			continue
+		}
+		// 시각은 문자열이 아니라 시점으로 비교한다(오프셋이 달라도 맞다). 해석 실패
+		// 행은 수에는 들어가고 last 후보에서만 빠진다.
+		if at, err := time.Parse(time.RFC3339Nano, outcome.RetainedAt); err == nil && (retention.LastRetainedAt == "" || at.After(last)) {
+			last, retention.LastRetainedAt = at, outcome.RetainedAt
+		}
 	}
+	result.Retention = retention
 	return nil
 }
 
