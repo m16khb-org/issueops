@@ -81,7 +81,7 @@ SQLite 전환 후 checkpoint 뒤에도 WAL이 truncate되지 않고 고수위로
 
 같은 state root를 두 process가 처음 열 때 process-local handle mutex는 data/span DB 파일 생성과 schema pragma를 직렬화하지 못한다. transaction lock만 재시도해도 open/schema 단계의 `SQLITE_BUSY`는 그대로 노출된다.
 
-- `sqlstore.Open`의 초기화 재시도는 typed `SQLITE_BUSY`/`SQLITE_LOCKED`에만 적용하고 명명된 짧은 상한을 둔다. permission, symlink, schema, path 오류를 retry로 숨기지 않는다.
+- `sqlstore.Open`의 초기화 재시도는 typed `SQLITE_BUSY`/`SQLITE_LOCKED`에만 적용하고 명명된 짧은 상한을 둔다. permission, symlink, schema, path 오류를 retry로 숨기지 않는다. 예외는 하나다. Windows에서 `-wal`/`-shm`/`-journal` sidecar의 `ERROR_ACCESS_DENIED`만 `repairPrivateSQLiteFiles` 호출당 `sidecarRetryBound`(500ms) sleep 예산 안에서 Lstat부터 다시 시도한다. 예산은 요청한 sleep 시간의 합이며 wall time 상한이 아니다. SQLite가 마지막 연결을 닫으며 지운 sidecar를 다른 process가 아직 열고 있으면 이름이 delete-pending으로 남아 같은 오류를 내기 때문이다. 예산을 다 쓰면 원래 오류를 그대로 돌려준다. main DB 파일과 Unix는 재시도하지 않는다. 대가로 실제 DACL이 막은 sidecar는 즉시가 아니라 repair 호출마다 예산을 다 쓴 뒤 실패하며, `Open`은 매 호출 한 번과 `newDB` 시도마다 두 번 repair를 `handlesMu` 아래에서 부른다([ADR 2026-11-12](../adr/2026-11-12-windows-sidecar-repair-retries-a-delete-pending-file.md)).
 - cross-process 회귀는 양쪽 helper가 준비됐다는 barrier 뒤 동시에 진입시킨다. 단순히 process 두 개를 순서대로 `Start`한 것만 actual contention 증거로 삼지 않는다.
 - expected loser error를 exact allowlist로 분류한다. 이미 artifact가 확정된 뒤의 phase exclusion과 live claim exclusion 외 오류는 `blocked`로 축약하지 말고 helper stderr와 nonzero exit로 남긴다.
 - parent는 첫 `Wait` 실패에서 즉시 종료하지 말고 시작된 모든 helper를 회수해 orphan과 TempDir cleanup race를 방지한다.

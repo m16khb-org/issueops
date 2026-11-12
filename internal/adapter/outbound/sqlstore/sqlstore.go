@@ -52,6 +52,25 @@ const (
 
 var sqliteFileSuffixes = [...]string{"", "-wal", "-shm", "-journal"}
 
+// Windows에서 SQLite는 마지막 연결을 닫을 때 -wal/-shm을 지운다. 다른 프로세스가
+// 아직 그 파일을 열고 있으면 이름은 delete-pending으로 남고, 그동안 열기와 속성
+// 조회가 ERROR_ACCESS_DENIED를 돌려준다. repairPrivateSQLiteFiles는 sidecar의 그
+// 오류만 아래 sleep 예산 안에서 다시 시도한다. 예산은 요청한 sleep 시간의 합이며
+// 시도마다의 Lstat/ACL 호출 시간은 그 위에 더해진다. 예산은 repair 호출 하나에
+// 하나다. Open은 매 호출마다 repair를 한 번, newDB 시도마다 두 번 더 부르고,
+// newDBWithRetry는 SQLITE_BUSY/LOCKED 뒤 openLockMaxWait(10초)까지 newDB를 다시
+// 시도하되 deadline은 시도 사이에서만 본다. 그래서 deadline 직전에 시작한 시도는
+// repair sleep만으로 약 1초 더 갈 수 있고, 이 모두가 handlesMu 아래에서 일어나므로
+// 예산을 짧게 둔다(ADR 2026-11-12).
+const (
+	sidecarRetryBound      = 500 * time.Millisecond
+	sidecarRetryInitialGap = time.Millisecond
+	sidecarRetryMaxGap     = 50 * time.Millisecond
+)
+
+// sidecarRetrySleep은 테스트가 실제로 기다리지 않고 sleep 호출을 세도록 바꾸는 seam이다.
+var sidecarRetrySleep = time.Sleep
+
 // DB 타입은 state root 디렉터리 하나에 대한 핸들이다.
 type DB struct {
 	dir      string
@@ -278,35 +297,77 @@ func ensurePrivateRoot(dir string) error {
 	return nil
 }
 
+// repairPrivateSQLiteFiles는 고정된 main/sidecar 파일 집합을 0600으로 맞추고 고친
+// 파일 이름을 돌려준다. main 데이터베이스 파일은 정상 동작 중 SQLite가 지우지 않으므로
+// access-denied를 실제 오류로 본다. sidecar만 isTransientSidecarError일 때 Lstat부터
+// 다시 시도하고, 예산을 다 쓰면 마지막 오류를 그대로 돌려준다(fail closed).
 func repairPrivateSQLiteFiles(dir string) ([]string, error) {
 	var repaired []string
+	retry := sidecarRetry{gap: sidecarRetryInitialGap}
 	for _, base := range [...]string{dataDBFile, spanDBFile} {
 		for _, suffix := range sqliteFileSuffixes {
 			name := base + suffix
 			path := filepath.Join(dir, name)
-			info, err := os.Lstat(path)
-			if errors.Is(err, fs.ErrNotExist) {
-				continue
-			}
-			if err != nil {
-				return nil, fmt.Errorf("sqlstore inspect permissions %s: %w", path, err)
-			}
-			if !info.Mode().IsRegular() {
-				return nil, fmt.Errorf("sqlstore refusing non-regular SQLite file %s", path)
-			}
-			if osfile.Perm(path, info) == 0o600 {
-				continue
-			}
-			if err := osfile.Chmod(path, 0o600); err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					continue
+			for {
+				fixed, err := repairPrivateSQLiteFile(path)
+				if err == nil {
+					if fixed {
+						repaired = append(repaired, name)
+					}
+					break
 				}
-				return nil, fmt.Errorf("sqlstore chmod %s: %w", path, err)
+				if suffix == "" || !isTransientSidecarError(err) || !retry.wait() {
+					return nil, err
+				}
 			}
-			repaired = append(repaired, name)
 		}
 	}
 	return repaired, nil
+}
+
+// repairPrivateSQLiteFile은 파일 하나를 검사해 0600이 아니면 고치고, 고쳤는지 알린다.
+// 없는 파일은 고칠 것이 없는 것으로 본다.
+func repairPrivateSQLiteFile(path string) (bool, error) {
+	info, err := os.Lstat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("sqlstore inspect permissions %s: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return false, fmt.Errorf("sqlstore refusing non-regular SQLite file %s", path)
+	}
+	if osfile.Perm(path, info) == 0o600 {
+		return false, nil
+	}
+	if err := osfile.Chmod(path, 0o600); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("sqlstore chmod %s: %w", path, err)
+	}
+	return true, nil
+}
+
+// sidecarRetry는 repairPrivateSQLiteFiles 호출 하나가 모든 sidecar에 걸쳐 공유하는
+// sleep 예산이다. 간격은 1ms에서 두 배씩 늘어 50ms에서 멈추고, 합계는
+// sidecarRetryBound를 넘지 않는다.
+type sidecarRetry struct {
+	gap   time.Duration
+	spent time.Duration
+}
+
+// wait는 예산이 남았으면 다음 간격만큼 자고 true를, 다 썼으면 자지 않고 false를 돌려준다.
+func (r *sidecarRetry) wait() bool {
+	if r.spent >= sidecarRetryBound {
+		return false
+	}
+	gap := min(r.gap, sidecarRetryBound-r.spent)
+	sidecarRetrySleep(gap)
+	r.spent += gap
+	r.gap = min(r.gap*2, sidecarRetryMaxGap)
+	return true
 }
 
 func openSQLite(path, params string) (*sql.DB, error) {

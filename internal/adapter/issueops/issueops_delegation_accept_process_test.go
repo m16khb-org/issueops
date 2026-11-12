@@ -55,27 +55,30 @@ func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
 
 	gate := filepath.Join(stateRoot, "accept-gate")
 	readyMarkers := make([]string, workers)
-	outputs := make(chan acceptProcessOutput, workers)
+	outputs := make(chan processHelperExit, workers)
 	for i, childID := range childIDs {
 		ready := filepath.Join(stateRoot, fmt.Sprintf("ready-worker-%d", i))
 		readyMarkers[i] = ready
 		cmd := acceptProcessHelperCommand(t, stateRoot, parent.ID, childID, evidenceByChild[childID], ready, gate)
 		go func(worker int, cmd *exec.Cmd) {
 			output, err := cmd.CombinedOutput()
-			outputs <- acceptProcessOutput{worker: worker, output: string(output), err: err}
+			outputs <- processHelperExit{worker: worker, output: string(output), err: err}
 		}(i, cmd)
 	}
 
-	waitForAcceptProcessReadyMarkers(t, readyMarkers, 5*time.Second)
-	if err := os.WriteFile(gate, []byte("go\n"), 0o600); err != nil {
+	releaseGate := func() error { return os.WriteFile(gate, []byte("go\n"), 0o600) }
+	if err := awaitHelperReadyMarkers(readyMarkers, 5*time.Second, releaseGate, outputs, processHelperCollectTimeout); err != nil {
+		t.Fatal(err)
+	}
+	if err := releaseGate(); err != nil {
 		t.Fatalf("release accept gate: %v", err)
 	}
 
-	for range workers {
-		result := <-outputs
-		if result.err != nil {
-			t.Fatalf("worker %d failed: %v\ncombined output:\n%s", result.worker, result.err, result.output)
-		}
+	results, err := collectHelperExits(outputs, workers, processHelperCollectTimeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range results {
 		if !strings.Contains(result.output, "accepted "+childIDs[result.worker]) {
 			t.Fatalf("worker %d output did not preserve child id: %q", result.worker, result.output)
 		}
@@ -102,12 +105,6 @@ func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
 	}
 }
 
-type acceptProcessOutput struct {
-	worker int
-	output string
-	err    error
-}
-
 func acceptProcessHelperCommand(t *testing.T, stateRoot, parentID, childID, evidence, ready, gate string) *exec.Cmd {
 	t.Helper()
 	cmd := exec.Command(os.Args[0], "-test.run=^TestIssueOpsDelegationAcceptProcessHelper$")
@@ -122,26 +119,6 @@ func acceptProcessHelperCommand(t *testing.T, stateRoot, parentID, childID, evid
 		acceptProcessHelperGateEnv+"="+gate,
 	)
 	return cmd
-}
-
-func waitForAcceptProcessReadyMarkers(t *testing.T, markers []string, timeout time.Duration) {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for {
-		missing := []string{}
-		for _, marker := range markers {
-			if _, err := os.Stat(marker); err != nil {
-				missing = append(missing, filepath.Base(marker))
-			}
-		}
-		if len(missing) == 0 {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("workers did not reach ready barrier in time; missing=%v", missing)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
 }
 
 func TestIssueOpsDelegationAcceptProcessHelper(t *testing.T) {

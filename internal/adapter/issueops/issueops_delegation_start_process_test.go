@@ -40,15 +40,14 @@ func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
 	gate := filepath.Join(stateRoot, "start.gate")
 
 	const workers = 4
-	type outcome struct {
-		branch string
-		output []byte
-		err    error
-	}
-	outcomes := make(chan outcome, workers)
+	branches := make([]string, workers)
+	readyMarkers := make([]string, workers)
+	outcomes := make(chan processHelperExit, workers)
 	for i := range workers {
 		branch := fmt.Sprintf("12%d-child-process-sibling", i)
 		title := fmt.Sprintf("process sibling %d", i)
+		branches[i] = branch
+		readyMarkers[i] = filepath.Join(readyDir, branch+".ready")
 		go func() {
 			cmd := exec.Command(os.Args[0], "-test.run=^TestIssueOpsDelegationStartProcessHelper$")
 			cmd.Env = append(os.Environ(),
@@ -62,22 +61,26 @@ func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
 				childStartProcessGateEnv+"="+gate,
 			)
 			output, err := cmd.CombinedOutput()
-			outcomes <- outcome{branch: branch, output: output, err: err}
+			outcomes <- processHelperExit{worker: i, output: string(output), err: err}
 		}()
 	}
 
-	waitForChildStartReadyMarkers(t, readyDir, workers)
-	if err := os.WriteFile(gate, []byte("release\n"), 0o600); err != nil {
+	releaseGate := func() error { return os.WriteFile(gate, []byte("release\n"), 0o600) }
+	if err := awaitHelperReadyMarkers(readyMarkers, 15*time.Second, releaseGate, outcomes, processHelperCollectTimeout); err != nil {
+		t.Fatal(err)
+	}
+	if err := releaseGate(); err != nil {
 		t.Fatal(err)
 	}
 
-	for range workers {
-		result := <-outcomes
-		if result.err != nil {
-			t.Fatalf("child start subprocess for %s failed: %v\n%s", result.branch, result.err, result.output)
-		}
-		if !strings.Contains(string(result.output), "child-start-ok "+result.branch) {
-			t.Fatalf("child start subprocess for %s did not report success:\n%s", result.branch, result.output)
+	results, err := collectHelperExits(outcomes, workers, processHelperCollectTimeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range results {
+		branch := branches[result.worker]
+		if !strings.Contains(result.output, "child-start-ok "+branch) {
+			t.Fatalf("child start subprocess for %s did not report success:\n%s", branch, result.output)
 		}
 	}
 
@@ -152,32 +155,6 @@ func TestIssueOpsDelegationStartProcessHelper(t *testing.T) {
 		t.Fatalf("ref mismatch for %s: %#v", branch, ref)
 	}
 	fmt.Printf("child-start-ok %s %s\n", branch, child.ID)
-}
-
-func waitForChildStartReadyMarkers(t *testing.T, readyDir string, want int) {
-	t.Helper()
-	deadline := time.Now().Add(15 * time.Second)
-	for time.Now().Before(deadline) {
-		entries, err := os.ReadDir(readyDir)
-		if err == nil {
-			ready := 0
-			for _, entry := range entries {
-				if strings.HasSuffix(entry.Name(), ".ready") {
-					ready++
-				}
-			}
-			if ready == want {
-				return
-			}
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	entries, _ := os.ReadDir(readyDir)
-	var names []string
-	for _, entry := range entries {
-		names = append(names, entry.Name())
-	}
-	t.Fatalf("timed out waiting for %d ready markers in %s; saw %v", want, readyDir, names)
 }
 
 func waitForChildStartGate(t *testing.T, gate string) {
