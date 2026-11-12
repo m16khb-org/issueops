@@ -125,8 +125,13 @@ def prompt_root(a: dict) -> str:
     return canonical_path(a.get("omoInputDir") or a["outDir"])
 
 
+def prompt_path(a: dict, relative: str) -> str:
+    """Name a review input in the host's own path form (POSIX output is unchanged)."""
+    return str(Path(prompt_root(a), relative))
+
+
 def finder_common(a: dict, cg: str) -> str:
-    root = prompt_root(a)
+    gate = prompt_path(a, "gate.md")
     checkout = canonical_path(a["checkout"])
     return f"""You are one inspector in a formal design inspection (Parnas active design review).
 Repository checkout at head: {checkout} (read-only; never edit, never checkout, never post).
@@ -137,7 +142,7 @@ How to work — this is a budget, not advice:
 - Allowed tools: read, grep, find, ls. Forbidden tools: bash, eval, webfetch, edit, write, bash_output. Do not attempt a forbidden tool.
 - Reserve the final assistant message for the JSON object. Stop all investigation and tool use one message before the cap; the final message must contain no tool call.
 - You carry several lenses. Apply each one separately over the same pack and tag every candidate with the lens that found it (candidate.lens); a candidate two lenses would both report is reported once under the stronger lens. Lens-specific file scope: 'contract' looks at dto/controller/gateway/generated files, 'data' at db/repository/query code, 'async' at kafka/queue/stream/retry code, 'security' at auth/validation/secrets — skip files the lens does not apply to.
-- Open the checkout only for a hop the pack names (a caller, a callee, a validator) or a symbol the pack does not list ({cg}). If {root}/gate.md exists, lint/typecheck/test results and LOC metrics are already measured there — never re-report them.
+- Open the checkout only for a hop the pack names (a caller, a callee, a validator) or a symbol the pack does not list ({cg}). If {gate} exists, lint/typecheck/test results and LOC metrics are already measured there — never re-report them.
 - When the budget is nearly spent, stop and report what you verified; an unverified hunch is not a candidate.
 
 Inspect ONLY through your lens. For every candidate defect you MUST, before reporting:
@@ -162,11 +167,11 @@ def cg_hint(a: dict) -> str:
 
 def finder_prompt(a: dict, u: dict) -> str:
     lens_lines = "\n".join(f"- {l} — {a['lensText'][l]}" for l in u["lenses"])
-    root = prompt_root(a)
+    pack = prompt_path(a, u["pack"])
     return f"""{finder_common(a, cg_hint(a))}
 
 Your unit: {u['id']}
-Pack file (message 1: one Read, whole — it lists the files in your slice): {root}/{u['pack']}
+Pack file (message 1: one Read, whole — it lists the files in your slice): {pack}
 Lenses:
 {lens_lines}"""
 
@@ -187,7 +192,8 @@ def skeptic_prompt(a: dict, sid: str, c: dict, prior: dict | None) -> str:
     if prior:
         prior_txt = (f"\nThe tracer already examined it and did not refute (confidence {prior.get('confidence')}): "
                      f"{prior.get('reason')}. Do not repeat its trace; attack the scenario itself.")
-    root = prompt_root(a)
+    hunk = prompt_path(a, f"hunks/{hunk_slug(c['path'])}.patch")
+    defs = prompt_path(a, "defs.md")
     checkout = canonical_path(a["checkout"])
     if sid == "tracer":
         tools = ("Allowed tools: read, grep, find, ls. Forbidden tools: bash, eval, webfetch, edit, write, "
@@ -202,7 +208,7 @@ Budget: at most {a['skeptic_turns']} assistant messages including the final JSON
 {tools}
 Reserve the final assistant message for the JSON object. Stop all investigation and tool use one message before the cap; the final message must contain no tool call.
 Checkout (read-only except throwaway test files you delete afterwards): {checkout}
-Start here, in one message: {root}/hunks/{hunk_slug(c['path'])}.patch (the diff of the candidate's file) and the "## <symbol>" sections of {root}/defs.md for the symbols in the claim (use the grep tool to locate them). Open other files only for a hop those name.
+Start here, in one message: {hunk} (the diff of the candidate's file) and the "## <symbol>" sections of {defs} for the symbols in the claim (use the grep tool to locate them). Open other files only for a hop those name.
 Lens: {sid} — {SKEPTIC_TEXT[sid]}
 Candidate: {json.dumps(blind(c) if sid == 'tracer' else c, ensure_ascii=False)}{prior_txt}
 severity_adjust other than "keep" is accepted only with an evidence entry (path:line) that justifies it.
@@ -506,6 +512,38 @@ def _jitter(delay: float) -> float:
     return random.uniform(delay * 0.75, delay * 1.25)
 
 
+def windows_taskkill() -> str:
+    return os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe")
+
+
+def kill_process_tree(process: subprocess.Popen) -> None:
+    """Kill Omo and the engine it started.
+
+    On POSIX Omo leads its own session, so SIGKILL to the process group reaches
+    the engine. Windows has no process groups and ignores start_new_session:
+    taskkill /T kills the child tree, and Popen.kill still stops Omo itself when
+    taskkill cannot run. That fallback is an accepted degradation: if taskkill is
+    missing or fails, only the direct Omo process dies, and a surviving grandchild
+    that inherited the stdout/stderr pipes can keep the caller's following
+    communicate() waiting until it exits.
+
+    taskkill is resolved by full path because CreateProcess searches the current
+    directory before System32.
+    """
+    if os.name == "nt":
+        try:
+            subprocess.run([windows_taskkill(), "/F", "/T", "/PID", str(process.pid)],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30, check=False)
+        except (OSError, subprocess.SubprocessError):
+            pass
+        process.kill()
+        return
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
 def run_omo_process(cmd: list[str], cwd: str, timeout: int) -> subprocess.CompletedProcess:
     """Run Omo in its own process group so timeout cleanup reaches its child engine.
 
@@ -522,10 +560,7 @@ def run_omo_process(cmd: list[str], cwd: str, timeout: int) -> subprocess.Comple
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as exc:
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        kill_process_tree(process)
         stdout, stderr = process.communicate()
         raise subprocess.TimeoutExpired(cmd, timeout, output=stdout, stderr=stderr) from exc
     return subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)

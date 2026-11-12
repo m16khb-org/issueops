@@ -23,10 +23,10 @@ def find_harness_binary() -> str:
     script = Path(__file__).resolve()
     # skills/atomic-commit-push/scripts/api_doc_gate.py -> repo root
     repo_root = script.parents[3]
-    for name in ("issueops", "issueops"):
-        local_bin = repo_root / "bin" / name
-        if local_bin.exists():
-            return str(local_bin)
+    # The canonical build is bin/issueops, and bin\issueops.exe on Windows.
+    local_bin = repo_root / "bin" / ("issueops.exe" if os.name == "nt" else "issueops")
+    if local_bin.exists():
+        return str(local_bin)
 
     for name in ("issueops", "issueops"):
         found = shutil.which(name)

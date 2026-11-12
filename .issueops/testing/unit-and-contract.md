@@ -135,6 +135,21 @@ Slack 스킬 테스트에 필요한 기존 PEP 723 의존성은
 root suite의 기존 optional local-file skip은 unittest 의미대로 유지하지만,
 스킬의 import 오류·빈 테스트 파일·실패·skip은 검사 실패다.
 
+Windows에서도 같은 명령이 exit 0으로 끝나야 한다. 먼저 `go build -o bin/issueops.exe ./cmd/issueops`로
+저장소 binary를 만든다(Linux·macOS는 `bin/issueops`). `api_doc_gate_test`가 이 canonical binary를 찾기 때문이다.
+Windows에서만 skip되는 항목은 root suite의 `measure_efficiency_test` subTest뿐이다. 모든 OS에서 skip되는
+`meeting_notes_skill_contract_test`의 optional local-file 검사는 위의 기존 규칙을 따른다.
+
+- FIFO 경우 2개(`kind='fifo'`, `name='fifo'`): Windows에는 `os.mkfifo`와 파일시스템 FIFO가 없다. 같은 테스트의
+  절대경로, root 밖 경로, symlink, 일반 파일 경우는 Windows에서도 실행한다.
+- `symlink_escape` 경우: symlink 생성이 권한 부족(`winerror` 1314)으로 실패할 때만 skip한다. 다른 생성 실패는
+  모든 OS에서 테스트 오류로 처리한다.
+
+스킬 suite는 Windows에서도 skip하지 않는다. POSIX 전용 기능은 제품 코드가 OS별로 분기하고, 테스트는 실행 중인
+OS의 분기를 검증한다. 예를 들어 `pr-review`의 `omo_driver`는 timeout이 나면 Windows에서 `taskkill /F /T`로 process
+tree를 종료한다. `stability-audit`의 hook smoke는 POSIX shell-form template을 실행하지 않고 `unsupported_platform`으로
+실패한다. Windows host는 installer가 쓴 exec form(Claude)이나 `commandWindows`(Codex)로 hook을 실행하기 때문이다.
+
 ```bash
 python_env="$(mktemp -d)"
 uv venv --python 3.13 "$python_env"

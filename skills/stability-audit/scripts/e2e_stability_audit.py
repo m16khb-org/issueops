@@ -37,6 +37,14 @@ HOOK_TEMPLATES = {
     "claude": ROOT / "configs" / "claude" / "hooks.settings.json",
 }
 HOOK_PAYLOADS = {"SessionStart": {"source": "startup", "cwd": str(ROOT)}}
+# The templates hold the POSIX shell form. On Windows the installer writes the exec form (Claude) and a
+# PowerShell commandWindows (Codex) instead, so running the templates there would not test what a host runs.
+HOOK_SMOKE_UNSUPPORTED = (
+    "hook smoke runs the POSIX shell-form hook templates; Windows hosts run the installer's exec form "
+    "(Claude) or commandWindows (Codex), so it is unsupported on this platform"
+    if os.name == "nt"
+    else ""
+)
 
 
 def run(cmd: list[str], *, env: dict[str, str] | None = None, input_text: str | None = None, timeout: float = 60) -> dict[str, Any]:
@@ -84,6 +92,13 @@ def add_step(report: dict[str, Any], name: str, ok: bool, **data: Any) -> None:
     report["steps"].append(item)
     if not ok:
         report["failures"].append(item)
+
+
+def failure_line(failure: dict[str, Any]) -> str:
+    """Text-mode line for a failed step; an unsupported step names its reason so it does not read as broken."""
+    if failure.get("unsupported"):
+        return f"FAIL {failure['name']}: {failure['unsupported']}"
+    return f"FAIL {failure['name']}"
 
 
 def parse_json_output(text: str) -> Any:
@@ -438,6 +453,12 @@ def hook_smoke(report: dict[str, Any]) -> None:
         registered[host] = sorted({entry["event"] for entry in entries})
         for entry in entries:
             event = entry["event"]
+            item: dict[str, Any] = {"host": host, "event": event, "matcher": entry["matcher"], "hook": entry["hook"]}
+            if HOOK_SMOKE_UNSUPPORTED:
+                ok = False
+                item["error"] = "unsupported_platform"
+                results.append(item)
+                continue
             # Template commands name ./bin/issueops, so running from ROOT exercises the fresh build.
             res = subprocess.run(
                 entry["command"],
@@ -449,7 +470,7 @@ def hook_smoke(report: dict[str, Any]) -> None:
                 stderr=subprocess.PIPE,
                 timeout=8,
             )
-            item: dict[str, Any] = {"host": host, "event": event, "matcher": entry["matcher"], "hook": entry["hook"], "returncode": res.returncode, "stdout_head": res.stdout[:240], "stderr_head": res.stderr[:240]}
+            item.update(returncode=res.returncode, stdout_head=res.stdout[:240], stderr_head=res.stderr[:240])
             error = "non_zero_exit" if res.returncode != 0 else hook_output_error(res.stdout)
             if error:
                 ok = False
@@ -470,7 +491,8 @@ def hook_smoke(report: dict[str, Any]) -> None:
         installed["unregistered_events"] = sorted(set(installed_events) - want)
         if installed["missing_events"] or installed["unregistered_events"]:
             ok = False
-    add_step(report, "hook_smoke", ok, registered=registered, results=results, installed_codex=installed)
+    unsupported = {"unsupported": HOOK_SMOKE_UNSUPPORTED} if HOOK_SMOKE_UNSUPPORTED else {}
+    add_step(report, "hook_smoke", ok, registered=registered, results=results, installed_codex=installed, **unsupported)
 
 
 def temp_state_worker_policy(report: dict[str, Any]) -> None:
@@ -724,7 +746,7 @@ def main() -> int:
     else:
         print(f"stability audit ok={report['ok']} failures={len(report['failures'])}")
         for failure in report["failures"]:
-            print(f"FAIL {failure['name']}")
+            print(failure_line(failure))
     return 0 if report["ok"] else 1
 
 

@@ -143,7 +143,7 @@ def placement_violations(
             violations.append(
                 Violation(
                     "missing_declared_path",
-                    str(declared.relative_to(root)),
+                    declared.relative_to(root).as_posix(),
                     "manifest declares a path that does not exist",
                 ),
             )
@@ -153,7 +153,7 @@ def placement_violations(
             continue
         resolved = document.resolve()
         relative = document.relative_to(docs_root)
-        path = str(document.relative_to(root))
+        path = document.relative_to(root).as_posix()
         if len(relative.parts) == 1:
             if document.name not in STANDARD_ROOT_DOCUMENTS and resolved not in allowed_roots:
                 violations.append(
@@ -172,7 +172,7 @@ def placement_violations(
                     Violation(
                         "nested_record",
                         path,
-                        f"dated record belongs directly under {module.relative_to(root)}",
+                        f"dated record belongs directly under {module.relative_to(root).as_posix()}",
                     ),
                 )
             continue
@@ -195,7 +195,7 @@ def placement_violations(
             violations.append(
                 Violation(
                     "undeclared_directory",
-                    str((docs_root / top).relative_to(root)),
+                    (docs_root / top).relative_to(root).as_posix(),
                     "directory is not a family module, runtime directory, or "
                     + "manifest directories entry",
                 ),
@@ -261,7 +261,7 @@ def validate(root: Path, manifest: Manifest) -> Report:
                 violations.append(
                     Violation(
                         "line_budget_exceeded",
-                        str(module.relative_to(root)),
+                        module.relative_to(root).as_posix(),
                         f"module exceeds {manifest.max_module_lines} lines",
                     ),
                 )
@@ -303,7 +303,7 @@ def validate(root: Path, manifest: Manifest) -> Report:
                 violations.append(
                     Violation(
                         "broken_link",
-                        str(document.relative_to(root)),
+                        document.relative_to(root).as_posix(),
                         f"target does not exist: {raw}",
                     ),
                 )

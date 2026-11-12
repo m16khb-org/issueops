@@ -212,7 +212,12 @@ class CIWorkflowTests(unittest.TestCase):
                     self.assertNotEqual(isolated_home, str(ambient_home))
                     for event in observed[labels.index('install'):]:
                         self.assertEqual(event['home'], isolated_home)
-                        self.assertEqual(event['codex'], isolated_home + '/.codex')
+                        if os.name == 'nt':
+                            # MSYS bash converts HOME and CODEX_HOME to different Windows spellings
+                            # (backslashes vs. forward slashes) when it starts the native fake.
+                            self.assertEqual(Path(event['codex']), Path(isolated_home) / '.codex')
+                        else:
+                            self.assertEqual(event['codex'], isolated_home + '/.codex')
                     self.assertFalse(Path(isolated_home).exists(), 'EXIT trap must clean up on success and failure')
                 self.assertEqual((ambient_home / 'sentinel').read_text(), 'preserved')
                 self.assertEqual(list(ambient_home.iterdir()), [ambient_home / 'sentinel'])

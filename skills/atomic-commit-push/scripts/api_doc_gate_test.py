@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import unittest
 from pathlib import Path
 
@@ -24,7 +25,7 @@ class ApiDocGateTest(unittest.TestCase):
 
         found = Path(module.find_harness_binary())
 
-        self.assertEqual(found.name, "issueops")
+        self.assertEqual(found.name, "issueops.exe" if os.name == "nt" else "issueops")
         self.assertEqual(found.parent.name, "bin")
 
 

@@ -13,6 +13,8 @@ from pathlib import Path
 
 
 SCRIPT = Path(__file__).with_name("measure_efficiency.py")
+# Windows has no filesystem FIFO; only the FIFO cases skip there.
+NO_FIFO_REASON = "" if hasattr(os, "mkfifo") else "os.mkfifo is unavailable: Windows has no filesystem FIFO"
 
 
 class MeasureEfficiencyTest(unittest.TestCase):
@@ -354,10 +356,20 @@ class MeasureEfficiencyTest(unittest.TestCase):
             contract_index = base_args.index("--contract-file") + 1
             stdout_index = base_args.index("--stdout-file") + 1
 
+            unavailable: dict[str, str] = {}
             fifo = root / "fixtures" / "stdout.pipe"
-            os.mkfifo(fifo)
+            if NO_FIFO_REASON:
+                unavailable["fifo"] = NO_FIFO_REASON
+            else:
+                os.mkfifo(fifo)
             escape = root / "fixtures" / "escape.json"
-            escape.symlink_to(outside)
+            try:
+                escape.symlink_to(outside)
+            except OSError as error:
+                # ERROR_PRIVILEGE_NOT_HELD (1314): the account may not create symlinks. Anything else is a real failure.
+                if getattr(error, "winerror", None) != 1314:
+                    raise
+                unavailable["symlink_escape"] = f"creating a symlink needs a Windows privilege this account lacks: {error}"
             cases = {
                 "absolute": (contract_index, str(outside)),
                 "outside": (contract_index, "../outside.json"),
@@ -366,6 +378,8 @@ class MeasureEfficiencyTest(unittest.TestCase):
             }
             for name, (index, replacement) in cases.items():
                 with self.subTest(name=name):
+                    if name in unavailable:
+                        self.skipTest(unavailable[name])
                     args = list(base_args)
                     args[index] = replacement
                     result = subprocess.run(
@@ -625,13 +639,24 @@ class MeasureEfficiencyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             candidate = self.record_fixture(root, "run-002-candidate", "candidate", 2)
-            outside = root / "fixtures" / "outside-manifest.pipe"
-            os.mkfifo(outside)
+            # Reading the FIFO would block, so rejecting it proves the check runs before any read.
+            # A regular file would fail the manifest parse if read first, so it keeps the
+            # outside-root check covered where FIFOs do not exist.
+            for kind in ("fifo", "regular"):
+                with self.subTest(kind=kind):
+                    if kind == "fifo" and NO_FIFO_REASON:
+                        self.skipTest(NO_FIFO_REASON)
+                    if kind == "fifo":
+                        outside = root / "fixtures" / "outside-manifest.pipe"
+                        os.mkfifo(outside)
+                    else:
+                        outside = root / "fixtures" / "outside-manifest.json"
+                        outside.write_text("{}\n", encoding="utf-8")
 
-            result = self.compare(root, outside.relative_to(root), candidate)
+                    result = self.compare(root, outside.relative_to(root), candidate)
 
-            self.assertEqual(result.returncode, 1)
-            self.assertIn("outside efficiency output root", result.stderr)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("outside efficiency output root", result.stderr)
 
 
 if __name__ == "__main__":

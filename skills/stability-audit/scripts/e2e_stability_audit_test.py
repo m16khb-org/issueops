@@ -4,6 +4,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -636,10 +637,20 @@ class HookSmokeTest(unittest.TestCase):
         )
         step, seen = self._run_hook_smoke(installed)
 
-        self.assertTrue(step["ok"], step)
+        if os.name == "nt":
+            # Windows hosts run the installer's exec/PowerShell forms, so the smoke refuses to run the POSIX templates.
+            self.assertFalse(step["ok"], step)
+            self.assertIn("unsupported on this platform", step["unsupported"])
+            self.assertEqual([item["error"] for item in step["results"]], ["unsupported_platform", "unsupported_platform"])
+            self.assertEqual(seen["calls"], "")
+            self.assertEqual(load_audit_module().failure_line(step), f"FAIL hook_smoke: {step['unsupported']}")
+        else:
+            self.assertTrue(step["ok"], step)
+            self.assertNotIn("unsupported", step)
+            self.assertEqual(load_audit_module().failure_line(step), "FAIL hook_smoke")
+            self.assertEqual(seen["calls"].splitlines(), ["hook session-start --host codex", "hook session-start --host claude"])
         self.assertEqual(step["registered"], {"codex": ["SessionStart"], "claude": ["SessionStart"]})
         self.assertEqual([(item["host"], item["event"]) for item in step["results"]], [("codex", "SessionStart"), ("claude", "SessionStart")])
-        self.assertEqual(seen["calls"].splitlines(), ["hook session-start --host codex", "hook session-start --host claude"])
         self.assertFalse(seen["marker"])
         self.assertEqual(step["installed_codex"]["events"], ["SessionStart"])
 

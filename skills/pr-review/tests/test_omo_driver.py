@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import os
 import subprocess
 import tempfile
 import unittest
@@ -633,6 +634,7 @@ class PureHelperTest(unittest.TestCase):
 
             def __init__(self):
                 self.calls = 0
+                self.kills = 0
 
             def communicate(self, timeout=None):
                 self.calls += 1
@@ -640,14 +642,30 @@ class PureHelperTest(unittest.TestCase):
                     raise subprocess.TimeoutExpired(["omo"], timeout)
                 return "", "killed"
 
+            def kill(self):
+                self.kills += 1
+
         process = FakeProcess()
-        with patch.object(omo_driver.subprocess, "Popen", return_value=process) as popen, \
-             patch.object(omo_driver.os, "killpg") as killpg:
+        # Windows has no process groups: taskkill /T kills the tree, then Popen.kill stops Omo itself.
+        if os.name == "nt":
+            killer = patch.object(omo_driver.subprocess, "run")
+        else:
+            killer = patch.object(omo_driver.os, "killpg")
+        with patch.object(omo_driver.subprocess, "Popen", return_value=process) as popen, killer as kill:
             with self.assertRaises(subprocess.TimeoutExpired):
                 omo_driver.run_omo_process(["omo"], "/tmp", 1)
         self.assertEqual(popen.call_args.kwargs["start_new_session"], True)
         self.assertEqual(popen.call_args.kwargs["cwd"], str(Path("/tmp").resolve()))
-        killpg.assert_called_once_with(123, omo_driver.signal.SIGKILL)
+        if os.name == "nt":
+            kill.assert_called_once()
+            taskkill = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe")
+            self.assertEqual(kill.call_args.args[0], [taskkill, "/F", "/T", "/PID", "123"])
+            self.assertIn("timeout", kill.call_args.kwargs)
+            self.assertFalse(kill.call_args.kwargs.get("shell"))
+            self.assertEqual(process.kills, 1)
+        else:
+            kill.assert_called_once_with(123, omo_driver.signal.SIGKILL)
+            self.assertEqual(process.kills, 0)
         self.assertEqual(process.calls, 2)
 
     def test_run_omo_process_force_disables_engine_model_fallback(self) -> None:
