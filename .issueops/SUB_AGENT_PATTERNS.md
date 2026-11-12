@@ -135,10 +135,42 @@ Sub-agent 계획은 아래 slug 중 하나, 기대 이득, 알려진 tradeoff, �
 | 복합 다단계 추론 | Sub-agent는 단순·독립 작업용 | Claude Code: general-purpose subagent needed for "complex reasoning to interpret results" |
 | 교차 아키텍처 판단 | 코드베이스 전체 이해 필요 | SWE-bench: single-agent 우세 |
 | 안전·되돌림·정렬 결정 | 메인 에이전트의 판단 책임 | issueops CAUTIONS: "main agent owns safety, reversibility, user-intent alignment" |
-| Sub-agent 중첩 (nesting) | 복잡도 폭발, 무한 루프 위험 | Claude Code: Plan subagent prevents nesting |
+| 조건 없는 Sub-agent 중첩 (nesting) | 복잡도 폭발, 무한 루프 위험. 메인이 손자 에이전트의 기록과 비용을 보지 못함 | 아래 "중첩 팀 구조"의 조건을 하나라도 빼면 금지다 (2026-11-12 ADR) |
 | 메인·서브 간 중복 작업 | Anti-Duplication Rule 위반 | Implementation Planning SKILL.md: "DO NOT perform the same search yourself" |
 
 ---
+
+## 중첩 팀 구조 (조건부 허용, 2026-11-12)
+
+메인 → 팀장 여럿 → 팀원 구조는 아래 조건을 모두 지킬 때만 쓴다. 조건 없는 중첩은 금지 패턴이다.
+
+**쓰는 경우:** 파일이 겹치지 않는 큰 갈래가 둘 이상이고, 갈래마다 과제 분할·구현·검증이 필요한 작업이다.
+읽기 전용 조사 fan-out, 작은 편집, 순서가 있는 과제 하나는 평면 구조로 한다.
+
+**조건:**
+
+1. 깊이는 2로 고정한다. 팀원은 아무도 띄우지 않는다. 팀원 지시서 첫머리에 그 문장을 적는다.
+2. 동시에 실행하는 팀장은 4명 이하, 팀장당 동시 팀원은 3명 이하다.
+3. 팀장마다 격리된 git worktree에서 작업한다. 갈래는 같은 파일을 고치지 않게 나눈다.
+4. 팀장과 팀원은 커밋하지 않는다. 메인이 갈래를 합쳐 커밋한다.
+5. 팀장은 팀원의 수용 기준 명령을 직접 다시 실행한 뒤에만 accept를 권고한다. 메인은 그 명령을 한 번 더 실행한다.
+6. 갈래의 diff는 그 팀장이 아닌 새 컨텍스트가 리뷰한다. 팀장의 accept는 리뷰를 대신하지 않는다.
+7. lint와 전체 검증 battery는 메인이 갈래를 병합할 때마다 실행한다.
+8. 사용자 의도 해석, 안전·되돌림 판단, 범위 변경, accept/reject 기록은 메인이 한다.
+9. 계획은 평면 구조와 같이 아래 사전 리뷰 게이트를 통과한다.
+
+**기록:** slug는 `task-fan-out-coordination`과 `isolated-worktree-work`를 쓰고, 기대 이득·tradeoff·대안·검증 방법을
+계획 또는 `issueops decision add`에 남긴다.
+
+**근거와 한계 (2026-11-11~12 실측):**
+
+- 호스트는 중첩을 막지 않는다. 서브에이전트가 Agent 도구로 손자 에이전트를 띄우는 것을 확인했다.
+- 과제 18개를 갈래 8개로 나눠 진행했다. 갈래 병합 9번에서 텍스트 충돌이 0건이었다(조건 3).
+- 팀장이 accept를 권고한 갈래 5개에서 독립 리뷰가 major 결함 5건을 찾았다. 팀장 환경에서 돌지 않은
+  lint 5건은 메인의 battery가 잡았다. 조건 6과 7은 생략할 수 없다.
+- 메인은 팀원의 기록과 토큰 사용량을 볼 수 없다. 팀장 보고의 명령과 결과는 메인이 그대로 재현할 수 있어야 한다.
+- 세션이 다시 시작되면 팀장과 팀원이 알림 없이 끊긴다. 재개할 때 팀장이 worktree 상태를 다시 검증한다.
+- 평면 구조와 같은 과제로 비교한 측정은 없다. 속도 이득은 추정이다.
 
 ## Verified Execution 스킬에의 적용
 
