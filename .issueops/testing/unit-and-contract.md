@@ -68,6 +68,8 @@ go test ./internal/architecture -count=1
 
 이 테스트는 `go list -json ./...`의 direct production import inventory를 두 번 수집해 정렬 결과가 byte-stable인지 확인한다. synthetic case는 rule name과 `importer -> imported` 진단을 고정하고, real graph는 unconditional layer rule과 sorted legacy baseline의 new/stale edge를 함께 검증한다.
 
+같은 패키지의 exec ratchet(`go test ./internal/architecture -run ExecCommand -count=1 -v`)은 `cmd`와 `internal`의 production `.go` 파일을 build tag와 상관없이 `go/parser`로 읽는다(`testdata`와 `internal/testsupport`는 건너뛴다). 선언별 `exec.Command` 수가 allowlist와 다르거나(새 호출, 개수 차이, 남은 항목) allowlist 없이 금지된 형태(`os/exec` dot import, `exec.Cmd` 직접 생성과 포인터가 아닌 `exec.Cmd` 변수·struct field, `os.StartProcess`·`syscall` 프로세스 시작, 첫 인자가 `context.Background()`·`context.TODO()` 호출식인 `exec.CommandContext`)가 나오면 실패한다. 한 파일이 `os/exec`를 여러 이름으로 import해도 모두 센다. 변수를 거친 root context는 구문만으로 알 수 없어 잡지 못한다. scanner fixture는 디스크의 `.go` 파일이 아니라 테스트 안의 source 문자열이다. 디스크에 두면 이 walk와 DDD source inventory가 production 코드로 읽는다.
+
 ### Operational-health and stability delegation
 
 - Pure classifier tests verify invocation-only preservation, duplicate/incomplete inventory failures, and exact resource ownership.

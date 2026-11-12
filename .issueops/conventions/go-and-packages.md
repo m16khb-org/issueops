@@ -20,12 +20,12 @@
 - exported 식별자와 패키지에는 문서 주석을 둔다. 주석은 식별자 이름과 공백으로 시작하는 완전한 문장이고, 시그니처만으로 알 수 없는 책임·에러·불변식을 적는다. 패키지 주석(`// Package name ...`)은 패키지마다 한 파일에만 둔다. 한국어 주석도 `// Name 함수는 ...`처럼 이름 뒤에 공백을 둔다.
 - 대소문자만 다른 이름 쌍(`Run`/`run`, `Apply`/`apply`)을 한 패키지에 두지 않는다. 한 줄 위임만 하는 쌍은 하나로 합치고, 다른 일을 하면 비공개 쪽 이름에 역할을 드러낸다.
 - 같은 패키지가 만든 에러는 문자열이 아니라 sentinel과 `errors.Is`로 비교한다. 외부 명령 시작 실패처럼 원인을 감싼 에러는 `Unwrap`으로 원인을 돌려준다.
-- provider port(`port.IssueProvider`)와 외부 명령·HTTP 호출은 첫 인자로 `context.Context`를 받아 `exec.CommandContext`·`http.NewRequestWithContext`에 넘긴다. 호출자의 취소가 외부 명령까지 닿아야 한다.
+- provider port(`port.IssueProvider`)와 외부 명령·HTTP 호출은 첫 인자로 `context.Context`를 받아 `exec.CommandContext`·`http.NewRequestWithContext`에 넘긴다. 호출자의 취소가 외부 명령까지 닿아야 한다. 자식 프로세스에 대해서는 이 규칙이 호출자 context가 있는 경로에만 걸린다. 호출자 context가 없는 경로(CLI는 아직 root context가 없다)와 프로세스 수명을 스스로 관리하는 경로는 `internal/architecture/exec_command_test.go`의 allowlist에 분류와 사유를 단 예외로만 `exec.Command`를 쓴다. 새 `exec.Command`는 이 ratchet이 막고, `exec.CommandContext`의 첫 인자로 `context.Background()`·`context.TODO()`를 직접 넘기는 것도 막는다. ratchet은 구문만 보므로 변수를 거친 root context(`ctx := context.Background(); exec.CommandContext(ctx, ...)`)는 잡지 못한다. 이 형태는 리뷰에서 확인한다([2026-11-12 ADR](../adr/2026-11-12-child-processes-take-the-caller-context-where-one-exists.md)).
 - 문서 주석과 stutter 규칙은 `.golangci.yml`의 revive `exported`·`package-comments` 규칙이 CI와 `scripts/lint-local.sh`에서 막는다. 나머지 규칙(대소문자 쌍, 에러 비교 등)은 revive·staticcheck(ST)를 켠 측정 설정(`.issueops/issues/572/effective-go-lint.yml`, `golangci-lint run -c <설정> ./...`)으로 확인하며 저장소 게이트에는 켜지 않는다(`../testing/unit-and-contract.md`).
 - 테스트 파일은 대상 파일 가까이에 `*_test.go`로 둔다.
 - CLI 명령의 들여쓴 JSON 출력은 leaf 패키지 `cmd/issueops/jsonout`(`Print`, `PrintTo`)을 쓴다. 명령 패키지마다 `json.Encoder`를 다시 만들지 않는다.
 - 파일이 없는지 판정할 때는 `errors.Is(err, fs.ErrNotExist)`를 쓴다. `os.IsNotExist`는 `%w`로 감싼 에러를 풀지 못한다(#550에서 production 호출을 모두 바꿨다).
-- adapter가 git을 실행할 때는 `exec.Command(gitbin.Path(), ...)`(`internal/adapter/outbound/gitbin`)를 쓴다. macOS의 `/usr/bin/git`은 xcrun shim이라 호출마다 약 5 ms가 더 들고, `gitbin`은 shim이 실행할 바로 그 바이너리로 바꿔 준다. 그 밖의 환경에서는 PATH의 git을 그대로 쓴다.
+- adapter가 git을 실행할 때는 `gitbin.Path()`(`internal/adapter/outbound/gitbin`)로 실행 파일을 정한다. 호출자 context가 있으면 `exec.CommandContext(ctx, gitbin.Path(), ...)`, 위 allowlist의 예외에서만 `exec.Command(gitbin.Path(), ...)`를 쓴다. macOS의 `/usr/bin/git`은 xcrun shim이라 호출마다 약 5 ms가 더 들고, `gitbin`은 shim이 실행할 바로 그 바이너리로 바꿔 준다. 그 밖의 환경에서는 PATH의 git을 그대로 쓴다.
 
 현재 구조(대표 경로):
 
