@@ -512,3 +512,34 @@ func TestCycleOutcomeBucketKeepsItsPersistedName(t *testing.T) {
 		t.Fatalf("CycleOutcomeBucket = %q, want %q from the outcome schema version", port.CycleOutcomeBucket, want)
 	}
 }
+
+// A row stored under another ID or at another schema is not this cycle's
+// outcome: the not-found error carries no note and still suggests stored IDs
+// with the prefix.
+func TestReadNotFoundIgnoresARetainedRowThatDoesNotDecodeStrictly(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		row  string
+	}{
+		{"row of another cycle", `{"schema_version":1,"id":"io-other","outcome":"abandoned","retained_at":"2026-10-26T15:00:17Z"}`},
+		{"row at another schema", `{"schema_version":2,"id":"io-gone","outcome":"abandoned","retained_at":"2026-10-26T15:00:17Z"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
+			database, err := sqlstore.Open(stateRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := database.Put(cycleOutcomeBucket, "io-gone", []byte(tc.row)); err != nil {
+				t.Fatal(err)
+			}
+			if err := database.Put(bucket, "io-gone-later", []byte("{}")); err != nil {
+				t.Fatal(err)
+			}
+			_, err = Store{}.Read(context.Background(), stateRoot, "io-gone")
+			if !errors.Is(err, fs.ErrNotExist) || strings.Contains(err.Error(), "removed it") || !strings.Contains(err.Error(), "did you mean io-gone-later?") {
+				t.Fatalf("err = %v, want not-found without a note and with the prefix suggestion", err)
+			}
+		})
+	}
+}

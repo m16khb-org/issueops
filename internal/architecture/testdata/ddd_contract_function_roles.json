@@ -633,5 +633,10 @@
     "path": "internal/contract/issueops/cycle_outcome_codec.go",
     "symbol": "func EncodeCycleOutcome",
     "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueops/cycle_outcome_codec.go",
+    "symbol": "func DecodeCycleOutcome",
+    "role": "codec"
   }
 ]

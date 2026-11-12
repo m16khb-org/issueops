@@ -181,3 +181,54 @@ func TestReadIssueOpsRejectsInvalidStateMatrix(t *testing.T) {
 		})
 	}
 }
+
+// A retained outcome row turns the not-found error into a note on how the cycle
+// ended, but only when the row decodes strictly: a row stored under another ID
+// or written at another schema yields the plain not-found error.
+func TestReadIssueOpsMissingRecordNotesOnlyAStrictRetainedOutcome(t *testing.T) {
+	t.Parallel()
+
+	const id = "io-gone"
+	cases := []struct {
+		name     string
+		row      string
+		wantNote bool
+	}{
+		{"matching row", `{"schema_version":1,"id":"io-gone","outcome":"abandoned","retained_at":"2026-10-26T15:00:17Z"}`, true},
+		{"row of another cycle", `{"schema_version":1,"id":"io-other","outcome":"abandoned","retained_at":"2026-10-26T15:00:17Z"}`, false},
+		{"row at another schema", `{"schema_version":2,"id":"io-gone","outcome":"abandoned","retained_at":"2026-10-26T15:00:17Z"}`, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			stateRoot := t.TempDir()
+			database, err := sqlstore.Open(stateRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := database.Put(cycleOutcomeBucket, id, []byte(tc.row)); err != nil {
+				t.Fatal(err)
+			}
+			for _, reader := range []struct {
+				name string
+				read func(string, string) (issueops.Record, error)
+			}{
+				{name: "read", read: ReadIssueOps},
+				{name: "existing", read: ReadIssueOpsExisting},
+			} {
+				_, err := reader.read(stateRoot, id)
+				if !errors.Is(err, fs.ErrNotExist) {
+					t.Fatalf("%s: err = %v, want fs.ErrNotExist", reader.name, err)
+				}
+				note := "issueops record io-gone: cleanup removed it (outcome abandoned at 2026-10-26T15:00:17Z): "
+				if tc.wantNote != strings.HasPrefix(err.Error(), note) {
+					t.Fatalf("%s: err = %q, want note %v", reader.name, err, tc.wantNote)
+				}
+				if !tc.wantNote && (strings.Contains(err.Error(), "removed it") || !strings.Contains(err.Error(), "issueops record io-gone not found in state")) {
+					t.Fatalf("%s: err = %q, want the plain not-found error", reader.name, err)
+				}
+			}
+		})
+	}
+}

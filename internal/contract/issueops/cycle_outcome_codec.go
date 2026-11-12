@@ -17,3 +17,21 @@ func EncodeCycleOutcome(recordID string, outcome CycleOutcome) ([]byte, error) {
 	}
 	return data, nil
 }
+
+// DecodeCycleOutcome 함수는 recordID 아래 저장된 보존 행 바이트를 읽는다. JSON이
+// 깨졌거나, CycleOutcomeSchemaVersion이 아니거나, 다른 cycle의 outcome이면 오류를
+// 돌려준다.
+func DecodeCycleOutcome(recordID string, data []byte) (CycleOutcome, error) {
+	var outcome CycleOutcome
+	// 모르는 필드는 거부하지 않는다. 뒤 버전이 더한 필드가 있어도 행을 읽어야 한다.
+	if err := json.Unmarshal(data, &outcome); err != nil {
+		return CycleOutcome{}, fmt.Errorf("decode cycle outcome %s: %w", recordID, err)
+	}
+	if outcome.SchemaVersion != CycleOutcomeSchemaVersion {
+		return CycleOutcome{}, fmt.Errorf("cycle outcome %s has schema %d, want %d", recordID, outcome.SchemaVersion, CycleOutcomeSchemaVersion)
+	}
+	if outcome.ID != recordID {
+		return CycleOutcome{}, fmt.Errorf("cycle outcome row %s holds outcome for %q", recordID, outcome.ID)
+	}
+	return outcome, nil
+}

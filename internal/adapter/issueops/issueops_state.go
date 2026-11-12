@@ -51,8 +51,7 @@ func ReadIssueOpsExisting(stateRoot, id string) (issueops.Record, error) {
 // the bare "not found" did not say which state was read.
 func recordNotFound(stateRoot, id string) error {
 	if data, ok, err := sqlstore.GetExisting(stateRoot, cycleOutcomeBucket, id); err == nil && ok {
-		var outcome issueops.CycleOutcome
-		if json.Unmarshal(data, &outcome) == nil {
+		if outcome, err := issueops.DecodeCycleOutcome(id, data); err == nil {
 			if note := issueopsdomain.RetiredCycleNote(outcome); note != "" {
 				return fmt.Errorf("issueops record %s: %s: %w", id, note, fs.ErrNotExist)
 			}

@@ -2,7 +2,6 @@ package issueopsrecord
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -66,7 +65,8 @@ func (Store) Read(
 // prefix of. Probe: `status --id io-69864` said only "file does not exist".
 func notFound(ctx context.Context, stateRoot, id string) error {
 	err := fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
-	if retired := retiredOutcome(sqlstore.GetExisting(stateRoot, cycleOutcomeBucket, id)); retired != "" {
+	row, found, getErr := sqlstore.GetExisting(stateRoot, cycleOutcomeBucket, id)
+	if retired := retiredOutcome(id, row, found, getErr); retired != "" {
 		return fmt.Errorf("%w; %s", err, retired)
 	}
 	ids, listErr := (Store{}).ListIDs(ctx, stateRoot)
@@ -92,12 +92,13 @@ const cycleOutcomeBucket = port.CycleOutcomeBucket
 // retiredOutcome names how a deleted cycle ended. QA: after abandon, `status
 // --id` said only "file does not exist", which reads like a failure rather
 // than the confirmation the agent was looking for.
-func retiredOutcome(data []byte, ok bool, err error) string {
+// A row that does not decode strictly yields no note rather than a guess.
+func retiredOutcome(id string, data []byte, ok bool, err error) string {
 	if err != nil || !ok {
 		return ""
 	}
-	var outcome issueopscontract.CycleOutcome
-	if json.Unmarshal(data, &outcome) != nil {
+	outcome, err := issueopscontract.DecodeCycleOutcome(id, data)
+	if err != nil {
 		return ""
 	}
 	return issueopsdomain.RetiredCycleNote(outcome)
@@ -398,7 +399,8 @@ func readLocked(
 	}
 	if !found {
 		err := fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
-		if retired := retiredOutcome(database.Get(cycleOutcomeBucket, id)); retired != "" {
+		row, ok, getErr := database.Get(cycleOutcomeBucket, id)
+		if retired := retiredOutcome(id, row, ok, getErr); retired != "" {
 			err = fmt.Errorf("%w; %s", err, retired)
 		}
 		return issueopscontract.Record{OK: false, ID: id}, err
