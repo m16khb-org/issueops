@@ -67,7 +67,7 @@ func TestStoreRejectsCancelledContextBeforeTouchingState(t *testing.T) {
 		"read related": func() error { _, _, err := store.ReadRelated(ctx, root, "io-x", "b"); return err },
 		"delete":       func() error { return store.Delete(ctx, root, "io-x") },
 		"delete if unchanged": func() error {
-			return store.DeleteIfUnchanged(ctx, root, "io-x", baseRecord("io-x"))
+			return store.DeleteIfUnchanged(ctx, root, "io-x", baseRecord("io-x"), nil)
 		},
 	}
 	for name, call := range calls {
@@ -110,7 +110,7 @@ func TestStoreRejectsInvalidIDsBeforeTouchingState(t *testing.T) {
 			},
 			"delete": func() error { return store.Delete(ctx, root, tc.id) },
 			"delete if unchanged": func() error {
-				return store.DeleteIfUnchanged(ctx, root, tc.id, baseRecord("io-ok"))
+				return store.DeleteIfUnchanged(ctx, root, tc.id, baseRecord("io-ok"), nil)
 			},
 		}
 		for name, call := range calls {
@@ -303,7 +303,7 @@ func TestDeleteIfUnchangedRejectsInvalidExpectedRecord(t *testing.T) {
 	putRecord(t, root, baseRecord("io-inv"))
 	expected := baseRecord("io-inv")
 	expected.Phase = "unknown"
-	if err := (Store{}).DeleteIfUnchanged(t.Context(), root, "io-inv", expected); err == nil || err.Error() != "invalid state" {
+	if err := (Store{}).DeleteIfUnchanged(t.Context(), root, "io-inv", expected, nil); err == nil || err.Error() != "invalid state" {
 		t.Fatalf("error = %v", err)
 	}
 	if _, err := (Store{}).Read(t.Context(), root, "io-inv"); err != nil {

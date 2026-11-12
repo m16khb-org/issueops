@@ -1,6 +1,6 @@
 // Package issueopsview 패키지는 `issueops view`가 돌려주는 cycle 조망의 DTO를
 // 소유한다. 조망은 timeline(시간순 이벤트)과 graph(증거 노드와 연결) 두 가지이며,
-// live record나 cleanup이 남긴 보존 요약 중 어느 쪽에서 읽었는지를 결과에
+// live record나 cleanup·prune이 남긴 보존 요약 중 어느 쪽에서 읽었는지를 결과에
 // 남긴다. contract 계층 패키지다.
 package issueopsview
 
@@ -13,7 +13,7 @@ import (
 // 패키지만 import할 수 있어서 그 domain이 읽는 공용 어휘를 여기서 이 이름으로 둔다.
 type Record = issueopscontract.Record
 
-// CycleOutcome 타입은 cleanup이 record를 지울 때 남기는 보존 요약의 별칭이다.
+// CycleOutcome 타입은 cleanup이나 prune이 record를 지울 때 남기는 보존 요약의 별칭이다.
 type CycleOutcome = issueopscontract.CycleOutcome
 
 // CycleTimeline 타입은 cycle 한 건의 시간순 이벤트 목록의 별칭이다.
@@ -43,8 +43,8 @@ const (
 const (
 	// SourceRecord means the live cycle record was read.
 	SourceRecord = "record"
-	// SourceRetained means the record was gone and the retained cleanup
-	// outcome was read instead.
+	// SourceRetained means the record was gone and the outcome cleanup or
+	// prune retained was read instead.
 	SourceRetained = "retained"
 )
 

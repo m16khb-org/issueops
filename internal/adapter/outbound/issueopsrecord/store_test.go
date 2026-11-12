@@ -2,16 +2,22 @@ package issueopsrecord
 
 import (
 	"context"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/port"
 )
 
 func TestDeleteIfUnchangedRejectsRecordDrift(t *testing.T) {
@@ -47,7 +53,7 @@ func TestDeleteIfUnchangedRejectsRecordDrift(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = store.DeleteIfUnchanged(context.Background(), stateRoot, id, expected, "artifact_stage_v1")
+	err = store.DeleteIfUnchanged(context.Background(), stateRoot, id, expected, nil, "artifact_stage_v1")
 
 	if _, ok := errors.AsType[*sqlstore.RawCASError](err); !ok {
 		t.Fatalf("error = %v, want RawCASError", err)
@@ -116,6 +122,7 @@ func TestDeleteIfUnchangedSerializesNewRelatedState(t *testing.T) {
 			stateRoot,
 			id,
 			expected,
+			nil,
 			"artifact_stage_v1",
 		)
 	}()
@@ -198,6 +205,7 @@ func TestDeleteIfUnchangedWaitsForOpenRelatedUpdateSpan(t *testing.T) {
 			stateRoot,
 			id,
 			expected,
+			nil,
 			"artifact_stage_v1",
 		)
 	}()
@@ -359,5 +367,148 @@ func TestReadNotFoundNamesTheRetainedOutcome(t *testing.T) {
 	_, err = Store{}.Read(context.Background(), stateRoot, "io-gone")
 	if !errors.Is(err, fs.ErrNotExist) || !strings.Contains(err.Error(), "cleanup removed it (outcome abandoned at 2026-10-26T15:00:17Z)") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestDeleteIfUnchangedAppliesWritesOnlyWithTheDelete(t *testing.T) {
+	store := Store{}
+	writes := []port.RecordMutation{{Bucket: cycleOutcomeBucket, ID: "io-writes", Data: []byte(`{"x":1}`)}}
+
+	t.Run("success stores the writes with the delete", func(t *testing.T) {
+		stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
+		putRecord(t, stateRoot, baseRecord("io-writes"))
+		expected, err := store.Read(context.Background(), stateRoot, "io-writes")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := store.DeleteIfUnchanged(context.Background(), stateRoot, "io-writes", expected, writes); err != nil {
+			t.Fatal(err)
+		}
+
+		database, err := sqlstore.Open(stateRoot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok, err := database.Get(bucket, "io-writes"); err != nil || ok {
+			t.Fatalf("record survived delete: ok=%v err=%v", ok, err)
+		}
+		got, ok, err := database.Get(cycleOutcomeBucket, "io-writes")
+		if err != nil || !ok || string(got) != `{"x":1}` {
+			t.Fatalf("written row = %q, ok=%v, err=%v", got, ok, err)
+		}
+	})
+
+	t.Run("drift applies neither the delete nor the writes", func(t *testing.T) {
+		stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
+		putRecord(t, stateRoot, baseRecord("io-writes"))
+		expected, err := store.Read(context.Background(), stateRoot, "io-writes")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := store.Update(context.Background(), stateRoot, "io-writes", func(record issueopscontract.Record) (issueopscontract.Record, bool, error) {
+			record.Branch = "100-after"
+			return record, true, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		err = store.DeleteIfUnchanged(context.Background(), stateRoot, "io-writes", expected, writes)
+
+		if _, ok := errors.AsType[*sqlstore.RawCASError](err); !ok {
+			t.Fatalf("error = %v, want RawCASError", err)
+		}
+		current, readErr := store.Read(context.Background(), stateRoot, "io-writes")
+		if readErr != nil || current.Branch != "100-after" {
+			t.Fatalf("current record = %+v, err = %v", current, readErr)
+		}
+		database, err := sqlstore.Open(stateRoot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, ok, err := database.Get(cycleOutcomeBucket, "io-writes"); err != nil || ok {
+			t.Fatalf("a write landed without the delete: %q ok=%v err=%v", got, ok, err)
+		}
+	})
+}
+
+func TestDeleteIfUnchangedRollsBackWhenAWriteFailsInCommit(t *testing.T) {
+	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
+	id := "io-rollback"
+	store := Store{}
+	putRecord(t, stateRoot, baseRecord(id))
+	database, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Apply(context.Background(), []port.RecordMutation{
+		{Bucket: "artifact_stage_v1", ID: id, Data: []byte("staged")},
+		{Bucket: cycleOutcomeBucket, ID: id, Data: []byte(`{"old":true}`)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	expected, err := store.Read(context.Background(), stateRoot, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := snapshotStoreRows(t, stateRoot)
+
+	err = store.DeleteIfUnchanged(
+		context.Background(),
+		stateRoot,
+		id,
+		expected,
+		[]port.RecordMutation{{Bucket: cycleOutcomeBucket, ID: id, Data: []byte(`{"new":true}`), RequireAbsent: true}},
+		"artifact_stage_v1",
+	)
+
+	if err == nil || !strings.Contains(err.Error(), "precondition failed") {
+		t.Fatalf("error = %v, want a precondition failure", err)
+	}
+	if after := snapshotStoreRows(t, stateRoot); !slices.Equal(before, after) {
+		t.Fatalf("rows changed although the commit failed:\nbefore %v\nafter  %v", before, after)
+	}
+}
+
+// snapshotStoreRows returns a sorted (bucket/id sha256(data)) line for every row
+// of the state DB, read through a read-only connection so the snapshot itself
+// never changes state.
+func snapshotStoreRows(t *testing.T, stateRoot string) []string {
+	t.Helper()
+	database, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(stateRoot, "issueops.db"))+"?mode=ro&_pragma=query_only(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	rows, err := database.Query(`SELECT bucket, id, data FROM records ORDER BY bucket, id`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	lines := []string{}
+	for rows.Next() {
+		var rowBucket, rowID string
+		var data []byte
+		if err := rows.Scan(&rowBucket, &rowID, &data); err != nil {
+			t.Fatal(err)
+		}
+		sum := sha256.Sum256(data)
+		lines = append(lines, rowBucket+"/"+rowID+" "+hex.EncodeToString(sum[:]))
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return lines
+}
+
+// The retained outcome bucket name is persisted: changing it hides every row
+// already stored. It must stay the versioned name readers derive from the
+// outcome schema version.
+func TestCycleOutcomeBucketKeepsItsPersistedName(t *testing.T) {
+	if port.CycleOutcomeBucket != "issueops_cycle_outcome_v1" {
+		t.Fatalf("CycleOutcomeBucket = %q, want issueops_cycle_outcome_v1", port.CycleOutcomeBucket)
+	}
+	if want := fmt.Sprintf("issueops_cycle_outcome_v%d", issueopscontract.CycleOutcomeSchemaVersion); port.CycleOutcomeBucket != want {
+		t.Fatalf("CycleOutcomeBucket = %q, want %q from the outcome schema version", port.CycleOutcomeBucket, want)
 	}
 }

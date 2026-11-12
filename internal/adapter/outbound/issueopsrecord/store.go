@@ -85,9 +85,9 @@ func notFound(ctx context.Context, stateRoot, id string) error {
 	return err
 }
 
-// cycleOutcomeBucket mirrors the bucket cleanup writes a deleted cycle's
-// outcome to (adapter/issueops); both derive from the outcome schema version.
-var cycleOutcomeBucket = fmt.Sprintf("issueops_cycle_outcome_v%d", issueopscontract.CycleOutcomeSchemaVersion)
+// cycleOutcomeBucket is the bucket cleanup and prune write a deleted cycle's
+// outcome to.
+const cycleOutcomeBucket = port.CycleOutcomeBucket
 
 // retiredOutcome names how a deleted cycle ended. QA: after abandon, `status
 // --id` said only "file does not exist", which reads like a failure rather
@@ -326,12 +326,15 @@ func (store Store) Delete(
 // DeleteIfUnchanged removes record id and its rows in relatedBuckets only when the
 // stored record still equals expected, so a concurrent change aborts the delete.
 // It runs inside the same serialization gate as Update and refuses an expected
-// record with a cleanup attempt in progress.
+// record with a cleanup attempt in progress. The writes are applied in the same
+// commit as the delete and never without it; a write that fails in the commit
+// rolls the delete back.
 func (store Store) DeleteIfUnchanged(
 	ctx context.Context,
 	stateRoot string,
 	id string,
 	expected issueopscontract.Record,
+	writes []port.RecordMutation,
 	relatedBuckets ...string,
 ) error {
 	if err := ctx.Err(); err != nil {
@@ -352,10 +355,11 @@ func (store Store) DeleteIfUnchanged(
 	if err != nil {
 		return err
 	}
-	mutations := make([]port.RecordMutation, 0, len(relatedBuckets)+1)
+	mutations := make([]port.RecordMutation, 0, len(relatedBuckets)+len(writes)+1)
 	for _, relatedBucket := range relatedBuckets {
 		mutations = append(mutations, port.RecordMutation{Bucket: relatedBucket, ID: id, Delete: true})
 	}
+	mutations = append(mutations, writes...)
 	mutations = append(mutations, port.RecordMutation{Bucket: bucket, ID: id, Delete: true})
 	// DeleteIfUnchanged도 같은 게이트를 지난다. CAS는 레코드 drift만 막고
 	// 열려 있는 span의 related Put과는 순서를 맺지 못한다.

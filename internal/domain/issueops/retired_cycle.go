@@ -6,13 +6,18 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-// RetiredCycleNote names how a cycle whose record cleanup deleted ended, from
-// the outcome cleanup kept. QA: after abandon, `status --id` said only "file
-// does not exist", which reads like a failure instead of the confirmation the
-// agent was checking for. An unusable outcome yields "".
+// RetiredCycleNote names how a cycle whose record cleanup or prune deleted ended,
+// from the outcome they kept. A pruned outcome reads "prune removed it ...";
+// every other outcome reads "cleanup removed it ...". QA: after abandon,
+// `status --id` said only "file does not exist", which reads like a failure
+// instead of the confirmation the agent was checking for. An unusable outcome
+// yields "".
 func RetiredCycleNote(outcome model.CycleOutcome) string {
 	if outcome.Outcome == "" {
 		return ""
+	}
+	if outcome.Outcome == model.CycleOutcomePruned {
+		return fmt.Sprintf("prune removed it (outcome %s at %s)", outcome.Outcome, outcome.RetainedAt)
 	}
 	return fmt.Sprintf("cleanup removed it (outcome %s at %s)", outcome.Outcome, outcome.RetainedAt)
 }

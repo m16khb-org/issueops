@@ -66,7 +66,8 @@ SQLite 전환 후 checkpoint 뒤에도 WAL이 truncate되지 않고 고수위로
 
 주의:
 - `sqlstore.Maintain`은 `PRAGMA wal_checkpoint(TRUNCATE)`와 사이드카 권한을 0600으로 재보증한다. context hook은 SQLite를 유지보수하지 않으므로 필요할 때 `issueops state maintain --json`을 명시적으로 실행한다.
-- 오래된 IssueOps record는 `issueops prune --max-age DURATION`으로 먼저 dry-run한 뒤 `--confirm`으로 삭제한다. cutoff보다 오래된 `done` record 중 lease가 released 상태이고 issue-create intent와 remote completion reflection이 정리된 record만 대상이다.
+- 오래된 IssueOps record는 `issueops prune --max-age DURATION`으로 먼저 dry-run한 뒤 `--confirm`으로 삭제한다. cutoff보다 오래된 `done` record 중 lease가 released 상태이고 issue-create intent와 remote completion reflection이 정리된 record만 대상이다. `--confirm`은 지운 record마다 `outcome: pruned` 보존 행을 같은 트랜잭션에 남기므로 review-metrics와 `view --view timeline`에서 사라지지 않는다.
+- 보존 행은 prune 대상이 아니며 줄이는 경로가 없다. 지운 record마다 최대 64KiB 행 하나가 남는다.
 - VACUUM은 DB가 수십 MB로 성장하기 전에는 비용만 있고 이득이 없어 비범위다(ADR 참조).
 
 ## 레코드 삭제는 related write span과 같은 게이트를 지날 것

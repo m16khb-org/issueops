@@ -39,7 +39,7 @@ func ReviewMetricsForRecord(record issueopscontract.Record) (issueopscontract.Re
 	return cycle, warnings
 }
 
-// CycleOutcomeForRecord 함수는 cleanup이 record를 지우기 직전에 남길 지표 요약을 만든다. 파싱하지 못한
+// CycleOutcomeForRecord 함수는 cleanup이나 prune이 record를 지우기 직전에 남길 지표 요약을 만든다. 파싱하지 못한
 // 시각은 ReviewMetricsForRecord처럼 그 항목만 빠진다.
 func CycleOutcomeForRecord(record issueopscontract.Record, outcome, retainedAt string) issueopscontract.CycleOutcome {
 	metrics, _ := ReviewMetricsForRecord(record)

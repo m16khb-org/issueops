@@ -91,7 +91,7 @@ const IDFormatHint = "cycle ids look like io-1a2b3c4d5e6f; find them with `issue
 // ReviewMetricsCycle 타입은 사이클 하나의 적대 리뷰 지표 파생값이다. 살아
 // 있는 record에서는 그 record가 이미 들고 있는 원자료(devil's-advocate
 // history, regress 이벤트, phase ledger)의 읽기 전용 projection이다. Outcome이
-// 있으면 cleanup이 record를 지우며 남긴 CycleOutcome에서 읽은 값이다.
+// 있으면 cleanup이나 prune이 record를 지우며 남긴 CycleOutcome에서 읽은 값이다.
 type ReviewMetricsCycle struct {
 	ID                          string             `json:"id"`
 	Phase                       string             `json:"phase,omitempty"`
@@ -107,17 +107,18 @@ type ReviewMetricsCycle struct {
 // CycleOutcomeSchemaVersion 상수는 보존된 사이클 결과 row의 현재 쓰기 버전이다.
 const CycleOutcomeSchemaVersion = 1
 
-// cleanup이 record를 지울 때 남기는 사이클 결과 종류.
+// record를 지울 때 남기는 사이클 결과 종류. pruned는 issueops prune이 쓴다.
 const (
 	CycleOutcomeFinished  = "finished"
 	CycleOutcomeAbandoned = "abandoned"
+	CycleOutcomePruned    = "pruned"
 )
 
-// CycleOutcome 타입은 cleanup finish·abandon이 record를 지우는 같은
-// 트랜잭션에서 남기는 지표 요약이다. record 원문이 아니라 review-metrics가
-// 파생하는 수치와 판정, 그리고 자유 문자열 없이 길이가 제한된 이벤트 목록인
-// 타임라인만 담으므로, record가 사라진 뒤에도 하네스 단계별 효과를 사이클을
-// 가로질러 비교할 수 있다.
+// CycleOutcome 타입은 cleanup finish·abandon과 `issueops prune --confirm`이
+// record를 지우는 같은 트랜잭션에서 남기는 지표 요약이다. record 원문이
+// 아니라 review-metrics가 파생하는 수치와 판정, 그리고 자유 문자열 없이
+// 길이가 제한된 이벤트 목록인 타임라인만 담으므로, record가 사라진 뒤에도
+// 하네스 단계별 효과를 사이클을 가로질러 비교할 수 있다.
 type CycleOutcome struct {
 	SchemaVersion int                `json:"schema_version"`
 	ID            string             `json:"id"`
@@ -151,20 +152,22 @@ type ReviewMetricsResult struct {
 	Aggregate   ReviewMetricsAggregate `json:"aggregate"`
 	Warnings    []string               `json:"warnings,omitempty"`
 	GeneratedAt string                 `json:"generated_at"`
-	// Retention은 `--repo` 조회에서만 채워진다. cleanup finish·abandon이 이
+	// Retention은 `--repo` 조회에서만 채워진다. cleanup finish·abandon과 prune이 이
 	// repo에 남긴 보존 행의 수와 가장 늦은 보존 시각이다. 0이어도 객체가 있으면
 	// "보존 경로를 읽었으나 행이 없다"이고, nil이면 이 조회가 보존 행을 읽지 않았다.
 	Retention *ReviewMetricsRetention `json:"retention,omitempty"`
 }
 
-// ReviewMetricsRetention 타입은 cleanup이 남긴 보존 행의 outcome별 수와 가장
-// 늦은 보존 시각이다. 같은 ID의 live record가 있는 행도 센다. LastRetainedAt은
+// ReviewMetricsRetention 타입은 record를 지운 경로(cleanup finish·abandon,
+// `issueops prune --confirm`)가 남긴 보존 행의 outcome별 수와 가장 늦은 보존
+// 시각이다. 같은 ID의 live record가 있는 행도 센다. LastRetainedAt은
 // time.RFC3339Nano로 해석되는 RetainedAt 중 가장 늦은 시점을 UTC
 // time.RFC3339Nano로 정규화한 값이다. 해석되지 않는 RetainedAt은 후보에서 빠진다.
-// 디코딩에 실패한 보존 행은 수에 들어가지 않고 read_errors로만 나간다.
-// `issueops prune`으로 지운 사이클은 보존 행이 없어 세지 못한다.
+// 디코딩에 실패한 보존 행은 수에 들어가지 않고 read_errors로만 나간다. prune이
+// 보존 행을 쓰기 전 버전으로 지운 사이클은 행이 없어 세지 못한다.
 type ReviewMetricsRetention struct {
 	Finished       int    `json:"finished"`
 	Abandoned      int    `json:"abandoned"`
+	Pruned         int    `json:"pruned"`
 	LastRetainedAt string `json:"last_retained_at,omitempty"`
 }

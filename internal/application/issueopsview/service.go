@@ -1,5 +1,5 @@
 // Package issueopsview orchestrates the read-only `issueops view` use case: it
-// reads a live cycle record, falls back to the outcome cleanup retained when the
+// reads a live cycle record, falls back to the outcome cleanup or prune retained when the
 // record is gone, and shapes the answer without writing anything.
 package issueopsview
 

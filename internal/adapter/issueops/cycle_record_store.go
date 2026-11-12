@@ -32,8 +32,8 @@ func (s CycleRecordStore) Save(ctx context.Context, record model.Record) (model.
 	return writeIssueOps(ctx, s.StateRoot, record)
 }
 
-// RetiredIDs names the cycle IDs whose records cleanup deleted: cleanup keeps
-// one outcome row per deleted record under the same ID. An ID that also has a
+// RetiredIDs names the cycle IDs whose records cleanup or prune deleted: both
+// keep one outcome row per deleted record under the same ID. An ID that also has a
 // live record (a cycle that reused it before IDs were retired) stays
 // resumable.
 func (s CycleRecordStore) RetiredIDs() (map[string]bool, error) {

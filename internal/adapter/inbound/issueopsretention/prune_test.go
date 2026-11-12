@@ -28,7 +28,7 @@ func (store *fakeRetentionStore) ReadUnchecked(
 }
 
 func (store *fakeRetentionStore) DeleteIfUnchanged(
-	context.Context, string, string, issueopsretentioncontract.Record,
+	context.Context, string, string, issueopsretentioncontract.Record, issueopsretentioncontract.CycleOutcome,
 ) error {
 	return errors.New("not expected in this test")
 }

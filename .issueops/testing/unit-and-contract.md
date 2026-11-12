@@ -215,3 +215,4 @@ CLI/MCP DTO를 변경하면 `issueops contract check --json`과 golden test를 �
 - bootstrap tests should verify dry-run plans `projects/<repo-id>/project.json` without creating it, and normal `project bootstrap` writes lifecycle profile metadata in user-state.
 - hook tests should cover fallback behavior when lifecycle state is missing/corrupt so prompt routing remains useful.
 - doctor tests should cover repo-local `.issueops/state/` and namespace mismatch warnings.
+- `issueops prune --confirm` tests should show that each deleted record leaves a `pruned` outcome row in the same CAS commit, and that preview, CAS failure, and an in-commit write failure leave every row unchanged.

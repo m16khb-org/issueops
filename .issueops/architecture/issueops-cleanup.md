@@ -39,8 +39,9 @@ fail-closed다(`workspace_processes_stop`, 시그널 없음). 요청자 자신(p
 (#477) — 결정적 ID(`sha256(repo+branch)`) 재사용과 충돌하지 않는
 유일한 수명 종료다. 각 파괴 단계는 멱등이며, 실패 시 레코드가 보존되고 재실행
 전 preview 재발급이 요구된다. prune은 completion 미반영 + RemoteArtifact 보유
-레코드를 나이와 무관하게 보존한다(보존 불변식). staged artifact의 수명은
-레코드와 같다(deleteIssueOps가 스테이지 버킷을 동반 삭제).
+레코드를 나이와 무관하게 보존한다(보존 불변식). prune이 지우는 레코드는
+cleanup처럼 `outcome: pruned` 보존 행을 같은 트랜잭션에 남긴다. staged artifact의
+수명은 레코드와 같다(deleteIssueOps가 스테이지 버킷을 동반 삭제).
 
 Cleanup `finish`, `remote-branch`, `abandon`은 같은 cycle의 실행 잠금과 `cleanup_attempt`를
 공유한다. attempt의 operation·token과 관측 당시의 원본 레코드를 CAS로 결속하며,

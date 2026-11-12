@@ -12,17 +12,14 @@ import (
 )
 
 // cycleOutcomeBucket keeps one metrics summary per deleted cycle record. Cleanup
-// writes it in the same transaction that deletes the record, so the summary
-// exists exactly when the record is gone.
-var cycleOutcomeBucket = fmt.Sprintf("issueops_cycle_outcome_v%d", model.CycleOutcomeSchemaVersion)
+// and prune write it in the same transaction that deletes the record, so the
+// summary exists exactly when the record is gone.
+const cycleOutcomeBucket = port.CycleOutcomeBucket
 
 func cycleOutcomeMutation(recordID string, outcome model.CycleOutcome) (port.RecordMutation, error) {
-	if outcome.SchemaVersion != model.CycleOutcomeSchemaVersion || outcome.ID != recordID {
-		return port.RecordMutation{}, fmt.Errorf("cycle outcome for %q does not match record %q at schema %d", outcome.ID, recordID, model.CycleOutcomeSchemaVersion)
-	}
-	data, err := json.Marshal(outcome)
+	data, err := model.EncodeCycleOutcome(recordID, outcome)
 	if err != nil {
-		return port.RecordMutation{}, fmt.Errorf("encode cycle outcome %s: %w", recordID, err)
+		return port.RecordMutation{}, err
 	}
 	return port.RecordMutation{Bucket: cycleOutcomeBucket, ID: recordID, Data: data}, nil
 }

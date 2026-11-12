@@ -10,6 +10,10 @@ import issueopscontract "issueops/internal/contract/issueops"
 // 공용 IssueOps 어휘를 여기서 이 이름으로 둔다.
 type Record = issueopscontract.Record
 
+// CycleOutcome 타입은 record를 지울 때 남기는 보존 요약의 별칭이다. retention
+// port가 이 vertical의 계약 이름으로 보존 행을 넘기게 한다.
+type CycleOutcome = issueopscontract.CycleOutcome
+
 // UnreadableRecordDiagnostic 타입은 읽지 못해 판단에서 빠진 기록 한 건의 ID와 원인 코드다.
 type UnreadableRecordDiagnostic struct {
 	ID   string `json:"id"`
@@ -42,10 +46,11 @@ type Result struct {
 	Error                 string                       `json:"error,omitempty"`
 }
 
-// LeaseStatusReleased, PhaseDone, IssueCreateCompleted는 정리 가능 여부 판정에
-// 쓰는 공용 계약 값을 이 패키지 이름으로 다시 노출한다.
+// LeaseStatusReleased, PhaseDone, IssueCreateCompleted, CycleOutcomePruned는
+// 정리 가능 여부 판정과 보존 행에 쓰는 공용 계약 값을 이 패키지 이름으로 다시 노출한다.
 const (
 	LeaseStatusReleased  = issueopscontract.LeaseStatusReleased
 	PhaseDone            = issueopscontract.PhaseDone
 	IssueCreateCompleted = issueopscontract.IssueCreateIntentCompleted
+	CycleOutcomePruned   = issueopscontract.CycleOutcomePruned
 )

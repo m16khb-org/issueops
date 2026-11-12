@@ -100,9 +100,9 @@ func (s Starter) cycleID(repo, branch string, independent bool) (string, error) 
 }
 
 // resumableID is the first stable ID for repo and branch that no cleaned-up
-// cycle used and no completed cycle holds. Cleanup keeps the outcome row under
-// the deleted record's ID, so a new cycle reusing it would share the old
-// cycle's audit lines and overwrite its outcome (QA: #42 got #41's ID right
+// or pruned cycle used and no completed cycle holds. Cleanup and prune keep the
+// outcome row under the deleted record's ID, so a new cycle reusing it would
+// share the old cycle's audit lines and overwrite its outcome (QA: #42 got #41's ID right
 // after cleanup). A done cycle awaiting merge takes no new work either; plain
 // start used to return it, so a second task in the same checkout was attached
 // to the finished cycle. The successors are derived, so a repeated start still

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	issueopsretentioncontract "issueops/internal/contract/issueopsretention"
+	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsretentiondomain "issueops/internal/domain/issueopsretention"
 )
 
@@ -30,7 +31,8 @@ func NewService(repository Repository, clock clock) *Service {
 // Prune deletes records in stateRoot last updated before now minus maxAge.
 // Without confirm it only reports what would be pruned (dry run). Unreadable
 // records and delete failures make the run incomplete and return an error
-// wrapping the incomplete sentinel alongside the partial result.
+// wrapping the incomplete sentinel alongside the partial result. With confirm
+// each deleted record leaves a pruned outcome row in the same commit.
 func (service *Service) Prune(
 	ctx context.Context,
 	stateRoot string,
@@ -54,7 +56,8 @@ func (service *Service) Prune(
 	if maxAge <= 0 {
 		return result, fmt.Errorf("max age must be positive")
 	}
-	cutoff := service.clock.Now().UTC().Add(-maxAge)
+	now := service.clock.Now().UTC()
+	cutoff := now.Add(-maxAge)
 	result.Cutoff = cutoff.Format(time.RFC3339Nano)
 	ids, err := service.repository.ListIDs(ctx, stateRoot)
 	if err != nil {
@@ -71,7 +74,8 @@ func (service *Service) Prune(
 			continue
 		}
 		if confirm {
-			if err := service.repository.DeleteIfUnchanged(ctx, stateRoot, id, record); err != nil {
+			outcome := issueopsdomain.CycleOutcomeForRecord(record, issueopsretentioncontract.CycleOutcomePruned, now.Format(time.RFC3339))
+			if err := service.repository.DeleteIfUnchanged(ctx, stateRoot, id, record, outcome); err != nil {
 				noteDeleteFailure(&result, id)
 				result.Error = errIncomplete.Error()
 				return result, fmt.Errorf("%w: delete %s: %v", errIncomplete, id, err) //nolint:errorlint // callers classify on errIncomplete alone; the delete failure is diagnostic text

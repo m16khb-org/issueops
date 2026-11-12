@@ -628,5 +628,10 @@
     "path": "internal/contract/issueops/cli_result_types.go",
     "symbol": "func StatusView",
     "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueops/cycle_outcome_codec.go",
+    "symbol": "func EncodeCycleOutcome",
+    "role": "codec"
   }
 ]

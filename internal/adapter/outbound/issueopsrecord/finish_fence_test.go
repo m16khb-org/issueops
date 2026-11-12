@@ -51,7 +51,7 @@ func TestArmedFinishRefusesOrdinaryRecordMutations(t *testing.T) {
 					case "delete":
 						err = store.Delete(ctx, root, record.ID, "artifact_stage_v1")
 					case "unchanged delete":
-						err = store.DeleteIfUnchanged(ctx, root, record.ID, record, "artifact_stage_v1")
+						err = store.DeleteIfUnchanged(ctx, root, record.ID, record, nil, "artifact_stage_v1")
 					}
 					if err == nil || !strings.Contains(err.Error(), "cleanup "+string(cleanupOperation)) || called {
 						t.Fatalf("armed record reached ordinary mutation: called=%v err=%v", called, err)

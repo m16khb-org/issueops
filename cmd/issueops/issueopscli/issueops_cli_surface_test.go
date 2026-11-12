@@ -597,8 +597,9 @@ func TestReviewMetricsRetentionText(t *testing.T) {
 		retention *issueopscontract.ReviewMetricsRetention
 		want      string
 	}{
-		{"with last", &issueopscontract.ReviewMetricsRetention{Finished: 0, Abandoned: 1, LastRetainedAt: "2026-11-01T10:00:00Z"}, "retention: finished 0, abandoned 1, last 2026-11-01T10:00:00Z"},
-		{"without last", &issueopscontract.ReviewMetricsRetention{}, "retention: finished 0, abandoned 0, last -"},
+		{"with last", &issueopscontract.ReviewMetricsRetention{Finished: 0, Abandoned: 1, LastRetainedAt: "2026-11-01T10:00:00Z"}, "retention: finished 0, abandoned 1, pruned 0, last 2026-11-01T10:00:00Z"},
+		{"with pruned", &issueopscontract.ReviewMetricsRetention{Pruned: 2, LastRetainedAt: "2026-11-04T00:00:00Z"}, "retention: finished 0, abandoned 0, pruned 2, last 2026-11-04T00:00:00Z"},
+		{"without last", &issueopscontract.ReviewMetricsRetention{}, "retention: finished 0, abandoned 0, pruned 0, last -"},
 		{"nil", nil, ""},
 	}
 	for _, tc := range cases {

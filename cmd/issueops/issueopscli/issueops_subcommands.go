@@ -603,7 +603,7 @@ func (cli command) runIssueOpsReviewMetrics(args []string) error {
 		if last == "" {
 			last = "-"
 		}
-		fmt.Printf("retention: finished %d, abandoned %d, last %s\n", retention.Finished, retention.Abandoned, last)
+		fmt.Printf("retention: finished %d, abandoned %d, pruned %d, last %s\n", retention.Finished, retention.Abandoned, retention.Pruned, last)
 	}
 	for _, warning := range result.Warnings {
 		fmt.Printf("  warning: %s\n", warning)

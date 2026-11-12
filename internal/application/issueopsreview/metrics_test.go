@@ -162,7 +162,7 @@ func TestMetricsReaderReportsRetention(t *testing.T) {
 		cycles     int
 		wantRaw    string
 	}{
-		{name: "no rows", want: contract.ReviewMetricsRetention{}, cycles: 1, wantRaw: `"retention":{"finished":0,"abandoned":0}`},
+		{name: "no rows", want: contract.ReviewMetricsRetention{}, cycles: 1, wantRaw: `"retention":{"finished":0,"abandoned":0,"pruned":0}`},
 		{name: "one finished row", rows: []contract.CycleOutcome{row("a", contract.CycleOutcomeFinished, "2026-11-01T00:00:00Z")},
 			want: contract.ReviewMetricsRetention{Finished: 1, LastRetainedAt: "2026-11-01T00:00:00Z"}, cycles: 2},
 		{name: "last is the latest instant, not the latest string", rows: []contract.CycleOutcome{
@@ -185,6 +185,10 @@ func TestMetricsReaderReportsRetention(t *testing.T) {
 			row("a", contract.CycleOutcomeFinished, "2026-11-03T00:00:00Z"),
 			row("b", contract.CycleOutcomeAbandoned, "2026-11-01T00:00:00Z"),
 		}, want: contract.ReviewMetricsRetention{Finished: 1, Abandoned: 1, LastRetainedAt: "2026-11-03T00:00:00Z"}, cycles: 3},
+		{name: "a pruned row is counted and is a last candidate", rows: []contract.CycleOutcome{
+			row("a", contract.CycleOutcomeFinished, "2026-11-01T00:00:00Z"),
+			row("b", contract.CycleOutcomePruned, "2026-11-04T00:00:00Z"),
+		}, want: contract.ReviewMetricsRetention{Finished: 1, Pruned: 1, LastRetainedAt: "2026-11-04T00:00:00Z"}, cycles: 3},
 		{name: "unknown outcome is neither counted nor a last candidate", rows: []contract.CycleOutcome{
 			row("a", contract.CycleOutcomeFinished, "2026-11-01T00:00:00Z"),
 			row("b", "bogus", "2026-11-05T00:00:00Z"),

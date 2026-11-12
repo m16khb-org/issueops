@@ -1916,7 +1916,8 @@
       "ok": true,
       "retention": {
         "abandoned": 0,
-        "finished": 0
+        "finished": 0,
+        "pruned": 0
       }
     },
     "issueops_set_phase": {

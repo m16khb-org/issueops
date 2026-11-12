@@ -46,7 +46,7 @@ func TestReviewMetricsRetentionCountsRealCleanup(t *testing.T) {
 	}
 
 	// (1) Cleanup has not run: the signal is present and says zero.
-	if got, want := retention(), map[string]any{"finished": float64(0), "abandoned": float64(0)}; !reflect.DeepEqual(got, want) {
+	if got, want := retention(), map[string]any{"finished": float64(0), "abandoned": float64(0), "pruned": float64(0)}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("before cleanup retention=%v want %v", got, want)
 	}
 
@@ -114,7 +114,7 @@ func TestReviewMetricsRetentionCountsRealCleanup(t *testing.T) {
 	}
 
 	// (4) The signal now counts that row and carries its retained_at verbatim.
-	want := map[string]any{"finished": float64(0), "abandoned": float64(1), "last_retained_at": retainedAt}
+	want := map[string]any{"finished": float64(0), "abandoned": float64(1), "pruned": float64(0), "last_retained_at": retainedAt}
 	if got := retention(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("after abandon retention=%v want %v", got, want)
 	}

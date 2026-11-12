@@ -84,12 +84,13 @@ agent가 즉시 알아야 할 canonical 요약이다.
   [`conventions/state-policy-and-hooks.md`](conventions/state-policy-and-hooks.md).
 - `issueops review-metrics (--id ID | --repo PATH)`는 적대 리뷰의 라운드·판정 분포·
   regress 수·단계 소요를 record에서 파생하는 읽기 전용 조망이다. record를 쓰지 않으며
-  record에 새 durable 필드도 만들지 않는다. cleanup finish·abandon은 record를 지우는 같은
-  트랜잭션에서 그 지표 요약을 `issueops_cycle_outcome_v1` bucket에 남기고, review-metrics는
+  record에 새 durable 필드도 만들지 않는다. cleanup finish·abandon과 `issueops prune --confirm`은
+  record를 지우는 같은 트랜잭션에서 그 지표 요약을 `issueops_cycle_outcome_v1` bucket에 남기고, review-metrics는
   live record와 이 요약을 함께 읽되 같은 ID는 live record를 쓴다. 요약에서 온 사이클은
-  `outcome`(`finished`|`abandoned`)을 가진다. `--id`와 `--repo`는 정확히 하나만 쓴다.
-  `--repo` 결과의 `retention`은 보존 행 수(`finished`, `abandoned`)와 마지막 `last_retained_at`이다.
-  디코딩에 실패한 행은 `read_errors`로만 나가고, `issueops prune`으로 지운 사이클은 보존 행이 없어 세지 못한다.
+  `outcome`(`finished`|`abandoned`|`pruned`)을 가진다. `--id`와 `--repo`는 정확히 하나만 쓴다.
+  `--repo` 결과의 `retention`은 보존 행 수(`finished`, `abandoned`, `pruned`)와 마지막 `last_retained_at`이다.
+  디코딩에 실패한 행은 `read_errors`로만 나간다. prune이 보존 행을 쓰기 전 버전으로 지운 사이클은 행이 없어 세지 못한다.
+  보존 행은 ID당 하나이고, 같은 ID의 사이클이 다시 지워지면 최신 outcome으로 덮어쓴다.
   보존 행은 사이클 타임라인(`issueops view --view timeline`이 읽는다)도 담는다. 타임라인의 subject·ref는
   `[A-Za-z0-9._:/-]` 64바이트 이하만 싣고, 그 밖의 값은 `?`로 바꾼다. 자유 문자열과 secret은 보존하지 않는다.
 - `issueops next`의 `review`는 host planner 기본 모델과 함께 변경 집합 티어

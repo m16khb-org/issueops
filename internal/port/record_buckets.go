@@ -9,4 +9,7 @@ const (
 	LeaseHolderBucket = "lease_holder_v1"
 	// ArtifactStageBucket holds artifacts staged before prepare.
 	ArtifactStageBucket = "artifact_stage_v1"
+	// CycleOutcomeBucket holds one retained outcome row per cycle whose record
+	// cleanup or prune deleted. Its version suffix is CycleOutcomeSchemaVersion.
+	CycleOutcomeBucket = "issueops_cycle_outcome_v1"
 )

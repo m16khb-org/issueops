@@ -10,7 +10,7 @@ import (
 )
 
 // MetricsReader keeps repository observations explicit and never mutates records.
-// ListOutcomes returns the summaries cleanup retained for deleted records whose
+// ListOutcomes returns the summaries cleanup or prune retained for deleted records whose
 // repository matches repo (every summary when repo is empty).
 type MetricsReader struct {
 	ReadRecord   func(stateRoot, id string) (issueops.Record, error)
@@ -82,7 +82,7 @@ func (reader MetricsReader) listRepoCycleIDs(stateRoot, repo string, result *iss
 	return listed, nil
 }
 
-// appendRetainedOutcomes adds the outcomes cleanup retained for repo, skipping
+// appendRetainedOutcomes adds the outcomes cleanup or prune retained for repo, skipping
 // any cycle that still has a live record, and reports every retained row
 // (live or not) as result.Retention.
 func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live map[string]bool, result *issueops.ReviewMetricsResult) error {
@@ -108,6 +108,8 @@ func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live 
 			retention.Finished++
 		case issueops.CycleOutcomeAbandoned:
 			retention.Abandoned++
+		case issueops.CycleOutcomePruned:
+			retention.Pruned++
 		default:
 			continue
 		}
@@ -122,7 +124,7 @@ func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live 
 }
 
 // readRetained answers a single-cycle query whose record is gone from the
-// outcome cleanup retained, or returns the original record error.
+// outcome cleanup or prune retained, or returns the original record error.
 func (reader MetricsReader) readRetained(stateRoot, id string, result issueops.ReviewMetricsResult, recordErr error) (issueops.ReviewMetricsResult, error) {
 	if reader.ListOutcomes == nil {
 		return issueops.ReviewMetricsResult{OK: false}, recordErr

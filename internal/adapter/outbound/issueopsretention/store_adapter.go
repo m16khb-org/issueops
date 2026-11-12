@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"issueops/internal/adapter/outbound/issueopsrecord"
+	issueopscontract "issueops/internal/contract/issueops"
 	issueopsretentioncontract "issueops/internal/contract/issueopsretention"
 	"issueops/internal/port"
 )
@@ -30,12 +31,19 @@ func (repository Repository) ReadUnchecked(
 }
 
 // DeleteIfUnchanged deletes record id, and its staged artifact bucket, only if the stored
-// record still equals record, so a concurrent update is never removed.
+// record still equals record, so a concurrent update is never removed. It stores outcome
+// as the retained row in the same commit.
 func (repository Repository) DeleteIfUnchanged(
 	ctx context.Context,
 	stateRoot string,
 	id string,
 	record issueopsretentioncontract.Record,
+	outcome issueopsretentioncontract.CycleOutcome,
 ) error {
-	return repository.Store.DeleteIfUnchanged(ctx, stateRoot, id, record, artifactStageBucket)
+	data, err := issueopscontract.EncodeCycleOutcome(id, outcome)
+	if err != nil {
+		return err
+	}
+	row := port.RecordMutation{Bucket: port.CycleOutcomeBucket, ID: id, Data: data}
+	return repository.Store.DeleteIfUnchanged(ctx, stateRoot, id, record, []port.RecordMutation{row}, artifactStageBucket)
 }
