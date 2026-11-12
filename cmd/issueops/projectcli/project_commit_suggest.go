@@ -1,6 +1,7 @@
 package projectcli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -20,7 +21,7 @@ func runProjectCommitSuggest(service app.Service, args []string) error {
 		return err
 	}
 
-	result, err := service.Suggest(commitsuggestcontract.Request{
+	result, err := service.Suggest(context.Background(), commitsuggestcontract.Request{
 		RepoRoot: *repo,
 		Staged:   *staged,
 	})

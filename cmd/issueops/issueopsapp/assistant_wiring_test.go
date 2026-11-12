@@ -42,11 +42,11 @@ func TestMCPAssistantServicesKeepCapturedRepositoryAndState(t *testing.T) {
 		if info.IssueOpsRoot != roots[i] || info.TargetRepo != roots[i] {
 			t.Fatalf("instance %d inspect=%+v", i, info)
 		}
-		result, err := d.Commit.Suggest(commitmodel.Request{RepoRoot: "."})
+		result, err := d.Commit.Suggest(t.Context(), commitmodel.Request{RepoRoot: "."})
 		if err != nil || !result.Executed || result.RepoRoot != roots[i] || !strings.Contains(result.Prompt, fmt.Sprintf("instance-%d", i)) {
 			t.Fatalf("instance %d commit=%+v err=%v", i, result, err)
 		}
-		lint, err := d.Lint.Diagnose(lintmodel.Request{RepoRoot: ".", CommandArgv: []string{catReadme, "README.md"}})
+		lint, err := d.Lint.Diagnose(t.Context(), lintmodel.Request{RepoRoot: ".", CommandArgv: []string{catReadme, "README.md"}})
 		if err != nil || !lint.Failed || !strings.Contains(lint.Prompt, fmt.Sprintf("instance-%d", i)) {
 			t.Fatalf("instance %d lint=%+v err=%v", i, lint, err)
 		}

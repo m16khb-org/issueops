@@ -30,9 +30,11 @@ func (e instanceAssistantEffects) NormalizeRoot(root string) (string, error) {
 	}
 	return root, nil
 }
-func (e instanceAssistantEffects) Diff(root string, staged bool) (string, error) { return e.owner, nil }
-func (e instanceAssistantEffects) Run(root string, argv []string) (string, int, bool) {
-	return e.owner, 2, true
+func (e instanceAssistantEffects) Diff(_ context.Context, root string, staged bool) (string, error) {
+	return e.owner, nil
+}
+func (e instanceAssistantEffects) Run(_ context.Context, root string, argv []string) (string, int, bool, error) {
+	return e.owner, 2, true, nil
 }
 
 type instancePreflight struct{ owner string }
