@@ -28,7 +28,8 @@ func NewService(repository Repository, clock clock) *Service {
 	return &Service{repository: repository, clock: clock}
 }
 
-// Prune deletes records in stateRoot last updated before now minus maxAge.
+// Prune deletes records in stateRoot whose last record instant (the latest
+// stored timestamp) is before now minus maxAge.
 // Without confirm it only reports what would be pruned (dry run). Unreadable
 // records and delete failures make the run incomplete and return an error
 // wrapping the incomplete sentinel alongside the partial result. With confirm

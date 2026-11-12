@@ -196,3 +196,77 @@ func TestIssueOpsPruneRetainsOutcomeThroughCLI(t *testing.T) {
 		t.Fatalf("status --json error = %q (ok=%v), want it to contain %q", statusOut.Error, statusOut.OK, wantNotice)
 	}
 }
+
+// `issueops list`는 record에 마지막으로 기록된 시각을 보여 준다. prune도 같은 시각으로
+// 나이를 판정해야 한다. UpdatedAt은 90일 전이지만 lease를 한 시간 전에 놓은 done
+// record는 미리보기와 확정 모두에서 남는다.
+func TestIssueOpsPruneKeepsRecordWithRecentLastRecordInstant(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", root)
+	t.Setenv("CLAUDE_CODE_SESSION_ID", "")
+	t.Setenv("CODEX_THREAD_ID", "")
+	root = issueOpsStateRoot()
+	repo := makeGitRepoForContract(t)
+	ctx := context.Background()
+
+	target, err := startIssueOpsFixture(root, model.StartRequest{Repo: repo, Branch: "994-prune-recent-release"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	target.Phase = model.PhaseDone
+	target.UpdatedAt = now.Add(-90 * 24 * time.Hour).Format(time.RFC3339Nano)
+	target.Execution = &model.Execution{
+		Workspace: model.Workspace{
+			SourceRoot: repo, Root: t.TempDir(), Branch: target.Branch,
+			BaseHead: strings.Repeat("a", 40), LinkedAt: target.UpdatedAt,
+		},
+		Lease: model.WriteLease{
+			Generation: 1, Status: model.LeaseStatusReleased,
+			ClaimedAt: target.UpdatedAt, ReleasedAt: now.Add(-time.Hour).Format(time.RFC3339Nano),
+		},
+	}
+	data, err := issueopsrecord.Encode(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database, err := sqlstore.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Apply(ctx, []port.RecordMutation{{Bucket: port.IssueOpsRecordBucket, ID: target.ID, Data: data}}); err != nil {
+		t.Fatal(err)
+	}
+
+	prune := func(args ...string) issueopsretentioncontract.Result {
+		t.Helper()
+		out := captureStdoutForContract(t, func() error {
+			return runIssueOps(append([]string{"prune"}, args...))
+		})
+		var result issueopsretentioncontract.Result
+		if err := json.Unmarshal([]byte(out), &result); err != nil {
+			t.Fatalf("prune JSON %q: %v", out, err)
+		}
+		return result
+	}
+
+	preview := prune("--json")
+	if !preview.DryRun || slices.Contains(preview.Pruned, target.ID) || !slices.Contains(preview.Kept, target.ID) {
+		t.Fatalf("prune preview pruned=%v kept=%v, want %s kept", preview.Pruned, preview.Kept, target.ID)
+	}
+	confirmed := prune("--confirm", "--json")
+	if !confirmed.OK || confirmed.DryRun || slices.Contains(confirmed.Pruned, target.ID) || !slices.Contains(confirmed.Kept, target.ID) {
+		t.Fatalf("prune confirm = %+v, want %s kept", confirmed, target.ID)
+	}
+	if !reflect.DeepEqual(slices.Sorted(slices.Values(preview.Pruned)), slices.Sorted(slices.Values(confirmed.Pruned))) ||
+		!reflect.DeepEqual(slices.Sorted(slices.Values(preview.Kept)), slices.Sorted(slices.Values(confirmed.Kept))) {
+		t.Fatalf("preview pruned=%v kept=%v, confirm pruned=%v kept=%v", preview.Pruned, preview.Kept, confirmed.Pruned, confirmed.Kept)
+	}
+
+	if _, err := (issueopsrecord.Store{}).Read(ctx, root, target.ID); err != nil {
+		t.Fatalf("kept record unreadable after prune --confirm: %v", err)
+	}
+	if _, found, err := core.ReadCycleOutcome(root, target.ID); err != nil || found {
+		t.Fatalf("kept record has a retained row: found=%v err=%v", found, err)
+	}
+}
