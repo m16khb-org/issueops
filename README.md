@@ -13,6 +13,10 @@
 </p>
 
 <p align="center">
+  <a href="https://glama.ai/mcp/servers/m16khb-org/issueops"><img src="https://glama.ai/mcp/servers/m16khb-org/issueops/badges/score.svg" alt="m16khb-org/issueops MCP server" /></a>
+</p>
+
+<p align="center">
   <img src="docs/assets/issueops-hero-team-memory.png" alt="팀원 A의 에이전트가 찾은 caution과 ADR이 PR에 담겨 저장소에 병합되고, 팀원 B의 에이전트가 작업 전에 그 기록을 받는 흐름" width="100%" />
 </p>
 
