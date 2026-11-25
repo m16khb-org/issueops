@@ -13,6 +13,10 @@
 </p>
 
 <p align="center">
+  <a href="https://glama.ai/mcp/servers/m16khb-org/issueops"><img src="https://glama.ai/mcp/servers/m16khb-org/issueops/badges/score.svg" alt="m16khb-org/issueops MCP server" /></a>
+</p>
+
+<p align="center">
   <img src="docs/assets/issueops-hero-team-memory.png" alt="A caution and an ADR found by teammate A's agent ride a PR into the repository, and teammate B's agent receives them before starting work" width="100%" />
 </p>
 
